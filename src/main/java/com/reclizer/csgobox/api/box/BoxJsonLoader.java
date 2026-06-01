@@ -22,6 +22,7 @@ import java.io.Writer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -356,5 +357,97 @@ public class BoxJsonLoader {
 
     private static float getFloat(JsonObject json, String key, float defaultValue) {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
+    }
+
+    public static void saveToFile(BoxDefinition def) {
+        try {
+            Files.createDirectories(BOXES_DIR);
+        } catch (IOException e) {
+            CsgoBox.LOGGER.error("Failed to create boxes directory for save", e);
+            return;
+        }
+
+        Path file = BOXES_DIR.resolve(def.id().getPath() + ".json");
+        Path tempFile = BOXES_DIR.resolve(def.id().getPath() + ".json.tmp");
+
+        JsonObject json = new JsonObject();
+        json.addProperty("name", def.name().getString());
+        json.addProperty("key", def.keyItem().toString());
+        json.addProperty("drop", def.dropRate());
+
+        JsonArray random = new JsonArray();
+        for (GradeGroup g : def.grades()) {
+            random.add(g.weight());
+        }
+        json.add("random", random);
+
+        JsonArray entity = new JsonArray();
+        if (!def.entityDropRates().isEmpty()) {
+            for (Map.Entry<ResourceLocation, Float> entry : def.entityDropRates().entrySet()) {
+                entity.add(entry.getKey().toString());
+                entity.add(entry.getValue());
+            }
+        } else {
+            for (ResourceLocation e : def.dropEntities()) {
+                entity.add(e.toString());
+                entity.add(1);
+            }
+        }
+        json.add("entity", entity);
+
+        for (int i = 0; i < def.grades().size(); i++) {
+            String gradeKey = "grade" + (def.grades().size() - i);
+            GradeGroup g = def.grades().get(i);
+            JsonArray itemsArr = new JsonArray();
+            for (ItemStack item : g.items()) {
+                itemsArr.add(serializeItemStack(item));
+            }
+            json.add(gradeKey, itemsArr);
+        }
+
+        try (Writer writer = Files.newBufferedWriter(tempFile)) {
+            GSON.toJson(json, writer);
+        } catch (IOException e) {
+            CsgoBox.LOGGER.error("Failed to save box JSON: {}", file, e);
+            return;
+        }
+
+        try {
+            Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            CsgoBox.LOGGER.info("Saved box to JSON: {} -> {}", def.id(), file);
+        } catch (IOException e) {
+            CsgoBox.LOGGER.error("Failed to finalize box JSON: {}", file, e);
+        }
+    }
+
+    public static void deleteFile(ResourceLocation boxId) {
+        Path file = BOXES_DIR.resolve(boxId.getPath() + ".json");
+        try {
+            if (Files.exists(file)) {
+                Files.delete(file);
+                CsgoBox.LOGGER.info("Deleted box JSON: {}", file);
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.error("Failed to delete box JSON: {}", file, e);
+        }
+    }
+
+    private static String serializeItemStack(ItemStack stack) {
+        JsonObject obj = new JsonObject();
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        obj.addProperty("id", itemId.toString());
+        obj.addProperty("count", stack.getCount());
+
+        DataComponentPatch patch = stack.getComponentsPatch();
+        if (!patch.isEmpty()) {
+            try {
+                var result = DataComponentPatch.CODEC.encodeStart(JsonOps.INSTANCE, patch);
+                result.result().ifPresent(elem -> obj.add("components", elem));
+            } catch (Exception e) {
+                CsgoBox.LOGGER.warn("Failed to serialize components for item: {}", itemId, e.getMessage());
+            }
+        }
+
+        return GSON.toJson(obj);
     }
 }

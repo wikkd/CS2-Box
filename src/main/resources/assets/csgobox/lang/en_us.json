@@ -43,6 +43,8 @@
   "commands.csgobox.help.desc.give": "      Give player specified box item",
   "commands.csgobox.help.line.reload": "/csbox reload",
   "commands.csgobox.help.desc.reload": "      Reload box config from KubeJS scripts",
+  "commands.csgobox.help.line.gui": "/csbox gui",
+  "commands.csgobox.help.desc.gui": "      Open box editor GUI",
   "commands.csgobox.help.footer": "Requires permission level 2.",
   "commands.csgobox.list.header": "Registered boxes (%s total):",
   "commands.csgobox.list.entry": "  %s - %s (%s grades, %s items)",
@@ -85,5 +87,46 @@
   "commands.csgobox.add.usage": "Usage: /csbox add <box> <grade> hand|inventory [count]",
   "commands.csgobox.add.box_created": "Box created: %s",
   "commands.csgobox.add.inventory.creative_mode": "Cannot add inventory items in creative mode",
-  "commands.csgobox.set.grade_weight.success_no_box": "Set grade weight: grade=%s weight=%s"
+  "commands.csgobox.set.grade_weight.success_no_box": "Set grade weight: grade=%s weight=%s",
+  "commands.csgobox.gui.open": "Opening box editor...",
+
+  "gui.csgobox.box_manager.title": "CS2 Box Manager",
+  "gui.csgobox.box_manager.subtitle": "Select a box to edit or create a new one",
+  "gui.csgobox.box_manager.new_box": "+ New Box",
+  "gui.csgobox.box_manager.no_boxes": "No boxes registered",
+  "gui.csgobox.box_manager.entry": "%s \u00b7 %d grades \u00b7 %d items \u00b7 %.0f%% drop",
+
+  "gui.csgobox.edit.title": "Box Editor",
+  "gui.csgobox.edit.basic_info": "Basic Info",
+  "gui.csgobox.edit.name": "Name",
+  "gui.csgobox.edit.drop_rate": "Drop Rate",
+  "gui.csgobox.edit.key_item": "Key Item",
+  "gui.csgobox.edit.texture": "Texture",
+  "gui.csgobox.edit.sound": "Sound",
+  "gui.csgobox.edit.default": "Default",
+
+  "gui.csgobox.edit.entities": "Drop Entities",
+  "gui.csgobox.edit.entity_add": "Add Entity...",
+  "gui.csgobox.edit.entity_search": "Search entities...",
+
+  "gui.csgobox.edit.weights": "Grade Weights",
+
+  "gui.csgobox.edit.items_pool": "Item Pool",
+  "gui.csgobox.edit.add_from_inventory": "+ Add from Inventory",
+  "gui.csgobox.edit.add_by_id": "+ Add by Item ID",
+  "gui.csgobox.edit.item_id_prompt": "Enter item ID (e.g. minecraft:diamond_sword)",
+  "gui.csgobox.edit.item_count": "Count",
+  "gui.csgobox.edit.item_remove": "Remove",
+  "gui.csgobox.edit.empty_grade": "No items in this grade",
+
+  "gui.csgobox.edit.save": "Save & Back",
+  "gui.csgobox.edit.export_json": "Export JSON",
+  "gui.csgobox.edit.delete": "Delete Box",
+  "gui.csgobox.edit.delete_confirm": "Are you sure you want to delete \"%s\"?",
+  "gui.csgobox.edit.saved": "Box \"%s\" saved successfully!",
+
+  "gui.csgobox.create.id_prompt": "Enter box ID (e.g. csgobox:my_custom_box)",
+  "gui.csgobox.create.name_prompt": "Enter display name",
+  "gui.csgobox.create.id_exists": "A box with ID \"%s\" already exists!",
+  "gui.csgobox.create.created": "Box \"%s\" created! Configure it now."
 }

@@ -10,6 +10,7 @@ import com.reclizer.csgobox.item.ModItems;
 import com.reclizer.csgobox.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.packet.PacketGiveItem;
 import com.reclizer.csgobox.packet.PacketBoxOpenResult;
+import com.reclizer.csgobox.packet.PacketOpenBoxEditor;
 import com.reclizer.csgobox.sounds.ModSounds;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
@@ -53,6 +54,7 @@ public class CsgoBox {
         registrar.playToServer(PacketCsgoProgress.TYPE, PacketCsgoProgress.STREAM_CODEC, PacketCsgoProgress::handleServer);
         registrar.playToServer(PacketGiveItem.TYPE, PacketGiveItem.STREAM_CODEC, PacketGiveItem::handle);
         registrar.playToClient(PacketBoxOpenResult.TYPE, PacketBoxOpenResult.STREAM_CODEC, PacketBoxOpenResult::handle);
+        registrar.playToClient(PacketOpenBoxEditor.TYPE, PacketOpenBoxEditor.CODEC, PacketOpenBoxEditor::handle);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

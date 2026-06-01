@@ -42,7 +42,9 @@
   "commands.csgobox.help.line.give": "/csbox give <箱子> [数量] [玩家]",
   "commands.csgobox.help.desc.give": "      给予玩家指定箱子物品",
   "commands.csgobox.help.line.reload": "/csbox reload",
-  "commands.csgobox.help.desc.reload": "      从 KubeJS 脚本重新加载箱子配置",
+  "commands.csgobox.help.desc.reload": "      重载箱子配置（从KubeJS脚本）",
+  "commands.csgobox.help.line.gui": "/csbox gui",
+  "commands.csgobox.help.desc.gui": "      打开箱子编辑器图形界面",
   "commands.csgobox.help.footer": "需要权限等级 2。",
   "commands.csgobox.list.header": "已注册箱子 (%s 个):",
   "commands.csgobox.list.entry": "  %s - %s (%s 个等级, %s 个物品)",
@@ -85,5 +87,46 @@
   "commands.csgobox.add.usage": "用法: /csbox add <箱子> <等级> hand|inventory [数量]",
   "commands.csgobox.add.box_created": "箱子已创建: %s",
   "commands.csgobox.add.inventory.creative_mode": "创造模式无法添加背包物品",
-  "commands.csgobox.set.grade_weight.success_no_box": "设置等级权重: 等级=%s 权重=%s"
+  "commands.csgobox.set.grade_weight.success_no_box": "设置等级权重: 等级=%s 权重=%s",
+  "commands.csgobox.gui.open": "正在打开箱子编辑器...",
+
+  "gui.csgobox.box_manager.title": "CS2 Box 箱子管理器",
+  "gui.csgobox.box_manager.subtitle": "选择一个箱子进行编辑，或创建新箱子",
+  "gui.csgobox.box_manager.new_box": "+ 新建箱子",
+  "gui.csgobox.box_manager.no_boxes": "没有已注册的箱子",
+  "gui.csgobox.box_manager.entry": "%s \u00b7 %d个等级 \u00b7 %d个物品 \u00b7 %.0f%% 掉落",
+
+  "gui.csgobox.edit.title": "箱子编辑器",
+  "gui.csgobox.edit.basic_info": "基本信息",
+  "gui.csgobox.edit.name": "名称",
+  "gui.csgobox.edit.drop_rate": "掉落率",
+  "gui.csgobox.edit.key_item": "钥匙物品",
+  "gui.csgobox.edit.texture": "纹理",
+  "gui.csgobox.edit.sound": "音效",
+  "gui.csgobox.edit.default": "默认",
+
+  "gui.csgobox.edit.entities": "掉落实体",
+  "gui.csgobox.edit.entity_add": "添加实体...",
+  "gui.csgobox.edit.entity_search": "搜索实体...",
+
+  "gui.csgobox.edit.weights": "等级权重",
+
+  "gui.csgobox.edit.items_pool": "物品池",
+  "gui.csgobox.edit.add_from_inventory": "+ 从背包添加",
+  "gui.csgobox.edit.add_by_id": "+ 输入物品ID",
+  "gui.csgobox.edit.item_id_prompt": "输入物品ID（例如 minecraft:diamond_sword）",
+  "gui.csgobox.edit.item_count": "数量",
+  "gui.csgobox.edit.item_remove": "删除",
+  "gui.csgobox.edit.empty_grade": "此等级暂无物品",
+
+  "gui.csgobox.edit.save": "保存并返回",
+  "gui.csgobox.edit.export_json": "导出JSON",
+  "gui.csgobox.edit.delete": "删除箱子",
+  "gui.csgobox.edit.delete_confirm": "确定要删除 \"%s\" 吗？",
+  "gui.csgobox.edit.saved": "箱子 \"%s\" 保存成功！",
+
+  "gui.csgobox.create.id_prompt": "输入箱子ID（例如 csgobox:my_custom_box）",
+  "gui.csgobox.create.name_prompt": "输入显示名称",
+  "gui.csgobox.create.id_exists": "ID \"%s\" 的箱子已存在！",
+  "gui.csgobox.create.created": "箱子 \"%s\" 已创建！现在配置它。"
 }

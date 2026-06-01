@@ -26,9 +26,11 @@ import com.reclizer.csgobox.api.box.BoxRegistry;
 import com.reclizer.csgobox.api.box.GradeGroup;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.item.ModItems;
+import com.reclizer.csgobox.packet.PacketOpenBoxEditor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -171,6 +173,9 @@ public class CsboxCommand {
                 .then(Commands.literal("reload")
                         .executes(CsboxCommand::reloadBoxes)
                 )
+                .then(Commands.literal("gui")
+                        .executes(CsboxCommand::openGui)
+                )
         );
     }
 
@@ -187,6 +192,7 @@ public class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_weight"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.gui"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return 1;
     }
@@ -507,5 +513,12 @@ public class CsboxCommand {
             CsgoBox.LOGGER.warn("Error in grade suggestions: {}", e.getMessage());
         }
         return builder.buildFuture();
+    }
+
+    private static int openGui(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        PacketDistributor.sendToPlayer(player, new PacketOpenBoxEditor());
+        ctx.getSource().sendSuccess(() -> Component.translatable("commands.csgobox.gui.open"), false);
+        return 1;
     }
 }
