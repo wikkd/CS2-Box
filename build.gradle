@@ -49,10 +49,21 @@ repositories {
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://modmaven.dev' }
     maven { url = 'https://www.cursemaven.com' }
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven {
+        url = 'https://maven.latvian.dev/releases'
+        content {
+            includeGroup 'dev.latvian.mods'
+            includeGroup 'dev.latvian.apps'
+        }
+    }
 }
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
+    implementation "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
+    compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    compileOnly "dev.latvian.mods:rhino:2101.2.7-build.82"
 }
 
 tasks.named('processResources', ProcessResources).configure {

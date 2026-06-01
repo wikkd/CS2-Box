@@ -11,7 +11,7 @@ public class RandomItem {
         if (candidateItem.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        return candidateItem.get(rng.nextInt(candidateItem.size()));
+        return candidateItem.get(rng.nextInt(candidateItem.size())).copy();
     }
 
     public static int randomItemsGrade(Random rng, int[] weights) {
@@ -21,14 +21,14 @@ public class RandomItem {
         }
         int rn = rng.nextInt(totalWeight);
         float countRate = 0;
-        int grade = 0;
+        int grade = weights.length;
         for (int num : weights) {
             if (rn < countRate + num) {
                 break;
             }
-            grade++;
+            grade--;
             countRate += num;
         }
-        return grade + 1;
+        return grade;
     }
 }

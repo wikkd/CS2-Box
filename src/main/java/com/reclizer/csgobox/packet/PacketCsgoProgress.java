@@ -7,7 +7,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record PacketCsgoProgress(int buttonID, String item) implements CustomPacketPayload {
+public record PacketCsgoProgress(long seed) implements CustomPacketPayload {
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
 
@@ -17,12 +17,11 @@ public record PacketCsgoProgress(int buttonID, String item) implements CustomPac
     );
 
     private static void write(FriendlyByteBuf buf, PacketCsgoProgress packet) {
-        buf.writeInt(packet.buttonID);
-        buf.writeUtf(packet.item);
+        buf.writeLong(packet.seed);
     }
 
     private static PacketCsgoProgress read(FriendlyByteBuf buf) {
-        return new PacketCsgoProgress(buf.readInt(), buf.readUtf());
+        return new PacketCsgoProgress(buf.readLong());
     }
 
     @Override

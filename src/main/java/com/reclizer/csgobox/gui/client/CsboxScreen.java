@@ -19,6 +19,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -29,6 +30,8 @@ public class CsboxScreen extends Screen {
     private final Player entity;
     private final Level world;
     public int gameTick = 0;
+
+    private boolean openClicked = false;
 
 
 
@@ -51,9 +54,15 @@ public class CsboxScreen extends Screen {
             this.itemGroup = ItemCsgoBox.getItemGroup(itemMenu);
             this.itemsList = itemsListProgress(this.itemGroup);
             this.gradeList = gradeListProgress(this.itemGroup);
-            if (ItemCsgoBox.getKey(itemMenu) != null) {
-                ResourceLocation resourceLocation = ResourceLocation.parse(ItemCsgoBox.getKey(itemMenu));
-                itemKey = new ItemStack(BuiltInRegistries.ITEM.get(resourceLocation));
+            ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
+            if (keyRl != null) {
+                try {
+                    Item item = BuiltInRegistries.ITEM.get(keyRl);
+                    if (item != null) {
+                        itemKey = new ItemStack(item);
+                    }
+                } catch (Exception ignored) {
+                }
             }
         } else {
             this.entity = null;
@@ -97,10 +106,13 @@ public class CsboxScreen extends Screen {
 
     public int isBoxKey() {
         int i = 0;
-        for (ItemStack stack : entity.getInventory().items) {
-            if (Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem())).toString().equals(ItemCsgoBox.getKey(itemMenu))) {
-                i = stack.getCount();
-                return i;
+        ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
+        if (keyRl != null) {
+            for (ItemStack stack : entity.getInventory().items) {
+                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                    i = stack.getCount();
+                    return i;
+                }
             }
         }
         return i;
@@ -305,20 +317,23 @@ public class CsboxScreen extends Screen {
             int openW = this.width * 4 / 100;
             int openH = this.height * 5 / 100;
             if (pMouseX >= openX && pMouseX <= openX + openW && pMouseY >= openY && pMouseY <= openY + openH) {
-                if (entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
-                    String key = ItemCsgoBox.getKey(itemMenu);
-                    if (key != null && !key.isEmpty()) {
+                if (!openClicked && entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
+                    ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
+                    boolean canOpen = true;
+                    if (keyRl != null && !keyRl.equals(ResourceLocation.parse("minecraft:air"))) {
+                        canOpen = false;
                         for (ItemStack stack : entity.getInventory().items) {
-                            if (Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem())).toString().equals(key)) {
-                                long screenSeed = (long) (Mth.sin(entity.getYRot()) * 100);
-                                Minecraft.getInstance().setScreen(new CsboxProgressScreen(screenSeed, itemGroup, entity));
-                                PacketDistributor.sendToServer(new PacketCsgoProgress(2, key));
+                            if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                                canOpen = true;
                                 break;
                             }
                         }
-                    } else {
+                    }
+                    if (canOpen) {
                         long screenSeed = (long) (Mth.sin(entity.getYRot()) * 100);
                         Minecraft.getInstance().setScreen(new CsboxProgressScreen(screenSeed, itemGroup, entity));
+                        PacketDistributor.sendToServer(new PacketCsgoProgress(screenSeed));
+                        openClicked = true;
                     }
                 }
                 return true;

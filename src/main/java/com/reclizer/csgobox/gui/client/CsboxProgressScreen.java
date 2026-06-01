@@ -21,7 +21,7 @@ import java.util.*;
 public class CsboxProgressScreen extends Screen {
     private final Player player;
     private final Map<ItemStack, Integer> itemGroup;
-    private long seed;
+    private final long seed;
     private final Random rng;
     private final List<ItemStack> itemInput = new ArrayList<>();
     private final List<Integer> gradeInput = new ArrayList<>();
@@ -167,7 +167,7 @@ public class CsboxProgressScreen extends Screen {
             this.startWidth = this.width;
             this.renderExport = renderMove(this.velocityExport);
 
-            PacketDistributor.sendToServer(new PacketGiveItem(seed));
+            PacketDistributor.sendToServer(new PacketGiveItem(seed, 0));
         }
 
         if (openTime < 5) return;

@@ -129,3 +129,9 @@ bin/
 # Local config & runtime
 config/
 init.gradle
+
+# Build output text files
+/*.txt
+
+# Local deployment script
+build_and_deploy.ps1

@@ -1,7 +1,8 @@
 package com.reclizer.csgobox.item;
 
 import com.reclizer.csgobox.CsgoBox;
-import com.reclizer.csgobox.config.CsgoBoxManage;
+import com.reclizer.csgobox.api.box.BoxDefinition;
+import com.reclizer.csgobox.api.box.BoxRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -25,16 +26,15 @@ public class ModItems {
             .title(Component.translatable("itemGroup." + CsgoBox.MODID + ".cs_tab"))
             .icon(() -> new ItemStack(ModItems.ITEM_CSGO_KEY0.get()))
             .displayItems((enabledFeatures, entries) -> {
-                entries.accept(ModItems.ITEM_CSGO_CRAFT.get());
                 entries.accept(ModItems.ITEM_CSGOBOX.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY0.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY1.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
 
-                for (ItemCsgoBox.BoxInfo info : CsgoBoxManage.BOX) {
+                for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
-                    ItemCsgoBox.setBoxInfo(info, stack);
+                    ItemCsgoBox.setBoxId(def.id(), stack);
                     entries.accept(stack);
                 }
             })
@@ -47,7 +47,6 @@ public class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY1 = ITEMS.register("csgo_key1", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", ItemCsgoKey::new);
-    public static final Supplier<Item> ITEM_CSGO_CRAFT = ITEMS.register("csgo_box_craft", ItemOpenBox::new);
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

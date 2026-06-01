@@ -5,6 +5,7 @@ import com.reclizer.csgobox.capability.CsboxPlayerData;
 import com.reclizer.csgobox.capability.ModCapability;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.utils.RandomItem;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -14,8 +15,10 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.*;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
-public record PacketGiveItem(long seed) implements CustomPacketPayload {
+public record PacketGiveItem(long seed, int grade) implements CustomPacketPayload {
 
     public static final Type<PacketGiveItem> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "give_item"));
 
@@ -26,10 +29,11 @@ public record PacketGiveItem(long seed) implements CustomPacketPayload {
 
     private static void write(FriendlyByteBuf buf, PacketGiveItem packet) {
         buf.writeLong(packet.seed);
+        buf.writeInt(packet.grade);
     }
 
     private static PacketGiveItem read(FriendlyByteBuf buf) {
-        return new PacketGiveItem(buf.readLong());
+        return new PacketGiveItem(buf.readLong(), buf.readInt());
     }
 
     @Override
@@ -54,42 +58,34 @@ public record PacketGiveItem(long seed) implements CustomPacketPayload {
 
             ItemStack giveItem = ItemStack.EMPTY;
             int finalGrade = 0;
-            for (int i = 0; i < 46; i++) {
+            int maxIter = message.grade > 0 ? Math.min(message.grade + 1, 50) : 46;
+
+            for (int i = 0; i < maxIter; i++) {
                 int grade = RandomItem.randomItemsGrade(rng, ItemCsgoBox.getRandom(box));
                 ItemStack itemStack = RandomItem.randomItems(rng, grade, itemList);
-                if (i == 45) {
+                if (i == maxIter - 1) {
                     giveItem = itemStack;
                     finalGrade = grade;
                 }
             }
 
             if (!giveItem.isEmpty()) {
-                var inventory = player.getInventory();
-                int emptySlot = -1;
-                for (int i = 0; i < 36; i++) {
-                    if (inventory.getItem(i).isEmpty()) {
-                        emptySlot = i;
-                        break;
-                    }
+                player.setData(ModCapability.PLAYER_DATA,
+                        new CsboxPlayerData(message.seed(), 0, giveItem.copy(), finalGrade));
+                if (player instanceof ServerPlayer sp) {
+                    PacketDistributor.sendToPlayer(sp, new PacketBoxOpenResult(giveItem.copy(), finalGrade));
                 }
-                if (emptySlot != -1) {
-                    player.getInventory().add(giveItem);
-                } else {
-                    player.drop(giveItem, true);
-                }
+                player.getInventory().add(giveItem.copy());
+                box.shrink(1);
             }
-
-            player.setData(ModCapability.PLAYER_DATA,
-                    player.getData(ModCapability.PLAYER_DATA).withItem(giveItem).withGrade(finalGrade));
-
-            box.shrink(1);
         });
     }
 
     private static boolean tryConsumeKeys(Player entity, ItemStack box) {
-        return Optional.ofNullable(ItemCsgoBox.getKey(box)).filter(key -> !key.isEmpty()).map(key -> {
+        ResourceLocation keyId = ItemCsgoBox.getKey(box);
+        return Optional.ofNullable(keyId).filter(key -> !key.equals(ResourceLocation.parse("minecraft:air"))).map(key -> {
             var keyItem = entity.getInventory().items.stream()
-                    .filter(stack -> key.equals(Objects.requireNonNull(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem())).toString()))
+                    .filter(stack -> key.equals(Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem()))))
                     .findAny();
             if (keyItem.isPresent()) {
                 keyItem.get().shrink(1);
@@ -99,4 +95,6 @@ public record PacketGiveItem(long seed) implements CustomPacketPayload {
             }
         }).orElse(true);
     }
+
+    public record GiveRequest(long seed, int grade) {}
 }

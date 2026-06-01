@@ -3,6 +3,7 @@ package com.reclizer.csgobox.gui.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.capability.CsboxPlayerData;
 import com.reclizer.csgobox.capability.ModCapability;
+import com.reclizer.csgobox.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.sounds.ModSounds;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.utils.ColorTools;
@@ -24,10 +25,21 @@ public class CsLookItemScreen extends Screen {
     private float rotX = 0;
     private float rotY = 0;
     private boolean openSwitch = true;
+    private boolean soundPlayed = false;
+
 
     public CsLookItemScreen() {
         super(Component.literal("look_item"));
         this.player = Minecraft.getInstance().player;
+        CsboxPlayerData data = player.getData(ModCapability.PLAYER_DATA);
+        ItemStack item = data.item();
+        if (!item.isEmpty()) {
+            this.openItem = item;
+            this.grade = data.grade();
+            this.openSwitch = false;
+            player.playSound(ModSounds.CS_FINSH.get(), 10F, 1F);
+            this.soundPlayed = true;
+        }
     }
 
     @Override
@@ -162,13 +174,25 @@ public class CsLookItemScreen extends Screen {
 
     public void containerTick() {
         if (!openSwitch) return;
-        player.playSound(ModSounds.CS_FINSH.get(), 10F, 1F);
         CsboxPlayerData data = player.getData(ModCapability.PLAYER_DATA);
         ItemStack itemStack = data.item();
         if (!itemStack.isEmpty()) {
-            openItem = itemStack;
-            grade = data.grade();
+            finishOpen(itemStack, data.grade());
+            return;
         }
+        ItemStack pendingItem = PacketBoxOpenResult.consumePendingItem();
+        if (!pendingItem.isEmpty()) {
+            finishOpen(pendingItem, PacketBoxOpenResult.consumePendingGrade());
+        }
+    }
+
+    private void finishOpen(ItemStack itemStack, int itemGrade) {
+        if (!soundPlayed) {
+            player.playSound(ModSounds.CS_FINSH.get(), 10F, 1F);
+            soundPlayed = true;
+        }
+        openItem = itemStack;
+        grade = itemGrade;
         openSwitch = false;
     }
 

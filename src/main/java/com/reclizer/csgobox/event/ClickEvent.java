@@ -29,8 +29,8 @@ public class ClickEvent {
 
             player.playSound(ModSounds.CS_OPEN.get(), 10F, 1F);
 
-            ItemCsgoBox.BoxInfo info = ItemCsgoBox.getBoxInfo(heldItem);
-            if (info != null) {
+            var def = ItemCsgoBox.getDefinition(heldItem);
+            if (def != null) {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc != null) {
                     mc.setScreen(new CsboxScreen());
