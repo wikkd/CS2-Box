@@ -1,1 +1,0 @@
-com.reclizer.csgobox.kubejs.KubeJsPlugin

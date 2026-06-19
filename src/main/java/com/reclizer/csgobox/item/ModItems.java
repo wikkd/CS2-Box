@@ -1,8 +1,8 @@
 package com.reclizer.csgobox.item;
 
 import com.reclizer.csgobox.CsgoBox;
-import com.reclizer.csgobox.api.box.BoxDefinition;
-import com.reclizer.csgobox.api.box.BoxRegistry;
+import com.reclizer.csgobox.box.BoxDefinition;
+import com.reclizer.csgobox.box.BoxRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -14,7 +14,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
-public class ModItems {
+public final class ModItems {
+    private ModItems() {
+    }
 
     private static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, CsgoBox.MODID);
 

@@ -46,6 +46,7 @@ runs {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    mavenCentral()
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://modmaven.dev' }
     maven { url = 'https://www.cursemaven.com' }
@@ -62,8 +63,6 @@ repositories {
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
     implementation "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
-    compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
-    compileOnly "dev.latvian.mods:rhino:2101.2.7-build.82"
 }
 
 tasks.named('processResources', ProcessResources).configure {

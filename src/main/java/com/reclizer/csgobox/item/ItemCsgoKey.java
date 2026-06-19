@@ -7,6 +7,4 @@ public class ItemCsgoKey extends Item {
     public ItemCsgoKey() {
         super(new Properties().rarity(Rarity.COMMON));
     }
-
-
 }

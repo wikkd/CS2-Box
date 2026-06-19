@@ -1,22 +1,95 @@
-# CS2 Box — NeoForge 1.21.1 非官方迁移版
+# CS2 Box - NeoForge 1.21.1 非官方迁移版
 
-> ⚠ **郑重提醒：本项目由 AI 辅助开发，可能存在未知问题，使用前请自行评估风险。**
+> 注意：本项目由 AI 辅助开发，可能存在未知问题，使用前请自行评估风险。
 
 ## 项目说明
 
 本模组为 [ChloePrime/CS2-Box](https://github.com/ChloePrime/CS2-Box)（Forge 1.20.1 版本）的 **非官方 NeoForge 1.21.1 迁移版**。
 
-原作者：Reclizer（原始概念与实现）  
-Forge 1.20.1 版本作者：ChloePrime  
+原作者：Reclizer（原始概念与实现）
+Forge 1.20.1 版本作者：ChloePrime
 NeoForge 1.21.1 迁移：wikkd
 
 ### 功能简介
 
-- 添加了 CS:GO / CS2 风格的开箱系统
-- 支持自定义箱子内容（配置文件）
-- 支持自定义箱子名称
-- 内含 3D 物品展示与开箱动画
-- 兼容 CraftTweaker 及其他 NBT 编辑模组
+- 添加 CS:GO / CS2 风格的开箱系统。
+- 支持通过 `config/csbox/*.json` 配置自定义箱子。
+- 支持箱子名称、钥匙、掉落实体、掉落概率、等级权重和奖励物品池。
+- 支持 Minecraft 1.21.1 `components` 物品数据，并兼容旧版 `tag` 字符串配置。
+- 开箱结果由服务端决定，客户端只负责预览和动画展示。
+- 开箱动画使用服务端下发的动画物品列表，最终落点与实际奖励一致。
+- 启动时可自动生成带英文 `_tutorial` 教程字段的默认 JSON。
+
+## 当前版本
+
+- **Mod 版本**: 1.0.4
+- **Minecraft**: 1.21.1
+- **NeoForge**: 21.1.115+
+- **Java**: 21
+
+构建产物位于 `build/libs/`。当前版本默认产物名为：
+
+```text
+csgobox-1.0.4.jar
+```
+
+## 配置文件
+
+箱子配置位于：
+
+```text
+config/csbox/*.json
+```
+
+当 `config/csbox` 下没有任何 `.json` 文件时，模组会自动生成：
+
+```text
+config/csbox/weapon_supply_box.json
+```
+
+自动生成的默认 JSON 包含 `_tutorial` 字段。JSON 不支持 `//` 注释，因此 `_tutorial` 使用合法 JSON 对象提供英文教程。加载器只读取已知配置字段，`_tutorial` 会被忽略，不影响箱子加载。
+
+常用字段：
+
+- `name`: 箱子显示名称。
+- `key`: 开箱钥匙物品 ID，使用 `minecraft:air` 表示不需要钥匙。
+- `drop`: 默认实体掉落概率，范围 `0.0` 到 `1.0`。
+- `random`: 五个等级权重，顺序为 `grade1` 到 `grade5`。
+- `entity`: 可写纯实体 ID 列表，也可写 `[实体ID, 掉落率]` 交替列表。
+- `grade1` 到 `grade5`: 奖励物品列表，`grade1` 最低，`grade5` 最高。
+
+物品格式示例：
+
+```json
+{
+  "id": "minecraft:diamond_sword",
+  "count": 1
+}
+```
+
+带 1.21.1 components 的物品示例：
+
+```json
+{
+  "id": "minecraft:diamond_sword",
+  "count": 1,
+  "components": {
+    "minecraft:custom_name": "{\"text\":\"Example Sword\",\"italic\":false}"
+  }
+}
+```
+
+## 测试重点
+
+手动测试时建议覆盖：
+
+- 默认 JSON 自动生成和加载。
+- 新版 object item 与旧版 JSON string item。
+- 缺失物品 ID、空等级、异常权重、奇数实体掉落配置。
+- 有钥匙、无钥匙、错误钥匙。
+- 开箱动画最终展示物品与实际获得物品一致。
+- ESC 退出动画后再次开箱不会卡死。
+- 空箱错误提示不被 3D 箱子模型遮挡。
 
 ## 许可声明
 
@@ -76,10 +149,16 @@ Copyright (c) 2024 Reclizer
 ## 构建指南
 
 ```bash
-./gradlew build -x test -x check
+./gradlew build
 ```
 
 构建产物位于 `build/libs/` 目录。
+
+如果只需要快速验证编译：
+
+```bash
+./gradlew compileJava
+```
 
 ## 致谢
 

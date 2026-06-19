@@ -1,7 +1,10 @@
 package com.reclizer.csgobox.utils;
 
-public class OverlayColor {
+public final class OverlayColor {
+    private OverlayColor() {
+    }
+
     public static int getBackgroundColor() {
-        return 0x30000000;
+        return 0xFF333333;
     }
 }

@@ -1,8 +1,11 @@
-package com.reclizer.csgobox.gui.client;
+package com.reclizer.csgobox.gui;
 
-import com.reclizer.csgobox.gui.client.CsboxProgressScreen;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.reclizer.csgobox.CsgoBox;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.packet.PacketCsgoProgress;
+import com.reclizer.csgobox.packet.PacketRequestBoxItems;
+import com.reclizer.csgobox.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.utils.GuiItemMove;
 import com.reclizer.csgobox.utils.IconListTools;
@@ -16,71 +19,82 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CsboxScreen extends Screen {
     private final Player entity;
     private final Level world;
-    public int gameTick = 0;
 
     private boolean openClicked = false;
+    private boolean boxEmpty = false;
 
 
 
-    public float itemRotX;
-    public float itemRotY;
+    private float itemRotX;
+    private float itemRotY;
 
-    public Map<ItemStack, Integer> itemGroup;
+    private Map<ItemStack, Integer> itemGroup;
 
-    List<ItemStack> itemsList;
-    List<Integer> gradeList;
+    private List<ItemStack> itemsList;
+    private List<Integer> gradeList;
+
+    private ResourceLocation keyRl;
+    private final long syncRequestId;
+    private Optional<ResourceLocation> expectedBoxId = Optional.empty();
 
     public CsboxScreen() {
         super(Component.literal("cs_screen"));
         this.minecraft = Minecraft.getInstance();
+        this.itemGroup = new LinkedHashMap<>();
+        this.itemsList = new ArrayList<>();
+        this.gradeList = new ArrayList<>();
+        this.openClicked = true;
+        this.syncRequestId = ThreadLocalRandom.current().nextLong();
+
         if (this.minecraft.player != null) {
             this.entity = this.minecraft.player;
             this.world = entity.level();
-            ItemStack boxStack = this.minecraft.player.getItemInHand(InteractionHand.MAIN_HAND);
-            this.itemMenu = boxStack;
-            this.itemGroup = ItemCsgoBox.getItemGroup(itemMenu);
-            this.itemsList = itemsListProgress(this.itemGroup);
-            this.gradeList = gradeListProgress(this.itemGroup);
-            ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
-            if (keyRl != null) {
-                try {
-                    Item item = BuiltInRegistries.ITEM.get(keyRl);
-                    if (item != null) {
-                        itemKey = new ItemStack(item);
-                    }
-                } catch (Exception ignored) {
-                }
-            }
+            this.itemMenu = this.minecraft.player.getItemInHand(InteractionHand.MAIN_HAND);
+            this.expectedBoxId = Optional.ofNullable(ItemCsgoBox.getBoxId(this.itemMenu));
+            PacketDistributor.sendToServer(new PacketRequestBoxItems(this.syncRequestId));
         } else {
             this.entity = null;
             this.world = null;
+            this.itemMenu = ItemStack.EMPTY;
         }
     }
 
-    public ItemStack itemKey;
-    public ItemStack itemMenu;
+    private ItemStack itemKey;
+    private ItemStack itemMenu;
+
+    private int actionButtonWidth() {
+        return Math.max(64, this.width * 7 / 100);
+    }
+
+    private int openButtonX() {
+        return Math.max(8, this.width - actionButtonWidth() * 2 - 20);
+    }
+
+    private int backButtonX() {
+        return openButtonX() + actionButtonWidth() + 8;
+    }
 
     @Override
     public boolean isPauseScreen() {
         return false;
     }
 
-    public static List<ItemStack> itemsListProgress(Map<ItemStack, Integer> itemList) {
+    private static List<ItemStack> itemsListProgress(Map<ItemStack, Integer> itemList) {
+        int maxGrade = itemList.values().stream().max(Integer::compareTo).orElse(5);
         List<ItemStack> itemStacks = new ArrayList<>();
-        for (int i = 1; i < 6; i++) {
+        for (int i = 1; i <= maxGrade; i++) {
             for (Map.Entry<ItemStack, Integer> entry : itemList.entrySet()) {
                 if (entry.getValue() == i) {
                     itemStacks.add(entry.getKey());
@@ -90,9 +104,10 @@ public class CsboxScreen extends Screen {
         return itemStacks;
     }
 
-    public static List<Integer> gradeListProgress(Map<ItemStack, Integer> itemList) {
+    private static List<Integer> gradeListProgress(Map<ItemStack, Integer> itemList) {
+        int maxGrade = itemList.values().stream().max(Integer::compareTo).orElse(5);
         List<Integer> itemStacks = new ArrayList<>();
-        for (int i = 1; i < 6; i++) {
+        for (int i = 1; i <= maxGrade; i++) {
             for (Map.Entry<ItemStack, Integer> entry : itemList.entrySet()) {
                 if (entry.getValue() == i) {
                     itemStacks.add(i);
@@ -102,20 +117,18 @@ public class CsboxScreen extends Screen {
         return itemStacks;
     }
 
-    public int boxKeyCount;
+    private int boxKeyCount;
 
-    public int isBoxKey() {
-        int i = 0;
-        ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
-        if (keyRl != null) {
+    private int countKeys() {
+        int total = 0;
+        if (keyRl != null && this.entity != null) {
             for (ItemStack stack : entity.getInventory().items) {
                 if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                    i = stack.getCount();
-                    return i;
+                    total += stack.getCount();
                 }
             }
         }
-        return i;
+        return total;
     }
 
     @Override
@@ -151,32 +164,36 @@ public class CsboxScreen extends Screen {
 
         int FrameWidth = width * 26 / 100;
         float scale = FrameWidth / 16F;
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 12 / 100,
-                this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
+        if (this.entity != null) {
+            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 12 / 100,
+                    this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
+        }
 
         int x = 0;
         int y = 0;
 
-        for (int i = 0; i < itemsList.size(); i++) {
-            int py = 55;
-            int px = i;
-            if (i > 9) {
-                py = 73;
-                px = i - 10;
+        if (this.entity != null) {
+            for (int i = 0; i < itemsList.size(); i++) {
+                int py = 55;
+                int px = i;
+                if (i > 9) {
+                    py = 73;
+                    px = i - 10;
+                }
+                ItemStack itemStack1 = itemsList.get(i);
+                int grade = gradeList.get(i);
+                x = px;
+                y = py;
+                if (grade == 5) break;
+                IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
+                        this.width * 4 / 100 + px * this.width * 9 / 100,
+                        this.height * py / 100, this.width, this.height, grade);
             }
-            ItemStack itemStack1 = itemsList.get(i);
-            int grade = gradeList.get(i);
-            x = px;
-            y = py;
-            if (grade == 5) break;
-            IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
-                    this.width * 4 / 100 + px * this.width * 9 / 100,
-                    this.height * py / 100, this.width, this.height, grade);
-        }
-        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
-            IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
-                    this.width * 4 / 100 + x * this.width * 9 / 100,
-                    this.height * y / 100, this.width, this.height, 5);
+            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
+                IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
+                        this.width * 4 / 100 + x * this.width * 9 / 100,
+                        this.height * y / 100, this.width, this.height, 5);
+            }
         }
 
         if (itemKey != null) {
@@ -184,10 +201,10 @@ public class CsboxScreen extends Screen {
                     this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 
-        drawButton(guiGraphics, this.width * 67 / 100, this.height * 94 / 100,
-                this.width * 4 / 100, this.height * 5 / 100, 0xFF00AA00, 0xFF00FF00);
-        drawButton(guiGraphics, this.width * 72 / 100, this.height * 94 / 100,
-                this.width * 4 / 100, this.height * 5 / 100, 0xFFAA0000, 0xFFFF0000);
+        drawButton(guiGraphics, openButtonX(), this.height * 94 / 100,
+                actionButtonWidth(), this.height * 5 / 100, 0xFF00AA00, 0xFF00FF00);
+        drawButton(guiGraphics, backButtonX(), this.height * 94 / 100,
+                actionButtonWidth(), this.height * 5 / 100, 0xFFAA0000, 0xFFFF0000);
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
@@ -209,6 +226,7 @@ public class CsboxScreen extends Screen {
         Style style = Style.EMPTY.withBold(true);
         int x = 0;
         int y = 0;
+        boolean showNames = CsgoBox.CONFIG.animation.showItemNames;
 
         for (int i = 0; i < itemsList.size(); i++) {
             int py = 67;
@@ -222,13 +240,17 @@ public class CsboxScreen extends Screen {
             x = px;
             y = py;
             if (grade > 4) break;
-            Component component = itemStack1.getItem().getName(itemStack1);
-            FormattedCharSequence pText = component.getVisualOrderText();
-            renderText(guiGraphics, pText, this.width * 4F / 100 + px * this.width * 9F / 100, this.height * py / 100F, 0.6F);
+            if (showNames) {
+                Component component = itemStack1.getItem().getName(itemStack1);
+                FormattedCharSequence pText = component.getVisualOrderText();
+                renderText(guiGraphics, pText, this.width * 4F / 100 + px * this.width * 9F / 100, this.height * py / 100F, 0.6F);
+            }
         }
-        renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
-                this.width * 4 / 100F + x * this.width * 9 / 100F,
-                this.height * y / 100F, 0.6F);
+        if (showNames) {
+            renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
+                    this.width * 4 / 100F + x * this.width * 9 / 100F,
+                    this.height * y / 100F, 0.6F);
+        }
 
         renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_box").getVisualOrderText(),
                 this.width * 46F / 100F, this.height * 13F / 100F, 0.8F);
@@ -255,10 +277,25 @@ public class CsboxScreen extends Screen {
         renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.title").withStyle(style).getVisualOrderText(),
                 middleOf(I18n.get("gui.csgobox.csgo_box.title"), 2), this.height * 5.9F / 100F, 2F);
 
-        renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.open_box").withStyle(style).getVisualOrderText(),
-                (float) this.width * 67.5F / 100F, (float) this.height * 95 / 100, 0.8F);
-        renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.back_box").withStyle(style).getVisualOrderText(),
-                (float) this.width * 72.5F / 100F, (float) this.height * 95 / 100, 0.8F);
+        if (boxEmpty) {
+            Component warnText = Component.translatable("gui.csgobox.csgo_box.label_not_configured");
+            FormattedCharSequence warnSeq = warnText.getVisualOrderText();
+            float warnWidth = this.font.width(warnSeq) * 1.2F;
+            int bgX0 = Math.max(8, (int) ((this.width - warnWidth) / 2.0F) - 8);
+            int bgX1 = Math.min(this.width - 8, (int) ((this.width + warnWidth) / 2.0F) + 8);
+            int bgY0 = this.height * 23 / 100 - 6;
+            int bgY1 = bgY0 + (int) (this.font.lineHeight * 1.2F) + 10;
+            RenderSystem.disableDepthTest();
+            guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, 0xAA101010);
+            RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
+                    (this.width - warnWidth) / 2.0F, bgY0 + 5, 0, 0, 1.2F, 0xFFFF4444);
+            RenderSystem.enableDepthTest();
+        }
+
+        renderCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.open_box").withStyle(style).getVisualOrderText(),
+                openButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F);
+        renderCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.back_box").withStyle(style).getVisualOrderText(),
+                backButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F);
     }
 
     private float middleOf(String text, float scale) {
@@ -269,8 +306,12 @@ public class CsboxScreen extends Screen {
         RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale, 0xFFD3D3D3);
     }
 
-    private void renderText(GuiGraphics guiGraphics, FormattedCharSequence pText, float px, float py, float scale, int color) {
-        RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale, color);
+    private void renderCenteredText(GuiGraphics guiGraphics, FormattedCharSequence text,
+                                    int x, int y, int w, int h, float scale) {
+        float textW = this.font.width(text) * scale;
+        float textX = x + (w - textW) / 2.0F;
+        float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
+        RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, 0xFFD3D3D3);
     }
 
     @Override
@@ -286,20 +327,27 @@ public class CsboxScreen extends Screen {
     }
 
     public void containerTick() {
-        gameTick++;
-        if (gameTick == 1) {
-            if (isBoxKey() > 0) {
-                boxKeyCount = isBoxKey();
+        var data = PacketSyncBoxItems.consumeMatching(this.syncRequestId, this.expectedBoxId);
+        if (data != null) {
+            this.itemGroup = buildItemGroup(data);
+            this.itemsList = itemsListProgress(this.itemGroup);
+            this.gradeList = gradeListProgress(this.itemGroup);
+            this.itemKey = data.keyItem();
+            if (data.keyItem() != null && !data.keyItem().isEmpty()) {
+                this.keyRl = BuiltInRegistries.ITEM.getKey(data.keyItem().getItem());
             }
+            this.openClicked = this.itemGroup.isEmpty();
+            this.boxEmpty = this.itemGroup.isEmpty();
+            this.boxKeyCount = countKeys();
         }
-        if (gameTick % 50 == 0) {
-            if (isBoxKey() > 0) {
-                boxKeyCount = isBoxKey();
-            }
+    }
+
+    private Map<ItemStack, Integer> buildItemGroup(PacketSyncBoxItems.BoxData data) {
+        Map<ItemStack, Integer> map = new LinkedHashMap<>();
+        for (int i = 0; i < data.items().size(); i++) {
+            map.put(data.items().get(i), data.grades().get(i));
         }
-        if (gameTick > 100) {
-            gameTick = 0;
-        }
+        return map;
     }
 
 
@@ -312,36 +360,39 @@ public class CsboxScreen extends Screen {
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton == 0) {
-            int openX = this.width * 67 / 100;
+            int openX = openButtonX();
             int openY = this.height * 94 / 100;
-            int openW = this.width * 4 / 100;
+            int openW = actionButtonWidth();
             int openH = this.height * 5 / 100;
             if (pMouseX >= openX && pMouseX <= openX + openW && pMouseY >= openY && pMouseY <= openY + openH) {
-                if (!openClicked && entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
-                    ResourceLocation keyRl = ItemCsgoBox.getKey(itemMenu);
-                    boolean canOpen = true;
-                    if (keyRl != null && !keyRl.equals(ResourceLocation.parse("minecraft:air"))) {
-                        canOpen = false;
-                        for (ItemStack stack : entity.getInventory().items) {
-                            if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                                canOpen = true;
-                                break;
+                if (this.entity != null) {
+                    if (!openClicked && entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
+                        ResourceLocation keyRl = this.keyRl;
+                        boolean canOpen = true;
+                        if (keyRl != null && !keyRl.equals(ResourceLocation.parse("minecraft:air"))) {
+                            canOpen = false;
+                            for (ItemStack stack : entity.getInventory().items) {
+                                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                                    canOpen = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if (canOpen) {
-                        long screenSeed = (long) (Mth.sin(entity.getYRot()) * 100);
-                        Minecraft.getInstance().setScreen(new CsboxProgressScreen(screenSeed, itemGroup, entity));
-                        PacketDistributor.sendToServer(new PacketCsgoProgress(screenSeed));
-                        openClicked = true;
+                        if (canOpen) {
+                            long openRequestId = ThreadLocalRandom.current().nextLong();
+                            // Request id only matches the later server result to this animation.
+                            Minecraft.getInstance().setScreen(new CsboxProgressScreen(entity, openRequestId));
+                            PacketDistributor.sendToServer(new PacketCsgoProgress(openRequestId));
+                            openClicked = true;
+                        }
                     }
                 }
                 return true;
             }
 
-            int backX = this.width * 72 / 100;
+            int backX = backButtonX();
             int backY = this.height * 94 / 100;
-            int backW = this.width * 4 / 100;
+            int backW = actionButtonWidth();
             int backH = this.height * 5 / 100;
             if (pMouseX >= backX && pMouseX <= backX + backW && pMouseY >= backY && pMouseY <= backY + backH) {
                 if (this.minecraft != null && this.minecraft.player != null) {

@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.command;
 
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -20,27 +21,26 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import com.reclizer.csgobox.CsgoBox;
-import com.reclizer.csgobox.api.box.BoxDefinition;
-import com.reclizer.csgobox.api.box.BoxJsonLoader;
-import com.reclizer.csgobox.api.box.BoxRegistry;
-import com.reclizer.csgobox.api.box.GradeGroup;
+import com.reclizer.csgobox.box.BoxDefinition;
+import com.reclizer.csgobox.box.BoxJsonLoader;
+import com.reclizer.csgobox.box.BoxRegistry;
+import com.reclizer.csgobox.box.GradeGroup;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.item.ModItems;
-import com.reclizer.csgobox.packet.PacketOpenBoxEditor;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @EventBusSubscriber(modid = CsgoBox.MODID)
-public class CsboxCommand {
+public final class CsboxCommand {
+    private CsboxCommand() {
+    }
 
     private static final DynamicCommandExceptionType BOX_NOT_FOUND = new DynamicCommandExceptionType(
             id -> Component.translatable("commands.csgobox.info.not_found", id)
@@ -75,7 +75,7 @@ public class CsboxCommand {
                                 .suggests(BOX_SUGGESTIONS)
                                 .executes(ctx -> showBoxInfo(ResourceLocationArgument.getId(ctx, "box"), ctx.getSource()))))
                 .then(Commands.literal("add")
-                        .then(Commands.argument("box", StringArgumentType.word())
+                        .then(Commands.argument("box", StringArgumentType.string())
                                 .suggests((ctx, builder) -> {
                                     SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
                                     return builder.buildFuture();
@@ -102,7 +102,7 @@ public class CsboxCommand {
                         )
                         .executes(ctx -> {
                             ctx.getSource().sendSuccess(() -> Component.translatable("commands.csgobox.add.usage"), false);
-                            return 1;
+                            return Command.SINGLE_SUCCESS;
                         }))
                 .then(Commands.literal("set")
                         .then(Commands.argument("box", ResourceLocationArgument.id())
@@ -173,9 +173,6 @@ public class CsboxCommand {
                 .then(Commands.literal("reload")
                         .executes(CsboxCommand::reloadBoxes)
                 )
-                .then(Commands.literal("gui")
-                        .executes(CsboxCommand::openGui)
-                )
         );
     }
 
@@ -192,9 +189,8 @@ public class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_weight"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.gui"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
-        return 1;
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int listAllBoxes(CommandContext<CommandSourceStack> ctx) {
@@ -223,10 +219,7 @@ public class CsboxCommand {
     }
 
     private static int showBoxInfo(ResourceLocation boxId, CommandSourceStack source) throws CommandSyntaxException {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.info.header",
                 def.id().toString(), def.name().getString()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.info.key",
@@ -258,7 +251,7 @@ public class CsboxCommand {
             GradeGroup grade = def.grades().get(i);
             source.sendSuccess(() -> Component.translatable("commands.csgobox.info.grade_entry",
                     grade.id(), String.valueOf(grade.weight()), String.valueOf(grade.items().size())), false);
-            List<ItemStack> displayItems = grade.items().stream().limit(5).collect(Collectors.toList());
+            List<ItemStack> displayItems = grade.items().stream().limit(5).toList();
             for (int j = 0; j < displayItems.size(); j++) {
                 final int itemIndex = j;
                 ItemStack item = displayItems.get(j);
@@ -270,7 +263,7 @@ public class CsboxCommand {
                         String.valueOf(grade.items().size() - 5)), false);
             }
         }
-        return 1;
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int addBoxByName(String name, CommandSourceStack source) {
@@ -278,7 +271,7 @@ public class CsboxCommand {
         if (BoxRegistry.contains(boxId)) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.already_exists",
                     boxId.toString()), false);
-            return 1;
+            return Command.SINGLE_SUCCESS;
         }
         BoxDefinition newBox = BoxDefinition.builder(boxId, name).build();
         BoxRegistry.register(newBox);
@@ -287,51 +280,41 @@ public class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_add", boxId.toString()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_info", boxId.toString()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_give", boxId.toString()), false);
-        return 1;
+        BoxJsonLoader.saveToFile(newBox);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int addHandItem(String boxArg, String gradeId, int count, ServerPlayer player) throws CommandSyntaxException {
         ResourceLocation boxId = resolveBoxId(boxArg);
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
         ItemStack handItem = player.getMainHandItem();
         if (handItem.isEmpty()) {
             player.sendSystemMessage(Component.translatable("commands.csgobox.add.item.empty_hand"));
             return 0;
         }
-        GradeGroup targetGrade = findGrade(def, gradeId);
-        if (targetGrade == null) {
-            throw GRADE_NOT_FOUND.create(gradeId);
-        }
+        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
         List<ItemStack> newItems = new ArrayList<>(targetGrade.items());
         newItems.add(handItem.copyWithCount(count));
         GradeGroup updatedGrade = new GradeGroup(
                 targetGrade.id(), targetGrade.displayName(),
                 targetGrade.color(), targetGrade.weight(), newItems
         );
-        BoxDefinition updatedBox = updateGradeInBox(def, gradeId, updatedGrade);
+        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
         BoxRegistry.register(updatedBox);
         player.sendSystemMessage(Component.translatable("commands.csgobox.add.item.success",
                 handItem.getItem().getName(handItem).getString(), count, boxId.toString(), gradeId));
-        return 1;
+        BoxJsonLoader.saveToFile(updatedBox);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int addInventoryItems(String boxArg, String gradeId, ServerPlayer player) throws CommandSyntaxException {
         ResourceLocation boxId = resolveBoxId(boxArg);
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
         if (player.isCreative()) {
             player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.creative_mode"));
             return 0;
         }
-        GradeGroup targetGrade = findGrade(def, gradeId);
-        if (targetGrade == null) {
-            throw GRADE_NOT_FOUND.create(gradeId);
-        }
+        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
         List<ItemStack> existingItems = new ArrayList<>(targetGrade.items());
         List<ItemStack> newItemsToAdd = new ArrayList<>();
         int addedCount = 0;
@@ -359,24 +342,19 @@ public class CsboxCommand {
                 targetGrade.weight(),
                 new ArrayList<>(existingItems)
         );
-        BoxDefinition updatedBox = updateGradeInBox(def, gradeId, updatedGrade);
+        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
         BoxRegistry.register(updatedBox);
         player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.success", addedCount, boxId.toString(), gradeId));
         if (skippedCount > 0) {
             player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.skipped", skippedCount));
         }
+        BoxJsonLoader.saveToFile(updatedBox);
         return addedCount;
     }
 
     private static int setItemCount(ResourceLocation boxId, String gradeId, int index, int count, CommandSourceStack source) throws CommandSyntaxException {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
-        GradeGroup targetGrade = findGrade(def, gradeId);
-        if (targetGrade == null) {
-            throw GRADE_NOT_FOUND.create(gradeId);
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
+        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
         int zeroBasedIndex = index - 1;
         if (zeroBasedIndex < 0 || zeroBasedIndex >= targetGrade.items().size()) {
             throw ITEM_NOT_FOUND.create(index + " (valid: 1-" + targetGrade.items().size() + ")");
@@ -401,20 +379,15 @@ public class CsboxCommand {
                 targetGrade.weight(),
                 updatedItems
         );
-        BoxDefinition updatedBox = updateGradeInBox(def, gradeId, updatedGrade);
+        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
         BoxRegistry.register(updatedBox);
-        return 1;
+        BoxJsonLoader.saveToFile(updatedBox);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int setGradeWeight(ResourceLocation boxId, String gradeId, int weight, CommandSourceStack source) throws CommandSyntaxException {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
-        GradeGroup targetGrade = findGrade(def, gradeId);
-        if (targetGrade == null) {
-            throw GRADE_NOT_FOUND.create(gradeId);
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
+        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
         GradeGroup updatedGrade = new GradeGroup(
                 targetGrade.id(),
                 targetGrade.displayName(),
@@ -422,18 +395,16 @@ public class CsboxCommand {
                 weight,
                 targetGrade.items()
         );
-        BoxDefinition updatedBox = updateGradeInBox(def, gradeId, updatedGrade);
+        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
         BoxRegistry.register(updatedBox);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.set.grade_weight.success",
                 gradeId, weight, boxId.toString()), false);
-        return 1;
+        BoxJsonLoader.saveToFile(updatedBox);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int giveBox(ResourceLocation boxId, int count, Collection<ServerPlayer> targets, CommandSourceStack source) throws CommandSyntaxException {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
+        BoxDefinition def = getBoxOrThrow(boxId);
         ItemStack boxStack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
         ItemCsgoBox.setBoxId(boxId, boxStack);
         boxStack.setCount(Math.min(count, boxStack.getMaxStackSize()));
@@ -468,35 +439,16 @@ public class CsboxCommand {
         return ResourceLocation.parse(CsgoBox.MODID + ":" + boxArg);
     }
 
-    private static GradeGroup findGrade(BoxDefinition def, String gradeId) {
-        for (GradeGroup grade : def.grades()) {
-            if (grade.id().equals(gradeId)) {
-                return grade;
-            }
+    private static BoxDefinition getBoxOrThrow(ResourceLocation boxId) throws CommandSyntaxException {
+        BoxDefinition def = BoxRegistry.get(boxId);
+        if (def == null) {
+            throw BOX_NOT_FOUND.create(boxId.toString());
         }
-        return null;
+        return def;
     }
 
-    private static BoxDefinition updateGradeInBox(BoxDefinition def, String gradeId, GradeGroup updatedGrade) {
-        List<GradeGroup> newGrades = new ArrayList<>();
-        for (GradeGroup grade : def.grades()) {
-            if (grade.id().equals(gradeId)) {
-                newGrades.add(updatedGrade);
-            } else {
-                newGrades.add(grade);
-            }
-        }
-        return new BoxDefinition(
-                def.id(),
-                def.name(),
-                def.keyItem(),
-                def.dropRate(),
-                def.dropEntities(),
-                newGrades,
-                def.texture(),
-                def.sound(),
-                def.entityDropRates()
-        );
+    private static GradeGroup getGradeOrThrow(BoxDefinition def, String gradeId) throws CommandSyntaxException {
+        return def.findGrade(gradeId).orElseThrow(() -> GRADE_NOT_FOUND.create(gradeId));
     }
 
     private static CompletableFuture<Suggestions> gradeSuggestions(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
@@ -513,12 +465,5 @@ public class CsboxCommand {
             CsgoBox.LOGGER.warn("Error in grade suggestions: {}", e.getMessage());
         }
         return builder.buildFuture();
-    }
-
-    private static int openGui(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        PacketDistributor.sendToPlayer(player, new PacketOpenBoxEditor());
-        ctx.getSource().sendSuccess(() -> Component.translatable("commands.csgobox.gui.open"), false);
-        return 1;
     }
 }

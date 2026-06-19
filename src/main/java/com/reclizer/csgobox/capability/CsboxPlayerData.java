@@ -6,6 +6,10 @@ import net.minecraft.world.item.ItemStack;
 
 public record CsboxPlayerData(long seed, int mode, ItemStack item, int grade) {
 
+    public CsboxPlayerData {
+        item = item == null ? ItemStack.EMPTY : item.copy();
+    }
+
     public CsboxPlayerData() {
         this(0L, 0, ItemStack.EMPTY, 0);
     }
@@ -16,26 +20,4 @@ public record CsboxPlayerData(long seed, int mode, ItemStack item, int grade) {
             ItemStack.OPTIONAL_CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(CsboxPlayerData::item),
             Codec.INT.optionalFieldOf("grade", 0).forGetter(CsboxPlayerData::grade)
     ).apply(instance, CsboxPlayerData::new));
-
-    public CsboxPlayerData withSeed(long seed) {
-        return new CsboxPlayerData(seed, mode, item, grade);
-    }
-
-    public CsboxPlayerData withMode(int mode) {
-        if (mode > -2 && mode < 2) {
-            return new CsboxPlayerData(seed, mode, item, grade);
-        }
-        return this;
-    }
-
-    public CsboxPlayerData withItem(ItemStack item) {
-        return new CsboxPlayerData(seed, mode, item, grade);
-    }
-
-    public CsboxPlayerData withGrade(int grade) {
-        if (grade > 0 && grade < 6) {
-            return new CsboxPlayerData(seed, mode, item, grade);
-        }
-        return this;
-    }
 }

@@ -30,10 +30,3 @@ mandatory=false
 versionRange="[15,)"
 ordering="NONE"
 side="BOTH"
-
-[[dependencies.${mod_id}]]
-modId="kubejs"
-mandatory=false
-versionRange="[2101,)"
-ordering="NONE"
-side="BOTH"

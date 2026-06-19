@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.0.4] - 2026-06-19
+
+### Added
+- Default generated box JSON now includes an English `_tutorial` object. It documents file naming, keys, drop rates, random weights, entity formats, grade lists, item objects, `components`, legacy `tag`, and the recommended workflow.
+- Added server-authoritative animation item data to `PacketBoxOpenResult`, so the client animation strip and final reward use the same server-selected result.
+- Added request id matching for box preview and open result packets to prevent stale client responses from being consumed by the wrong screen.
+
+### Fixed
+- Fixed client GUI opening from the wrong thread in integrated server play. Box screens are now opened only for the local client player and scheduled onto the client thread.
+- Fixed `RenderFontTool` crashing when a screen font is temporarily null by falling back to `Minecraft.getInstance().font`.
+- Fixed open animation waiting forever when the server rejects an open request, such as during short cooldown, missing keys, empty boxes, or invalid held items. The server now sends a matching empty result so the client exits cleanly.
+- Fixed animation speed behavior when the winning item was placed near the start of the strip. Winning indexes are now selected from a late animation window, making the animation start fast and slow down into the reward.
+- Fixed preview text for empty boxes being hidden behind the 3D box model by drawing the warning above the model with a foreground overlay.
+- Fixed several boundary cases around negative or oversized weights, odd entity drop-rate arrays, empty item lists, null item stacks, and list size limits in custom packets.
+
+### Changed
+- Opening cooldown is now a short anti-double-click guard instead of the full animation duration, so cancelling an animation with ESC does not block the next manual test.
+- Box, grade, packet, and utility data paths were refactored to copy mutable `ItemStack` and collection data at boundaries.
+- Utility classes were made non-instantiable where appropriate.
+- `RandomItem` now handles null and empty inputs defensively and uses long total weights to avoid overflow.
+- `CsboxProgressScreen` now uses frame partial ticks as the render interpolation factor instead of mixing velocity into the interpolation amount.
+
+### Notes
+- Existing JSON files are not overwritten. The `_tutorial` object appears only when the mod auto-generates a new default JSON in an empty `config/csbox` directory.
+- The current Gradle mod version is `1.0.4`, so the expected release jar is `csgobox-1.0.4.jar`.
+
 ## [1.0.2] - 2026-06-01
 
 ### Added
