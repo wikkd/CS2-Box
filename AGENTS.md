@@ -53,8 +53,7 @@ ModLoadingContext.get().getActiveContainer().registerConfig(
 ## 关键物品
 
 - `csgobox:csgo_key0`（铁）、`csgo_key1`（金）、`csgo_key2`（钻石）
-- `csgobox:csgo_key3`（下界合金）：**双配方并存**
-  - 工作台：`3x netherite_ingot`（竖向 3x1）
+- `csgobox:csgo_key3`（下界合金）：**仅锻造台配方**
   - 锻造台：`csgo_key2` + `netherite_upgrade_smithing_template` + `netherite_ingot`
 - 配方文件路径：`src/main/resources/data/csgobox/recipes/`
 

@@ -6,9 +6,9 @@
 - **完全移除 Cloth Config 依赖。** 模组不再依赖 `me.shedaniel.cloth:cloth-config-neoforge`。配置现通过 NeoForge 原生 `ModConfigSpec` API 持久化，存储为 `config/csgobox-common.toml`。
 
 ### 新增
-- **`csgobox:csgo_key3` 的锻造台升级路径。** 除现有的 3x 下界合金锭合成配方外，玩家还可在锻造台中使用 `minecraft:netherite_upgrade_smithing_template` 和一个下界合金锭，将钻石钥匙升级为下界合金钥匙。
+- **`csgobox:csgo_key3` 的锻造台升级路径。** 玩家在锻造台中使用 `minecraft:netherite_upgrade_smithing_template` 和一个下界合金锭，将钻石钥匙 (`csgobox:csgo_key2`) 升级为下界合金钥匙。
   - 配方文件：`data/csgobox/recipes/csgo_key3_smithing.json`
-  - 原工作台配方与新锻造台配方共存。
+  - **1.0.5 修正**：此配方现为下界合金钥匙的唯一获取方式。原工作台 3x 下界合金锭合成配方（`data/csgobox/recipes/csgo_key3.json`）已移除。
 
 ### 更改
 - 配置文件路径从 `config/csgobox.toml` 迁移至 `config/csgobox-common.toml`。现有玩家需手动删除旧文件以避免混淆，数值不会自动迁移。

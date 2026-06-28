@@ -88,10 +88,9 @@ config/csbox/weapon_supply_box.json
 | 铁钥匙 (key0) | 工作台 crafting_shaped | 3x `minecraft:iron_ingot`（3x1 竖列） |
 | 金钥匙 (key1) | 工作台 crafting_shaped | 3x `minecraft:gold_ingot`（3x1 竖列） |
 | 钻石钥匙 (key2) | 工作台 crafting_shaped | 3x `minecraft:diamond`（3x1 竖列） |
-| 下界合金钥匙 (key3) | 工作台 crafting_shaped | 3x `minecraft:netherite_ingot`（3x1 竖列） |
 | 下界合金钥匙 (key3) | 锻造台 smithing_transform | 1x `csgobox:csgo_key2`（base） + 1x `minecraft:netherite_ingot`（addition） + 1x `minecraft:netherite_upgrade_smithing_template`（template） |
 
-下界合金钥匙提供两种获取路径：工作台直接合成与锻造台升级。锻造台升级每次消耗 1 个下界合金升级模板（原版行为）。钻石钥匙为锻造台的 base 物品，严格限定为 `csgobox:csgo_key2`。
+下界合金钥匙仅可通过锻造台升级获得：使用钻石钥匙 (`csgo_key2`) + 下界合金升级模板 + 一颗下界合金锭升级。每次升级消耗 1 个下界合金升级模板（原版行为）。钻石钥匙为锻造台的 base 物品，严格限定为 `csgobox:csgo_key2`。
 
 ## 测试重点
 
@@ -104,7 +103,7 @@ config/csbox/weapon_supply_box.json
 - 开箱动画最终展示物品与实际获得物品一致。
 - ESC 退出动画后再次开箱不会卡死。
 - 空箱错误提示不被 3D 箱子模型遮挡。
-- 下界合金钥匙的两种合成路径（工作台 3x 下界合金锭 或 锻造台 key2 + 模板 + 下界合金锭）。
+- 下界合金钥匙的锻造台合成路径（key2 + 模板 + 下界合金锭），确认工作台 3x 下界合金锭合成已被移除。
 
 ## 许可声明
 

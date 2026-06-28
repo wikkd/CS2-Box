@@ -48,15 +48,12 @@ build/libs/csgobox-1.0.5.jar
 
 ## 配方更新附录
 
-下界合金钥匙（`csgobox:csgo_key3`）有两条获取路径：
+下界合金钥匙（`csgobox:csgo_key3`）仅可通过锻造台升级获得：
 
-1. **工作台合成（现有）**
-   - 配方：`N`、`N`、`N`（3x1 竖列）
-   - 材料：`minecraft:netherite_ingot` × 3
+- 模板：`minecraft:netherite_upgrade_smithing_template`
+- 基物品：`csgobox:csgo_key2`（钻石钥匙）
+- 添加材料：`minecraft:netherite_ingot` × 1
 
-2. **锻造台升级（1.0.5 后新增）**
-   - 模板：`minecraft:netherite_upgrade_smithing_template`
-   - 基物品：`csgobox:csgo_key2`（钻石钥匙）
-   - 添加材料：`minecraft:netherite_ingot` × 1
+配方文件：`data/csgobox/recipes/csgo_key3_smithing.json`。
 
-配方文件：`data/csgobox/recipes/csgo_key3_smithing.json`。无需数据迁移；现有存档继续正常工作。两份配方均产出 `csgobox:csgo_key3`，在配方书中共存。
+**1.0.5 修正**：原工作台 3x 下界合金锭合成配方（`data/csgobox/recipes/csgo_key3.json`）已移除，以与锻造台升级流程保持一致并保持下界合金钥匙的稀有度。无需数据迁移；现有存档继续正常工作。
