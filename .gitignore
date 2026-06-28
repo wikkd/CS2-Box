@@ -127,7 +127,7 @@ runs/
 bin/
 
 # Local config & runtime
-config/
+/config/
 init.gradle
 
 # Build output text files
