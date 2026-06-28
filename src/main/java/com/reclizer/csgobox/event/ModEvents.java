@@ -38,9 +38,7 @@ public final class ModEvents {
             }
 
             float effectiveRate = def.getDropRateForEntity(entityType) * lootingMultiplier;
-            if (CsgoBox.CONFIG != null) {
-                effectiveRate *= CsgoBox.CONFIG.general.globalDropRatePercent / 100F;
-            }
+            effectiveRate *= CsgoBox.CONFIG.globalDropRatePercent / 100F;
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {

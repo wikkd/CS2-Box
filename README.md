@@ -22,7 +22,7 @@ NeoForge 1.21.1 迁移：wikkd
 
 ## 当前版本
 
-- **Mod 版本**: 1.0.4
+- **Mod 版本**: 1.0.5
 - **Minecraft**: 1.21.1
 - **NeoForge**: 21.1.115+
 - **Java**: 21
@@ -30,7 +30,7 @@ NeoForge 1.21.1 迁移：wikkd
 构建产物位于 `build/libs/`。当前版本默认产物名为：
 
 ```text
-csgobox-1.0.4.jar
+csgobox-1.0.5.jar
 ```
 
 ## 配置文件
@@ -79,6 +79,20 @@ config/csbox/weapon_supply_box.json
 }
 ```
 
+## 钥匙合成
+
+钥匙物品 `csgobox:csgo_key0/1/2/3` 的合成方式如下：
+
+| 钥匙 | 合成方式 | 材料 |
+|---|---|---|
+| 铁钥匙 (key0) | 工作台 crafting_shaped | 3x `minecraft:iron_ingot`（3x1 竖列） |
+| 金钥匙 (key1) | 工作台 crafting_shaped | 3x `minecraft:gold_ingot`（3x1 竖列） |
+| 钻石钥匙 (key2) | 工作台 crafting_shaped | 3x `minecraft:diamond`（3x1 竖列） |
+| 下界合金钥匙 (key3) | 工作台 crafting_shaped | 3x `minecraft:netherite_ingot`（3x1 竖列） |
+| 下界合金钥匙 (key3) | 锻造台 smithing_transform | 1x `csgobox:csgo_key2`（base） + 1x `minecraft:netherite_ingot`（addition） + 1x `minecraft:netherite_upgrade_smithing_template`（template） |
+
+下界合金钥匙提供两种获取路径：工作台直接合成与锻造台升级。锻造台升级每次消耗 1 个下界合金升级模板（原版行为）。钻石钥匙为锻造台的 base 物品，严格限定为 `csgobox:csgo_key2`。
+
 ## 测试重点
 
 手动测试时建议覆盖：
@@ -90,6 +104,7 @@ config/csbox/weapon_supply_box.json
 - 开箱动画最终展示物品与实际获得物品一致。
 - ESC 退出动画后再次开箱不会卡死。
 - 空箱错误提示不被 3D 箱子模型遮挡。
+- 下界合金钥匙的两种合成路径（工作台 3x 下界合金锭 或 锻造台 key2 + 模板 + 下界合金锭）。
 
 ## 许可声明
 

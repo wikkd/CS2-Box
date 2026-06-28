@@ -1,76 +1,76 @@
-# CS2 Box 1.0.4 Update Notes
+# CS2 Box 1.0.4 更新说明
 
-Date: 2026-06-19
+日期：2026-06-19
 
-## Summary
+## 概述
 
-Version 1.0.4 focuses on server-authoritative opening behavior, safer client networking, animation correctness, JSON documentation, and crash fixes found during manual testing.
+1.0.4 版本聚焦于服务端授权的开箱行为、更安全的客户端网络、动画正确性、JSON 文档以及手动测试期间发现的崩溃修复。
 
-The expected build artifact is:
+预期构建产物：
 
 ```text
 build/libs/csgobox-1.0.4.jar
 ```
 
-## User-Facing Changes
+## 用户可见变化
 
-- Opening results are now decided by the server and sent to the client together with the animation item strip.
-- The animation now scrolls through a meaningful distance before slowing down and stopping on the winning item.
-- Pressing ESC during the animation no longer causes the next opening attempt to wait forever.
-- Empty-box warning text is drawn above the 3D model so it remains readable.
-- The default auto-generated JSON now includes an English `_tutorial` section.
+- 开箱结果现由服务端决定，并与动画物品条一同发送至客户端。
+- 动画现经过有意义的滚动距离后才减速停止在奖励物品上。
+- 在动画过程中按 ESC 不再导致下次开箱请求永远等待。
+- 空箱警告文字现绘制在 3D 模型上方，保持可读。
+- 自动生成的默认 JSON 现包含英文 `_tutorial` 部分。
 
-## JSON Tutorial
+## JSON 教程
 
-Minecraft JSON files do not support real comments. The generated default config uses a `_tutorial` object instead.
+Minecraft JSON 文件不支持真正的注释。生成的默认配置使用 `_tutorial` 对象代替。
 
-The loader ignores `_tutorial`, so it is safe to keep it in a config file.
+加载器忽略 `_tutorial`，因此将其保留在配置文件中是安全的。
 
-The tutorial explains:
+教程说明内容：
 
-- How file names map to box ids.
-- What `name`, `key`, `drop`, `random`, and `entity` mean.
-- The rarity order from `grade1` to `grade5`.
-- How to write item objects with `id` and optional `count`.
-- How to use Minecraft 1.21.1 `components`.
-- Why legacy `tag` strings are still accepted.
-- How to copy the default file to create a new box.
+- 文件名如何映射到箱子 ID。
+- `name`、`key`、`drop`、`random`、`entity` 的含义。
+- 从 `grade1` 到 `grade5` 的稀有度顺序。
+- 如何用 `id` 和可选的 `count` 编写物品对象。
+- 如何使用 Minecraft 1.21.1 `components`。
+- 为什么仍接受旧版 `tag` 字符串。
+- 如何复制默认文件来创建新箱子。
 
-Important behavior:
+重要行为：
 
-- Existing JSON files are not overwritten.
-- The tutorial appears only when `config/csbox` has no `.json` files and the mod creates `weapon_supply_box.json`.
+- 现有 JSON 文件不会被覆盖。
+- 教程仅在 `config/csbox` 没有 `.json` 文件且模组创建 `weapon_supply_box.json` 时出现。
 
-## Networking Changes
+## 网络变化
 
-- `PacketBoxOpenResult` now includes:
-  - Final item.
-  - Final grade.
-  - Winning animation index.
-  - Server seed.
-  - Client request id.
-  - Server-generated animation items.
-  - Server-generated animation grades.
-- Preview sync and opening result packets use request id matching.
-- Pending client packet queues are bounded to avoid unbounded growth.
-- Invalid or rejected open requests return an empty matching result instead of leaving the client waiting.
+- `PacketBoxOpenResult` 现包含：
+  - 最终物品。
+  - 最终等级。
+  - 中奖动画索引。
+  - 服务端种子。
+  - 客户端请求 ID。
+  - 服务端生成的动画物品列表。
+  - 服务端生成的动画等级列表。
+- 预览同步和开箱结果数据包使用请求 ID 匹配。
+- 待处理客户端数据包队列有上限，避免无界增长。
+- 无效或被拒绝的开箱请求返回匹配的空白结果，而非让客户端持续等待。
 
-## Animation Changes
+## 动画变化
 
-- Winning items are placed in a late animation window instead of anywhere in the 50-item strip.
-- This prevents the animation from stopping after only a small movement when the winning item would otherwise be index 0 or near the start.
-- Frame interpolation now uses render partial ticks directly.
-- Server cooldown is a short anti-double-click guard rather than the full animation duration.
+- 中奖物品现放置在动画窗口后期，而非 50 物品条的任意位置。
+- 这防止了当获奖物品本应是索引 0 或靠近开头时，动画仅移动很小距离就停止的问题。
+- 帧插值现直接使用渲染帧间渲染插值因子。
+- 服务端冷却为短效防双击保护，而非完整动画时长。
 
-## Crash Fixes
+## 崩溃修复
 
-- Fixed a wrong-thread crash caused by opening a client GUI from an integrated server event path.
-- Fixed a null font crash in custom text rendering.
-- Fixed empty result and rejected request paths so the client screen closes safely.
+- 修复了从集成服务器事件路径在错误线程打开客户端 GUI 导致的崩溃。
+- 修复了自定义文本渲染中的空字体崩溃。
+- 修复了空结果和被拒绝请求路径，使客户端界面能够安全关闭。
 
-## Config Compatibility
+## 配置兼容性
 
-Supported item formats:
+支持的物品格式：
 
 ```json
 {
@@ -89,29 +89,29 @@ Supported item formats:
 }
 ```
 
-Legacy JSON-string item entries are still accepted for older files:
+仍接受旧版 JSON 字符串物品条目：
 
 ```json
 "{\"id\":\"minecraft:diamond_sword\",\"count\":1}"
 ```
 
-## Manual Test Checklist
+## 手动测试清单
 
-- Start the game with an empty `config/csbox` folder and confirm `weapon_supply_box.json` is generated with `_tutorial`.
-- Open a basic configured box and confirm the item shown at the end matches the reward received.
-- Press ESC during the opening animation, then open another box.
-- Test a box that uses `minecraft:air` as the key.
-- Test a box that requires a different key.
-- Test a box with legacy JSON-string item entries.
-- Test empty or sparse grade lists.
-- Test invalid weights and odd entity drop-rate arrays and check that the game does not crash.
-- Confirm empty-box warning text is visible and not covered by the 3D model.
+- 以空的 `config/csbox` 文件夹启动游戏，确认生成带 `_tutorial` 的 `weapon_supply_box.json`。
+- 打开一个已配置的箱子，确认结尾显示的物品与获得的奖励一致。
+- 在开箱动画过程中按 ESC，然后打开另一个箱子。
+- 测试以 `minecraft:air` 作为钥匙的箱子。
+- 测试需要不同钥匙的箱子。
+- 测试使用旧版 JSON 字符串物品条目的箱子。
+- 测试空或稀疏的等级列表。
+- 测试无效权重和奇数实体掉落率数组，确认游戏不会崩溃。
+- 确认空箱警告文字可见且未被 3D 模型遮挡。
 
-## Deployment Notes
+## 部署说明
 
-When deploying to a manual test instance, remove older `csgobox-*.jar` files first. Loading multiple versions at once can produce misleading results.
+部署到手动测试实例时，先移除旧的 `csgobox-*.jar` 文件。同时加载多个版本可能产生误导性结果。
 
-Recommended deployment target:
+推荐部署目标：
 
 ```text
 <minecraft instance>/mods/csgobox-1.0.4.jar

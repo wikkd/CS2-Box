@@ -12,16 +12,17 @@ import com.reclizer.csgobox.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.sounds.ModSounds;
-import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.serializer.Toml4jConfigSerializer;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -32,10 +33,18 @@ public class CsgoBox {
 
     public static final String MODID = "csgobox";
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static CsboxConfig CONFIG;
+    public static final CsboxConfig CONFIG;
+    public static final ModConfigSpec CONFIG_SPEC;
+
+    static {
+        var pair = new ModConfigSpec.Builder()
+                .configure(CsboxConfig::new);
+        CONFIG = pair.getLeft();
+        CONFIG_SPEC = pair.getRight();
+    }
 
     public CsgoBox(IEventBus modEventBus) {
-        CONFIG = AutoConfig.register(CsboxConfig.class, Toml4jConfigSerializer::new).getConfig();
+        ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox-common.toml");
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
@@ -58,14 +67,14 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        if (CONFIG.advanced.loadDefaultBoxes) {
+        if (CONFIG.loadDefaultBoxes) {
             event.enqueueWork(BoxJsonLoader::loadAll);
         }
         LOGGER.info("CS2 Box initialized successfully");
     }
 
     public static boolean debug() {
-        return CONFIG != null && CONFIG.advanced.enableDebugLogging;
+        return CONFIG.enableDebugLogging;
     }
 
     @SubscribeEvent
