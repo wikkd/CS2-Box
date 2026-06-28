@@ -19,6 +19,19 @@ java {
     }
 }
 
+// NeoForged userdev Run tasks extend JavaExec and don't auto-inherit the
+// project's toolchain. Force every JavaExec task (runClient, runServer,
+// etc.) to launch with the JDK 21 binary resolved from the explicitly
+// registered toolchain installation. This bypasses any JAVA_HOME / PATH
+// JDK that the shell happens to point at.
+def jdk21 = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}
+
+tasks.withType(JavaExec).configureEach {
+    executable = jdk21.get().executablePath.asFile.path
+}
+
 runs {
     configureEach {
         systemProperty 'forge.logging.markers', 'REGISTRIES'
