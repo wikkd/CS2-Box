@@ -68,5 +68,12 @@
   "commands.csgobox.set.item_not_found": "Item index %s not found in grade [%s]. Valid range: 1-%s",
   "commands.csgobox.give.success": "Given %s x%s to %s",
   "commands.csgobox.reload.success": "Reloaded %s box definitions",
-  "commands.csgobox.error.grade_not_found": "Grade not found: %s"
+  "commands.csgobox.error.grade_not_found": "Grade not found: %s",
+
+  "advancement.csgobox.root.title": "CS2 Box",
+  "advancement.csgobox.root.description": "Open CS:GO boxes to unlock achievements",
+  "advancement.csgobox.first_box.title": "A Fresh Start",
+  "advancement.csgobox.first_box.description": "Open your first CS:GO Box",
+  "advancement.csgobox.shopper.title": "Shopkeeper",
+  "advancement.csgobox.shopper.description": "Open 200 CS:GO Boxes"
 }

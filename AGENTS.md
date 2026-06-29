@@ -45,6 +45,7 @@ ModLoadingContext.get().getActiveContainer().registerConfig(
 | `box/` | BoxDefinition、BoxRegistry、BoxJsonLoader |
 | `config/` | 基于 ModConfigSpec 的 CsboxConfig |
 | `event/` | LivingDeathEvent（生物掉落投骰） |
+| `advancement/` | OpenedBoxTrigger（自定义 criteria trigger）+ 成就注册 |
 | `gui/` | CsboxScreen、CsboxProgressScreen、CsLookItemScreen |
 | `item/` | ItemCsgoBox、ItemCsgoKey、ModItems |
 | `packet/` | 4 个自定义网络同步数据包 + StreamCodec |
@@ -84,3 +85,4 @@ Smithing transform：
 - `CsgoBox.java:36-44` — CONFIG static 初始化（勿改动初始化顺序）
 - `CsboxConfig.java` — 所有配置字段；builder 调用在每个 `define*` 上使用 `.get()`
 - `ModEvents.java:41` — 生物掉落率直接使用 `CONFIG.globalDropRatePercent`（无需 null 检查）
+- `advancement/OpenedBoxTrigger.java` — `csgobox:opened_box` trigger 注册 + `Stats.CUSTOM` 累加入口（`awardStat` 路径）

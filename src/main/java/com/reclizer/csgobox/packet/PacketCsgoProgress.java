@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.packet;
 
 import com.reclizer.csgobox.CsgoBox;
+import com.reclizer.csgobox.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.capability.CsboxPlayerData;
 import com.reclizer.csgobox.capability.ModCapability;
 import com.reclizer.csgobox.item.ItemCsgoBox;
@@ -158,6 +159,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 player.drop(toGive, false);
             }
             box.shrink(1);
+
+            if (player instanceof ServerPlayer sp) {
+                sp.awardStat(OpenedBoxTrigger.STAT, 1);
+                if (CsgoBox.CONFIG.enableAchievements) {
+                    OpenedBoxTrigger.INSTANCE.trigger(sp);
+                }
+            }
         });
     }
 

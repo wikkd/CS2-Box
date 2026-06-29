@@ -68,5 +68,12 @@
   "commands.csgobox.set.item_not_found": "在等级 [%s] 中未找到序号 %s 的物品。有效范围: 1-%s",
   "commands.csgobox.give.success": "已将 %s x%s 给予 %s",
   "commands.csgobox.reload.success": "已重新加载 %s 个箱子定义",
-  "commands.csgobox.error.grade_not_found": "等级未找到: %s"
+  "commands.csgobox.error.grade_not_found": "等级未找到: %s",
+
+  "advancement.csgobox.root.title": "CS2 Box",
+  "advancement.csgobox.root.description": "开启 CS:GO 箱子以解锁成就",
+  "advancement.csgobox.first_box.title": "全新的开始",
+  "advancement.csgobox.first_box.description": "开启你的第一个 CS:GO 箱子",
+  "advancement.csgobox.shopper.title": "导购",
+  "advancement.csgobox.shopper.description": "开启 200 个 CS:GO 箱子"
 }

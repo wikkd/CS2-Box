@@ -6,6 +6,7 @@ public class CsboxConfig {
 
     public boolean loadDefaultBoxes;
     public boolean enableDebugLogging;
+    public boolean enableAchievements;
 
     public int openSoundVolume;
     public int tickSoundVolume;
@@ -20,6 +21,7 @@ public class CsboxConfig {
 
     private final ModConfigSpec.BooleanValue loadDefaultBoxesValue;
     private final ModConfigSpec.BooleanValue enableDebugLoggingValue;
+    private final ModConfigSpec.BooleanValue enableAchievementsValue;
     private final ModConfigSpec.IntValue openSoundVolumeValue;
     private final ModConfigSpec.IntValue tickSoundVolumeValue;
     private final ModConfigSpec.IntValue finishSoundVolumeValue;
@@ -50,6 +52,10 @@ public class CsboxConfig {
                 .comment("Enable verbose debug logging")
                 .define("enableDebugLogging", false);
         this.enableDebugLogging = this.enableDebugLoggingValue.get();
+        this.enableAchievementsValue = builder
+                .comment("Enable the achievement system (stats are still accumulated when off)")
+                .define("enableAchievements", true);
+        this.enableAchievements = this.enableAchievementsValue.get();
         builder.pop();
 
         builder.comment("Sound settings").push("sound");

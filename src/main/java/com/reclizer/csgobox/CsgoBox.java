@@ -7,11 +7,13 @@ import com.reclizer.csgobox.capability.ModCapability;
 import com.reclizer.csgobox.config.CsboxConfig;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.item.ModItems;
-import com.reclizer.csgobox.packet.PacketCsgoProgress;
+import com.reclizer.csgobox.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.packet.PacketBoxOpenResult;
+import com.reclizer.csgobox.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.sounds.ModSounds;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -67,6 +69,8 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        CriteriaTriggers.register(OpenedBoxTrigger.ID.toString(), OpenedBoxTrigger.INSTANCE);
+
         if (CONFIG.loadDefaultBoxes) {
             event.enqueueWork(BoxJsonLoader::loadAll);
         }

@@ -1,0 +1,22 @@
+{
+  "parent": "csgobox:root",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.first_box.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.first_box.description"
+    },
+    "icon": {
+      "item": "csgobox:csgo_box"
+    },
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "open_any_box": {
+      "trigger": "csgobox:opened_box"
+    }
+  },
+  "rewards": {}
+}
