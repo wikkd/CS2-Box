@@ -94,7 +94,7 @@ These are the only external integrations in the project sense - dependencies on 
 - `Registries.elementsDirPath(Registries.RECIPE)` -> `data/<namespace>/recipe/` (singular) is the data-pack directory scanned by `RecipeManager`; the mod's recipe files now live at `src/main/resources/data/csgobox/recipe/` after the 2026-06-29 rename
 
 **NeoForge API:**
-- `ModLoadingContext.get().getActiveContainer().registerConfig(...)` (`CsgoBox.java:45`)
+- `ModLoadingContext.get().getActiveContainer().registerConfig(...)` (`CsgoBox.java:49`, registers `csgobox.toml`)
 - `RegisterPayloadHandlersEvent` for custom network payloads (`CsgoBox.java:60-66`)
 - `AttachmentType` (`NeoForgeRegistries.ATTACHMENT_TYPES`) for player-attached state (`capability/ModCapability.java:17`)
 - `IAttachmentSerializer` interface for value-input/output serialization (`capability/ModCapability.java:23-34`)

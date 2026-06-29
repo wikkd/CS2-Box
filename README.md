@@ -104,7 +104,7 @@ config/csbox/weapon_supply_box.json
 - ESC 退出动画后再次开箱不会卡死。
 - 空箱错误提示不被 3D 箱子模型遮挡。
 - 下界合金钥匙的锻造台合成路径（key2 + 模板 + 下界合金锭），确认工作台 3x 下界合金锭合成已被移除。
-- 成就系统：首次开箱 → 「全新的开始」toast；开箱 200 次 → 「导购」紫色 challenge toast；在 `config/csgobox-common.toml` 设 `enableAchievements = false` → 关闭后再开箱不再弹任何 csgobox toast，但 `csgobox:opened_boxes` 统计仍累加。
+- 成就系统：首次开箱 → 「全新的开始」toast；开箱 200 次 → 「导购」紫色 challenge toast；在 `config/csgobox.toml` 设 `enableAchievements = false` → 关闭后再开箱不再弹任何 csgobox toast，但 `csgobox:opened_boxes` 统计仍累加。
 
 ## 许可声明
 

@@ -82,7 +82,7 @@
 - `me.shedaniel.cloth:cloth-config-neoforge` - explicitly dropped in 1.0.5 (commit 862ab1f, 2026-06-28); replaced by NeoForge's native `ModConfigSpec`. See `docs/update-1.0.5.md`.
 
 **Added dependency (v1.0.5, transitive via NeoForge):**
-- NeoForge's `net.neoforged.neoforge.common.ModConfigSpec` is now the sole runtime-config backend. `CsboxConfig` constructs a `ModConfigSpec.Builder` and `CsgoBox.java` registers the resulting spec as `csgobox-common.toml`.
+- NeoForge's `net.neoforged.neoforge.common.ModConfigSpec` is now the sole runtime-config backend. `CsboxConfig` constructs a `ModConfigSpec.Builder` and `CsgoBox.java` registers the resulting spec as `csgobox.toml` (reverted from the v1.0.5-introduced `csgobox-common.toml`).
 
 **Maven repositories (`build.gradle` lines 48-60):**
 - `mavenCentral()`

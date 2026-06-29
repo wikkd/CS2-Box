@@ -103,7 +103,7 @@ static {
 **Registration** (`src/main/java/com/reclizer/csgobox/CsgoBox.java:47`):
 ```java
 ModLoadingContext.get().getActiveContainer()
-        .registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox-common.toml");
+        .registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 ```
 
 **Style rules for config classes** (model: `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`):
@@ -113,7 +113,7 @@ ModLoadingContext.get().getActiveContainer()
 - `push("groupName")` / `pop()` bracket each TOML section (`general`, `advanced`, `sound`, `animation`)
 - `comment("...")` precedes every `define` / `defineInRange` / `defineEnum` call
 - `init()` copies `*Value.get()` results into the public fields; call `init()` after `registerConfig` returns
-- The generated config file is `config/csgobox-common.toml` (replaces the old `config/csgobox.toml`)
+- The generated config file is `config/csgobox.toml` (reverted from the v1.0.5 `csgobox-common.toml` name; matches the pre-1.0.4 naming)
 
 ## Error Handling
 
@@ -235,7 +235,7 @@ Incremental update applied to capture changes since the 2026-06-28 baseline. All
 
 **Package rename.** Java source root was renamed from `com.reclizer.csbox` to `com.reclizer.csgobox`. Every code-path example, static-utility list, deferred-register list, import-order example, and `CsgoBox`/`ItemCsgoBox` reference has been updated to the new package. The modid remains `"csgobox"` — only the Java package spelling changed. Affected files: 40+ Java sources under `src/main/java/com/reclizer/csgobox/`.
 
-**Config relocation.** `CsboxConfig` moved from `com.reclizer.csbox.config` to `com.reclizer.csgobox.config` (`src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`, commit `b7b11e5`). A new "Configuration" section now documents the `ModConfigSpec` pattern, the `static { ... }` builder pair, the `registerConfig(..., "csgobox-common.toml")` call, and the field/`*Value` convention used in `CsboxConfig`.
+**Config relocation.** `CsboxConfig` moved from `com.reclizer.csbox.config` to `com.reclizer.csgobox.config` (`src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`, commit `b7b11e5`). A new "Configuration" section now documents the `ModConfigSpec` pattern, the `static { ... }` builder pair, the `registerConfig(..., "csgobox.toml")` call, and the field/`*Value` convention used in `CsboxConfig`.
 
 **Cloth Config removal.** The previous 1.0.5 baseline already reflected Cloth Config removal in the dependency layer, but the convention doc had no section capturing the replacement pattern. The new "Configuration" section now spells out `ModConfigSpec` as the only acceptable config API. Cloth Config is explicitly called out as removed (commit `862ab1f`) and must not be reintroduced.
 
@@ -245,7 +245,7 @@ Incremental update applied to capture changes since the 2026-06-28 baseline. All
 
 **Files not modified (intentionally):**
 - `docs/port-26.1.2.md` describes the 1.21.1 → 26.1.2 port — it is version-history documentation, not a current-state reference, so no edits were applied.
-- `docs/update-1.0.5.md` is the 1.0.5 release note — same reason. Its contents (Cloth Config removal, `csgobox-common.toml` path, `recipe/` singular folder) are now incorporated into the convention doc.
+- `docs/update-1.0.5.md` is the 1.0.5 release note — same reason. Its contents (Cloth Config removal, `recipe/` singular folder, the v1.0.5 → csgobox-common.toml migration) are now incorporated into the convention doc. (Subsequent v1.0.5 commit reverted the filename back to `csgobox.toml`.)
 
 ---
 

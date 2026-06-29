@@ -46,7 +46,7 @@ public class CsgoBox {
     }
 
     public CsgoBox(IEventBus modEventBus) {
-        ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox-common.toml");
+        ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);

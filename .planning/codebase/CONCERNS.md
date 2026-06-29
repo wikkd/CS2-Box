@@ -39,11 +39,11 @@
 - Trigger: Specific invalid box state combinations (deferred until call sites are inspected).
 - Workaround: None documented. Likely causes a `NullPointerException` upstream that just crashes the packet handler silently (logs but doesn't surface).
 
-### Old config file `config/csgobox.toml` not auto-migrated
-- Issue: 1.0.5 release moved config to `config/csgobox-common.toml` but does not migrate existing values.
-- Files: `src/main/java/com/reclizer/csgobox/CsgoBox.java` (registration call), `CHANGELOG.md:14`
-- Trigger: Existing 1.0.4 players upgrading to 1.0.5.
-- Workaround: Players must manually delete `config/csgobox.toml` per CHANGELOG note. Two files coexist indefinitely.
+### Config file rename not auto-migrated (round-trip csgobox.toml ↔ csgobox-common.toml)
+- Issue: The config filename has been renamed twice within v1.0.5 (`csgobox.toml` → `csgobox-common.toml` → `csgobox.toml`). Neither direction auto-migrates existing values, so any player who customized their config on an intermediate build ends up with orphaned settings.
+- Files: `src/main/java/com/reclizer/csgobox/CsgoBox.java` (registration call at line 49), `CHANGELOG.md` ([1.0.5] `### 更改` 段)
+- Trigger: Players who customized their config while running the `csgobox-common.toml` build (or who still have a pre-1.0.5 `csgobox.toml`) upgrade to the current `csgobox.toml` build.
+- Workaround: Players must manually rename or delete the old config file to pick up the new one. Two files may coexist indefinitely.
 
 ### Empty box warning text occluded by 3D model
 - Issue: Pre-1.0.4 had a bug where empty-box warning was hidden behind the 3D model. Fixed by drawing in foreground overlay, but the original problem suggests Z-order / render-order is fragile in this screen.
@@ -206,7 +206,7 @@ Incremental update applied against HEAD `a8bea6a`. The 2026-06-28 baseline remai
 
 - **Status: Resolved.** The "Cloth Config dependency" tech-debt entry is no longer applicable.
 - **What changed:** The `me.shedaniel.cloth:cloth-config-neoforge` dependency has been dropped from `build.gradle`. Config persistence now uses NeoForge's native `ModConfigSpec` API.
-- **On-disk artifact:** Config moved from `config/csgobox.toml` to `config/csgobox-common.toml` (registered via `ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox-common.toml")` in `CsgoBox.java`).
+- **On-disk artifact:** Config path history within v1.0.5: `csgobox.toml` (pre-1.0.5) → `csgobox-common.toml` (v1.0.5 first wave) → `csgobox.toml` (v1.0.5 revert). Current registration in `CsgoBox.java:49` writes to `config/csgobox.toml` via `ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml")`.
 - **Validation:** A `grep -ri "cloth|shedaniel" src/` returns no matches — no residual references in source. The CHANGELOG `1.0.5` manual test step `确认启动期间 latest.log 中不出现任何 cloth 或 shedaniel 相关条目` provides a runtime check.
 - **Note:** `ModConfigSpec`-based config is generally less ergonomic for complex nested sections. The current schema is flat (`CONFIG.fieldName`), which is appropriate for ~10 fields; if the config grows, consider whether a wrapper like Cloth Config should be re-evaluated or whether `ModConfigSpec`'s nested `Builder.push()` is sufficient.
 

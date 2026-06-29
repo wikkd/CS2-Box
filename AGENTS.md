@@ -31,10 +31,10 @@ static {
 
 // 注册（在构造方法中，不在 static 块中）
 ModLoadingContext.get().getActiveContainer().registerConfig(
-    ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox-common.toml");
+    ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 ```
 
-- TOML 路径：`config/csgobox-common.toml`（不是 `csgobox.toml`）
+- TOML 路径：`config/csgobox.toml`（与 v1.0.4 之前的命名一致）
 - TOML 中的 `[general]`、`[advanced]`、`[sound]`、`[animation]` 分组保留，但 Java 端访问是**扁平化**的（`CONFIG.fieldName`，不是 `CONFIG.section.fieldName`）
 - `CONFIG` 是 `final`——永不为 null。删除所有 `CONFIG != null` 守卫检查。
 
