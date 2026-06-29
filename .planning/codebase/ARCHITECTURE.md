@@ -1,354 +1,312 @@
-<!-- refreshed: 2026-06-28 -->
-<!-- updated: 2026-06-29 (incremental) -->
+<!-- refreshed: 2026-06-29 -->
 # Architecture
 
-**Analysis Date:** 2026-06-28
-**Last Updated:** 2026-06-29 (incremental)
+**Analysis Date:** 2026-06-29
 
 ## System Overview
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              Client (Player Side)                            │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │  CsboxScreen         (preview / "open" button)                          │  │
-│  │  CsboxProgressScreen (rolling animation strip)                          │  │
-│  │  CsLookItemScreen    (final reward display)                             │  │
-│  │  ClickEvent          (right-click box -> open CsboxScreen)              │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│              │ send                                                 │ receive
-│              ▼                                                      ▲
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │  PacketRequestBoxItems (C->S)   PacketSyncBoxItems    (S->C preview)    │  │
-│  │  PacketCsgoProgress    (C->S)   PacketBoxOpenResult   (S->C result)     │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              Server (Authoritative)                          │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │  PacketCsgoProgress.handleServer  (validate, consume key, roll items)   │  │
-│  │  ModEvents.livingDeath            (entity death -> drop roll)           │  │
-│  │  CsboxCommand                     (/csbox admin command tree)           │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│              │                                            │                   │
-│              ▼                                            ▼                   │
-│  ┌─────────────────────────┐                  ┌──────────────────────────┐     │
-│  │  RandomItem             │                  │  BoxRegistry (static)    │     │
-│  │  CsboxPlayerData        │◄────────────────►│  BoxDefinition (record)  │     │
-│  │  ModCapability          │  attachment      │  GradeGroup    (record)  │     │
-│  └─────────────────────────┘                  └──────────────────────────┘     │
-│                                                              ▲                │
-│                                                              │                │
-│                                       BoxJsonLoader (config/csbox/*.json)     │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    ENTRY: Right-click Box Item                   │
+│       `event/ClickEvent.java` (client-side @SubscribeEvent)      │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ opens
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     GUI LAYER (client-only)                      │
+│   `gui/CsboxScreen.java`       -> preview & open button          │
+│   `gui/CsboxProgressScreen.java` -> server-driven animation      │
+│   `gui/CsLookItemScreen.java`    -> 3D result display            │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ sends payloads
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  PACKET LAYER (bidirectional)                    │
+│   `packet/PacketRequestBoxItems`  (C -> S, preview fetch)        │
+│   `packet/PacketSyncBoxItems`     (S -> C, preview data)         │
+│   `packet/PacketCsgoProgress`     (C -> S, open request)         │
+│   `packet/PacketBoxOpenResult`    (S -> C, animation + reward)   │
+│   `packet/PacketValidation.java`  (shared defensive helpers)     │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  SERVER-AUTHORITATIVE LAYER                      │
+│   `packet/PacketCsgoProgress.handleServer` (the heart)           │
+│   - validates held box, key, cooldown                            │
+│   - computes animation strip + winning item via `RandomItem`     │
+│   - consumes key, shrinks box, gives reward                     │
+│   - awards custom stat `csgobox:opened_boxes`                    │
+│   - fires `OpenedBoxTrigger` for advancement progress            │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       DOMAIN MODEL                               │
+│   `box/BoxDefinition` (record, JSON-serializable)                 │
+│   `box/GradeGroup`     (record, one per rarity tier)             │
+│   `box/BoxRegistry`    (in-memory map, loaded from JSON)         │
+│   `box/BoxJsonLoader`  (filesystem read/write, default seeding)  │
+│   `item/ItemCsgoBox`   (Item, references box by box_id)          │
+│   `item/ItemCsgoKey`   (Item, key variants 0..3)                 │
+│   `capability/CsboxPlayerData` + `ModCapability`                 │
+│   `advancement/OpenedBoxTrigger`  + `ModLoadedTrigger`           │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  SIDE EFFECTS / OUTPUT                                            │
+│  - Item drop on mob death      (`event/ModEvents.livingDeath`)    │
+│  - Custom stat persisted       (`Stats.CUSTOM` registry)         │
+│  - Advancement progress        (`CriteriaTriggers`)              │
+│  - Player data attachment      (`CsboxPlayerData`, codec)        │
+│  - Saved config + box JSON     (`config/csgobox.toml`,           │
+│                                  `config/csbox/*.json`)           │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| `CsgoBox` | Mod entry point. Registers config spec, deferred registers, sounds, capabilities, data components, creative tab, payload handlers, server-start logging. | `src/main/java/com/reclizer/csgobox/CsgoBox.java` |
-| `BoxDefinition` | Immutable record describing one box: id, name, key item, drop rate, drop entities, grades (with weights/items), per-entity drop rate overrides. Provides Mojang `Codec` + `StreamCodec`. | `src/main/java/com/reclizer/csgobox/box/BoxDefinition.java` |
-| `BoxRegistry` | Static singleton `Map<Identifier, BoxDefinition>`. Read-rebuild-replace pattern for runtime mutation. | `src/main/java/com/reclizer/csgobox/box/BoxRegistry.java` |
-| `BoxJsonLoader` | Loads `config/csbox/*.json` into `BoxRegistry`. Auto-creates `weapon_supply_box.json` when dir is empty. Supports both Minecraft 1.21+ `components` and legacy `tag` strings for items. Saves boxes back to disk via atomic temp-file replace. | `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java` |
-| `GradeGroup` | Immutable record for one grade tier: id (`consumer`/`industrial`/`mil_spec`/`restricted`/`classified`), display name, ARGB color, weight, item list. Defensive `.copy()` on all `ItemStack`s. | `src/main/java/com/reclizer/csgobox/box/GradeGroup.java` |
-| `CsboxConfig` | `ModConfigSpec` for general/advanced/sound/animation settings. Static-initialized in `CsgoBox`. | `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` |
-| `ItemCsgoBox` | Custom `Item`. Holds `box_id` data component. Looks up `BoxDefinition` from registry. Tooltip iterates grades. | `src/main/java/com/reclizer/csgobox/item/ItemCsgoBox.java` |
-| `ItemCsgoKey` | Bare `Item` subclass (rarity COMMON). Four variants registered: `csbox_key0/1/2/3`. | `src/main/java/com/reclizer/csgobox/item/ItemCsgoKey.java` |
-| `ModItems` | Deferred registers for `csgobox` + 4 keys, plus the `EQUIPMENT_TAB` creative tab. | `src/main/java/com/reclizer/csgobox/item/ModItems.java` |
-| `CsboxScreen` | Client preview screen. Sends `PacketRequestBoxItems` on open; on tick consumes matching `PacketSyncBoxItems` reply. Has open/back buttons, draggable 3D box model, key count, grade-coloured item frames. | `src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java` |
-| `CsboxProgressScreen` | Client animation screen. Polls `PacketBoxOpenResult.consumeMatching(requestId)`; once received animates the server-supplied item strip toward `winningIndex`. Replaces `tick` per frame to drive `renderWidthAdd`. | `src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java` |
-| `CsLookItemScreen` | Client reward display. Drag-rotatable 3D reward item with grade-coloured rarity line. | `src/main/java/com/reclizer/csgobox/gui/CsLookItemScreen.java` |
-| `ModEvents` | Server `LivingDeathEvent` subscriber. Rolls each matching box's drop rate (modulated by Looting + `globalDropRatePercent`). Drops configured box items. | `src/main/java/com/reclizer/csgobox/event/ModEvents.java` |
-| `ClickEvent` | Client `RightClickItem` subscriber. Plays `CS_OPEN` and opens `CsboxScreen` on `mc.execute()`. | `src/main/java/com/reclizer/csgobox/event/ClickEvent.java` |
-| `CsboxCommand` | Brigadier `/csbox` tree: `list`, `info`, `add`, `set`, `give`, `reload`. Mutates registry + persists via `BoxJsonLoader.saveToFile`. | `src/main/java/com/reclizer/csgobox/command/CsboxCommand.java` |
-| `PacketCsgoProgress` | C→S open-box request. Server is authoritative: validates player state, anti-spam cooldown (10 ticks), box non-empty, key presence; rolls `ANIMATION_ITEM_COUNT=50` items, picks `MIN_WINNING_INDEX..MAX_WINNING_INDEX=35..44`, replies `PacketBoxOpenResult`, gives item, decrements box. | `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java` |
-| `PacketBoxOpenResult` | S→C authoritative reward. Includes `serverSeed`, `winningIndex`, full animation strip (`animationItems`, `animationGrades`), and the matched `requestId`. Queues into client-side `ArrayDeque`, consumed by `CsboxProgressScreen` by id. | `src/main/java/com/reclizer/csgobox/packet/PacketBoxOpenResult.java` |
-| `PacketRequestBoxItems` | C→S preview request. Echoes `requestId`. Server replies `PacketSyncBoxItems` with copy of items/grades/weights/key for the held box. | `src/main/java/com/reclizer/csgobox/packet/PacketRequestBoxItems.java` |
-| `PacketSyncBoxItems` | S→C preview payload. Holds box id, items, grades, weights, key item. Queued client-side and matched by `requestId + boxId` from `CsboxScreen.containerTick`. | `src/main/java/com/reclizer/csgobox/packet/PacketSyncBoxItems.java` |
-| `PacketValidation` | Internal helper. Bounds-checks list sizes, clamps grade integers, defensive `.copy()` of `ItemStack` lists, trims client queues to `MAX_PENDING_*` entries. | `src/main/java/com/reclizer/csgobox/packet/PacketValidation.java` |
-| `CsboxPlayerData` | Record attached to `Player` via NeoForge attachment: `seed`, `mode`, `item`, `grade`. Stored under `ModCapability.PLAYER_DATA`. | `src/main/java/com/reclizer/csgobox/capability/CsboxPlayerData.java` |
-| `ModCapability` | Registers `PLAYER_DATA` `AttachmentType<CsboxPlayerData>` with `ValueInput`/`ValueOutput` serializer. | `src/main/java/com/reclizer/csgobox/capability/ModCapability.java` |
-| `RandomItem` | Pure helpers: weighted grade roll, item pick by grade, nearest-non-empty clamp, fallback resolution (same grade -> lower grades -> any). | `src/main/java/com/reclizer/csgobox/utils/RandomItem.java` |
-| `RenderFontTool` | Scaled text drawing with null-font fallback to `Minecraft.getInstance().font`. | `src/main/java/com/reclizer/csgobox/utils/RenderFontTool.java` |
-| `GuiItemMove` | Drag-rotation accumulator + 3D item render in inventory. | `src/main/java/com/reclizer/csgobox/utils/GuiItemMove.java` |
-| `IconListTools` | Item frame rendering (rarity gradient, gold tier, progress strip). | `src/main/java/com/reclizer/csgobox/utils/IconListTools.java` |
-| `ColorTools` / `OverlayColor` | Grade ARGB colours and background fill. | `src/main/java/com/reclizer/csgobox/utils/ColorTools.java`, `OverlayColor.java` |
-| `EntityChineseMap` | Entity id -> Chinese display name lookup (used by GUI). | `src/main/java/com/reclizer/csgobox/utils/EntityChineseMap.java` |
-| `ModSounds` | Deferred registers for `cs_open`, `cs_finish`, `cs_dita` `SoundEvent`s. | `src/main/java/com/reclizer/csgobox/sounds/ModSounds.java` |
+| `CsgoBox` | Mod entrypoint; registers registries, payloads, config, sounds, attachments | `src/main/java/com/reclizer/csgobox/CsgoBox.java` |
+| `ItemCsgoBox` | The box item; reads/writes the `box_id` data component, tooltip of contents | `src/main/java/com/reclizer/csgobox/item/ItemCsgoBox.java` |
+| `ItemCsgoKey` | Key item (4 tiers: iron/gold/diamond/netherite) | `src/main/java/com/reclizer/csgobox/item/ItemCsgoKey.java` |
+| `ModItems` | `DeferredRegister` for items + the custom creative tab `EQUIPMENT_TAB` | `src/main/java/com/reclizer/csgobox/item/ModItems.java` |
+| `BoxDefinition` | Immutable box spec (id, name, key, drop rate, drop entities, grades) | `src/main/java/com/reclizer/csgobox/box/BoxDefinition.java` |
+| `GradeGroup` | Per-rarity tier (id, display name, color, weight, items) | `src/main/java/com/reclizer/csgobox/box/GradeGroup.java` |
+| `BoxRegistry` | In-memory `LinkedHashMap` registry of loaded boxes | `src/main/java/com/reclizer/csgobox/box/BoxRegistry.java` |
+| `BoxJsonLoader` | Filesystem loader/saver; seeds a default `weapon_supply_box.json` if folder is empty | `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java` |
+| `ModEvents` | Mob death -> box drop; player login -> `ModLoadedTrigger` | `src/main/java/com/reclizer/csgobox/event/ModEvents.java` |
+| `ClickEvent` | Client-side right-click -> open `CsboxScreen` | `src/main/java/com/reclizer/csgobox/event/ClickEvent.java` |
+| `CsboxScreen` | Preview GUI: shows contents, key, open/back buttons | `src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java` |
+| `CsboxProgressScreen` | Server-driven scrolling animation between preview and reward | `src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java` |
+| `CsLookItemScreen` | Final 3D-rotatable reward display | `src/main/java/com/reclizer/csgobox/gui/CsLookItemScreen.java` |
+| `PacketRequestBoxItems` | C->S: request preview data for held box | `src/main/java/com/reclizer/csgobox/packet/PacketRequestBoxItems.java` |
+| `PacketSyncBoxItems` | S->C: preview items/grades/weights/key for the held box | `src/main/java/com/reclizer/csgobox/packet/PacketSyncBoxItems.java` |
+| `PacketCsgoProgress` | C->S: client requests to actually open the held box | `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java` |
+| `PacketBoxOpenResult` | S->C: 50-item animation strip + winning index + final reward | `src/main/java/com/reclizer/csgobox/packet/PacketBoxOpenResult.java` |
+| `PacketValidation` | Defensive helpers: list-size checks, defensive copies, queue trim | `src/main/java/com/reclizer/csgobox/packet/PacketValidation.java` |
+| `RandomItem` | Pure deterministic weighted-rarity item picking (no networking) | `src/main/java/com/reclizer/csgobox/utils/RandomItem.java` |
+| `IconListTools` | GUI rendering: item frames, rarity backgrounds | `src/main/java/com/reclizer/csgobox/utils/IconListTools.java` |
+| `GuiItemMove` | 3D-rotatable item render used by preview/result screens | `src/main/java/com/reclizer/csgobox/utils/GuiItemMove.java` |
+| `RenderFontTool` | Scaled `FormattedCharSequence` drawing | `src/main/java/com/reclizer/csgobox/utils/RenderFontTool.java` |
+| `ColorTools` | ARGB utilities + grade-to-color mapping | `src/main/java/com/reclizer/csgobox/utils/ColorTools.java` |
+| `OverlayColor` | Constant background color (`0xFF333333`) | `src/main/java/com/reclizer/csgobox/utils/OverlayColor.java` |
+| `EntityChineseMap` | Hardcoded zh_CN display names for vanilla entity ids | `src/main/java/com/reclizer/csgobox/utils/EntityChineseMap.java` |
+| `ModSounds` | `DeferredRegister` for `cs_dita`, `cs_open`, `cs_finish` | `src/main/java/com/reclizer/csgobox/sounds/ModSounds.java` |
+| `CsboxCommand` | `/csbox ...` operator command tree (list/info/add/set/give/reload) | `src/main/java/com/reclizer/csgobox/command/CsboxCommand.java` |
+| `CsboxConfig` | `ModConfigSpec` with sections `[general]`, `[advanced]`, `[sound]`, `[animation]` | `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` |
+| `CsboxPlayerData` | Record attached to player (seed, mode, item, grade) | `src/main/java/com/reclizer/csgobox/capability/CsboxPlayerData.java` |
+| `ModCapability` | Registers `csgobox:player_data` attachment type | `src/main/java/com/reclizer/csgobox/capability/ModCapability.java` |
+| `OpenedBoxTrigger` | `SimpleCriterionTrigger` for `csgobox:opened_box`, supports `count` threshold | `src/main/java/com/reclizer/csgobox/advancement/OpenedBoxTrigger.java` |
+| `ModLoadedTrigger` | Always-true trigger for `csgobox:mod_loaded`; drives `csgobox:root` tab | `src/main/java/com/reclizer/csgobox/advancement/ModLoadedTrigger.java` |
 
 ## Pattern Overview
 
-**Overall:** Server-authoritative mod with immutable data model + read-rebuild-replace mutation + client/server packet symmetry.
+**Overall:** Layered event-driven client/server mod with a thin shared domain model.
 
 **Key Characteristics:**
-- **Server is the source of truth.** All rewards (final item, grade, animation strip) come from the server. The client only renders.
-- **Immutable data records.** `BoxDefinition`, `GradeGroup`, `CsboxPlayerData`, all packet payloads are Java `record`s. Mutating any one produces a new instance.
-- **Read-rebuild-replace.** Runtime mutation never edits an existing record in place — `BoxDefinition.withUpdatedGrade()` rebuilds, then `BoxRegistry.register()` replaces. `/csbox` and JSON reload follow this pattern.
-- **Request-id matching.** Every client-initiated action generates a `long requestId` echoed back by the server; the client dequeues only matching packets, preventing stale responses from being consumed by the wrong screen.
-- **Defensive `.copy()` at boundaries.** `ItemStack`s entering registry, packets, attachments, and JSON loader output are all deep-copied. `GradeGroup` constructor copies every item.
-- **Deferred registers over manual IDs.** All items, sounds, attachments, data components, and creative tab use NeoForge `DeferredRegister`.
-- **Mojang codecs + StreamCodec.** `BoxDefinition`/`GradeGroup`/`CsboxPlayerData` ship both `Codec` and `StreamCodec`; payloads with >6 fields use manual `StreamCodec.of()`.
+- **Server-authoritative random outcomes.** Client never decides the winning item; it renders whatever the server sends.
+- **Registry-driven content.** Box definitions live in `BoxRegistry` (in-memory) and on disk in `config/csbox/*.json`; the rest of the code references boxes by `ResourceLocation` only.
+- **Data components over NBT.** Box identity is stored as the typed `csgobox:box_id` `DataComponentType<ResourceLocation>` (set in `ItemCsgoBox.BOX_ID`, persisted + network-synchronized). Legacy NBT-style `tag` strings in `config/csbox/*.json` are still accepted for back-compat (`BoxJsonLoader.java:362-372`).
+- **Custom statistic as advancement source of truth.** The server awards `Stats.CUSTOM.get(csgobox:opened_boxes)` (`PacketCsgoProgress.java:164`); `OpenedBoxTrigger.TriggerInstance.matches()` reads that stat, letting one trigger class drive both the unconditional "first box" advancement and the `count=200` "shopper" advancement.
+- **Defensive network layer.** All four packets run their fields through `PacketValidation` (size caps, list consistency, defensive copies) before exposing data to consumers.
 
 ## Layers
 
-**Data definition layer (`box/`):**
-- Purpose: Define immutable box/grade data structures, load/persist JSON, and serve as the single read source for everything else.
-- Location: `src/main/java/com/reclizer/csgobox/box/`
-- Contains: `BoxDefinition`, `GradeGroup`, `BoxRegistry`, `BoxJsonLoader`
-- Depends on: Minecraft codec API, Gson, `FMLPaths`
-- Used by: items, packets, command, events, GUI
+**Entry / Event layer:**
+- Purpose: Listen to NeoForge events and dispatch them to the right subsystem.
+- Location: `src/main/java/com/reclizer/csgobox/event/` (`ClickEvent.java`, `ModEvents.java`)
+- Contains: `@SubscribeEvent` static handlers, marked with `@EventBusSubscriber(modid = CsgoBox.MODID)`.
+- Depends on: `CsgoBox`, `BoxRegistry`, `BoxDefinition`, `ItemCsgoBox`.
+- Used by: NeoForge game event bus only.
 
-**Configuration layer (`config/`):**
-- Purpose: TOML-backed config via `ModConfigSpec`. Stored as `config/csbox-common.toml`.
-- Location: `src/main/java/com/reclizer/csgobox/config/`
-- Contains: `CsboxConfig`
-- Depends on: NeoForge `ModConfigSpec`
-- Used by: `CsgoBox`, `ClickEvent`, `CsboxProgressScreen`, `CsLookItemScreen`, `ModEvents`
-
-**Item/registry layer (`item/`, `sounds/`):**
-- Purpose: Register game-content objects and adapt between ItemStacks and BoxDefinitions.
-- Location: `src/main/java/com/reclizer/csgobox/item/`, `src/main/java/com/reclizer/csgobox/sounds/`
-- Contains: `ItemCsgoBox`, `ItemCsgoKey`, `ModItems`, `ModSounds`
-- Depends on: `box/`, data components
-- Used by: `ClickEvent`, packets, command, GUI
-
-**Network layer (`packet/`):**
-- Purpose: Server-authoritative C<->S communication with request-id matching and bounded queues.
+**Network / Packet layer:**
+- Purpose: Marshal typed payloads between client and server with size-bounded, validated records.
 - Location: `src/main/java/com/reclizer/csgobox/packet/`
-- Contains: `PacketCsgoProgress`, `PacketBoxOpenResult`, `PacketRequestBoxItems`, `PacketSyncBoxItems`, `PacketValidation`
-- Depends on: `item/`, `box/`, `capability/`, `utils/RandomItem`
-- Used by: GUI screens, `ModEvents`
+- Contains: `record` payloads implementing `CustomPacketPayload`, each with its own `Type`, `STREAM_CODEC`, and either `handle` (client side) or `handleServer` (server side).
+- Depends on: `ItemCsgoBox`, `BoxRegistry`, `RandomItem`, `OpenedBoxTrigger`, `CsboxPlayerData`.
+- Used by: `CsgoBox.registerPayloads()` registers every payload, `CsboxScreen` / `CsboxProgressScreen` send/await them.
 
-**Player state layer (`capability/`):**
-- Purpose: Attach server-side open-result data to players.
-- Location: `src/main/java/com/reclizer/csgobox/capability/`
-- Contains: `CsboxPlayerData`, `ModCapability`
-- Depends on: NeoForge attachment API
-- Used by: `PacketCsgoProgress.handleServer` (writes on successful open)
-
-**GUI layer (`gui/`):**
-- Purpose: Three-screen client flow (preview -> progress -> reward) using server-supplied data only.
+**GUI / Rendering layer:**
+- Purpose: All `net.minecraft.client.gui.screens.Screen` subclasses that the user sees.
 - Location: `src/main/java/com/reclizer/csgobox/gui/`
-- Contains: `CsboxScreen`, `CsboxProgressScreen`, `CsLookItemScreen`
-- Depends on: packets, utils, sounds, config
-- Used by: `ClickEvent`
+- Contains: Three screens (`CsboxScreen`, `CsboxProgressScreen`, `CsLookItemScreen`). Imports `RenderSystem`, `GuiGraphics`, `PoseStack` etc.
+- Depends on: `CsgoBox.CONFIG`, packet queues (`PacketSyncBoxItems.sPendingResponses`, `PacketBoxOpenResult.sPendingResults`), utility renderers.
+- Used by: `ClickEvent` opens `CsboxScreen`; `CsboxScreen` transitions to `CsboxProgressScreen`; `CsboxProgressScreen` transitions to `CsLookItemScreen`.
 
-**Server events layer (`event/`):**
-- Purpose: React to player input and mob death server-side.
-- Location: `src/main/java/com/reclizer/csgobox/event/`
-- Contains: `ClickEvent` (client), `ModEvents` (server/common)
-- Depends on: items, sounds, GUI, registry, config
+**Domain / Box layer:**
+- Purpose: Box content model and persistence.
+- Location: `src/main/java/com/reclizer/csgobox/box/`
+- Contains: `BoxDefinition`, `GradeGroup`, `BoxRegistry`, `BoxJsonLoader`.
+- Depends on: Gson, `FMLPaths`, `BuiltInRegistries`.
+- Used by: `ItemCsgoBox` (resolves box by id), `ModEvents` (loops over `BoxRegistry.getAll()`), `PacketRequestBoxItems.handle` (sends box preview), `PacketCsgoProgress.handleServer` (computes animation + reward), `CsboxCommand` (CRUD on box defs).
 
-**Command layer (`command/`):**
-- Purpose: Admin/server console management via Brigadier.
-- Location: `src/main/java/com/reclizer/csgobox/command/`
-- Contains: `CsboxCommand`
-- Depends on: registry, JSON loader, items
+**Capability layer:**
+- Purpose: Per-player persistent state (current open seed, mode, reward in flight, grade).
+- Location: `src/main/java/com/reclizer/csgobox/capability/`
+- Contains: `CsboxPlayerData` record + `ModCapability` registering the `AttachmentType`.
+- Used by: `PacketCsgoProgress.handleServer` writes the seed + reward so a later reconnect can resume (line 139-142). The `mode` field is reserved/unused by current logic.
 
-**Utilities (`utils/`):**
-- Purpose: Stateless helpers (rendering, math, randomness, colours, font).
+**Advancement layer:**
+- Purpose: Vanilla-style progression tracked by `Stats.CUSTOM` + `CriteriaTriggers`.
+- Location: `src/main/java/com/reclizer/csgobox/advancement/`
+- Contains: `OpenedBoxTrigger` (with optional `count` threshold), `ModLoadedTrigger` (always-true), both `extends SimpleCriterionTrigger`.
+- Used by: `CsgoBox` registers both under `Registries.TRIGGER_TYPE` and resolves `Stats.CUSTOM.get(STAT_ID)` on common setup.
+
+**Command layer:**
+- Purpose: Operator (/op level 2) in-game box CRUD.
+- Location: `src/main/java/com/reclizer/csgobox/command/CsboxCommand.java`
+- Contains: Single class with a static `@SubscribeEvent register(RegisterCommandsEvent)` that builds the entire Brigadier tree.
+- Depends on: `BoxRegistry`, `BoxJsonLoader`, `BoxDefinition`, `GradeGroup`, `ItemCsgoBox`, `ModItems`.
+
+**Item layer:**
+- Purpose: The two item types and their data component.
+- Location: `src/main/java/com/reclizer/csgobox/item/`
+- Contains: `ItemCsgoBox` (the box), `ItemCsgoKey` (the key, all 4 tiers share this class), `ModItems` (deferred registers + creative tab).
+
+**Config layer:**
+- Purpose: Runtime user-configurable knobs.
+- Location: `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`
+- Contains: Single class with section-grouped `ModConfigSpec.*Value` fields. Constructor is invoked eagerly from `CsgoBox`'s static initializer (line 50-54) so all `.get()` calls work synchronously - this was the v1.0.5 init() fix per `CHANGELOG.md`.
+
+**Utility layer:**
+- Purpose: Pure helpers, no I/O.
 - Location: `src/main/java/com/reclizer/csgobox/utils/`
-- Contains: `RandomItem`, `GuiItemMove`, `IconListTools`, `RenderFontTool`, `ColorTools`, `OverlayColor`, `EntityChineseMap`
+- Contains: `RandomItem`, `IconListTools`, `GuiItemMove`, `RenderFontTool`, `ColorTools`, `OverlayColor`, `EntityChineseMap`.
+- Used by: GUI and packet layers.
 
 ## Data Flow
 
-### Primary Request Path — "Open Box" -> "Roll Reward" -> "Give Item"
+### Primary Request Path (player opens a box)
 
-1. **Player right-clicks with `csgobox` in main hand.**
-   - `ClickEvent.onRightClick` (`src/main/java/com/reclizer/csgobox/event/ClickEvent.java:23`) — client only.
-   - Plays `ModSounds.CS_OPEN` at `CONFIG.openSoundVolume`.
-   - Schedules `mc.setScreen(new CsboxScreen())` on the client executor.
+1. **Trigger** - Player right-clicks while holding an `ItemCsgoBox`. `event/ClickEvent.onRightClick` (`ClickEvent.java:23-47`) plays `cs_open` and pushes `CsboxScreen` (`Minecraft.getInstance().setScreen(new CsboxScreen())`).
+2. **Preview fetch (C->S)** - `CsboxScreen` constructor (`CsboxScreen.java:52-72`) sends `PacketRequestBoxItems` with a client-generated `syncRequestId` and remembers the held box's `expectedBoxId`.
+3. **Preview data (S->C)** - `PacketRequestBoxItems.handle` (`PacketRequestBoxItems.java:38-78`) reads the held box, builds `items + grades + weights + key`, and sends `PacketSyncBoxItems` to the requesting player.
+4. **Preview render** - `CsboxScreen.containerTick` (`CsboxScreen.java:329-343`) calls `PacketSyncBoxItems.consumeMatching(syncRequestId, expectedBoxId)` and, on match, populates the item grid, key count, and grade list. `renderBg` then draws the frames via `IconListTools`.
+5. **Open click** - User clicks the green "OPEN" button. `CsboxScreen.mouseClicked` (`CsboxScreen.java:367-388`) verifies the player has the required key in inventory, generates an `openRequestId`, transitions to `CsboxProgressScreen`, and sends `PacketCsgoProgress(openRequestId)`.
+6. **Authoritative server roll** - `PacketCsgoProgress.handleServer` (`PacketCsgoProgress.java:53-170`):
+   - Rejects if not holding `ItemCsgoBox`, if player is dead/removed, if cooldown (`isOpenBlocked`) is active, if box is empty, if no weights, or if no key is available.
+   - Generates `serverSeed = SecureRandom.nextLong()`.
+   - Pre-computes a 50-item animation strip via `RandomItem.precomputeGradeMap` + `randomItemsGrade` + `randomItemsFromGradeMap` with fallback to `findFallbackFromGradeMap`.
+   - Picks `winningIndex` in `[35, 44]` via `SECURE_RANDOM.nextInt`.
+   - Consumes one key, shrinks the held box by 1.
+   - Awards `Stats.CUSTOM.get(csgobox:opened_boxes)` by 1.
+   - Fires `OpenedBoxTrigger.INSTANCE.trigger(sp)` (when `enableAchievements` is true).
+   - Sends `PacketBoxOpenResult` with the winning item + animation strip back to the player.
+7. **Animation consume** - `CsboxProgressScreen.tick` (`CsboxProgressScreen.java:136-221`) calls `PacketBoxOpenResult.consumeMatching(expectedRequestId)`, fills the 50-item strip into `itemInput / gradeInput`, then drives an easing function (`easedScroll`) over `totalTicks` (derived from config).
+8. **Final reveal** - When `startTime == totalTicks`, `CsboxProgressScreen.tick:191-196` opens `CsLookItemScreen(resultItem, resultGrade)`.
+9. **Result dismiss** - User clicks BACK in `CsLookItemScreen` (`CsLookItemScreen.java:139-149`) which closes the screen and returns to gameplay.
 
-2. **Preview screen requests box contents.**
-   - `CsboxScreen` constructor (`src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java:54`) generates `syncRequestId = ThreadLocalRandom.nextLong()`, captures `expectedBoxId = ItemCsgoBox.getBoxId(itemMenu)`.
-   - Sends `PacketRequestBoxItems(syncRequestId)` via `ServerboundCustomPayloadPacket`.
+### Secondary Flow: Mob drop
 
-3. **Server responds with snapshot.**
-   - `PacketRequestBoxItems.handle` (`src/main/java/com/reclizer/csgobox/packet/PacketRequestBoxItems.java:38`) reads the held box, calls `ItemCsgoBox.getItemGroup` + `getRandom`, replies with `PacketSyncBoxItems(requestId, boxId, items, grades, weights, keyStack)`.
+1. Any mob kill fires `LivingDeathEvent`. `ModEvents.livingDeath` (`ModEvents.java:29-50`) iterates every `BoxDefinition` in `BoxRegistry.getAll()`.
+2. Per-definition roll: skips unless entity id is in `dropEntities`. Effective rate = `entityDropRate * lootingMultiplier` (looting gives +50% per level, up to 2.5x at looting III) * `CsgoBox.CONFIG.globalDropRatePercent() / 100F` global cap. Clamped to `1.0`.
+3. On success, spawns an `ItemCsgoBox` with `boxId` set via `ItemCsgoBox.setBoxId`.
 
-4. **Client receives preview (eventually).**
-   - `PacketSyncBoxItems.handle` enqueues into a bounded `ArrayDeque` (max 8).
-   - `CsboxScreen.containerTick` calls `PacketSyncBoxItems.consumeMatching(syncRequestId, expectedBoxId)` and populates `itemGroup`, `itemsList`, `gradeList`, `itemKey`, `boxKeyCount`. Buttons become clickable.
+### Secondary Flow: Advancement / stat tracking
 
-5. **Player clicks "open".**
-   - `CsboxScreen.mouseClicked` (`src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java:368`) checks key presence client-side as a UX guard.
-   - Generates a new `openRequestId`, opens `CsboxProgressScreen`, sends `PacketCsgoProgress(openRequestId)`.
+1. Every successful open, server `sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1)`.
+2. If `CsgoBox.CONFIG.enableAchievements()` is true, `OpenedBoxTrigger.INSTANCE.trigger(sp)` matches both `csgobox:first_box` (no count) and `csgobox:shopper` (count=200) on the client.
+3. `ModLoadedTrigger` (`ModEvents.java:65-71`) fires on `PlayerEvent.PlayerLoggedInEvent` so the `csgobox:root` advancement node is granted, which is the only reliable way to surface the CS2 Box tab in the advancement UI (replaces the legacy `minecraft:tick`-based root that did not work in 1.21+).
 
-6. **Server rolls the reward.**
-   - `PacketCsgoProgress.handleServer` (`src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java:51`):
-     - Rejects if box isn't `ItemCsgoBox`, player is removed/dead, or 10-tick cooldown is active.
-     - Reads `ItemCsgoBox.getItemGroup` + `getRandom`.
-     - Consumes key from inventory if required (`tryConsumeKeys`).
-     - Generates `serverSeed = SECURE_RANDOM.nextLong()`, rolls `ANIMATION_ITEM_COUNT=50` items, picks `winningIndex` from `[35,44]`.
-     - Stores result in `ModCapability.PLAYER_DATA` attachment (defensive copy).
-     - Replies `PacketBoxOpenResult` with seed, index, item strip, grades, and matching `requestId`.
-     - Adds item to player inventory (`player.getInventory().add(toGive)`; drops if full).
-     - `box.shrink(1)`.
-     - `blockFurtherOpens(player)` sets a 10-tick per-player cooldown.
+### Secondary Flow: Command-driven config edit
 
-7. **Client animates the strip.**
-   - `CsboxProgressScreen.tick` (`src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java:128`) calls `PacketBoxOpenResult.consumeMatching(expectedRequestId)`.
-     - Empty `result.item()` -> immediate close (server rejected).
-     - Otherwise populates `itemInput`, `gradeInput`, `serverWinningIndex`.
-   - Animation runs for `readAnimationTicks()` (respects `CONFIG.totalAnimationTicks`, `animationSpeedMultiplier`, `animationSpeed` enum).
-   - When complete, opens `CsLookItemScreen(resultItem, resultGrade)`.
-
-8. **Reward display.**
-   - `CsLookItemScreen` (`src/main/java/com/reclizer/csgobox/gui/CsLookItemScreen.java`) shows the server-authoritative item; user can drag-rotate and click "back" to close.
+1. Op runs `/csbox add <box> <grade> hand <count>`.
+2. `CsboxCommand.addHandItem` (`CsboxCommand.java:287-308`) reads the held item, builds a new `GradeGroup`, calls `BoxDefinition.withUpdatedGrade` -> `BoxRegistry.register(updatedBox)` -> `BoxJsonLoader.saveToFile(updatedBox)` for atomic write (`BoxJsonLoader.java:438-447` writes `.json.tmp` then `Files.move(...ATOMIC_MOVE)`).
+3. Subsequent reload uses `/csbox reload` -> `BoxRegistry.clear()` + `BoxJsonLoader.loadAll()` (`CsboxCommand.java:427-433`).
 
 **State Management:**
-- Server: `BoxRegistry` (static map), per-player `OPEN_BLOCKED_UNTIL_TICK` in `PacketCsgoProgress`, per-player `CsboxPlayerData` via `ModCapability.PLAYER_DATA`.
-- Client: bounded `ArrayDeque<PacketSyncBoxItems>` and `ArrayDeque<PacketBoxOpenResult>` are drained by id from each screen's `tick`/`containerTick`.
-
-### Secondary Flow — Mob Drop
-
-1. `LivingDeathEvent` fires (`ModEvents.livingDeath`).
-2. For every registered `BoxDefinition`, check if its `dropEntities` contains the dead entity's id.
-3. Compute `effectiveRate = entityDropRate * lootingMultiplier * (CONFIG.globalDropRatePercent / 100)`, clamp to `1.0`.
-4. On roll success, `mob.spawnAtLocation(serverLevel, new ItemStack(ITEM_CSBOX) with box_id set)`.
-
-### Secondary Flow — `/csbox` Admin
-
-1. Brigadier dispatches in `CsboxCommand.register` (`src/main/java/com/reclizer/csgobox/command/CsboxCommand.java:63`).
-2. Subcommands `add`/`set`/`addByName` build a new `BoxDefinition` (via `withUpdatedGrade`) and `BoxRegistry.register(updatedBox)`.
-3. `BoxJsonLoader.saveToFile(updatedBox)` writes to `config/csbox/<path>.json` via temp-file + atomic move.
-4. `/csbox reload` clears registry, then `BoxJsonLoader.loadAll()` re-parses every file.
+- Box definitions: persistent (JSON on disk) + cached in-memory (`BoxRegistry`).
+- Per-player state: `CsboxPlayerData` attachment (persistent via `DataComponentPatch` codec).
+- Animation request matching: in-process FIFO queues (`PacketBoxOpenResult.sPendingResults`, `PacketSyncBoxItems.sPendingResponses`) trimmed to 8 entries each via `PacketValidation.trimQueue`.
+- Per-player open cooldown: in-memory `HashMap<UUID, Long> OPEN_BLOCKED_UNTIL_TICK` (`PacketCsgoProgress.java:38`). Not persisted; resets on server restart.
 
 ## Key Abstractions
 
-**`BoxDefinition`:**
-- Purpose: Immutable per-box configuration and reward table.
-- Examples: `src/main/java/com/reclizer/csgobox/box/BoxDefinition.java`
-- Pattern: Java `record` with Mojang `Codec` and `StreamCodec`; constructor enforces invariants (null key -> `minecraft:air`, drop rate clamped to `[0,1]`, lists copied).
+**BoxDefinition (record):**
+- Purpose: Immutable, serializable specification of one box type.
+- Examples: `BoxDefinition.java`, `BoxJsonLoader.loadFromFile()`, `BoxRegistry`, `ItemCsgoBox.getDefinition()`.
+- Pattern: Java `record` + Mojang `Codec` + custom `StreamCodec<RegistryFriendlyByteBuf>` for the same record. Includes a `Builder` (`BoxDefinition.java:166-229`) for code-driven construction.
 
-**`GradeGroup`:**
-- Purpose: One rarity tier within a box (id, display name, colour, weight, item pool).
-- Examples: `src/main/java/com/reclizer/csgobox/box/GradeGroup.java`
-- Pattern: Record; grade ids map to numeric levels via `BoxDefinition.gradeLevel(id)` (`consumer`=1, ..., `classified`=5). Used as the lookup key for weighted rolls.
+**GradeGroup (record):**
+- Purpose: One rarity tier (consumer / industrial / mil_spec / restricted / classified) inside a box.
+- Examples: `BoxJsonLoader.writeDefaultIfEmpty` seeds five tiers; `RandomItem` rolls over them.
+- Pattern: Java `record` + `Codec` + `STREAM_CODEC` + `StreamCodec.composite`.
 
-**`BoxRegistry`:**
-- Purpose: Process-wide lookup for box definitions.
-- Examples: `src/main/java/com/reclizer/csgobox/box/BoxRegistry.java`
-- Pattern: Static `LinkedHashMap` wrapped in `unmodifiableCollection` for reads. Mutations (`register`/`clear`/`remove`) happen in `BoxJsonLoader.loadAll`, `CsboxCommand`, and reload.
+**CustomPacketPayload (record):**
+- Purpose: Each of the four packets is a Java `record` implementing `CustomPacketPayload`, with its own `Type<>` (namespace `csgobox`) and `STREAM_CODEC`. Validation is centralised in the record's compact constructor calling `PacketValidation`.
 
-**Request-id matching (cross-cutting):**
-- Purpose: Ensure that an in-flight reply is consumed by the screen that asked for it, not a stale one.
-- Examples: `PacketSyncBoxItems.consumeMatching`, `PacketBoxOpenResult.consumeMatching`, `PacketValidation.trimQueue`.
-- Pattern: Client sends `long requestId`; server echoes it back unchanged; client dequeues only entries with matching id (+ `boxId` for preview).
+**SimpleCriterionTrigger subclass:**
+- Purpose: Pattern for `OpenedBoxTrigger` and `ModLoadedTrigger` - extending `SimpleCriterionTrigger<T extends SimpleInstance>` and providing a `RecordCodecBuilder` `CODEC` plus a `trigger(ServerPlayer)` method.
 
 ## Entry Points
 
 **Mod entry:**
 - Location: `src/main/java/com/reclizer/csgobox/CsgoBox.java`
-- Triggers: `@Mod(CsgoBox.MODID)` discovered by NeoForge.
-- Responsibilities: Build `CsboxConfig` + `ModConfigSpec` in `static {}`; in constructor register config (`csbox-common.toml`), add `commonSetup`/`registerPayloads`/`ClientModEvents` listeners, register all deferred registers, register on `NeoForge.EVENT_BUS`. `FMLCommonSetupEvent` triggers `BoxJsonLoader.loadAll()` if `CONFIG.loadDefaultBoxes`. `ServerStartingEvent` logs registered box count.
+- Trigger: `@Mod(CsgoBox.MODID)` on the class.
+- Responsibilities: Registers config, deferred registers, payload handlers, common setup, custom stat, criterion triggers.
 
-**Client entry:**
-- Location: `ClickEvent.onRightClick` (`src/main/java/com/reclizer/csgobox/event/ClickEvent.java:23`)
-- Triggers: Right-click in main hand with `csgobox`.
-- Responsibilities: Play open sound and open `CsboxScreen`.
-
-**Server entry:**
-- Location: `PacketCsgoProgress.handleServer` (`src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java:51`)
-- Triggers: `PacketCsgoProgress` payload from a client.
-- Responsibilities: Authoritative open-box logic — see Primary Request Path step 6.
+**GUI entry:**
+- Location: `src/main/java/com/reclizer/csgobox/event/ClickEvent.java`
+- Trigger: `PlayerInteractEvent.RightClickItem` (client side only, via `@EventBusSubscriber(value = Dist.CLIENT, ...)`).
+- Responsibilities: Plays open sound and opens `CsboxScreen`.
 
 **Mob-drop entry:**
-- Location: `ModEvents.livingDeath` (`src/main/java/com/reclizer/csgobox/event/ModEvents.java:31`)
-- Triggers: `LivingDeathEvent` on the common bus.
-- Responsibilities: Roll configured boxes for matching entities with Looting + global multiplier.
+- Location: `src/main/java/com/reclizer/csgobox/event/ModEvents.java`
+- Trigger: `LivingDeathEvent` (both sides).
+- Responsibilities: Rolls per-box drop chance and spawns the box item.
+
+**Command entry:**
+- Location: `src/main/java/com/reclizer/csgobox/command/CsboxCommand.java`
+- Trigger: `RegisterCommandsEvent`.
+- Responsibilities: Builds `/csbox ...` Brigadier tree.
 
 ## Architectural Constraints
 
-- **Threading:** Minecraft's main client/server threads only. `IPayloadContext.enqueueWork` schedules packet handlers onto the correct thread. `PacketBoxOpenResult.consumeMatching` / `PacketSyncBoxItems.consumeMatching` MUST be called from the main client thread (see comments in `PacketBoxOpenResult.java:106`).
-- **Global state:**
-  - `BoxRegistry.BOX_REGISTRY` (`src/main/java/com/reclizer/csgobox/box/BoxRegistry.java:16`) — mutable static `LinkedHashMap`.
-  - `PacketCsgoProgress.OPEN_BLOCKED_UNTIL_TICK` (`src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java:36`) — `HashMap<UUID, Long>` for per-player open cooldown.
-  - `PacketBoxOpenResult.sPendingResults`, `PacketSyncBoxItems.sPendingResponses` — `ArrayDeque` bounded to 8.
-  - `BoxJsonLoader.BOXES_DIR` — constant path; thread-unsafe file IO runs on whatever thread `loadAll`/`saveToFile` is called from (init: main thread; command: server thread).
-- **Circular imports:** None observed. Layering flows one-way: `box/` -> `item/`/`packet/`/`event/`/`command/`/`gui/`.
-- **Immutability of data records:** Every record enforces invariants in its compact constructor (`Objects.requireNonNull`, `.copy()`, `List.copyOf`, `Math.clamp`). Any change yields a new instance.
+- **Threading:** All NeoForge payload handlers use `context.enqueueWork(...)` to bounce onto the main thread before touching game state (`PacketRequestBoxItems.java:39`, `PacketSyncBoxItems.java:122`, `PacketBoxOpenResult.java:107`, `PacketCsgoProgress.java:54`). The static queues `sPendingResults` / `sPendingResponses` are therefore mutated only on the main thread; consumer screens (`CsboxScreen.tick`, `CsboxProgressScreen.tick`) also tick on the main thread.
+- **Global state:** `BoxRegistry.BOX_REGISTRY` (`BoxRegistry.java:16`), `PacketBoxOpenResult.sPendingResults`, `PacketSyncBoxItems.sPendingResponses`, `PacketCsgoProgress.OPEN_BLOCKED_UNTIL_TICK`, `CsgoBox.OPENED_BOXES_STAT`. All single-process, not synchronised.
+- **Circular imports:** None detected; dependencies flow one-way (event -> packet -> domain).
+- **Box identity stability:** The `ResourceLocation` of a box is its JSON file basename (without `.json`), prefixed with the `csgobox` namespace (`BoxJsonLoader.java:249`). Renaming a JSON file = new box id = all existing held items break.
+- **Side parity:** The mod is `BOTH` sided. All client-only classes (`gui/*`, `event/ClickEvent`) reference `Dist.CLIENT` explicitly. `ModEvents.livingDeath` and `ModEvents.playerLoggedIn` are both sides, but only `PlayerLoggedInEvent` is fired on the server.
 
 ## Anti-Patterns
 
-### Server-trust gap on the preview path
+### Init() that is never called
 
-**What happens:** `CsboxScreen.mouseClicked` (`src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java:378`) re-checks the held item is `ItemCsgoBox` and that a matching key is in the inventory before sending `PacketCsgoProgress`. The server still re-validates, but client-side checks duplicate logic.
-**Why it's wrong:** Two sources of truth for "can I open?". If the server's check ever changes (e.g. extra cooldown), the client button may stay enabled when the server will reject.
-**Do this instead:** Treat the client guard as UX-only. The single authoritative check is `PacketCsgoProgress.handleServer` — every reason to reject (`isOpenBlocked`, empty item list, missing key, etc.) sends a matching empty `PacketBoxOpenResult`, which the client surfaces as a silent close. `CsboxScreen` button should always send the open packet when clicked.
+**What happens:** `CsboxConfig` previously used a deferred `init()` pattern, but no caller invoked it, leaving every config field at its `.get()` default of `false/0/null` at runtime.
+**Why it's wrong:** Animation speed was null -> NPE on first box open; drops were disabled; sounds were silent; debug logging off. Caused a server-crash regression caught in v1.0.5.
+**Do this instead:** Inline the `.get()` calls in the constructor (the current pattern in `CsboxConfig.java:19-64`), which is what the AGENTS.md line 21 convention mandates.
 
-### Direct mutation of `BoxRegistry` from network handlers
+### Client-trusted RNG / Client-picked winning index
 
-**What happens:** Nothing currently mutates the registry on packet receipt (only `BoxJsonLoader.loadAll` and `CsboxCommand` do), but the registry has no locking.
-**Why it's wrong (latent):** Any future code path that mutates `BoxRegistry` while a packet handler is iterating `getAll()` would race.
-**Do this instead:** Keep registry mutations confined to `BoxJsonLoader.loadAll`, `BoxJsonLoader.saveToFile`, and `CsboxCommand` (single-threaded server-side). If async mutation is ever needed, wrap the map in a `ConcurrentHashMap` and audit every iteration.
+**What happens:** The animation strip and the final reward must come from the server, never the client.
+**Why it's wrong:** Without server authority, the player could just send `PacketBoxOpenResult` claiming a grade-5 reward.
+**Do this instead:** Server (`PacketCsgoProgress.handleServer:96-135`) generates `serverSeed`, computes all 50 animation items + the winning index, then sends `PacketBoxOpenResult`. Client (`CsboxProgressScreen.tick:146-167`) only consumes and displays. The `requestId` is for matching only - never for security (`PacketCsgoProgress.java:33-34`).
 
-### Wide visibility on `CsboxScreen.itemMenu`
+### Long-blocking inventory scans in render code
 
-**What happens:** `CsboxScreen.itemMenu` (`src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java:78`) is package-private and assigned in the constructor without `final`.
-**Why it's wrong:** It's effectively immutable after construction but doesn't communicate that.
-**Do this instead:** Declare `private final ItemStack itemMenu;` and assign in the constructor only. The constructor already takes the snapshot from `mc.player.getItemInHand(MAIN_HAND)`.
-
-### Hardcoded literal config fallback
-
-**What happens:** `CsboxProgressScreen.readAnimationTicks()` (`src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java:237`) returns `145` if `CsgoBox.CONFIG == null`.
-**Why it's wrong:** `CONFIG` is `public static final` and never null per the AGENTS.md contract. The guard is dead code that masks refactor mistakes.
-**Do this instead:** Read `CsgoBox.CONFIG.totalAnimationTicks` directly; remove the null check (AGENTS.md is explicit on this).
+**What happens:** `countKeys()` (`CsboxScreen.java:122-132`) and `tryConsumeKeys()` (`PacketCsgoProgress.java:222-234`) scan all inventory slots for the key item.
+**Why it's wrong:** This is fine for a small inventory and a per-screen check, but it is O(n) per open attempt and O(n) per tick in the preview screen.
+**Do this instead:** Currently acceptable (max 36 slots). If expanded to a larger storage, refactor to an index lookup.
 
 ## Error Handling
 
-**Strategy:** Fail closed on the server, fail loud in JSON loading, validate at packet boundaries.
+**Strategy:** Fail loud during dev (throw `IllegalStateException`, `DecoderException`), fail soft during gameplay (log + send empty result back to client).
 
 **Patterns:**
-- Server-side open (`PacketCsgoProgress.handleServer`): every rejection (not a box, player invalid, cooldown, empty list, missing key, empty reward after fallback) sends a `PacketBoxOpenResult` with `ItemStack.EMPTY` so the client always gets a matching packet and never hangs. The animation screen then closes immediately.
-- JSON loader (`BoxJsonLoader.loadFromFile`): any per-file exception is caught and logged at `ERROR`; the loader continues with other files. Unknown item ids and unparseable `components`/`tag` are skipped with `WARN`.
-- Packet codecs (`BoxDefinition`, `PacketSyncBoxItems`, `PacketBoxOpenResult`): explicit list-size caps (`MAX_ITEMS`, `MAX_GRADES`, `ANIMATION_ITEM_COUNT`) throw `DecoderException` from `StreamCodec` reads, preventing oversized wire payloads.
-- `PacketValidation`: every record constructor validates sizes, clamps grade integers to `[1,5]`, copies item stacks, and trims the client pending queues to `MAX_PENDING_*`.
-- Defensive RNG fallbacks (`RandomItem.clampToValidItem`, `findFallback`, `findFallbackFromGradeMap`) walk to lower grades and then any non-empty entry before giving up.
+- Network deserialisation: explicit bounds checks throw `io.netty.handler.codec.DecoderException` (`PacketBoxOpenResult.java:87`, `PacketSyncBoxItems.java:92, 103`).
+- Server-side rejection paths all funnel through `sendRejected` (`PacketCsgoProgress.java:182-192`) which sends an empty `PacketBoxOpenResult` so the client animation can exit cleanly instead of timing out.
+- Box JSON parse errors are caught per-file (`BoxJsonLoader.java:71-74`) so one bad file does not break the rest.
+- Path traversal in `deleteFile` is rejected with a warn log rather than throwing (`BoxJsonLoader.java:456`).
 
 ## Cross-Cutting Concerns
 
-**Logging:** `CsgoBox.LOGGER = LogUtils.getLogger()` (SLF4J). `INFO` for lifecycle + box load, `WARN` for malformed JSON / unknown item ids, `ERROR` for IO failures, `DEBUG` for `BoxRegistry.register`.
-
-**Validation:** Triple-layered: TOML config (`CsboxConfig`), JSON config (`BoxJsonLoader` weight clamping, name fallback, unknown id warning), packet wire (`PacketValidation`, manual `StreamCodec` bounds).
-
-**Authentication:** None — Minecraft's session auth is the only gate. The `csgobox` Brigadier command requires `PermissionLevel.GAMEMASTERS`. The forge permission set is `Permission.HasCommandLevel`.
+**Logging:** SLF4J via Mojang `LogUtils.getLogger()` (`CsgoBox.LOGGER`). Standard `info/warn/error/debug` levels. No structured fields.
+**Validation:** Centralised in `packet/PacketValidation.java` (size caps, list consistency, defensive copies). Box JSON parsing has its own defensive try/catch in `BoxJsonLoader.parseItem`.
+**Authentication:** Minecraft session only; command layer requires op level 2 (`CsboxCommand.java:65`). No custom identity.
 
 ---
 
-*Architecture analysis: 2026-06-28*
-
-## Update 2026-06-29
-
-Incremental refresh — surgical updates only. All other content from the 2026-06-28 baseline is preserved verbatim.
-
-### CsboxConfig package relocation
-
-`CsboxConfig` relocated from the `csgobox.config` package to the `csgobox.config` package. Commit: `b7b11e5` ("fix(config): relocate CsboxConfig to csgobox package").
-
-- **Previous path:** `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`
-- **New path:** `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`
-
-`CsgoBox` static initialiser imports the class from the new package; no other code changes. The configuration layer (`config/`) remains a top-level package under `csgobox/` and continues to house the single `CsboxConfig` class (the file moved; the layer did not).
-
-### Recipe directory rename
-
-Data-pack recipe directory renamed from `data/csgobox/recipes/` to `data/csgobox/recipe/` (singular). All four recipe JSONs moved into the new directory:
-
-- `csgo_key0.json`
-- `csgo_key1.json`
-- `csgo_key2.json`
-- `csgo_key3_smithing.json`
-
-No code references the directory by literal path — Minecraft's data-pack discovery finds it by convention — so no source-file changes were required. Affects: `src/main/resources/data/csgobox/recipe/` (new location).
-
-### csgo_key3 workbench recipe removed
-
-Commit `be40e5a` ("feat(recipe)!: remove workbench 3x netherite recipe for csgo_key3") removed the original workbench recipe that crafted `csgobox:csgo_key3` from 3x netherite ingots. The netherite key is now exclusively obtainable via the smithing transform that upgrades `csgobox:csgo_key2`. This drops the recipe count from 5 to 4 files.
-
-- `data/csgobox/recipe/csgo_key3_smithing.json` — sole remaining `csgo_key3` recipe (template = `minecraft:netherite_upgrade_smithing_template`, base = `csgobox:csgo_key2`, addition = `minecraft:netherite_ingot`).
-- `data/csgobox/recipe/csgo_key0.json`, `csgo_key1.json`, `csgo_key2.json` — unchanged shaped recipes (iron / gold / diamond ingots).
-
-No data migration is required; existing worlds continue to function. See `docs/update-1.0.5.md` for the user-facing release notes and `docs/port-26.1.2.md` for the MC 26.1.2 port.
+*Architecture analysis: 2026-06-29*
