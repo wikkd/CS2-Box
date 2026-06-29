@@ -34,7 +34,7 @@ public final class ClickEvent {
 
         if (heldItem.getItem() == ModItems.ITEM_CSGOBOX.get()) {
 
-            float vol = CsgoBox.CONFIG.openSoundVolume / 100F;
+            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
             }

@@ -30,7 +30,7 @@ public class CsLookItemScreen extends Screen {
         this.openItem = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = grade;
         if (this.player != null && !this.openItem.isEmpty()) {
-            float vol = CsgoBox.CONFIG.finishSoundVolume / 100F;
+            float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }

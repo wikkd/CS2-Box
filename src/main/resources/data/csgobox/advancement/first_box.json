@@ -8,7 +8,7 @@
       "translate": "advancement.csgobox.first_box.description"
     },
     "icon": {
-      "item": "csgobox:csgo_box"
+      "id": "csgobox:csgo_box"
     },
     "show_toast": true,
     "announce_to_chat": true

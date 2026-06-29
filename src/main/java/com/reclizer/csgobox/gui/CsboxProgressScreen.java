@@ -212,7 +212,7 @@ public class CsboxProgressScreen extends Screen {
         soundWidthAdd += startWidth / 173F * velocity;
         if (soundWidthAdd > soundThreshold) {
             soundWidthAdd = 0;
-            float tickVol = CsgoBox.CONFIG.tickSoundVolume / 100F;
+            float tickVol = CsgoBox.CONFIG.tickSoundVolume() / 100F;
             if (tickVol > 0) {
                 player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
                         ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
@@ -243,10 +243,9 @@ public class CsboxProgressScreen extends Screen {
     }
 
     private static int readAnimationTicks() {
-        if (CsgoBox.CONFIG == null) return 145;
-        int base = CsgoBox.CONFIG.totalAnimationTicks;
-        int multiplier = CsgoBox.CONFIG.animationSpeedMultiplier;
-        int ticks = switch (CsgoBox.CONFIG.animationSpeed) {
+        int base = CsgoBox.CONFIG.totalAnimationTicks();
+        int multiplier = CsgoBox.CONFIG.animationSpeedMultiplier();
+        int ticks = switch (CsgoBox.CONFIG.animationSpeed()) {
             case SLOW -> base * 2;
             case FAST -> base / 2;
             default -> base;

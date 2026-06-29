@@ -8,13 +8,18 @@ import com.reclizer.csgobox.config.CsboxConfig;
 import com.reclizer.csgobox.item.ItemCsgoBox;
 import com.reclizer.csgobox.item.ModItems;
 import com.reclizer.csgobox.advancement.OpenedBoxTrigger;
+import com.reclizer.csgobox.advancement.ModLoadedTrigger;
 import com.reclizer.csgobox.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.sounds.ModSounds;
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.stats.Stat;
+import net.minecraft.stats.Stats;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,12 +27,14 @@ import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
 @Mod(CsgoBox.MODID)
@@ -37,6 +44,7 @@ public class CsgoBox {
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final CsboxConfig CONFIG;
     public static final ModConfigSpec CONFIG_SPEC;
+    public static Stat<ResourceLocation> OPENED_BOXES_STAT;
 
     static {
         var pair = new ModConfigSpec.Builder()
@@ -50,6 +58,21 @@ public class CsgoBox {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
+        modEventBus.addListener(this::resolveOpenedBoxesStat);
+        modEventBus.addListener((ModConfigEvent.Reloading event) -> {
+            if (event.getConfig().getSpec() == CONFIG_SPEC) {
+                LOGGER.info("CS2 Box config reloaded");
+            }
+        });
+        modEventBus.addListener((RegisterEvent event) -> {
+            ResourceKey<?> registryKey = event.getRegistryKey();
+            if (registryKey.equals(Registries.CUSTOM_STAT)) {
+                event.register(Registries.CUSTOM_STAT, OpenedBoxTrigger.STAT_ID, () -> OpenedBoxTrigger.STAT_ID);
+            } else if (registryKey.equals(Registries.TRIGGER_TYPE)) {
+                event.register(Registries.TRIGGER_TYPE, OpenedBoxTrigger.ID, () -> OpenedBoxTrigger.INSTANCE);
+                event.register(Registries.TRIGGER_TYPE, ModLoadedTrigger.ID, () -> ModLoadedTrigger.INSTANCE);
+            }
+        });
 
         ModSounds.SOUNDS.register(modEventBus);
         ModCapability.ATTACHMENT_TYPES.register(modEventBus);
@@ -69,16 +92,23 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        CriteriaTriggers.register(OpenedBoxTrigger.ID.toString(), OpenedBoxTrigger.INSTANCE);
-
-        if (CONFIG.loadDefaultBoxes) {
+        if (CONFIG.loadDefaultBoxes()) {
             event.enqueueWork(BoxJsonLoader::loadAll);
         }
         LOGGER.info("CS2 Box initialized successfully");
     }
 
+    private void resolveOpenedBoxesStat(final FMLCommonSetupEvent event) {
+        OPENED_BOXES_STAT = Stats.CUSTOM.get(OpenedBoxTrigger.STAT_ID);
+        if (OPENED_BOXES_STAT == null) {
+            throw new IllegalStateException(
+                    "Custom stat " + OpenedBoxTrigger.STAT_ID + " not registered — CUSTOM_STAT registry missing entry");
+        }
+        LOGGER.info("Resolved custom stat {} -> {}", OpenedBoxTrigger.STAT_ID, OPENED_BOXES_STAT);
+    }
+
     public static boolean debug() {
-        return CONFIG.enableDebugLogging;
+        return CONFIG.enableDebugLogging();
     }
 
     @SubscribeEvent

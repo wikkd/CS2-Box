@@ -76,7 +76,38 @@ dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
 }
 
+def removeStaleBuildResources = { task ->
+    def buildRes = file("$buildDir/resources/main")
+    if (!buildRes.exists()) {
+        return
+    }
+
+    // Delete any same-basename " 2" / " 3" duplicates that macOS auto-appends
+    // when a build re-emits a file that already exists on disk (e.g. bumped
+    // mod_version overwriting neoforge.mods.toml, or a renamed texture/pack).
+    // Run this as a dedicated task so it still executes when processResources is
+    // up-to-date; otherwise stale duplicates survive incremental builds.
+    buildRes.eachFileRecurse(groovy.io.FileType.ANY) { f ->
+        if (f.name ==~ /.+ [0-9]+(\..+)?/) {
+            if (f.isDirectory()) {
+                f.deleteDir()
+            } else {
+                f.delete()
+            }
+            task.logger.lifecycle("Removed stale build artifact: ${f}")
+        }
+    }
+}
+
+def purgeStaleBuildResources = tasks.register('purgeStaleBuildResources') {
+    doLast {
+        removeStaleBuildResources(delegate)
+    }
+}
+
 tasks.named('processResources', ProcessResources).configure {
+    dependsOn purgeStaleBuildResources
+
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
             neo_version: neo_version, neo_version_range: neo_version_range,

@@ -1,4 +1,9 @@
 {
+  "criteria": {
+    "requirement": {
+      "trigger": "csgobox:mod_loaded"
+    }
+  },
   "display": {
     "title": {
       "translate": "advancement.csgobox.root.title"
@@ -7,15 +12,10 @@
       "translate": "advancement.csgobox.root.description"
     },
     "icon": {
-      "item": "minecraft:chest"
+      "id": "minecraft:chest"
     },
-    "background": "minecraft:textures/block/oak_planks.png",
     "show_toast": false,
-    "announce_to_chat": false
-  },
-  "criteria": {
-    "requirement": {
-      "trigger": "minecraft:impossible"
-    }
+    "announce_to_chat": false,
+    "background": "csgobox:textures/gui/advancements/backgrounds/background_root.png"
   }
 }

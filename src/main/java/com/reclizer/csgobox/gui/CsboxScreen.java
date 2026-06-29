@@ -226,7 +226,7 @@ public class CsboxScreen extends Screen {
         Style style = Style.EMPTY.withBold(true);
         int x = 0;
         int y = 0;
-        boolean showNames = CsgoBox.CONFIG.showItemNames;
+        boolean showNames = CsgoBox.CONFIG.showItemNames();
 
         for (int i = 0; i < itemsList.size(); i++) {
             int py = 67;

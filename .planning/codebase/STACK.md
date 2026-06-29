@@ -1,98 +1,44 @@
-# Technology Stack
+<!-- refreshed: 2026-06-29 -->
+# 技术栈
 
-**Analysis Date:** 2026-06-29
+**分析日期：** 2026-06-29
 
-## Languages
+## 语言
 
-**Primary:**
-- Java 21 - All mod logic under `src/main/java/com/reclizer/csgobox/`
+- **主要：** Java 21 - 模组全部逻辑
+- **次要：** JSON（配置/配方/进度/翻译/模型/音效）、Groovy（`build.gradle`）、TOML（运行时配置）、GLSL JSON（着色器注册）
 
-**Secondary:**
-- JSON - Data-driven config (`config/csbox/*.json`), recipes (`data/csgobox/recipe/`), advancements (`data/csgobox/advancement/`), lang files (`assets/csgobox/lang/`), models (`assets/csgobox/models/`), sounds (`assets/csgobox/sounds.json`)
-- Groovy - `build.gradle` (build script)
-- TOML - Generated runtime config (`config/csgobox.toml`, written by NeoForge ModConfigSpec)
-- GLSL (shader JSON) - `assets/minecraft/shaders/program/fade_in_blur.json` and `assets/minecraft/shaders/post/fade_in_blur.json` (vanilla-shader registration overlay)
+## 运行时
 
-## Runtime
+- **环境：** Minecraft 1.21.1（Mojang 官方映射）、JDK 21
+- **包管理器：** Gradle wrapper + NeoForged userdev 7.0.171。无单独 Maven。
+- **锁文件：** 无。版本在 `gradle.properties` 中固定。
 
-**Environment:**
-- Minecraft 1.21.1 (Mojang official mappings, `mapping_channel=official`, `mapping_version=1.21.1`)
-- Java toolchain pinned to JDK 21 (`gradle.properties` line 3, `build.gradle` `JavaLanguageVersion.of(21)`)
+## 框架
 
-**Package Manager:**
-- Gradle wrapper (`gradlew`, `gradle/wrapper/`)
-- Userdev plugin: `net.neoforged.gradle.userdev` version `7.0.171`
-- No Maven or direct dependency manager; only the NeoForge userdev plugin resolves transitive deps from Maven Central + NeoForged repos.
+- **核心：** NeoForge 21.1.115 + Minecraft 1.21.1 原版代码
+- **加载器约定：** `modLoader="javafml"`，`loader_version_range=[4,)`
+- **构建/开发：** NeoForged userdev 提供 runs（client/server/gameTestServer/data），Eclipse + IDEA 插件，`maven-publish`
+- **测试：** GameTest 框架已注册但未使用（`src/` 下无 GameTest 类）
 
-**Lockfile:**
-- None. `gradle.lockfile` is absent; dependency versions are pinned in `gradle.properties` only.
+## 关键依赖
 
-## Frameworks
+- **关键：** `net.neoforged:neoforge:21.1.115`
+- **基础设施：** Cloth Config 已移除，使用原生 `ModConfigSpec`。Google Gson 通过 NeoForge 传递引入。
+- **无外部运行时服务。** 100% 离线。
 
-**Core:**
-- NeoForge `21.1.115` (modern Minecraft Forge successor) - sole compile-time dependency declared in `build.gradle:76` (`implementation "net.neoforged:neoforge:${neo_version}"`)
-- Minecraft 1.21.1 vanilla code (resolved transitively via NeoForge userdev)
+## 配置
 
-**Loader contract:**
-- `modLoader="javafml"` (`src/main/resources/META-INF/neoforge.mods.toml:1`)
-- Loader accepts `[4,)` (NeoForge `loader_version_range`)
+- **环境配置：** 无 `.env`。所有配置为 `config/csgobox.toml`（ModConfigSpec 写入）+ `config/csbox/*.json`（BoxJsonLoader 加载）。
+- **构建配置：** `gradle.properties`、`build.gradle`、`settings.gradle`、`neoforge.mods.toml`、`pack.mcmeta`。
+- **资源处理：** `processResources` 扩展模板变量 + `purgeStaleBuildResources` 清理 macOS 重复文件。
 
-**Build/Dev:**
-- NeoForged userdev 7.0.171 - provides `runs { client, server, gameTestServer, data }` task graph
-- Eclipse + IDEA IDE plugins (`build.gradle:3-4`)
-- `maven-publish` plugin (`build.gradle:5`) - for publishing the jar artifact
+## 平台要求
 
-**Test:**
-- Minecraft GameTest framework registered (`forge.enabledGameTestNamespaces=mod_id` in `build.gradle:43-52`). No custom GameTest classes were detected under `src/`; framework is enabled but unused.
-
-## Key Dependencies
-
-**Critical:**
-- `net.neoforged:neoforge:21.1.115` - full mod loader + game APIs (`net.neoforged.neoforge.*`, `net.neoforged.fml.*`, `net.neoforged.bus.api.*`)
-
-**Infrastructure:**
-- Cloth Config - explicitly REMOVED in v1.0.5 (per `CHANGELOG.md` 移除). Config now uses native NeoForge `ModConfigSpec` (`src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`).
-- Google Gson - transitively pulled in via NeoForge, used directly in `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java` for box definition serialization.
-
-**No external runtime services.** No HTTP clients, no database drivers, no analytics SDKs. Mod is 100% offline client/server logic.
-
-## Configuration
-
-**Environment:**
-- No `.env` files. All config is in-game TOML written by `ModConfigSpec` to `config/csgobox.toml` (registered in `src/main/java/com/reclizer/csgobox/CsgoBox.java:57` with `registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml")`).
-- Box definitions loaded at runtime from `config/csbox/*.json` (path resolved via `FMLPaths.CONFIGDIR.get().resolve("csbox")` in `BoxJsonLoader.java:40`).
-
-**Build configuration files:**
-- `gradle.properties` - version pins for minecraft, neo, mappings, mod metadata
-- `build.gradle` - plugin application, repository declarations, dependency block, run-config block, resource processing (token replacement in `META-INF/neoforge.mods.toml` and `pack.mcmeta`), jar manifest
-- `settings.gradle` - plugin management (NeoForged repo), root project name
-- `src/main/resources/META-INF/neoforge.mods.toml` - mod metadata, dependency declarations on `neoforge` and `minecraft` (both `mandatory=true`)
-- `src/main/resources/pack.mcmeta` - resource-pack descriptor (`pack_format: 34`, supported `[34, 48]`)
-
-**Resource processing (`build.gradle:108-124`):**
-- `processResources` expands `${mod_id}`, `${mod_version}`, `${minecraft_version}`, etc. into `neoforge.mods.toml` and `pack.mcmeta`.
-- `purgeStaleBuildResources` task deletes macOS auto-appended `name 2.ext` duplicates in `build/resources/main/`.
-
-## Platform Requirements
-
-**Development:**
-- macOS-targeted: `gradle.properties:3-4` hardcodes `/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home` and registers it via `foojay-resolver-convention`.
-- `build.gradle:31-33` forces every `JavaExec` (including `runClient`, `runServer`) to use the JDK 21 binary resolved from the toolchain - bypasses whatever `JAVA_HOME` happens to point at.
-- Min Gradle JVM heap: `-Xmx3G` (`gradle.properties:1`)
-- Gradle daemon disabled (`org.gradle.daemon=false`) - required for stable toolchain resolution on macOS.
-
-**Production:**
-- Distribution target: `csgobox-1.0.5.jar` (per `CHANGELOG.md` 备注 + `archivesName = "csgobox"` in `build.gradle:13`)
-- Sides: `BOTH` (`neoforge.mods.toml:18, 24`) - runs on dedicated servers AND clients
-- Client requirements: Minecraft 1.21.1 + NeoForge >=21.1.115 + (optional) matching NeoForge on server
-
-**Distribution repositories declared in `build.gradle:62-72`:**
-- Maven Central
-- BlameJared Maven (`https://maven.blamejared.com`)
-- Modmaven (`https://modmaven.dev`)
-- Curse Maven (`https://www.cursemaven.com`)
-- Latvian Maven (`https://maven.latvian.dev/releases`) - scoped to `dev.latvian.mods` / `dev.latvian.apps` only
+- **开发：** macOS 目标（`gradle.properties` 硬编码 JDK 21 路径）。所有 `JavaExec` 强制使用 JDK 21 toolchain。Gradle daemon 禁用。
+- **生产：** 产物 `csgobox-1.0.5.jar`，`BOTH` 端（服务器 + 客户端）。需要 Minecraft 1.21.1 + NeoForge >=21.1.115。
+- **分发仓库：** Maven Central、BlameJared Maven、Modmaven、Curse Maven、Latvian Maven（限定 `dev.latvian.mods`）。
 
 ---
 
-*Stack analysis: 2026-06-29*
+*技术栈分析：2026-06-29*

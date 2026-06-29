@@ -161,8 +161,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             box.shrink(1);
 
             if (player instanceof ServerPlayer sp) {
-                sp.awardStat(OpenedBoxTrigger.STAT, 1);
-                if (CsgoBox.CONFIG.enableAchievements) {
+                sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
+                if (CsgoBox.CONFIG.enableAchievements()) {
                     OpenedBoxTrigger.INSTANCE.trigger(sp);
                 }
             }

@@ -38,7 +38,7 @@ public final class ModEvents {
             }
 
             float effectiveRate = def.getDropRateForEntity(entityType) * lootingMultiplier;
-            effectiveRate *= CsgoBox.CONFIG.globalDropRatePercent / 100F;
+            effectiveRate *= CsgoBox.CONFIG.globalDropRatePercent() / 100F;
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
@@ -59,5 +59,14 @@ public final class ModEvents {
         var lootingHolder = enchantmentRegistry.getHolderOrThrow(Enchantments.LOOTING);
         int lootingLevel = weapon.getEnchantmentLevel(lootingHolder);
         return lootingLevel > 0 ? 1.0F + lootingLevel * 0.5F : 1.0F;
+    }
+
+    /** Fires ModLoadedTrigger so csgobox:root criteria is satisfied on world join. */
+    @SubscribeEvent
+    public static void playerLoggedIn(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (CsgoBox.CONFIG.enableAchievements()
+                && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.reclizer.csgobox.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+        }
     }
 }

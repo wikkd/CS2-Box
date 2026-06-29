@@ -5,12 +5,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.reclizer.csgobox.CsgoBox;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
-import net.minecraft.stats.Stats;
 
 import java.util.Optional;
 
@@ -30,12 +27,6 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
 
     public static final ResourceLocation STAT_ID =
             ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "opened_boxes");
-    public static final Stat<ResourceLocation> STAT;
-
-    static {
-        Registry.register(BuiltInRegistries.CUSTOM_STAT, STAT_ID, STAT_ID);
-        STAT = Stats.CUSTOM.get(STAT_ID);
-    }
 
     @Override
     public Codec<TriggerInstance> codec() {
@@ -60,7 +51,11 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
             if (count <= 0) {
                 return true;
             }
-            return player.getStats().getValue(STAT) >= count;
+            Stat<ResourceLocation> stat = CsgoBox.OPENED_BOXES_STAT;
+            if (stat == null) {
+                return false;
+            }
+            return player.getStats().getValue(stat) >= count;
         }
     }
 }

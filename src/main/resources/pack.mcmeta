@@ -1,6 +1,10 @@
 {
   "pack": {
     "description": "csgobox resources",
-    "pack_format": 34
+    "pack_format": 34,
+    "supported_formats": {
+      "min_inclusive": 34,
+      "max_inclusive": 48
+    }
   }
 }

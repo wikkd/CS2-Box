@@ -1,128 +1,62 @@
-# External Integrations
+<!-- refreshed: 2026-06-29 -->
+# 外部集成
 
-**Analysis Date:** 2026-06-29
+**分析日期：** 2026-06-29
 
-This mod is a self-contained client/server Minecraft mod. It runs entirely inside the Minecraft JVM and does not call out to any third-party SaaS, HTTP API, telemetry endpoint, or remote service. All "integrations" are against vanilla Minecraft / NeoForge runtime surfaces.
+本模组是一个独立的客户端/服务端 Minecraft 模组。它完全运行在 Minecraft JVM 内部，不调用任何第三方 SaaS、HTTP API、遥测端点或远程服务。所有"集成"均针对原版 Minecraft / NeoForge 运行时表面。
 
-## APIs & External Services
+## API 与外部服务
 
-**HTTP / REST:**
-- None. No `java.net.http`, `okhttp`, `HttpClient`, or `URLConnection` usage anywhere in `src/`.
+- **HTTP / REST：** 无。`src/` 中没有 `java.net.http`、`HttpClient` 等。
+- **遥测 / 分析：** 无可选加入的数据收集。
+- **身份验证：** 无。仅依赖 Minecraft 内置会话。
+- **SaaS / 付费服务：** 无。
 
-**Telemetry / Analytics:**
-- None. No opt-in data collection.
+## 数据存储
 
-**Authentication:**
-- None. Mod does not implement login. It only relies on Minecraft's built-in session and the `Player` object available on the server thread.
+- **数据库：** 无 SQL 或 NoSQL 层。
+- **文件存储：** 仅本地文件系统。
+  - `config/csgobox.toml` - 运行时配置（`ModConfigSpec`）
+  - `config/csbox/*.json` - 箱子定义（`BoxJsonLoader` 加载）
+  - 路径遍历保护：`BoxJsonLoader.deleteFile()` 验证路径是否在 `csbox/` 目录内。
+- **缓存：** 无。`BoxRegistry` 是进程内 `LinkedHashMap`；`/csbox reload` 清空并重新填充。
 
-**SaaS / Paid services:**
-- None.
+## 身份验证与授权
 
-## Data Storage
+- **认证：** Minecraft 内置 Mojang 账户。
+- **授权：** 命令需 `hasPermission(2)`（op 等级 2）。服务端对开箱结果权威，`requestId` 仅用于匹配，不用于安全。
 
-**Databases:**
-- None. The mod has no SQL or NoSQL layer.
+## 监控与可观测性
 
-**File Storage:**
-- Local filesystem only.
-  - `config/csgobox.toml` - runtime config written by `ModConfigSpec` (see `CsgoBox.java:57`)
-  - `config/csbox/*.json` - box definitions loaded on startup by `BoxJsonLoader.java:40` (path `FMLPaths.CONFIGDIR.get().resolve("csbox")`)
-  - Path-traversal protection: `BoxJsonLoader.deleteFile()` (`BoxJsonLoader.java:453-467`) validates the resolved path stays inside the `csbox/` directory before deletion.
+- **错误跟踪：** 无 Sentry、Bugsnag。
+- **日志：** SLF4J via `LogUtils.getLogger()`。标准 info/warn/error/debug。无结构化日志。
 
-**Caching:**
-- None. In-process only. `BoxRegistry` (`src/main/java/com/reclizer/csgobox/box/BoxRegistry.java`) holds an in-memory `LinkedHashMap<ResourceLocation, BoxDefinition>`; on `/csbox reload` it is cleared and re-populated.
+## CI/CD 与部署
 
-## Authentication & Identity
+- **托管：** 无后端。模组以 `.jar` 分发。
+- **CI 流水线：** 无（无 `.github/workflows/`）。
+- **发布产物：** `build/libs/csgobox-1.0.5.jar`。`maven-publish` 声明但未配置。
 
-**Auth Provider:**
-- Minecraft session (built-in Mojang account). The mod does not perform auth itself.
+## 游戏引擎集成点
 
-**Authorization (in-game):**
-- Command-level: `/csbox ...` requires `hasPermission(2)` (op level 2) - declared in `src/main/java/com/reclizer/csgobox/command/CsboxCommand.java:65`.
-- Network-level: server is authoritative for box opening outcomes (`PacketCsgoProgress.handleServer` rejects invalid requests, `PacketCsgoProgress.java:53-170`). The client `requestId` is used only for matching the response to the visible animation, never for security decisions (`PacketCsgoProgress.java:33-34`, `PacketBoxOpenResult.java:21-25`).
+**NeoForge 事件总线：** 模组总线和游戏总线上注册了 7 个事件处理器。
 
-## Monitoring & Observability
+**Minecraft 注册表：** 通过 `Registries.ITEM`、`Registries.SOUND_EVENT`、`Registries.CREATIVE_MODE_TAB`、`Registries.CUSTOM_STAT`、`Registries.TRIGGER_TYPE`、`Registries.DATA_COMPONENT_TYPE` 注册。
 
-**Error Tracking:**
-- None. No Sentry, no Bugsnag, no equivalent.
+**NeoForge 载荷网络：** 4 个 `CustomPacketPayload` 数据包，注册在 `CsgoBox.java:86-92`。验证集中在 `PacketValidation.java`。
 
-**Logs:**
-- SLF4J via `com.mojang.logging.LogUtils.getLogger()` (`CsgoBox.java:44`).
-- All log lines go through NeoForge's log4j configuration. Mod uses standard `LOGGER.info`, `LOGGER.warn`, `LOGGER.error`, `LOGGER.debug`.
-- No structured logging. No MDC.
+**NeoForge 玩家数据附件：** 一个 `csgobox:player_data` 类型，通过 `CsboxPlayerData.CODEC` 持久化。
 
-## CI/CD & Deployment
+**NeoForge 配置系统：** `config/csgobox.toml`，四个部分。
 
-**Hosting:**
-- No hosted backend. Mod is distributed as a `.jar` artifact consumers install into the Minecraft `mods/` folder.
+## 环境配置
 
-**CI Pipeline:**
-- None detected in this repo (no `.github/workflows/`, no `.gitlab-ci.yml`, no `Jenkinsfile`). Build is run manually by a developer invoking `./gradlew build`.
+- 无运行时必需的环境变量。`JAVA_HOME` 在构建时可能被设置，但 `build.gradle:31-33` 用 JDK 21 toolchain 覆盖。无密钥、凭据。
 
-**Release artifacts:**
-- Built jar: `build/libs/csgobox-1.0.5.jar` (`archivesName = mod_id` in `build.gradle:13`).
-- `maven-publish` plugin declared in `build.gradle:5` but no `publishing {}` block configured - jar is published only locally.
+## Webhook 与回调
 
-## Game Engine Integration Points
-
-These are not "external" services but are the canonical surfaces the mod integrates with inside the Minecraft JVM:
-
-**NeoForge event bus (`net.neoforged.bus.api.IEventBus`):**
-- Mod bus: registration of `DeferredRegister`s, `RegisterPayloadHandlersEvent`, `FMLCommonSetupEvent`, `RegisterEvent`, `ModConfigEvent.Reloading`.
-- Game bus (`NeoForge.EVENT_BUS`): `LivingDeathEvent` (mob drop), `PlayerInteractEvent.RightClickItem` (right-click to open box), `PlayerEvent.PlayerLoggedInEvent` (fire `ModLoadedTrigger` so `csgobox:root` advances).
-- See `src/main/java/com/reclizer/csgobox/CsgoBox.java:56-83`, `src/main/java/com/reclizer/csgobox/event/ModEvents.java`, `src/main/java/com/reclizer/csgobox/event/ClickEvent.java`.
-
-**Minecraft registries (`net.minecraft.core.registries.BuiltInRegistries`):**
-- `Registries.ITEM` - items registered via `ModItems.ITEMS` (`src/main/java/com/reclizer/csgobox/item/ModItems.java:46-51`)
-- `Registries.SOUND_EVENT` - sounds registered via `ModSounds.SOUNDS` (`src/main/java/com/reclizer/csgobox/sounds/ModSounds.java:14`)
-- `Registries.CREATIVE_MODE_TAB` - one custom tab `EQUIPMENT_TAB` (`ModItems.java:21-44`)
-- `Registries.CUSTOM_STAT` - custom stat `csgobox:opened_boxes` registered in `CsgoBox.java:69-70`, resolved in `CsgoBox.java:101-108`
-- `Registries.TRIGGER_TYPE` - `csgobox:opened_box` and `csgobox:mod_loaded` triggers (`CsgoBox.java:71-73`)
-- `Registries.DATA_COMPONENT_TYPE` - `csgobox:box_id` data component (`src/main/java/com/reclizer/csgobox/item/ItemCsgoBox.java:36-44`)
-
-**NeoForge payload network (`net.neoforged.neoforge.network`):**
-- Four `CustomPacketPayload` packets registered in `CsgoBox.java:86-92`:
-  - `csgobox:csgo_progress` (client -> server, opening request)
-  - `csgobox:box_open_result` (server -> client, opening result + animation strip)
-  - `csgobox:request_box_items` (client -> server, preview fetch)
-  - `csgobox:sync_box_items` (server -> client, preview data)
-- Payload delivery uses `PacketDistributor.sendToServer` / `sendToPlayer`.
-- Validation is centralised in `src/main/java/com/reclizer/csgobox/packet/PacketValidation.java` (size caps, defensive copies, list-size consistency checks).
-
-**NeoForge player data attachments (`net.neoforged.neoforge.attachment`):**
-- One attachment type `csgobox:player_data` of `CsboxPlayerData` (`src/main/java/com/reclizer/csgobox/capability/ModCapability.java:17-22`). Persists per-player open-state seed across server restarts via `CsboxPlayerData.CODEC`.
-
-**NeoForge config system (`net.neoforged.neoforge.common.ModConfigSpec`):**
-- Single common config file `config/csgobox.toml`, four sections (`general`, `advanced`, `sound`, `animation`) - see `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`.
-
-## Environment Configuration
-
-**Required env vars:**
-- None. Mod does not read environment variables at runtime.
-
-**Build-time env vars:**
-- `JAVA_HOME` may be set, but `build.gradle:31-33` overrides it for JavaExec tasks using the JDK 21 toolchain.
-
-**Secrets location:**
-- None. Mod has no secrets, no API keys, no credentials. `BoxJsonLoader` rejects path-traversal in `deleteFile` but otherwise no auth is required for local file ops.
-
-## Webhooks & Callbacks
-
-**Incoming (HTTP):**
-- None.
-
-**Outgoing (HTTP):**
-- None.
-
-**In-game (NeoForge event listeners are the only "callbacks"):**
-- `LivingDeathEvent` -> `ModEvents.livingDeath` (mob death -> possible box drop)
-- `PlayerInteractEvent.RightClickItem` -> `ClickEvent.onRightClick` (client-side right-click -> open GUI)
-- `PlayerEvent.PlayerLoggedInEvent` -> `ModEvents.playerLoggedIn` (player joins -> fire `ModLoadedTrigger`)
-- `RegisterCommandsEvent` -> `CsboxCommand.register` (command tree registration)
-- `FMLCommonSetupEvent` -> `CsgoBox.commonSetup` (load box JSONs) and `CsgoBox.resolveOpenedBoxesStat` (resolve custom stat)
-- `RegisterPayloadHandlersEvent` -> `CsgoBox.registerPayloads` (network packet handlers)
-- `ModConfigEvent.Reloading` -> `CsgoBox` anonymous listener (log when config reloads)
+- 无入站/出站 HTTP。唯一的"回调"是 NeoForge 事件监听器（7 个已注册）。
 
 ---
 
-*Integration audit: 2026-06-29*
+*集成审计：2026-06-29*
