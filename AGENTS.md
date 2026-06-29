@@ -55,7 +55,7 @@ ModLoadingContext.get().getActiveContainer().registerConfig(
 - `csgobox:csgo_key0`（铁）、`csgo_key1`（金）、`csgo_key2`（钻石）
 - `csgobox:csgo_key3`（下界合金）：**仅锻造台配方**
   - 锻造台：`csgo_key2` + `netherite_upgrade_smithing_template` + `netherite_ingot`
-- 配方文件路径：`src/main/resources/data/csgobox/recipes/`
+- 配方文件路径：`src/main/resources/data/csgobox/recipe/`（**注意是单数 `recipe`**，与 Minecraft 数据包规范一致；RecipeManager 通过 `Registries.elementsDirPath(Registries.RECIPE)` 扫描此目录）
 
 ## 配方 JSON 格式
 

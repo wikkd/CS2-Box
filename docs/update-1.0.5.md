@@ -54,6 +54,6 @@ build/libs/csgobox-1.0.5.jar
 - 基物品：`csgobox:csgo_key2`（钻石钥匙）
 - 添加材料：`minecraft:netherite_ingot` × 1
 
-配方文件：`data/csgobox/recipes/csgo_key3_smithing.json`。
+配方文件：`data/csgobox/recipe/csgo_key3_smithing.json`。
 
-**1.0.5 修正**：原工作台 3x 下界合金锭合成配方（`data/csgobox/recipes/csgo_key3.json`）已移除，以与锻造台升级流程保持一致并保持下界合金钥匙的稀有度。无需数据迁移；现有存档继续正常工作。
+**1.0.5 修正**：原工作台 3x 下界合金锭合成配方（`data/csgobox/recipe/csgo_key3.json`）已移除，以与锻造台升级流程保持一致并保持下界合金钥匙的稀有度。无需数据迁移；现有存档继续正常工作。
