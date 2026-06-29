@@ -7,7 +7,7 @@
 
 **Runner:** None present in this project.
 
-The repository contains **no automated test code**. There is no `src/test/java/`, no `src/test/resources/`, no `src/gametest/java/`, no JUnit / TestNG / Jupiter dependencies, no `test {}` block in `build.gradle`, and no assertion library on the classpath. The only test-related configuration is the NeoForge `forge.enabledGameTestNamespaces` system property in `build.gradle:30-39`, which is wired to the `csbox` namespace but has no game test classes to load.
+The repository contains **no automated test code**. There is no `src/test/java/`, no `src/test/resources/`, no `src/gametest/java/`, no JUnit / TestNG / Jupiter dependencies, no `test {}` block in `build.gradle`, and no assertion library on the classpath. The only test-related configuration is the NeoForge `forge.enabledGameTestNamespaces` system property in `build.gradle:30-39`, which is wired to the `csgobox` namespace but has no game test classes to load.
 
 **Assertion Library:** None.
 
@@ -64,7 +64,7 @@ The repository contains **no automated test code**. There is no `src/test/java/`
 
 **Integration Tests:** Not present. The closest integration exercise is the manual UAT documented in `README.md:97-108` (default JSON generation, item format variants, missing IDs, empty grades, key requirements, animation final item, ESC-then-reopen, empty-box warning overlay, netherite key smithing-only recipe).
 
-**E2E Tests:** Not present. The NeoForge `gameTest` framework is enabled in `build.gradle:37-39` but the `csbox` game-test namespace contains zero test classes. Game tests would let you start a fake server, register boxes, send packets, and assert on `BoxRegistry` state — but no such infrastructure has been written.
+**E2E Tests:** Not present. The NeoForge `gameTest` framework is enabled in `build.gradle:37-39` but the `csgobox` game-test namespace contains zero test classes. Game tests would let you start a fake server, register boxes, send packets, and assert on `BoxRegistry` state — but no such infrastructure has been written.
 
 **Game Tests:** Framework enabled (`build.gradle:30, 34, 38`), namespace registered, content absent. To add game tests, create `src/gametest/java/com/reclizer/csgobox/` and place `GameTest`-annotated methods in classes registered via `RegisterGameTestsEvent`.
 
@@ -119,7 +119,7 @@ Incremental update applied to capture changes since the 2026-06-28 baseline. All
 
 **Path updates (recipe directory rename).** The only test-fixture-adjacent path reference in the doc — the smithing recipe location cited in UAT checklist item 8 — has been updated from `data/csbox/recipes/csgo_key3_smithing.json` to `data/csgobox/recipe/csgo_key3_smithing.json` (singular `recipe/`, `csgobox` namespace). This is a single-line correction; the manual test instruction itself (smithing-table-only crafting, workbench recipe removed) is unchanged.
 
-**Java package renames in code references.** Every Java-source file path cited in the doc has been updated from `com.reclizer.csbox` to `com.reclizer.csgobox`:
+**Java package renames in code references.** Every Java-source file path cited in the doc has been updated from `com.reclizer.csgobox` to `com.reclizer.csgobox`:
 - `BoxJsonLoader` / `BoxDefinition` paths in the unit-test candidates list
 - `RandomItem` / `PacketValidation` / `ColorTools` paths
 - The "Defensive Code That Functions Like Tests" section

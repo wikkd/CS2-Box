@@ -5,7 +5,7 @@
 ## Languages
 
 **Primary:**
-- Java 25 (toolchain-pinned via `gradle.properties` -> `org.gradle.java.home=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home`, while `build.gradle` declares `JavaLanguageVersion.of(25)`) - All sources under `src/main/java/com/reclizer/csbox/**`
+- Java 25 (toolchain-pinned via `gradle.properties` -> `org.gradle.java.home=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home`, while `build.gradle` declares `JavaLanguageVersion.of(25)`) - All sources under `src/main/java/com/reclizer/csgobox/**`
 
 **Secondary:**
 - GLSL fragment shader (Minecraft JSON shader format) - 1 file under `src/main/resources/assets/minecraft/shaders/program/fade_in_blur.fsh`
@@ -37,7 +37,7 @@
 ## Frameworks
 
 **Core (mod loader / Minecraft):**
-- NeoForge 26.1.2.76 (API entrypoint `CsBox.java` annotated `@Mod(CsBox.MODID)`)
+- NeoForge 26.1.2.76 (API entrypoint `CsgoBox.java` annotated `@Mod(CsgoBox.MODID)`)
 - Minecraft 26.1.2 (vanilla jars obtained via NeoGradle's NeoForm 26.1.2 pipeline)
 - Forge FML event bus (`net.neoforged.bus`, `net.neoforged.fml`)
 - NeoForge network payload bus (`net.neoforged.neoforge.network`)
@@ -48,7 +48,7 @@
 
 **Persistence / Config:**
 - NeoForge `ModConfigSpec` (TOML-backed config system) - sole config backend since v1.0.5 (Cloth Config removed)
-- `CsboxConfig` lives in the `com.reclizer.csgobox.config` package (relocated from `com.reclizer.csbox.config` in commit b7b11e5, 2026-06-29)
+- `CsboxConfig` lives in the `com.reclizer.csgobox.config` package (relocated from `com.reclizer.csgobox.config` in commit b7b11e5, 2026-06-29)
 - JSON via `com.google.gson` (Gson) for box definition files
 - Mojang `DataComponentPatch` + `JsonOps`/`NbtOps` codecs for item component data
 
@@ -69,14 +69,14 @@
 
 **Transitive (resolved through NeoForge; not declared in `build.gradle`):**
 - `net.minecraft:minecraft` (via NeoGradle 26.1.2 sources jar + NeoForm pipeline)
-- `com.mojang:brigadier` - command dispatcher (`src/main/java/com/reclizer/csbox/command/CsboxCommand.java:3-12`)
-- `com.mojang:logging` (`com.mojang.logging.LogUtils`) - mod logger (`src/main/java/com/reclizer/csbox/CsBox.java:3`)
+- `com.mojang:brigadier` - command dispatcher (`src/main/java/com/reclizer/csgobox/command/CsboxCommand.java:3-12`)
+- `com.mojang:logging` (`com.mojang.logging.LogUtils`) - mod logger (`src/main/java/com/reclizer/csgobox/CsgoBox.java:3`)
 - `com.mojang:serialization` (`com.mojang.serialization.Codec` / `RecordCodecBuilder` / `JsonOps`) - data codecs in `BoxDefinition.java`, `GradeGroup.java`, `CsboxPlayerData.java`, `BoxJsonLoader.java`
 - `com.google.code.gson:gson` - JSON read/write for `config/csbox/*.json` (`BoxJsonLoader.java:3-7`)
-- `org.slf4j:slf4j-api` - logger facade (`CsBox.java:27`)
+- `org.slf4j:slf4j-api` - logger facade (`CsgoBox.java:27`)
 - `io.netty:netty-codec` - `DecoderException` used by packet read paths (`PacketBoxOpenResult.java:4`, `PacketSyncBoxItems.java:4`, `BoxDefinition.java:5`)
 - `org.joml:joml` - `Matrix3x2fStack` 2D matrix used by GUI code (transitively pulled in)
-- `java.security.SecureRandom` (JDK built-in) - server-authoritative RNG seed (`PacketCs2Progress.java:19,35`)
+- `java.security.SecureRandom` (JDK built-in) - server-authoritative RNG seed (`PacketCsgoProgress.java:19,35`)
 
 **Removed dependency (v1.0.5):**
 - `me.shedaniel.cloth:cloth-config-neoforge` - explicitly dropped in 1.0.5 (commit 862ab1f, 2026-06-28); replaced by NeoForge's native `ModConfigSpec`. See `docs/update-1.0.5.md`.
@@ -100,7 +100,7 @@
 - Resource expansion: `META-INF/neoforge.mods.toml` and `pack.mcmeta` are filtered through `replaceProperties` at `processResources` time
 
 **Mod (runtime, TOML):**
-- NeoForge `ModConfigSpec` registered in `CsBox.java:45` -> `config/csbox-common.toml` (file name forced by the third arg)
+- NeoForge `ModConfigSpec` registered in `CsgoBox.java:45` -> `config/csbox-common.toml` (file name forced by the third arg)
 - Section grouping: `[general]`, `[advanced]`, `[sound]`, `[animation]` (see `CsboxConfig.java` in the `com.reclizer.csgobox.config` package)
 - Section comments are emitted in the TOML, but Java callers access fields flatly (`CONFIG.fieldName`, no `CONFIG.section.fieldName`) - documented in `AGENTS.md`
 - Field defaults (v1.0.5):
@@ -145,7 +145,7 @@ Incremental update covering commits `862ab1f`, `be40e5a`, `b7b11e5`, `a8bea6a` (
 - **Recipe directory renamed** `data/csgobox/recipes/` -> `data/csgobox/recipe/` (singular) to match the Minecraft data-pack layout that `RecipeManager` scans. All four recipe files now live under the singular directory: `csgo_key0.json`, `csgo_key1.json`, `csgo_key2.json`, `csgo_key3_smithing.json`.
 - **`csgo_key3` workbench recipe removed** (commit be40e5a). Recipe count dropped from 5 (4 crafting_shaped + 1 smithing_transform) to 4 (3 crafting_shaped + 1 smithing_transform). The netherite key is now exclusively obtained via the smithing table using `minecraft:netherite_upgrade_smithing_template` + `csgo_key2` + `minecraft:netherite_ingot`.
 - **Cloth Config fully removed** (commit 862ab1f, v1.0.5). `me.shedaniel.cloth:cloth-config-neoforge` is no longer on the classpath. NeoForge's native `ModConfigSpec` (resolved transitively) is the only config backend.
-- **`CsboxConfig` package relocated** from `com.reclizer.csbox.config` to `com.reclizer.csgobox.config` (commit b7b11e5, 2026-06-29). No behavioral change; the import in `CsgoBox.java:7` was updated to match. The new path is `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`.
+- **`CsboxConfig` package relocated** from `com.reclizer.csgobox.config` to `com.reclizer.csgobox.config` (commit b7b11e5, 2026-06-29). No behavioral change; the import in `CsgoBox.java:7` was updated to match. The new path is `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`.
 - **`runClient` JVM forced to JDK 21** (commit a8bea6a, 2026-06-29). The `runs { client { ... } }` block in `build.gradle` now pins the toolchain to `JavaLanguageVersion.of(21)` so the dev client JVM and the Gradle daemon use the same JDK regardless of the shell's `JAVA_HOME`.
 - Documentation references: `AGENTS.md:58` already notes the singular `recipe/` directory; `docs/update-1.0.5.md:57,59` already reference the singular path; `docs/port-26.1.2.md:549` still says `data/csbox/recipes/` (plural) and is now stale.
 

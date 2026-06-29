@@ -18,28 +18,28 @@ CSBox/
 │   └── port-26.1.2.md
 ├── src/
 │   └── main/
-│       ├── java/com/reclizer/csbox/
+│       ├── java/com/reclizer/csgobox/
 │       │   ├── box/          # BoxDefinition, BoxRegistry, BoxJsonLoader, GradeGroup
 │       │   ├── capability/   # ModCapability, CsboxPlayerData
 │       │   ├── command/      # /csbox Brigadier command
 │       │   ├── config/       # CsboxConfig (ModConfigSpec) [package: com.reclizer.csgobox.config]
 │       │   ├── event/        # ModEvents (LivingDeath), ClickEvent (RightClickItem)
 │       │   ├── gui/          # CsboxScreen, CsboxProgressScreen, CsLookItemScreen
-│       │   ├── item/         # ItemCsBox, ItemCs2Key, ModItems
+│       │   ├── item/         # ItemCsgoBox, ItemCsgoKey, ModItems
 │       │   ├── packet/       # 4 payloads + PacketValidation
 │       │   ├── sounds/       # ModSounds
 │       │   ├── utils/        # RandomItem, render helpers, colours, font
-│       │   └── CsBox.java  # @Mod entry point
+│       │   └── CsgoBox.java  # @Mod entry point
 │       └── resources/
 │           ├── META-INF/
 │           │   └── neoforge.mods.toml    # mod metadata (template-substituted)
 │           ├── assets/
-│           │   ├── csbox/
+│           │   ├── csgobox/
 │           │   │   ├── lang/             # en_us.json, zh_cn.json
-│           │   │   ├── models/item/      # csbox, csbox_key0..3 (csbox_test also exists)
+│           │   │   ├── models/item/      # csgobox, csbox_key0..3 (csbox_test also exists)
 │           │   │   ├── sounds/           # cs_open.ogg, cs_finish.ogg, cs_dita.ogg
 │           │   │   ├── textures/
-│           │   │   │   ├── item/         # csbox.png, csbox_key0..3.png
+│           │   │   │   ├── item/         # csgobox.png, csbox_key0..3.png
 │           │   │   │   └── screens/      # csbox_table.png, csbox_background.png, gold_item.png + atlas/
 │           │   │   └── sounds.json
 │           │   └── minecraft/shaders/    # fade_in_blur post-processing
@@ -57,10 +57,10 @@ CSBox/
 
 ## Directory Purposes
 
-**`src/main/java/com/reclizer/csbox/`:**
+**`src/main/java/com/reclizer/csgobox/`:**
 - Purpose: All mod code under a single Java package.
-- Contains: 9 sub-packages and one root file (`CsBox.java`).
-- Key files: `CsBox.java` (entry point), `box/BoxDefinition.java`, `box/BoxRegistry.java`, `box/BoxJsonLoader.java`, `packet/PacketCs2Progress.java`, `packet/PacketBoxOpenResult.java`, `gui/CsboxScreen.java`, `gui/CsboxProgressScreen.java`.
+- Contains: 9 sub-packages and one root file (`CsgoBox.java`).
+- Key files: `CsgoBox.java` (entry point), `box/BoxDefinition.java`, `box/BoxRegistry.java`, `box/BoxJsonLoader.java`, `packet/PacketCsgoProgress.java`, `packet/PacketBoxOpenResult.java`, `gui/CsboxScreen.java`, `gui/CsboxProgressScreen.java`.
 
 **`box/`:**
 - Purpose: Box/grade data model, JSON loader, and registry.
@@ -70,7 +70,7 @@ CSBox/
 **`packet/`:**
 - Purpose: Server-authoritative network payloads.
 - Contains: 5 classes (4 payload records + `PacketValidation` helper).
-- Key files: `PacketCs2Progress.java`, `PacketBoxOpenResult.java`, `PacketRequestBoxItems.java`, `PacketSyncBoxItems.java`.
+- Key files: `PacketCsgoProgress.java`, `PacketBoxOpenResult.java`, `PacketRequestBoxItems.java`, `PacketSyncBoxItems.java`.
 
 **`gui/`:**
 - Purpose: Client-only screens; no business logic.
@@ -80,7 +80,7 @@ CSBox/
 **`item/`:**
 - Purpose: Item types and registration.
 - Contains: 2 item classes + `ModItems` registrar.
-- Key files: `ItemCsBox.java` (data component holder), `ItemCs2Key.java` (bare), `ModItems.java` (deferred registers + creative tab).
+- Key files: `ItemCsgoBox.java` (data component holder), `ItemCsgoKey.java` (bare), `ModItems.java` (deferred registers + creative tab).
 
 **`event/`:**
 - Purpose: Lifecycle event subscribers.
@@ -122,10 +122,10 @@ CSBox/
 ## Key File Locations
 
 **Entry Points:**
-- `src/main/java/com/reclizer/csbox/CsBox.java` — `@Mod` entry; static config init; registers deferred registers and payloads.
-- `src/main/java/com/reclizer/csbox/event/ClickEvent.java` — client right-click listener that opens `CsboxScreen`.
-- `src/main/java/com/reclizer/csbox/packet/PacketCs2Progress.java` — authoritative open-box server handler.
-- `src/main/java/com/reclizer/csbox/event/ModEvents.java` — mob-death drop roller.
+- `src/main/java/com/reclizer/csgobox/CsgoBox.java` — `@Mod` entry; static config init; registers deferred registers and payloads.
+- `src/main/java/com/reclizer/csgobox/event/ClickEvent.java` — client right-click listener that opens `CsboxScreen`.
+- `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java` — authoritative open-box server handler.
+- `src/main/java/com/reclizer/csgobox/event/ModEvents.java` — mob-death drop roller.
 
 **Configuration:**
 - `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` — all `ModConfigSpec` keys.
@@ -134,10 +134,10 @@ CSBox/
 - `src/main/resources/pack.mcmeta` — resource-pack metadata (substituted).
 
 **Core Logic:**
-- `src/main/java/com/reclizer/csbox/box/BoxDefinition.java` — box record (codec + stream codec).
-- `src/main/java/com/reclizer/csbox/box/BoxRegistry.java` — static registry.
-- `src/main/java/com/reclizer/csbox/box/BoxJsonLoader.java` — load/save/delete JSON; auto-create default `weapon_supply_box.json`.
-- `src/main/java/com/reclizer/csbox/utils/RandomItem.java` — weighted grade roll + item pick + fallback resolution.
+- `src/main/java/com/reclizer/csgobox/box/BoxDefinition.java` — box record (codec + stream codec).
+- `src/main/java/com/reclizer/csgobox/box/BoxRegistry.java` — static registry.
+- `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java` — load/save/delete JSON; auto-create default `weapon_supply_box.json`.
+- `src/main/java/com/reclizer/csgobox/utils/RandomItem.java` — weighted grade roll + item pick + fallback resolution.
 
 **Testing:**
 - No automated test sources are present. The `runs/` directory holds dev launch configurations from `./gradlew runClient`/`runServer`.
@@ -158,7 +158,7 @@ CSBox/
 - Sound names are snake_case: `cs_open`, `cs_finish`, `cs_dita`.
 - Models/textures follow `assets/csbox/<kind>/<name>.{json,png}` convention.
 - Lang files use the standard `en_us.json`/`zh_cn.json` locale codes.
-- Translation keys follow `gui.csbox.csbox.*`, `commands.csbox.*`, `tooltips.csbox.*`.
+- Translation keys follow `gui.csgobox.csgobox.*`, `commands.csgobox.*`, `tooltips.csgobox.*`.
 
 ## Where to Add New Code
 
@@ -167,30 +167,30 @@ CSBox/
 - Tests: none in-repo; manual via `/csbox` + `config/csbox/<name>.json`.
 
 **New key tier:**
-- Primary code: add a new `Supplier<Item> ITEM_CSBOX_KEYn` in `src/main/java/com/reclizer/csbox/item/ModItems.java` and add it to the creative tab display list.
+- Primary code: add a new `Supplier<Item> ITEM_CSBOX_KEYn` in `src/main/java/com/reclizer/csgobox/item/ModItems.java` and add it to the creative tab display list.
 - Recipe: add `src/main/resources/data/csgobox/recipe/csgo_keyN.json` (crafting_shaped or smithing_transform).
 - Texture: `src/main/resources/assets/csbox/textures/item/csbox_keyN.png` and model `assets/csbox/models/item/csbox_keyN.json`.
 - Lang: add entry to `src/main/resources/assets/csbox/lang/en_us.json` and `zh_cn.json`.
 - Update `BoxJsonLoader.writeDefaultIfEmpty` if the default box should reference the new key.
 
 **New screen:**
-- Primary code: extend `src/main/java/com/reclizer/csbox/gui/`. Reuse utils under `utils/` for font/item rendering. If the screen needs server data, add a new packet in `packet/` and register it in `CsBox.registerPayloads`.
+- Primary code: extend `src/main/java/com/reclizer/csgobox/gui/`. Reuse utils under `utils/` for font/item rendering. If the screen needs server data, add a new packet in `packet/` and register it in `CsgoBox.registerPayloads`.
 
 **New payload:**
-- Primary code: new record under `src/main/java/com/reclizer/csbox/packet/` implementing `CustomPacketPayload`. With >6 fields, write a manual `StreamCodec.of()` and reuse `PacketValidation` helpers.
-- Register in `CsBox.registerPayloads` (`src/main/java/com/reclizer/csbox/CsBox.java:60`) via `registrar.playToServer` or `playToClient`.
+- Primary code: new record under `src/main/java/com/reclizer/csgobox/packet/` implementing `CustomPacketPayload`. With >6 fields, write a manual `StreamCodec.of()` and reuse `PacketValidation` helpers.
+- Register in `CsgoBox.registerPayloads` (`src/main/java/com/reclizer/csgobox/CsgoBox.java:60`) via `registrar.playToServer` or `playToClient`.
 
 **New config field:**
 - Primary code: extend `CsboxConfig` (`src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`) inside the appropriate `push`/`pop` block. Call `.get()` on every `define*`. Update `AGENTS.md` if it changes the public `CONFIG` contract.
 
 **New command:**
-- Primary code: extend `CsboxCommand` (`src/main/java/com/reclizer/csbox/command/CsboxCommand.java`) — add a new `.then(...)` branch in `register` and a private executor method. Add translation keys under `commands.csbox.*` in both `lang/*.json` files.
+- Primary code: extend `CsboxCommand` (`src/main/java/com/reclizer/csgobox/command/CsboxCommand.java`) — add a new `.then(...)` branch in `register` and a private executor method. Add translation keys under `commands.csgobox.*` in both `lang/*.json` files.
 
 **New event hook:**
-- Primary code: add a `@SubscribeEvent` static method on either `ModEvents` (server/common) or `ClickEvent` (client). Annotate the class with `@EventBusSubscriber(modid = CsBox.MODID)` (already present on both).
+- Primary code: add a `@SubscribeEvent` static method on either `ModEvents` (server/common) or `ClickEvent` (client). Annotate the class with `@EventBusSubscriber(modid = CsgoBox.MODID)` (already present on both).
 
 **Utilities:**
-- Shared helpers: `src/main/java/com/reclizer/csbox/utils/`. Follow the existing `final class + private constructor` pattern for stateless helpers.
+- Shared helpers: `src/main/java/com/reclizer/csgobox/utils/`. Follow the existing `final class + private constructor` pattern for stateless helpers.
 
 ## Special Directories
 
@@ -229,9 +229,9 @@ Incremental refresh — surgical updates only. All other content from the 2026-0
 
 ### CsboxConfig package relocation
 
-`CsboxConfig` relocated from the `csbox.config` package to the `csgobox.config` package. Commit: `b7b11e5` ("fix(config): relocate CsboxConfig to csgobox package").
+`CsboxConfig` relocated from the `csgobox.config` package to the `csgobox.config` package. Commit: `b7b11e5` ("fix(config): relocate CsboxConfig to csgobox package").
 
-- **Previous path:** `src/main/java/com/reclizer/csbox/config/CsboxConfig.java`
+- **Previous path:** `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`
 - **New path:** `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`
 
 The class is the only file under `config/`, so the directory tree still shows a single entry for the package. The "Key File Locations" and "Where to Add New Code" sections have been updated to point at the new package path. The configuration layer's purpose and responsibilities are unchanged.

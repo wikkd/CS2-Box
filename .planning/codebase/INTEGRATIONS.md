@@ -21,20 +21,20 @@ This mod is a self-contained client/server Minecraft mod. It runs entirely insid
 
 **File Storage:**
 - Local filesystem only, scoped to the standard NeoForge config directory.
-- Box definitions: `<config_dir>/csbox/*.json` - one file per registered box (`BoxJsonLoader.BOXES_DIR = FMLPaths.CONFIGDIR.get().resolve("csbox")` at `src/main/java/com/reclizer/csbox/box/BoxJsonLoader.java:41`)
+- Box definitions: `<config_dir>/csgobox/*.json` - one file per registered box (`BoxJsonLoader.BOXES_DIR = FMLPaths.CONFIGDIR.get().resolve("csgobox")` at `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java:41`)
 - Default file auto-created on first run: `weapon_supply_box.json` (`BoxJsonLoader.writeDefaultIfEmpty()` lines 83-159)
 - Writes use atomic move (`Files.move(... REPLACE_EXISTING, ATOMIC_MOVE)` at `BoxJsonLoader.java:448`)
 - Path-traversal guard: `deleteFile()` rejects paths outside `BOXES_DIR.normalize()` (`BoxJsonLoader.java:455-469`)
-- Server-authoritative box state: `CsboxPlayerData` attached to each `Player` via NeoForge `AttachmentType` (`ModCapability.PLAYER_DATA` in `src/main/java/com/reclizer/csbox/capability/ModCapability.java`). Serialized via `ValueInput`/`ValueOutput` using `CsboxPlayerData.CODEC` and saved with the player.
+- Server-authoritative box state: `CsboxPlayerData` attached to each `Player` via NeoForge `AttachmentType` (`ModCapability.PLAYER_DATA` in `src/main/java/com/reclizer/csgobox/capability/ModCapability.java`). Serialized via `ValueInput`/`ValueOutput` using `CsboxPlayerData.CODEC` and saved with the player.
 
 **Caching:**
-- None. No in-memory cache beyond the static `BoxRegistry.BOX_REGISTRY` `LinkedHashMap` (`src/main/java/com/reclizer/csbox/box/BoxRegistry.java:16`).
+- None. No in-memory cache beyond the static `BoxRegistry.BOX_REGISTRY` `LinkedHashMap` (`src/main/java/com/reclizer/csgobox/box/BoxRegistry.java:16`).
 
 ## Authentication & Identity
 
 **Auth Provider:**
 - Inherits Minecraft / NeoForge's built-in authentication. The mod does not implement its own login or identity layer.
-- Mojang / Microsoft account auth is performed entirely by the Minecraft launcher and online-mode server flag; the mod only reads `Minecraft.getInstance().getUser().getName()` for diagnostic logging at startup (`CsBox.java:89`).
+- Mojang / Microsoft account auth is performed entirely by the Minecraft launcher and online-mode server flag; the mod only reads `Minecraft.getInstance().getUser().getName()` for diagnostic logging at startup (`CsgoBox.java:89`).
 - Single-player / LAN servers operate in offline mode and need no additional auth.
 
 ## Monitoring & Observability
@@ -43,7 +43,7 @@ This mod is a self-contained client/server Minecraft mod. It runs entirely insid
 - None. No Sentry/Bugsnag/etc. integration. All error reporting is local log lines.
 
 **Logs:**
-- SLF4J / `com.mojang.logging.LogUtils` - mod logger at `CsBox.LOGGER` (`src/main/java/com/reclizer/csbox/CsBox.java:33`)
+- SLF4J / `com.mojang.logging.LogUtils` - mod logger at `CsgoBox.LOGGER` (`src/main/java/com/reclizer/csgobox/CsgoBox.java:33`)
 - Log level controlled via `CONFIG.enableDebugLogging` (`CsboxConfig.java` `[advanced]` section; `CsboxConfig` lives in `com.reclizer.csgobox.config` since commit b7b11e5, 2026-06-29)
 - Stdout: build runs emit REGISTRIES markers at debug level (`build.gradle` line 24: `systemProperty 'forge.logging.markers', 'REGISTRIES'`)
 
@@ -63,7 +63,7 @@ This mod is a self-contained client/server Minecraft mod. It runs entirely insid
 
 **Required env vars:**
 - None. The mod is configured entirely through:
-  1. `config/csbox-common.toml` (NeoForge `ModConfigSpec`, written by `ModConfig.Type.COMMON` registration in `CsBox.java:45`)
+  1. `config/csbox-common.toml` (NeoForge `ModConfigSpec`, written by `ModConfig.Type.COMMON` registration in `CsgoBox.java:45`)
   2. `config/csbox/*.json` (user-editable box definitions)
 
 **Build-time env vars (developer machine only, set in `gradle.properties`):**
@@ -89,22 +89,22 @@ These are the only external integrations in the project sense - dependencies on 
 - DataComponents / ItemStack components (`net.minecraft.core.component.DataComponentPatch`, `DataComponents.CUSTOM_NAME`)
 - NBT codec ops (`NbtOps`, `TagParser.parseCompoundFully`) for legacy JSON item tags (`BoxJsonLoader.java:364-373`)
 - Entity lifecycle: `LivingDeathEvent` for mob drops (`event/ModEvents.java:31`)
-- Inventory: `player.getInventory().getContainerSize()` / `getItem()` (`PacketCs2Progress.java:216`, `CsboxCommand.java:324`)
+- Inventory: `player.getInventory().getContainerSize()` / `getItem()` (`PacketCsgoProgress.java:216`, `CsboxCommand.java:324`)
 - Command dispatcher: Mojang `brigadier` registered on `RegisterCommandsEvent` (`command/CsboxCommand.java:62-179`)
 - `Registries.elementsDirPath(Registries.RECIPE)` -> `data/<namespace>/recipe/` (singular) is the data-pack directory scanned by `RecipeManager`; the mod's recipe files now live at `src/main/resources/data/csgobox/recipe/` after the 2026-06-29 rename
 
 **NeoForge API:**
-- `ModLoadingContext.get().getActiveContainer().registerConfig(...)` (`CsBox.java:45`)
-- `RegisterPayloadHandlersEvent` for custom network payloads (`CsBox.java:60-66`)
+- `ModLoadingContext.get().getActiveContainer().registerConfig(...)` (`CsgoBox.java:45`)
+- `RegisterPayloadHandlersEvent` for custom network payloads (`CsgoBox.java:60-66`)
 - `AttachmentType` (`NeoForgeRegistries.ATTACHMENT_TYPES`) for player-attached state (`capability/ModCapability.java:17`)
 - `IAttachmentSerializer` interface for value-input/output serialization (`capability/ModCapability.java:23-34`)
-- `DeferredRegister` for items, sounds, creative tabs, data components, attachment types (`ModItems.java`, `ModSounds.java`, `ItemCsBox.java:36-44`, `ModCapability.java:17-18`)
+- `DeferredRegister` for items, sounds, creative tabs, data components, attachment types (`ModItems.java`, `ModSounds.java`, `ItemCsgoBox.java:36-44`, `ModCapability.java:17-18`)
 - Event bus subscribers annotated with `@EventBusSubscriber` (e.g., `event/ModEvents.java:22`, `event/ClickEvent.java:17`, `command/CsboxCommand.java:42`)
 - `FMLPaths.CONFIGDIR` for filesystem paths (`box/BoxJsonLoader.java:41`)
-- `ModConfigSpec` (NeoForge-native, since v1.0.5) backs the runtime config — registered in `CsBox.java` against the `csgobox.config.CsboxConfig` instance
+- `ModConfigSpec` (NeoForge-native, since v1.0.5) backs the runtime config — registered in `CsgoBox.java` against the `csgobox.config.CsboxConfig` instance
 
 **Custom network payload protocols (this mod defines 4):**
-- `PacketCs2Progress` - client->server, "open this held box" request (`packet/PacketCs2Progress.java`)
+- `PacketCsgoProgress` - client->server, "open this held box" request (`packet/PacketCsgoProgress.java`)
 - `PacketBoxOpenResult` - server->client, server-authoritative animation items + reward (`packet/PacketBoxOpenResult.java`)
 - `PacketRequestBoxItems` - client->server, request current box preview (`packet/PacketRequestBoxItems.java`)
 - `PacketSyncBoxItems` - server->client, preview response (`packet/PacketSyncBoxItems.java`)
@@ -126,7 +126,7 @@ Incremental update covering commits `862ab1f`, `be40e5a`, `b7b11e5`, `a8bea6a` (
 - **Recipe directory renamed** `data/csgobox/recipes/` -> `data/csgobox/recipe/` (singular) to match the Minecraft data-pack layout that `RecipeManager` scans via `Registries.elementsDirPath(Registries.RECIPE)`. All four recipe files now live under the singular directory. Added a new "Recipe integrations" section listing the 4 remaining files.
 - **`csgo_key3` workbench recipe removed** (commit be40e5a). The recipe list shrank from 5 entries (4 crafting_shaped + 1 smithing_transform) to 4 entries (3 crafting_shaped + 1 smithing_transform). `csgo_key3` is now exclusively obtainable via the smithing table.
 - **Cloth Config fully removed** (commit 862ab1f, v1.0.5). `me.shedaniel.cloth:cloth-config-neoforge` is no longer a dependency. NeoForge's native `ModConfigSpec` (resolved transitively through NeoForge) is the sole runtime-config backend; the `NeoForge API` integration list now reflects this.
-- **`CsboxConfig` package relocated** from `com.reclizer.csbox.config` to `com.reclizer.csgobox.config` (commit b7b11e5, 2026-06-29). The new path is `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`. The `CsgoBox.java:7` import was updated to match; the `Monitoring & Observability` section's `CsboxConfig.java` reference was updated to note the new package.
+- **`CsboxConfig` package relocated** from `com.reclizer.csgobox.config` to `com.reclizer.csgobox.config` (commit b7b11e5, 2026-06-29). The new path is `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java`. The `CsgoBox.java:7` import was updated to match; the `Monitoring & Observability` section's `CsboxConfig.java` reference was updated to note the new package.
 - **`runClient` JVM forced to JDK 21** (commit a8bea6a, 2026-06-29). The `runClient` Gradle run config is pinned to JDK 21 via the toolchain specifier. The `CI/CD & Deployment` section now reflects this so future readers know `./gradlew runClient` always uses JDK 21 regardless of shell `JAVA_HOME`.
 
 *Integration audit: 2026-06-28 (baseline), 2026-06-29 (incremental update)*

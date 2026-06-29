@@ -9,19 +9,19 @@
 
 ### BoxJsonLoader is a god class (489 lines)
 - Issue: `BoxJsonLoader.java` handles default JSON authoring, schema tutorial, file IO, weight parsing, entity parsing, item parsing (DataComponent + legacy NBT), and serialization to disk — all in one class.
-- Files: `src/main/java/com/reclizer/csbox/box/BoxJsonLoader.java`
+- Files: `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java`
 - Impact: High. Single point of change for any schema/format evolution. Touching one concern risks regressing the others.
 - Fix approach: Split into `BoxDefaultsWriter`, `BoxJsonParser`, `BoxJsonSerializer`, `BoxFileIO`. Each becomes independently testable.
 
 ### Hardcoded GRADE_COLORS array contains duplicate values
 - Issue: `BoxJsonLoader.java:45` defines `GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF4B69FF, 0xFF4B69FF}` — entries 3-5 (`mil_spec`, `industrial`, `consumer`) all share `0xFF4B69FF`. Either an oversight, or grades were meant to be visually distinguished but never were.
-- Files: `src/main/java/com/reclizer/csbox/box/BoxJsonLoader.java:43-45`
+- Files: `src/main/java/com/reclizer/csgobox/box/BoxJsonLoader.java:43-45`
 - Impact: Medium. Users see no visual progression for 3 of 5 rarities in the UI.
 - Fix approach: Define distinct colors per grade (cool → warm gradient: purple → blue → cyan → teal → green), or extract to `CsboxConfig` so designers can change without recompile.
 
 ### `OPEN_BLOCKED_UNTIL_TICK` uses non-thread-safe `HashMap`
-- Issue: `PacketCs2Progress.java:46` declares `private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new HashMap<>()`. Packet handlers run on the netty event loop; multiple inbound packets can hit the map concurrently.
-- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCs2Progress.java`
+- Issue: `PacketCsgoProgress.java:46` declares `private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new HashMap<>()`. Packet handlers run on the netty event loop; multiple inbound packets can hit the map concurrently.
+- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java`
 - Impact: Medium-to-high. Race-condition corruption, lost updates, or `ConcurrentModificationException` under load (many players opening rapidly on a server).
 - Fix approach: Use `ConcurrentHashMap` + atomic `compute()` for put-if-absent, or move to per-player capability (`CsboxPlayerData` already exists).
 
@@ -53,14 +53,14 @@
 ## Security Considerations
 
 ### Server-authority contract is sound but unevenly enforced
-- Risk: `PacketCs2Progress` correctly re-validates box, keys, weight, RNG, and cooldowns on server (CHANGELOG 1.0.4 added matching request IDs, animation item data, and `sendRejected` for failures). However, validation is split across `PacketValidation` helpers, per-packet `handleServer` methods, and `ItemCsBox` static methods — easy to forget a guard when adding a new packet.
-- Files: `src/main/java/com/reclizer/csgobox/packet/PacketValidation.java`, `src/main/java/com/reclizer/csgobox/packet/PacketCs2Progress.java`
+- Risk: `PacketCsgoProgress` correctly re-validates box, keys, weight, RNG, and cooldowns on server (CHANGELOG 1.0.4 added matching request IDs, animation item data, and `sendRejected` for failures). However, validation is split across `PacketValidation` helpers, per-packet `handleServer` methods, and `ItemCsgoBox` static methods — easy to forget a guard when adding a new packet.
+- Files: `src/main/java/com/reclizer/csgobox/packet/PacketValidation.java`, `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java`
 - Current mitigation: Recent hardening (1.0.4) plus `PacketValidation` helpers for stack-copying and int clamping.
 - Recommendations: Extract a single `OpenBoxValidator.validate(ServerPlayer, ItemStack, long requestId)` that returns a `ValidationResult` enum; have every open-related packet call it. Reduces drift.
 
 ### Client animation consumes server-authorized result, but `requestId` is forgeable
 - Risk: Client sends `requestId` with each open. Server uses it only to route responses; the value is not authenticated. A client could replay a recent `requestId` to confuse the GUI logic.
-- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCs2Progress.java`, `src/main/java/com/reclizer/csgobox/packet/PacketBoxOpenResult.java`
+- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java`, `src/main/java/com/reclizer/csgobox/packet/PacketBoxOpenResult.java`
 - Current mitigation: Server-side `OPEN_BLOCKED_UNTIL_TICK` map per player, and server's own choice of `requestId` to send back is unrelated.
 - Recommendations: Either drop `requestId` and use monotonic counter per session, or sign it with a per-session HMAC. Low priority since the server is the only authority on actual rewards.
 
@@ -74,7 +74,7 @@
 
 ### Per-tick static HashMap cleanup
 - Problem: `OPEN_BLOCKED_UNTIL_TICK` is a `HashMap<UUID, Long>` that grows unbounded if entries are never evicted (no tick handler visible).
-- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCs2Progress.java:46`
+- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java:46`
 - Cause: Entries added on open but never removed on expiry.
 - Improvement path: Add a `ServerTickEvent` handler that walks the map and removes entries older than the cooldown window. O(n) per tick where n = active recent players; trivially fine.
 
@@ -99,7 +99,7 @@
 - Test coverage: None. Manual UAT only.
 
 ### Box animation selection (server rolls, client animates)
-- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCs2Progress.java`, `src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java`
+- Files: `src/main/java/com/reclizer/csgobox/packet/PacketCsgoProgress.java`, `src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java`
 - Why fragile: The animation must visually land on the server-rolled index. CHANGELOG 1.0.4 fixed "animation speed behavior abnormal when winning item is near the start" — a previous regression that shipped. Any change to the easing or strip-window math can re-introduce visual mismatch.
 - Safe modification: Keep the index-mapping math identical; only change visuals that don't affect landing position.
 - Test coverage: None. Manual visual UAT per `README.md:97-108`.
@@ -213,10 +213,10 @@ Incremental update applied against HEAD `a8bea6a`. The 2026-06-28 baseline remai
 ### `CsboxConfig` relocated to `com.reclizer.csgobox.config` package (commit `b7b11e5`)
 
 - **Status: Resolved.** The "config in wrong package" concern is closed.
-- **What changed:** `CsboxConfig.java` moved from `src/main/java/com/reclizer/csbox/config/CsboxConfig.java` (package `com.reclizer.csbox.config`) to `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` (package `com.reclizer.csgobox.config`). Every other source on `main` already imported `com.reclizer.csgobox.config.CsboxConfig`, so the previous layout was a compile-time discrepancy.
+- **What changed:** `CsboxConfig.java` moved from `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` (package `com.reclizer.csgobox.config`) to `src/main/java/com/reclizer/csgobox/config/CsboxConfig.java` (package `com.reclizer.csgobox.config`). Every other source on `main` already imported `com.reclizer.csgobox.config.CsboxConfig`, so the previous layout was a compile-time discrepancy.
 - **Side fix in the same commit:** `.gitignore`'s `config/` entry was tightened to `/config/` so source-level `config/` directories (like the new `src/main/java/com/reclizer/csgobox/config/`) are no longer accidentally ignored by git.
-- **Validation:** `ls src/main/java/com/reclizer/csbox/config/` returns "No such file or directory"; `ls src/main/java/com/reclizer/csgobox/config/` lists only `CsboxConfig.java`. Package declaration on line 1 of `CsboxConfig.java` matches the directory path.
-- **Risk if reintroduced:** Re-creating a `com.reclizer.csbox.config` package (or any `csbox`-prefixed package alongside the `csgobox`-prefixed tree) would re-introduce import drift and break the build. All new config files must go under `com.reclizer.csgobox.*`.
+- **Validation:** `ls src/main/java/com/reclizer/csgobox/config/` returns "No such file or directory"; `ls src/main/java/com/reclizer/csgobox/config/` lists only `CsboxConfig.java`. Package declaration on line 1 of `CsboxConfig.java` matches the directory path.
+- **Risk if reintroduced:** Re-creating a `com.reclizer.csgobox.config` package (or any `csgobox`-prefixed package alongside the `csgobox`-prefixed tree) would re-introduce import drift and break the build. All new config files must go under `com.reclizer.csgobox.*`.
 
 ### JDK 21 runConfig pin (commit `a8bea6a`)
 
@@ -227,9 +227,9 @@ Incremental update applied against HEAD `a8bea6a`. The 2026-06-28 baseline remai
 
 ### Summary of file-path refreshes applied
 
-The following file paths in this document were updated to reflect the `com.reclizer.csbox.*` → `com.reclizer.csgobox.*` correction (which was already applied repo-wide in 1.0.5 but the previous CONCERNS.md still used `csbox` for the source paths):
+The following file paths in this document were updated to reflect the `com.reclizer.csgobox.*` → `com.reclizer.csgobox.*` correction (which was already applied repo-wide in 1.0.5 but the previous CONCERNS.md still used `csgobox` for the source paths):
 
-- `src/main/java/com/reclizer/csbox/...` → `src/main/java/com/reclizer/csgobox/...` across all 4 Tech Debt entries, all 4 Fragile Areas, the Server-authority / Client animation / KubeJS Security entries, the 3 Performance Bottleneck entries, and all 4 Test Coverage Gaps.
+- `src/main/java/com/reclizer/csgobox/...` → `src/main/java/com/reclizer/csgobox/...` across all 4 Tech Debt entries, all 4 Fragile Areas, the Server-authority / Client animation / KubeJS Security entries, the 3 Performance Bottleneck entries, and all 4 Test Coverage Gaps.
 - `CHANGELOG.md:11` → `CHANGELOG.md:14` in the "Old config file not auto-migrated" entry, matching the new line number for the config-path note in the 1.0.5 section.
 
 No semantic changes were made to the baseline concerns — only path corrections. The 2026-06-28 wording is preserved verbatim aside from those path updates.
