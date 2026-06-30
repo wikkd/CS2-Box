@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
@@ -13,9 +12,11 @@ import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.Connection;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
@@ -64,7 +65,7 @@ public class CsboxScreen extends Screen {
             this.world = entity.level();
             this.itemMenu = this.minecraft.player.getItemInHand(InteractionHand.MAIN_HAND);
             this.expectedBoxId = Optional.ofNullable(ItemCsgoBox.getBoxId(this.itemMenu));
-            Connection conn = Minecraft.getInstance().getConnection();
+            ClientPacketListener conn = Minecraft.getInstance().getConnection();
             if (conn != null) {
                 conn.send(new ServerboundCustomPayloadPacket(new PacketRequestBoxItems(this.syncRequestId)));
             }
@@ -136,28 +137,30 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+    public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (this.minecraft != null && this.minecraft.level != null) {
             pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         } else {
-            super.renderBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+            super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
         }
     }
 
     @Override
-    public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double pDragX, double pDragY) {
+        double pMouseX = event.x();
+        double pMouseY = event.y();
         boolean isInRange = (pMouseX >= this.width * 37F / 100 && pMouseX <= this.width * 37F / 100 + 200)
                 && (pMouseY >= this.height * 12F / 100 && pMouseY <= this.height * 12F / 100 + 176);
-        if (pButton == 0 && isInRange) {
+        if (event.button() == 0 && isInRange) {
             this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
             this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
         }
-        return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
+        return super.mouseDragged(event, pDragX, pDragY);
     }
 
     @Override
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY);
     }
@@ -217,13 +220,13 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int key, int b, int c) {
-        if (key == 256) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256) {
             this.minecraft.player.closeContainer();
             this.minecraft.options.hideGui = false;
             return true;
         }
-        return super.keyPressed(key, b, c);
+        return super.keyPressed(event);
     }
 
     protected void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
@@ -289,11 +292,11 @@ public class CsboxScreen extends Screen {
             int bgX1 = Math.min(this.width - 8, (int) ((this.width + warnWidth) / 2.0F) + 8);
             int bgY0 = this.height * 23 / 100 - 6;
             int bgY1 = bgY0 + (int) (this.font.lineHeight * 1.2F) + 10;
-            RenderSystem.disableDepthTest();
+            guiGraphics.nextStratum();
             guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, 0xAA101010);
             RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
                     (this.width - warnWidth) / 2.0F, bgY0 + 5, 0, 0, 1.2F, 0xFFFF4444);
-            RenderSystem.enableDepthTest();
+            guiGraphics.nextStratum();
         }
 
         renderCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.open_box").withStyle(style).getVisualOrderText(),
@@ -362,13 +365,13 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (pButton == 0) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) {
             int openX = openButtonX();
             int openY = this.height * 94 / 100;
             int openW = actionButtonWidth();
             int openH = this.height * 5 / 100;
-            if (pMouseX >= openX && pMouseX <= openX + openW && pMouseY >= openY && pMouseY <= openY + openH) {
+            if (event.x() >= openX && event.x() <= openX + openW && event.y() >= openY && event.y() <= openY + openH) {
                 if (this.entity != null) {
                     if (!openClicked && entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
                         Identifier keyRl = this.keyRl;
@@ -386,7 +389,7 @@ public class CsboxScreen extends Screen {
                             long openRequestId = ThreadLocalRandom.current().nextLong();
                             // Request id only matches the later server result to this animation.
                             Minecraft.getInstance().setScreen(new CsboxProgressScreen(entity, openRequestId));
-                            Connection openConn = Minecraft.getInstance().getConnection();
+                            ClientPacketListener openConn = Minecraft.getInstance().getConnection();
                             if (openConn != null) {
                                 openConn.send(new ServerboundCustomPayloadPacket(new PacketCsgoProgress(openRequestId)));
                             }
@@ -401,7 +404,7 @@ public class CsboxScreen extends Screen {
             int backY = this.height * 94 / 100;
             int backW = actionButtonWidth();
             int backH = this.height * 5 / 100;
-            if (pMouseX >= backX && pMouseX <= backX + backW && pMouseY >= backY && pMouseY <= backY + backH) {
+            if (event.x() >= backX && event.x() <= backX + backW && event.y() >= backY && event.y() <= backY + backH) {
                 if (this.minecraft != null && this.minecraft.player != null) {
                     this.minecraft.player.closeContainer();
                     this.minecraft.options.hideGui = false;
@@ -409,7 +412,7 @@ public class CsboxScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(pMouseX, pMouseY, pButton);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
@@ -71,8 +72,8 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         renderProgressBackground(guiGraphics);
         renderBg(guiGraphics, partialTicks);
     }
@@ -213,12 +214,12 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int key, int b, int c) {
-        if (key == 256) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256) {
             this.onClose();
             return true;
         }
-        return super.keyPressed(key, b, c);
+        return super.keyPressed(event);
     }
 
     @Override

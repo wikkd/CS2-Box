@@ -1,18 +1,8 @@
 package com.reclizer.csgobox.v26_1_2.utils;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix4fStack;
 
 public final class GuiItemMove {
     private GuiItemMove() {
@@ -38,57 +28,15 @@ public final class GuiItemMove {
             LivingEntity player,
             float scale
     ) {
-        BakedModel bakedModel = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
-        renderItemInInventory(guiGraphics.pose(), item, x, y, bakedModel, angleXComponent, angleYComponent, scale);
-    }
-
-    protected static void renderItemInInventory(
-            PoseStack poseStack,
-            ItemStack itemStack,
-            int x,
-            int y,
-            BakedModel bakedModel,
-            float angleXComponent,
-            float angleYComponent,
-            float scale
-    ) {
-        poseStack.pushPose();
-        poseStack.translate(x, y, 100.0F);
-        poseStack.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        poseStack.scale(1.0F, -1.0F, 1.0F);
-        poseStack.mulPose(Axis.XP.rotation(angleYComponent));
-        poseStack.mulPose(Axis.YP.rotation(angleXComponent));
-        Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
-        poseStack.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
-
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        boolean flatLighting = !bakedModel.usesBlockLight();
-        if (flatLighting) {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
+        if (item == null || item.isEmpty() || player == null) return;
+        int pixelX = x;
+        int pixelY = y;
+        int seed = (int)(player.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
+        guiGraphics.pose().pushMatrix();
+        if (scale != 1.0F) {
+            guiGraphics.pose().scale(scale, scale);
         }
-
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(poseStack.last().pose());
-        RenderSystem.applyModelViewMatrix();
-        Minecraft.getInstance().getItemRenderer().render(
-                itemStack,
-                ItemDisplayContext.GUI,
-                false,
-                new PoseStack(),
-                bufferSource,
-                15728880,
-                OverlayTexture.NO_OVERLAY,
-                bakedModel
-        );
-        bufferSource.endBatch();
-        RenderSystem.enableDepthTest();
-        if (flatLighting) {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-        }
-
-        poseStack.popPose();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
+        guiGraphics.item(player, item, pixelX, pixelY, seed);
+        guiGraphics.pose().popMatrix();
     }
 }

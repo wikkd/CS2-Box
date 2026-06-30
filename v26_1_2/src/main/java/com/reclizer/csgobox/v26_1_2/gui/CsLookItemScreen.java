@@ -9,6 +9,8 @@ import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
@@ -50,8 +52,8 @@ public class CsLookItemScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         renderLookBackground(guiGraphics);
         renderLabels(guiGraphics);
         renderBg(guiGraphics, mouseX, mouseY);
@@ -116,31 +118,33 @@ public class CsLookItemScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         float frameWidth = this.width * 26F / 100F;
         float itemCenterX = this.width * 37F / 100F + frameWidth;
         float itemCenterY = this.height * 30F / 100F;
         float range = frameWidth * 0.7F;
         boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
                 && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
-        if (button == 0 && isInRange) {
+        if (event.button() == 0 && isInRange) {
             this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
             this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         int btnX = backButtonX();
         int btnY = this.height * 94 / 100;
         int btnW = backButtonWidth();
         int btnH = this.height * 5 / 100;
-        if (button == 0 && isInside(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
+        if (event.button() == 0 && isInside(event.x(), event.y(), btnX, btnY, btnW, btnH)) {
             this.onClose();
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
@@ -148,12 +152,12 @@ public class CsLookItemScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int key, int b, int c) {
-        if (key == 256) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256) {
             this.onClose();
             return true;
         }
-        return super.keyPressed(key, b, c);
+        return super.keyPressed(event);
     }
 
     @Override
