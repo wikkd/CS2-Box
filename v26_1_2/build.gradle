@@ -15,16 +15,17 @@ base {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(java_toolchain_version as int)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
-def jdk21 = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(java_toolchain_version as int)
+def jdk25 = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
 }
 
 tasks.withType(JavaExec).configureEach {
-    executable = jdk21.get().executablePath.asFile.path
+    executable = jdk25.get().executablePath.asFile.path
+    jvmArgs += '--enable-preview'
 }
 
 runs {
@@ -152,4 +153,5 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['--enable-preview']
 }
