@@ -3,9 +3,9 @@ package com.reclizer.csgobox.v26_1_2.advancement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
-import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.advancements.criterion.ContextAwarePredicate;
+import net.minecraft.advancements.criterion.SimpleCriterionTrigger;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 
@@ -22,11 +22,11 @@ import java.util.Optional;
 public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.TriggerInstance> {
 
     public static final OpenedBoxTrigger INSTANCE = new OpenedBoxTrigger();
-    public static final ResourceLocation ID =
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "opened_box");
+    public static final Identifier ID =
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "opened_box");
 
-    public static final ResourceLocation STAT_ID =
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "opened_boxes");
+    public static final Identifier STAT_ID =
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "opened_boxes");
 
     @Override
     public Codec<TriggerInstance> codec() {
@@ -51,7 +51,7 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
             if (count <= 0) {
                 return true;
             }
-            Stat<ResourceLocation> stat = CsgoBox.OPENED_BOXES_STAT;
+            Stat<Identifier> stat = CsgoBox.OPENED_BOXES_STAT;
             if (stat == null) {
                 return false;
             }

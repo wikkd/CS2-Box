@@ -19,7 +19,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -44,7 +44,7 @@ public class CsgoBox {
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final CsboxConfig CONFIG;
     public static final ModConfigSpec CONFIG_SPEC;
-    public static Stat<ResourceLocation> OPENED_BOXES_STAT;
+    public static Stat<Identifier> OPENED_BOXES_STAT;
 
     static {
         var pair = new ModConfigSpec.Builder()

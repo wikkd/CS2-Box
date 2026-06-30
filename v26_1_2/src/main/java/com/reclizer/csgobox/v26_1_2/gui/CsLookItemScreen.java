@@ -8,7 +8,7 @@ import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -51,21 +51,21 @@ public class CsLookItemScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderLookBackground(guiGraphics);
         renderLabels(guiGraphics);
         renderBg(guiGraphics, mouseX, mouseY);
     }
 
-    private void renderLookBackground(GuiGraphics guiGraphics) {
+    private void renderLookBackground(GuiGraphicsExtractor guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
             guiGraphics.fillGradient(0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
     }
 
-    private void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -95,7 +95,7 @@ public class CsLookItemScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
-    private void renderLabels(GuiGraphics guiGraphics) {
+    private void renderLabels(GuiGraphicsExtractor guiGraphics) {
         if (openItem.isEmpty()) return;
 
         Style style = Style.EMPTY.withBold(true);
@@ -109,11 +109,11 @@ public class CsLookItemScreen extends Screen {
                 backButtonX(), this.height * 94 / 100, backButtonWidth(), this.height * 5 / 100, 0.8F);
     }
 
-    private void renderText(GuiGraphics guiGraphics, FormattedCharSequence text, float x, float y, float scale) {
+    private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text, float x, float y, float scale) {
         RenderFontTool.drawString(guiGraphics, this.font, text, x, y, 0, 0, scale, 0xFFFFFFFF);
     }
 
-    private void renderCenteredText(GuiGraphics guiGraphics, FormattedCharSequence text,
+    private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
                                     int x, int y, int w, int h, float scale) {
         float textX = x + (w - this.font.width(text) * scale) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;

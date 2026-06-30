@@ -8,10 +8,10 @@ import com.reclizer.csgobox.v26_1_2.utils.ColorTools;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -72,20 +72,20 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderProgressBackground(guiGraphics);
         renderBg(guiGraphics, partialTicks);
     }
 
-    private void renderProgressBackground(GuiGraphics guiGraphics) {
+    private void renderProgressBackground(GuiGraphicsExtractor guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
             guiGraphics.fillGradient(0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
     }
 
-    private void renderBg(GuiGraphics guiGraphics, float partialTicks) {
+    private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
         if (this.minecraft == null) return;
         this.minecraft.options.hideGui = true;
 
@@ -126,7 +126,7 @@ public class CsboxProgressScreen extends Screen {
 
         RenderSystem.enableBlend();
         guiGraphics.blit(
-                ResourceLocation.parse("csgobox:textures/screens/csgo_background.png"),
+                Identifier.parse("csgobox:textures/screens/csgo_background.png"),
                 0, 0, 0, 0, this.width, this.height, this.width, this.height
         );
         RenderSystem.disableBlend();

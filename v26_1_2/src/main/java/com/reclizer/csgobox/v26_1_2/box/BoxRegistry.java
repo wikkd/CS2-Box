@@ -1,7 +1,7 @@
 package com.reclizer.csgobox.v26_1_2.box;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -13,14 +13,14 @@ public final class BoxRegistry {
     private BoxRegistry() {
     }
 
-    private static final Map<ResourceLocation, BoxDefinition> BOX_REGISTRY = new LinkedHashMap<>();
+    private static final Map<Identifier, BoxDefinition> BOX_REGISTRY = new LinkedHashMap<>();
 
     public static void register(BoxDefinition definition) {
         BOX_REGISTRY.put(definition.id(), definition);
         CsgoBox.LOGGER.debug("Registered box: {}", definition.id());
     }
 
-    public static BoxDefinition get(ResourceLocation id) {
+    public static BoxDefinition get(Identifier id) {
         return BOX_REGISTRY.get(id);
     }
 
@@ -28,7 +28,7 @@ public final class BoxRegistry {
         return Collections.unmodifiableCollection(BOX_REGISTRY.values());
     }
 
-    public static Set<ResourceLocation> getIds() {
+    public static Set<Identifier> getIds() {
         return Collections.unmodifiableSet(BOX_REGISTRY.keySet());
     }
 
@@ -40,11 +40,11 @@ public final class BoxRegistry {
         BOX_REGISTRY.clear();
     }
 
-    public static boolean contains(ResourceLocation id) {
+    public static boolean contains(Identifier id) {
         return BOX_REGISTRY.containsKey(id);
     }
 
-    public static void remove(ResourceLocation id) {
+    public static void remove(Identifier id) {
         BOX_REGISTRY.remove(id);
     }
 }

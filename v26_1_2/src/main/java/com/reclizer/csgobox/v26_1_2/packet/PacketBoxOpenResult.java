@@ -5,7 +5,7 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -39,7 +39,7 @@ public record PacketBoxOpenResult(
     private static final int MAX_PENDING_RESULTS = 8;
 
     public static final Type<PacketBoxOpenResult> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "box_open_result"));
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "box_open_result"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketBoxOpenResult> STREAM_CODEC = StreamCodec.of(
             PacketBoxOpenResult::write,

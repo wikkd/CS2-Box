@@ -9,7 +9,7 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
@@ -36,11 +36,11 @@ public class ItemCsgoBox extends Item {
     public static final DeferredRegister<DataComponentType<?>> BOX_DATA_COMPONENTS =
             DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, CsgoBox.MODID);
 
-    public static final Supplier<DataComponentType<ResourceLocation>> BOX_ID =
+    public static final Supplier<DataComponentType<Identifier>> BOX_ID =
             BOX_DATA_COMPONENTS.register("box_id", () ->
-                    DataComponentType.<ResourceLocation>builder()
-                            .persistent(ResourceLocation.CODEC)
-                            .networkSynchronized(ResourceLocation.STREAM_CODEC)
+                    DataComponentType.<Identifier>builder()
+                            .persistent(Identifier.CODEC)
+                            .networkSynchronized(Identifier.STREAM_CODEC)
                             .build());
 
     public static void registerDataComponents(IEventBus bus) {
@@ -57,15 +57,15 @@ public class ItemCsgoBox extends Item {
     }
 
     public static Optional<BoxDefinition> getDefinition(ItemStack stack) {
-        ResourceLocation id = getBoxId(stack);
+        Identifier id = getBoxId(stack);
         return id == null ? Optional.empty() : Optional.ofNullable(BoxRegistry.get(id));
     }
 
-    public static ResourceLocation getBoxId(ItemStack stack) {
+    public static Identifier getBoxId(ItemStack stack) {
         return stack.getItem() instanceof ItemCsgoBox ? stack.get(BOX_ID.get()) : null;
     }
 
-    public static ItemStack setBoxId(ResourceLocation boxId, ItemStack stack) {
+    public static ItemStack setBoxId(Identifier boxId, ItemStack stack) {
         if (stack.getItem() instanceof ItemCsgoBox) {
             stack.set(BOX_ID.get(), boxId);
             BoxDefinition def = BoxRegistry.get(boxId);
@@ -98,7 +98,7 @@ public class ItemCsgoBox extends Item {
         return itemsMap;
     }
 
-    public static ResourceLocation getKey(ItemStack stack) {
+    public static Identifier getKey(ItemStack stack) {
         return getDefinition(stack)
                 .map(BoxDefinition::keyItem)
                 .orElse(null);

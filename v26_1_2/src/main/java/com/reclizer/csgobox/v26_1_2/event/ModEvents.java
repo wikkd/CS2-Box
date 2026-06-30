@@ -7,7 +7,7 @@ import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +29,7 @@ public final class ModEvents {
     @SubscribeEvent
     public static void livingDeath(LivingDeathEvent event) {
         LivingEntity mob = event.getEntity();
-        ResourceLocation entityType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
+        Identifier entityType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
         float lootingMultiplier = lootingMultiplier(event, mob);
 
         for (BoxDefinition def : BoxRegistry.getAll()) {

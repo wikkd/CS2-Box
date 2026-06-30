@@ -3,9 +3,9 @@ package com.reclizer.csgobox.v26_1_2.advancement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
-import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.advancements.criterion.ContextAwarePredicate;
+import net.minecraft.advancements.criterion.SimpleCriterionTrigger;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -18,8 +18,8 @@ import java.util.Optional;
 public class ModLoadedTrigger extends SimpleCriterionTrigger<ModLoadedTrigger.TriggerInstance> {
 
     public static final ModLoadedTrigger INSTANCE = new ModLoadedTrigger();
-    public static final ResourceLocation ID =
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "mod_loaded");
+    public static final Identifier ID =
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "mod_loaded");
 
     @Override
     public Codec<TriggerInstance> codec() {

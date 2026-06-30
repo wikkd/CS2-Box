@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,35 +21,35 @@ import java.util.Optional;
  * Immutable box definition loaded from JSON and referenced by box ItemStacks.
  */
 public record BoxDefinition(
-        ResourceLocation id,
+        Identifier id,
         Component name,
-        ResourceLocation keyItem,
+        Identifier keyItem,
         float dropRate,
-        List<ResourceLocation> dropEntities,
+        List<Identifier> dropEntities,
         List<GradeGroup> grades,
-        Optional<ResourceLocation> texture,
-        Optional<ResourceLocation> sound,
-        Map<ResourceLocation, Float> entityDropRates
+        Optional<Identifier> texture,
+        Optional<Identifier> sound,
+        Map<Identifier, Float> entityDropRates
 ) {
 
     public static final int GRADE_COUNT = 5;
     public static final int[] DEFAULT_WEIGHTS = new int[]{625, 125, 25, 5, 2};
 
-    private static final ResourceLocation NO_KEY = ResourceLocation.parse("minecraft:air");
+    private static final Identifier NO_KEY = Identifier.parse("minecraft:air");
     private static final int MAX_DROP_ENTITIES = 256;
     private static final int MAX_GRADES = 16;
     private static final int MAX_ENTITY_DROP_RATES = 256;
 
     public static final Codec<BoxDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
+            Identifier.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
             ComponentSerialization.CODEC.fieldOf("name").forGetter(BoxDefinition::name),
-            ResourceLocation.CODEC.fieldOf("key").forGetter(BoxDefinition::keyItem),
+            Identifier.CODEC.fieldOf("key").forGetter(BoxDefinition::keyItem),
             Codec.FLOAT.fieldOf("drop_rate").forGetter(BoxDefinition::dropRate),
-            ResourceLocation.CODEC.listOf().fieldOf("drop_entities").forGetter(BoxDefinition::dropEntities),
+            Identifier.CODEC.listOf().fieldOf("drop_entities").forGetter(BoxDefinition::dropEntities),
             GradeGroup.CODEC.listOf().fieldOf("grades").forGetter(BoxDefinition::grades),
-            ResourceLocation.CODEC.optionalFieldOf("texture").forGetter(BoxDefinition::texture),
-            ResourceLocation.CODEC.optionalFieldOf("sound").forGetter(BoxDefinition::sound),
-            Codec.unboundedMap(ResourceLocation.CODEC, Codec.FLOAT)
+            Identifier.CODEC.optionalFieldOf("texture").forGetter(BoxDefinition::texture),
+            Identifier.CODEC.optionalFieldOf("sound").forGetter(BoxDefinition::sound),
+            Codec.unboundedMap(Identifier.CODEC, Codec.FLOAT)
                     .optionalFieldOf("entity_drop_rates", Map.of())
                     .forGetter(BoxDefinition::entityDropRates)
     ).apply(instance, BoxDefinition::new));
@@ -72,54 +72,54 @@ public record BoxDefinition(
     }
 
     private static void write(RegistryFriendlyByteBuf buf, BoxDefinition def) {
-        ResourceLocation.STREAM_CODEC.encode(buf, def.id());
+        Identifier.STREAM_CODEC.encode(buf, def.id());
         ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).encode(buf, def.name());
-        ResourceLocation.STREAM_CODEC.encode(buf, def.keyItem());
+        Identifier.STREAM_CODEC.encode(buf, def.keyItem());
         buf.writeFloat(def.dropRate());
-        ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
+        Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
         GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).encode(buf, def.grades());
-        ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).encode(buf, def.texture());
-        ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).encode(buf, def.sound());
+        ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.texture());
+        ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.sound());
 
-        Map<ResourceLocation, Float> entityRates = def.entityDropRates();
+        Map<Identifier, Float> entityRates = def.entityDropRates();
         if (entityRates.size() > MAX_ENTITY_DROP_RATES) {
             throw new IllegalArgumentException("Too many entity drop rates: " + entityRates.size());
         }
         buf.writeVarInt(entityRates.size());
-        for (Map.Entry<ResourceLocation, Float> entry : entityRates.entrySet()) {
-            ResourceLocation.STREAM_CODEC.encode(buf, entry.getKey());
+        for (Map.Entry<Identifier, Float> entry : entityRates.entrySet()) {
+            Identifier.STREAM_CODEC.encode(buf, entry.getKey());
             buf.writeFloat(entry.getValue());
         }
     }
 
     private static BoxDefinition read(RegistryFriendlyByteBuf buf) {
-        ResourceLocation id = ResourceLocation.STREAM_CODEC.decode(buf);
+        Identifier id = Identifier.STREAM_CODEC.decode(buf);
         Component name = ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).decode(buf);
-        ResourceLocation keyItem = ResourceLocation.STREAM_CODEC.decode(buf);
+        Identifier keyItem = Identifier.STREAM_CODEC.decode(buf);
         float dropRate = buf.readFloat();
-        List<ResourceLocation> dropEntities = ResourceLocation.STREAM_CODEC
+        List<Identifier> dropEntities = Identifier.STREAM_CODEC
                 .apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).decode(buf);
         List<GradeGroup> grades = GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).decode(buf);
-        Optional<ResourceLocation> texture = ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).decode(buf);
-        Optional<ResourceLocation> sound = ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).decode(buf);
+        Optional<Identifier> texture = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
+        Optional<Identifier> sound = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
 
         int entityRatesSize = buf.readVarInt();
         if (entityRatesSize < 0 || entityRatesSize > MAX_ENTITY_DROP_RATES) {
             throw new DecoderException("Invalid entity drop rate count: " + entityRatesSize);
         }
-        Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
+        Map<Identifier, Float> entityDropRates = new HashMap<>();
         for (int i = 0; i < entityRatesSize; i++) {
-            ResourceLocation entityId = ResourceLocation.STREAM_CODEC.decode(buf);
+            Identifier entityId = Identifier.STREAM_CODEC.decode(buf);
             entityDropRates.put(entityId, buf.readFloat());
         }
         return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
     }
 
-    public static Builder builder(ResourceLocation id, String name) {
+    public static Builder builder(Identifier id, String name) {
         return new Builder(id, name);
     }
 
-    public float getDropRateForEntity(ResourceLocation entityType) {
+    public float getDropRateForEntity(Identifier entityType) {
         Float entityRate = entityDropRates.get(entityType);
         return Math.min(entityRate != null ? entityRate : dropRate, 1.0F);
     }
@@ -164,17 +164,17 @@ public record BoxDefinition(
     }
 
     public static class Builder {
-        private final ResourceLocation id;
+        private final Identifier id;
         private Component name;
-        private ResourceLocation keyItem = NO_KEY;
+        private Identifier keyItem = NO_KEY;
         private float dropRate = 0.12F;
-        private final List<ResourceLocation> dropEntities = new ArrayList<>();
+        private final List<Identifier> dropEntities = new ArrayList<>();
         private final List<GradeGroup> grades = new ArrayList<>();
-        private Optional<ResourceLocation> texture = Optional.empty();
-        private Optional<ResourceLocation> sound = Optional.empty();
-        private final Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
+        private Optional<Identifier> texture = Optional.empty();
+        private Optional<Identifier> sound = Optional.empty();
+        private final Map<Identifier, Float> entityDropRates = new HashMap<>();
 
-        public Builder(ResourceLocation id, String name) {
+        public Builder(Identifier id, String name) {
             this.id = Objects.requireNonNull(id, "box id");
             this.name = Component.literal(Objects.requireNonNull(name, "box name"));
         }
@@ -184,7 +184,7 @@ public record BoxDefinition(
             return this;
         }
 
-        public Builder key(ResourceLocation keyItem) {
+        public Builder key(Identifier keyItem) {
             this.keyItem = keyItem == null ? NO_KEY : keyItem;
             return this;
         }
@@ -196,13 +196,13 @@ public record BoxDefinition(
 
         public Builder dropFrom(String... entities) {
             for (String entity : entities) {
-                this.dropEntities.add(ResourceLocation.parse(entity));
+                this.dropEntities.add(Identifier.parse(entity));
             }
             return this;
         }
 
         public Builder entityDropRate(String entityId, float rate) {
-            this.entityDropRates.put(ResourceLocation.parse(entityId), Math.clamp(rate, 0.0F, 1.0F));
+            this.entityDropRates.put(Identifier.parse(entityId), Math.clamp(rate, 0.0F, 1.0F));
             return this;
         }
 
@@ -211,12 +211,12 @@ public record BoxDefinition(
             return this;
         }
 
-        public Builder texture(ResourceLocation texture) {
+        public Builder texture(Identifier texture) {
             this.texture = Optional.ofNullable(texture);
             return this;
         }
 
-        public Builder sound(ResourceLocation sound) {
+        public Builder sound(Identifier sound) {
             this.sound = Optional.ofNullable(sound);
             return this;
         }

@@ -10,7 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -38,7 +38,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
     private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new HashMap<>();
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
 
     public static final StreamCodec<FriendlyByteBuf, PacketCsgoProgress> STREAM_CODEC = StreamCodec.of(
             (buf, packet) -> buf.writeLong(packet.requestId),
@@ -220,8 +220,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
     }
 
     private static boolean tryConsumeKeys(Player entity, ItemStack box) {
-        ResourceLocation keyId = ItemCsgoBox.getKey(box);
-        if (keyId == null || keyId.equals(ResourceLocation.parse("minecraft:air"))) {
+        Identifier keyId = ItemCsgoBox.getKey(box);
+        if (keyId == null || keyId.equals(Identifier.parse("minecraft:air"))) {
             return true;
         }
         for (ItemStack stack : entity.getInventory().items) {

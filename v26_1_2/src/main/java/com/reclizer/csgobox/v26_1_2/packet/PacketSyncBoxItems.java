@@ -5,7 +5,7 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -22,7 +22,7 @@ import java.util.Queue;
  */
 public record PacketSyncBoxItems(
         long requestId,
-        Optional<ResourceLocation> boxId,
+        Optional<Identifier> boxId,
         List<ItemStack> items,
         List<Integer> grades,
         List<Integer> weights,
@@ -34,7 +34,7 @@ public record PacketSyncBoxItems(
     private static final int MAX_PENDING_RESPONSES = 8;
 
     public static final Type<PacketSyncBoxItems> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "sync_box_items"));
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "sync_box_items"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketSyncBoxItems> STREAM_CODEC = StreamCodec.of(
             PacketSyncBoxItems::write,
@@ -65,7 +65,7 @@ public record PacketSyncBoxItems(
     private static void write(RegistryFriendlyByteBuf buf, PacketSyncBoxItems packet) {
         buf.writeLong(packet.requestId);
         buf.writeBoolean(packet.boxId.isPresent());
-        packet.boxId.ifPresent(id -> ResourceLocation.STREAM_CODEC.encode(buf, id));
+        packet.boxId.ifPresent(id -> Identifier.STREAM_CODEC.encode(buf, id));
 
         buf.writeVarInt(packet.items.size());
         for (int i = 0; i < packet.items.size(); i++) {
@@ -83,8 +83,8 @@ public record PacketSyncBoxItems(
 
     private static PacketSyncBoxItems read(RegistryFriendlyByteBuf buf) {
         long requestId = buf.readLong();
-        Optional<ResourceLocation> boxId = buf.readBoolean()
-                ? Optional.of(ResourceLocation.STREAM_CODEC.decode(buf))
+        Optional<Identifier> boxId = buf.readBoolean()
+                ? Optional.of(Identifier.STREAM_CODEC.decode(buf))
                 : Optional.empty();
 
         int size = buf.readVarInt();
@@ -132,8 +132,8 @@ public record PacketSyncBoxItems(
         });
     }
 
-    public static BoxData consumeMatching(long requestId, Optional<ResourceLocation> expectedBoxId) {
-        Optional<ResourceLocation> normalizedBoxId = expectedBoxId == null ? Optional.empty() : expectedBoxId;
+    public static BoxData consumeMatching(long requestId, Optional<Identifier> expectedBoxId) {
+        Optional<Identifier> normalizedBoxId = expectedBoxId == null ? Optional.empty() : expectedBoxId;
         Iterator<BoxData> iterator = sPendingResponses.iterator();
         while (iterator.hasNext()) {
             BoxData data = iterator.next();
@@ -147,7 +147,7 @@ public record PacketSyncBoxItems(
 
     public record BoxData(
             long requestId,
-            Optional<ResourceLocation> boxId,
+            Optional<Identifier> boxId,
             List<ItemStack> items,
             List<Integer> grades,
             List<Integer> weights,

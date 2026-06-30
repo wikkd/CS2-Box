@@ -11,7 +11,7 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -213,13 +213,13 @@ public final class BoxJsonLoader {
         if (json == null) return Optional.empty();
 
         String name = getString(json, "name", boxIdStr);
-        ResourceLocation keyItem = ResourceLocation.parse(getString(json, "key", "csgobox:csgo_key0"));
+        Identifier keyItem = Identifier.parse(getString(json, "key", "csgobox:csgo_key0"));
         float dropRate = getFloat(json, "drop", 0.12F);
 
         int[] weights = parseWeights(json);
 
-        List<ResourceLocation> dropEntityIds = new ArrayList<>();
-        Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
+        List<Identifier> dropEntityIds = new ArrayList<>();
+        Map<Identifier, Float> entityDropRates = new HashMap<>();
         parseEntities(json, dropEntityIds, entityDropRates);
 
         List<GradeGroup> grades = new ArrayList<>();
@@ -246,10 +246,10 @@ public final class BoxJsonLoader {
         }
 
         BoxDefinition.Builder builder = BoxDefinition.builder(
-                ResourceLocation.parse("csgobox:" + boxIdStr), name);
+                Identifier.parse("csgobox:" + boxIdStr), name);
         builder.key(keyItem);
         builder.dropRate(dropRate);
-        for (ResourceLocation entityId : dropEntityIds) {
+        for (Identifier entityId : dropEntityIds) {
             Float rate = entityDropRates.get(entityId);
             if (rate != null) {
                 builder.entityDropRate(entityId.toString(), rate);
@@ -293,8 +293,8 @@ public final class BoxJsonLoader {
     /**
      * Parses either a plain entity id list or alternating entity id/drop-rate pairs.
      */
-    private static void parseEntities(JsonObject json, List<ResourceLocation> dropEntityIds,
-                                       Map<ResourceLocation, Float> entityDropRates) {
+    private static void parseEntities(JsonObject json, List<Identifier> dropEntityIds,
+                                       Map<Identifier, Float> entityDropRates) {
         if (!json.has("entity")) return;
         JsonArray entityArr = json.getAsJsonArray("entity");
         if (entityArr.size() == 0) return;
@@ -302,7 +302,7 @@ public final class BoxJsonLoader {
         if (entityArr.size() == 1 || (entityArr.get(1).isJsonPrimitive()
                 && entityArr.get(1).getAsJsonPrimitive().isString())) {
             for (JsonElement elem : entityArr) {
-                ResourceLocation entityId = ResourceLocation.parse(elem.getAsString());
+                Identifier entityId = Identifier.parse(elem.getAsString());
                 dropEntityIds.add(entityId);
             }
             return;
@@ -315,7 +315,7 @@ public final class BoxJsonLoader {
         for (int i = 0; i + 1 < entityArr.size(); i += 2) {
             String entityIdStr = entityArr.get(i).getAsString();
             float rate = entityArr.get(i + 1).getAsFloat();
-            ResourceLocation entityId = ResourceLocation.parse(entityIdStr);
+            Identifier entityId = Identifier.parse(entityIdStr);
             dropEntityIds.add(entityId);
             entityDropRates.put(entityId, rate);
         }
@@ -342,7 +342,7 @@ public final class BoxJsonLoader {
             String id = obj.get("id").getAsString();
             int count = obj.has("count") ? obj.get("count").getAsInt() : 1;
 
-            var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(id));
+            var item = BuiltInRegistries.ITEM.get(Identifier.parse(id));
             if (item == null) {
                 CsgoBox.LOGGER.warn("Unknown item in box JSON: {}", id);
                 return ItemStack.EMPTY;
@@ -411,12 +411,12 @@ public final class BoxJsonLoader {
 
         JsonArray entity = new JsonArray();
         if (!def.entityDropRates().isEmpty()) {
-            for (Map.Entry<ResourceLocation, Float> entry : def.entityDropRates().entrySet()) {
+            for (Map.Entry<Identifier, Float> entry : def.entityDropRates().entrySet()) {
                 entity.add(entry.getKey().toString());
                 entity.add(entry.getValue());
             }
         } else {
-            for (ResourceLocation e : def.dropEntities()) {
+            for (Identifier e : def.dropEntities()) {
                 entity.add(e.toString());
                 entity.add(1);
             }
@@ -450,7 +450,7 @@ public final class BoxJsonLoader {
         }
     }
 
-    public static void deleteFile(ResourceLocation boxId) {
+    public static void deleteFile(Identifier boxId) {
         Path file = BOXES_DIR.resolve(boxId.getPath() + ".json").normalize();
         if (!file.startsWith(BOXES_DIR.normalize())) {
             CsgoBox.LOGGER.warn("Rejected path traversal attempt: {}", boxId.getPath());
@@ -468,7 +468,7 @@ public final class BoxJsonLoader {
 
     private static JsonObject serializeItemStack(ItemStack stack) {
         JsonObject obj = new JsonObject();
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         obj.addProperty("id", itemId.toString());
         obj.addProperty("count", stack.getCount());
 

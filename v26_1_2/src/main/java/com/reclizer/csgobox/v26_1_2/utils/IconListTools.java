@@ -4,11 +4,11 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -17,18 +17,18 @@ import org.joml.Matrix4fStack;
 
 public final class IconListTools {
 
-    private static final ResourceLocation GOLD_ITEM_TEXTURE =
-            ResourceLocation.parse("csgobox:textures/screens/gold_item.png");
+    private static final Identifier GOLD_ITEM_TEXTURE =
+            Identifier.parse("csgobox:textures/screens/gold_item.png");
 
     private IconListTools() {
     }
 
-    public static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
+    public static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
         guiGraphics.fillGradient(pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
         guiGraphics.fill(pX0, pY0, pX0 + 2, toY, color);
     }
 
-    public static void renderItemFrame(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
+    public static void renderItemFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
         int color = ColorTools.colorItems(grade);
 
         int frameWidth = width * 8 / 100;
@@ -49,7 +49,7 @@ public final class IconListTools {
         }
     }
 
-    public static void renderGuiItem(LivingEntity entity, Level world, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
+    public static void renderGuiItem(LivingEntity entity, Level world, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
         renderGuiItem(guiGraphics.pose(), itemStack, pX, pY, Minecraft.getInstance().getItemRenderer().getModel(itemStack, world, entity, 0), scale);
     }
 
@@ -83,7 +83,7 @@ public final class IconListTools {
         RenderSystem.applyModelViewMatrix();
     }
 
-    public static void renderItemProgress(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
+    public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
         int color = ColorTools.colorItems(grade);
         float frameWidth = width * 18 / 100;
         float frameHeight = height * 25 / 100;

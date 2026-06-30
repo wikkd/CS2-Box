@@ -6,7 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,7 +23,7 @@ import java.util.Optional;
 public record PacketRequestBoxItems(long requestId) implements CustomPacketPayload {
 
     public static final Type<PacketRequestBoxItems> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "request_box_items"));
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "request_box_items"));
 
     public static final StreamCodec<FriendlyByteBuf, PacketRequestBoxItems> STREAM_CODEC = StreamCodec.of(
             (buf, packet) -> buf.writeLong(packet.requestId),
@@ -56,7 +56,7 @@ public record PacketRequestBoxItems(long requestId) implements CustomPacketPaylo
             }
 
             ItemStack keyStack = ItemStack.EMPTY;
-            ResourceLocation keyRl = ItemCsgoBox.getKey(box);
+            Identifier keyRl = ItemCsgoBox.getKey(box);
             if (keyRl != null) {
                 Item keyItem = BuiltInRegistries.ITEM.get(keyRl);
                 if (keyItem != null) {

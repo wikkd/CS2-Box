@@ -11,13 +11,13 @@ import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -45,9 +45,9 @@ public class CsboxScreen extends Screen {
     private List<ItemStack> itemsList;
     private List<Integer> gradeList;
 
-    private ResourceLocation keyRl;
+    private Identifier keyRl;
     private final long syncRequestId;
-    private Optional<ResourceLocation> expectedBoxId = Optional.empty();
+    private Optional<Identifier> expectedBoxId = Optional.empty();
 
     public CsboxScreen() {
         super(Component.literal("cs_screen"));
@@ -132,7 +132,7 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+    public void renderBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (this.minecraft != null && this.minecraft.level != null) {
             pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         } else {
@@ -152,13 +152,13 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY);
     }
 
-    protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int gx, int gy) {
+    protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
         guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, 0xFFD3D3D3);
         guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
 
@@ -207,7 +207,7 @@ public class CsboxScreen extends Screen {
                 actionButtonWidth(), this.height * 5 / 100, 0xFFAA0000, 0xFFFF0000);
     }
 
-    private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
+    private void drawButton(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
         guiGraphics.fill(x, y, x + w, y + h, borderColor);
         guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
@@ -222,7 +222,7 @@ public class CsboxScreen extends Screen {
         return super.keyPressed(key, b, c);
     }
 
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         Style style = Style.EMPTY.withBold(true);
         int x = 0;
         int y = 0;
@@ -302,11 +302,11 @@ public class CsboxScreen extends Screen {
         return (this.width - font.width(text) * scale) * 0.5F;
     }
 
-    private void renderText(GuiGraphics guiGraphics, FormattedCharSequence pText, float px, float py, float scale) {
+    private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText, float px, float py, float scale) {
         RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale, 0xFFD3D3D3);
     }
 
-    private void renderCenteredText(GuiGraphics guiGraphics, FormattedCharSequence text,
+    private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
                                     int x, int y, int w, int h, float scale) {
         float textW = this.font.width(text) * scale;
         float textX = x + (w - textW) / 2.0F;
@@ -367,9 +367,9 @@ public class CsboxScreen extends Screen {
             if (pMouseX >= openX && pMouseX <= openX + openW && pMouseY >= openY && pMouseY <= openY + openH) {
                 if (this.entity != null) {
                     if (!openClicked && entity.getMainHandItem().getItem() instanceof ItemCsgoBox) {
-                        ResourceLocation keyRl = this.keyRl;
+                        Identifier keyRl = this.keyRl;
                         boolean canOpen = true;
-                        if (keyRl != null && !keyRl.equals(ResourceLocation.parse("minecraft:air"))) {
+                        if (keyRl != null && !keyRl.equals(Identifier.parse("minecraft:air"))) {
                             canOpen = false;
                             for (ItemStack stack : entity.getInventory().items) {
                                 if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
