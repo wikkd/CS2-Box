@@ -53,7 +53,10 @@ public class ItemCsgoBox extends Item {
         super(new Properties().stacksTo(16).rarity(Rarity.EPIC));
     }
 
-    @Override
+    // canPerformAction override deliberately omitted in 26.1.2: Item.canPerformAction
+    // no longer exists on the base class (ItemAbility class still lives in
+    // net.neoforged.neoforge.common, but the dispatch point on Item was removed).
+    // Defer fully-removing this hook until runtime semantics are confirmed.
     public boolean canPerformAction(ItemStack stack, net.neoforged.neoforge.common.ItemAbility itemAbility) {
         return false;
     }

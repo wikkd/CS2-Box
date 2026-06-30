@@ -13,6 +13,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -363,7 +364,7 @@ public final class BoxJsonLoader {
             } else if (obj.has("tag")) {
                 try {
                     String tagStr = obj.get("tag").getAsString();
-                    var tag = TagParser.parseTag(tagStr);
+                    var tag = TagParser.parseCompoundFully(tagStr);
                     DataComponentPatch patch = DataComponentPatch.CODEC.parse(NbtOps.INSTANCE, tag)
                             .result().orElse(DataComponentPatch.EMPTY);
                     stack.applyComponents(patch);

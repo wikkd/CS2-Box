@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -44,7 +45,7 @@ public final class ModEvents {
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
                 ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
                 ItemCsgoBox.setBoxId(def.id(), stack);
-                mob.spawnAtLocation(stack);
+                mob.spawnAtLocation((ServerLevel) mob.level(), stack);
             }
         }
     }
@@ -55,8 +56,8 @@ public final class ModEvents {
         }
 
         ItemStack weapon = player.getMainHandItem();
-        var enchantmentRegistry = mob.level().registryAccess().registryOrThrow(Registries.ENCHANTMENT);
-        var lootingHolder = enchantmentRegistry.getHolderOrThrow(Enchantments.LOOTING);
+        var enchantmentRegistry = mob.level().registryAccess().lookup(Registries.ENCHANTMENT).orElseThrow();
+        var lootingHolder = enchantmentRegistry.getOrThrow(Enchantments.LOOTING);
         int lootingLevel = weapon.getEnchantmentLevel(lootingHolder);
         return lootingLevel > 0 ? 1.0F + lootingLevel * 0.5F : 1.0F;
     }

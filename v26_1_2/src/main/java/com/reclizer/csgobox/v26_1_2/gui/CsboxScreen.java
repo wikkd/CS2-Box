@@ -15,15 +15,17 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -62,7 +64,10 @@ public class CsboxScreen extends Screen {
             this.world = entity.level();
             this.itemMenu = this.minecraft.player.getItemInHand(InteractionHand.MAIN_HAND);
             this.expectedBoxId = Optional.ofNullable(ItemCsgoBox.getBoxId(this.itemMenu));
-            PacketDistributor.sendToServer(new PacketRequestBoxItems(this.syncRequestId));
+            Connection conn = Minecraft.getInstance().getConnection();
+            if (conn != null) {
+                conn.send(new ServerboundCustomPayloadPacket(new PacketRequestBoxItems(this.syncRequestId)));
+            }
         } else {
             this.entity = null;
             this.world = null;
@@ -381,7 +386,10 @@ public class CsboxScreen extends Screen {
                             long openRequestId = ThreadLocalRandom.current().nextLong();
                             // Request id only matches the later server result to this animation.
                             Minecraft.getInstance().setScreen(new CsboxProgressScreen(entity, openRequestId));
-                            PacketDistributor.sendToServer(new PacketCsgoProgress(openRequestId));
+                            Connection openConn = Minecraft.getInstance().getConnection();
+                            if (openConn != null) {
+                                openConn.send(new ServerboundCustomPayloadPacket(new PacketCsgoProgress(openRequestId)));
+                            }
                             openClicked = true;
                         }
                     }
