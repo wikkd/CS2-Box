@@ -35,6 +35,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
+import com.reclizer.csgobox.platform.Platform;
+import com.reclizer.csgobox.v26_1_2.platform.Platform26;
 import org.slf4j.Logger;
 
 @Mod(CsgoBox.MODID)
@@ -47,6 +49,7 @@ public class CsgoBox {
     public static Stat<Identifier> OPENED_BOXES_STAT;
 
     static {
+        Platform.set(new Platform26());
         var pair = new ModConfigSpec.Builder()
                 .configure(CsboxConfig::new);
         CONFIG = pair.getLeft();
