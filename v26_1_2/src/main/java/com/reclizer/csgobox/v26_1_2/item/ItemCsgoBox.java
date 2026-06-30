@@ -49,8 +49,8 @@ public class ItemCsgoBox extends Item {
         BOX_DATA_COMPONENTS.register(bus);
     }
 
-    public ItemCsgoBox() {
-        super(new Properties().stacksTo(16).rarity(Rarity.EPIC));
+    public ItemCsgoBox(Properties properties) {
+        super(properties.stacksTo(16).rarity(Rarity.EPIC));
     }
 
     // canPerformAction override deliberately omitted in 26.1.2: Item.canPerformAction
