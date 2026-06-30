@@ -201,7 +201,7 @@ public class CsboxScreen extends Screen {
         }
 
         if (itemKey != null) {
-            IconListTools.renderGuiItem(this.entity, this.world, guiGraphics, itemKey,
+            IconListTools.renderGuiItem(this.entity, guiGraphics, itemKey,
                     this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 

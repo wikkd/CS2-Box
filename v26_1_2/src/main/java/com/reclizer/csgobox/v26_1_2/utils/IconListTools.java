@@ -1,19 +1,9 @@
 package com.reclizer.csgobox.v26_1_2.utils;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import org.joml.Matrix4fStack;
 
 public final class IconListTools {
 
@@ -45,42 +35,21 @@ public final class IconListTools {
                     frameWidth - 4, frameHeight - 4, frameWidth - 4, frameHeight - 4);
         } else {
             renderRarity(guiGraphics, pX, pY, toX, toY, color);
-            renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
+            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
         }
     }
 
-    public static void renderGuiItem(LivingEntity entity, Level world, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
-        renderGuiItem(guiGraphics.pose(), itemStack, pX, pY, Minecraft.getInstance().getItemRenderer().getModel(itemStack, world, entity, 0), scale);
-    }
-
-    private static void renderGuiItem(PoseStack poseStack, ItemStack itemStack, float pX, float pY, BakedModel bakedModel, float scale) {
-        poseStack.pushPose();
-        poseStack.translate(pX, pY, 2F);
-        poseStack.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        poseStack.scale(1.0F, -1.0F, 0F);
-        poseStack.scale(16.0F * scale, 16.0F * scale, 0);
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        boolean useFlatLighting = !bakedModel.usesBlockLight();
-        if (useFlatLighting) {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
+    public static void renderGuiItem(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
+        if (itemStack == null || itemStack.isEmpty() || entity == null) return;
+        int pixelX = Math.round(pX);
+        int pixelY = Math.round(pY);
+        int seed = (int)(entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
+        guiGraphics.pose().pushMatrix();
+        if (scale != 1.0F) {
+            guiGraphics.pose().scale(scale, scale);
         }
-
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(poseStack.last().pose());
-        RenderSystem.applyModelViewMatrix();
-
-        Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GUI, false,
-                new PoseStack(), bufferSource, 15728880, OverlayTexture.NO_OVERLAY, bakedModel);
-        bufferSource.endBatch();
-        RenderSystem.enableDepthTest();
-        if (useFlatLighting) {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-        }
-
-        poseStack.popPose();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
+        guiGraphics.item(entity, itemStack, pixelX, pixelY, seed);
+        guiGraphics.pose().popMatrix();
     }
 
     public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
@@ -102,8 +71,7 @@ public final class IconListTools {
             guiGraphics.fillGradient((int) pX, (int) pY, (int) toX, (int) toY, 0xFF696969, 0xFFA9A9A9);
             guiGraphics.fillGradient((int) pX, (int) (pY + frameHeight * 2 / 3), (int) toX, (int) toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
-            RenderSystem.enableBlend();
+            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
             guiGraphics.fill((int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
         }
     }
