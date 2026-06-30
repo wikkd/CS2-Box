@@ -10,8 +10,70 @@ pluginManagement {
 }
 
 plugins {
-    id 'net.neoforged.gradle.userdev' version '7.0.171'
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.9.0'
 }
 
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = 'LocalPatchedLibraries'
+            url = file('local-repo')
+            metadataSources {
+                mavenPom()
+                artifact()
+            }
+        }
+        maven {
+            name = 'GradleMinecraftLibrariesCache'
+            url = file("${gradle.gradleUserHomeDir}/caches/minecraft/libraries")
+        }
+        mavenCentral()
+        maven {
+            name = 'NeoForged'
+            url = 'https://maven.neoforged.net/releases'
+        }
+        maven { url = 'https://libraries.minecraft.net' }
+        maven { url = 'https://maven.blamejared.com' }
+        maven { url = 'https://modmaven.dev' }
+        maven { url = 'https://www.cursemaven.com' }
+        maven {
+            url = 'https://maven.latvian.dev/releases'
+            content {
+                includeGroup 'dev.latvian.mods'
+                includeGroup 'dev.latvian.apps'
+            }
+        }
+    }
+}
+
 rootProject.name = 'CsgoBox'
+
+include 'common'
+project(':common').projectDir = file('common')
+
+// NeoGradle userdev versions cannot be loaded side-by-side reliably because
+// they both register the same IDEA extension on the root project. Keep one
+// Minecraft version active per Gradle invocation.
+def activeVersions = (providers.gradleProperty('active_versions').getOrElse('1.21.1') as String)
+        .split(',')
+        .collect { it.trim() }
+        .findAll { !it.isEmpty() }
+
+def versionModules = [
+        '1.21.1': 'v1_21_1',
+        '26.1.2': 'v26_1_2',
+]
+
+activeVersions.each { versionName ->
+    def moduleName = versionModules[versionName]
+    if (moduleName == null) {
+        throw new GradleException("Unknown active_versions entry '${versionName}'. Expected one of ${versionModules.keySet()}.")
+    }
+    def moduleDir = file(moduleName)
+    if (moduleDir.exists()) {
+        include moduleName
+        project(":$moduleName").projectDir = moduleDir
+    } else {
+        throw new GradleException("Requested module '${moduleName}' for active version '${versionName}' does not exist.")
+    }
+}

@@ -1,0 +1,33 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+}
+
+base {
+    archivesName = "${mod_id}-common"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(java_toolchain_version as int)
+    }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+            "Specification-Title": mod_id,
+            "Specification-Vendor": mod_authors,
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": project.version
+        )
+    }
+}
