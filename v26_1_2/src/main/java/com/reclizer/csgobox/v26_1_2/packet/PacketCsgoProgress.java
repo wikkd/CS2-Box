@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.security.SecureRandom;
@@ -59,13 +58,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
 
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
-                sendRejected(sp, message.requestId());
+                sendRejected(context, message.requestId());
                 return;
             }
 
             if (isOpenBlocked(player)) {
                 if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
+                    sendRejected(context, message.requestId());
                 }
                 return;
             }
@@ -73,7 +72,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             var itemList = ItemCsgoBox.getItemGroup(box);
             if (itemList.isEmpty()) {
                 if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
+                    sendRejected(context, message.requestId());
                 }
                 return;
             }
@@ -81,14 +80,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             int[] weights = ItemCsgoBox.getRandom(box);
             if (weights.length == 0) {
                 if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
+                    sendRejected(context, message.requestId());
                 }
                 return;
             }
 
             if (!tryConsumeKeys(player, box)) {
                 if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
+                    sendRejected(context, message.requestId());
                 }
                 return;
             }
@@ -113,7 +112,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             winningIndex = RandomItem.clampToValidItem(animationItems, winningIndex);
             if (winningIndex < 0) {
                 if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
+                    sendRejected(context, message.requestId());
                 }
                 return;
             }
@@ -125,7 +124,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 giveItem = RandomItem.findFallback(1, itemList);
                 if (giveItem.isEmpty()) {
                     if (player instanceof ServerPlayer sp) {
-                        sendRejected(sp, message.requestId());
+                        sendRejected(context, message.requestId());
                     }
                     return;
                 }
@@ -141,17 +140,15 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             player.setData(ModCapability.PLAYER_DATA,
                     new CsboxPlayerData(serverSeed, 0, giveItem.copy(), finalGrade));
 
-            if (player instanceof ServerPlayer sp) {
-                PacketDistributor.sendToPlayer(sp, new PacketBoxOpenResult(
-                        giveItem.copy(),
-                        finalGrade,
-                        winningIndex,
-                        serverSeed,
-                        message.requestId(),
-                        animationItems,
-                        animationGrades
-                ));
-            }
+            context.reply(new PacketBoxOpenResult(
+                    giveItem.copy(),
+                    finalGrade,
+                    winningIndex,
+                    serverSeed,
+                    message.requestId(),
+                    animationItems,
+                    animationGrades
+            ));
 
             ItemStack toGive = giveItem.copy();
             boolean added = player.getInventory().add(toGive);
@@ -179,8 +176,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return min + SECURE_RANDOM.nextInt(max - min + 1);
     }
 
-    private static void sendRejected(ServerPlayer player, long requestId) {
-        PacketDistributor.sendToPlayer(player, new PacketBoxOpenResult(
+    private static void sendRejected(IPayloadContext context, long requestId) {
+        context.reply(new PacketBoxOpenResult(
                 ItemStack.EMPTY,
                 1,
                 0,
@@ -224,7 +221,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         if (keyId == null || keyId.equals(Identifier.parse("minecraft:air"))) {
             return true;
         }
-        for (ItemStack stack : entity.getInventory().items) {
+        for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
             if (keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                 stack.shrink(1);
                 return true;

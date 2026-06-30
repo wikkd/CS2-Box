@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v26_1_2.packet;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +11,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
@@ -58,22 +58,20 @@ public record PacketRequestBoxItems(long requestId) implements CustomPacketPaylo
             ItemStack keyStack = ItemStack.EMPTY;
             Identifier keyRl = ItemCsgoBox.getKey(box);
             if (keyRl != null) {
-                Item keyItem = BuiltInRegistries.ITEM.get(keyRl);
+                Item keyItem = BuiltInRegistries.ITEM.get(keyRl).map(Holder.Reference::value).orElse(null);
                 if (keyItem != null) {
                     keyStack = new ItemStack(keyItem);
                 }
             }
 
-            if (player instanceof ServerPlayer sp) {
-                PacketDistributor.sendToPlayer(sp, new PacketSyncBoxItems(
-                        message.requestId(),
-                        Optional.ofNullable(ItemCsgoBox.getBoxId(box)),
-                        items,
-                        grades,
-                        weights,
-                        keyStack
-                ));
-            }
+            context.reply(new PacketSyncBoxItems(
+                    message.requestId(),
+                    Optional.ofNullable(ItemCsgoBox.getBoxId(box)),
+                    items,
+                    grades,
+                    weights,
+                    keyStack
+            ));
         });
     }
 }

@@ -14,7 +14,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -67,13 +67,13 @@ public final class CsboxCommand {
                 .then(Commands.literal("help").executes(CsboxCommand::showHelp))
                 .then(Commands.literal("list")
                         .executes(CsboxCommand::listAllBoxes)
-                        .then(Commands.argument("box", ResourceLocationArgument.id())
+                        .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
-                                .executes(ctx -> listBoxDetail(ctx, ResourceLocationArgument.getId(ctx, "box")))))
+                                .executes(ctx -> listBoxDetail(ctx, IdentifierArgument.getId(ctx, "box")))))
                 .then(Commands.literal("info")
-                        .then(Commands.argument("box", ResourceLocationArgument.id())
+                        .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
-                                .executes(ctx -> showBoxInfo(ResourceLocationArgument.getId(ctx, "box"), ctx.getSource()))))
+                                .executes(ctx -> showBoxInfo(IdentifierArgument.getId(ctx, "box"), ctx.getSource()))))
                 .then(Commands.literal("add")
                         .then(Commands.argument("box", StringArgumentType.string())
                                 .suggests((ctx, builder) -> {
@@ -105,7 +105,7 @@ public final class CsboxCommand {
                             return Command.SINGLE_SUCCESS;
                         }))
                 .then(Commands.literal("set")
-                        .then(Commands.argument("box", ResourceLocationArgument.id())
+                        .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .then(Commands.argument("grade", StringArgumentType.word())
                                         .suggests(CsboxCommand::gradeSuggestions)
@@ -113,7 +113,7 @@ public final class CsboxCommand {
                                                 .then(Commands.argument("index", IntegerArgumentType.integer(1))
                                                         .then(Commands.argument("count", IntegerArgumentType.integer(0))
                                                                 .executes(ctx -> setItemCount(
-                                                                        ResourceLocationArgument.getId(ctx, "box"),
+                                                                        IdentifierArgument.getId(ctx, "box"),
                                                                         StringArgumentType.getString(ctx, "grade"),
                                                                         IntegerArgumentType.getInteger(ctx, "index"),
                                                                         IntegerArgumentType.getInteger(ctx, "count"),
@@ -125,7 +125,7 @@ public final class CsboxCommand {
                                         .then(Commands.literal("weight")
                                                 .then(Commands.argument("weight", IntegerArgumentType.integer(1))
                                                         .executes(ctx -> setGradeWeight(
-                                                                ResourceLocationArgument.getId(ctx, "box"),
+                                                                IdentifierArgument.getId(ctx, "box"),
                                                                 StringArgumentType.getString(ctx, "grade"),
                                                                 IntegerArgumentType.getInteger(ctx, "weight"),
                                                                 ctx.getSource()
@@ -136,24 +136,24 @@ public final class CsboxCommand {
                         )
                 )
                 .then(Commands.literal("give")
-                        .then(Commands.argument("box", ResourceLocationArgument.id())
+                        .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .executes(ctx -> giveBox(
-                                        ResourceLocationArgument.getId(ctx, "box"),
+                                        IdentifierArgument.getId(ctx, "box"),
                                         1,
                                         List.of(ctx.getSource().getPlayerOrException()),
                                         ctx.getSource()
                                 ))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1))
                                         .executes(ctx -> giveBox(
-                                                ResourceLocationArgument.getId(ctx, "box"),
+                                                IdentifierArgument.getId(ctx, "box"),
                                                 IntegerArgumentType.getInteger(ctx, "count"),
                                                 List.of(ctx.getSource().getPlayerOrException()),
                                                 ctx.getSource()
                                         ))
                                         .then(Commands.argument("player", EntityArgument.player())
                                                 .executes(ctx -> giveBox(
-                                                        ResourceLocationArgument.getId(ctx, "box"),
+                                                        IdentifierArgument.getId(ctx, "box"),
                                                         IntegerArgumentType.getInteger(ctx, "count"),
                                                         EntityArgument.getPlayers(ctx, "player"),
                                                         ctx.getSource()
@@ -162,7 +162,7 @@ public final class CsboxCommand {
                                 )
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(ctx -> giveBox(
-                                                ResourceLocationArgument.getId(ctx, "box"),
+                                                IdentifierArgument.getId(ctx, "box"),
                                                 1,
                                                 EntityArgument.getPlayers(ctx, "player"),
                                                 ctx.getSource()
@@ -319,7 +319,7 @@ public final class CsboxCommand {
         List<ItemStack> newItemsToAdd = new ArrayList<>();
         int addedCount = 0;
         int skippedCount = 0;
-        for (ItemStack item : player.getInventory().items) {
+        for (ItemStack item : player.getInventory().getNonEquipmentItems()) {
             if (item.isEmpty()) continue;
             boolean alreadyExists = existingItems.stream().anyMatch(existing ->
                     ItemStack.isSameItemSameComponents(existing, item));

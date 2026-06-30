@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
@@ -342,7 +343,7 @@ public final class BoxJsonLoader {
             String id = obj.get("id").getAsString();
             int count = obj.has("count") ? obj.get("count").getAsInt() : 1;
 
-            var item = BuiltInRegistries.ITEM.get(Identifier.parse(id));
+            Item item = BuiltInRegistries.ITEM.get(Identifier.parse(id)).map(Holder.Reference::value).orElse(null);
             if (item == null) {
                 CsgoBox.LOGGER.warn("Unknown item in box JSON: {}", id);
                 return ItemStack.EMPTY;

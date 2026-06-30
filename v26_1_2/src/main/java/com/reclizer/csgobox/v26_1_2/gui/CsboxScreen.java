@@ -121,7 +121,7 @@ public class CsboxScreen extends Screen {
     private int countKeys() {
         int total = 0;
         if (keyRl != null && this.entity != null) {
-            for (ItemStack stack : entity.getInventory().items) {
+            for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
                 if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                     total += stack.getCount();
                 }
@@ -370,7 +370,7 @@ public class CsboxScreen extends Screen {
                         boolean canOpen = true;
                         if (keyRl != null && !keyRl.equals(Identifier.parse("minecraft:air"))) {
                             canOpen = false;
-                            for (ItemStack stack : entity.getInventory().items) {
+                            for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
                                 if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                                     canOpen = true;
                                     break;

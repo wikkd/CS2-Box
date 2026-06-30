@@ -116,7 +116,7 @@ public class CsgoBox {
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
     }
 
-    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
     public static class ClientModEvents {
 
         @SubscribeEvent
