@@ -53,7 +53,7 @@ public class CsboxProgressScreen extends Screen {
     private int waitingTicks = 0;
 
     public CsboxProgressScreen(Player player, long requestId) {
-        super(Component.literal("cs_progress"));
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("cs_progress"));
         this.player = player;
         this.expectedRequestId = requestId;
         this.randomWidth = ThreadLocalRandom.current().nextFloat() * (111F - 93.5F) + 93.5F;

@@ -50,8 +50,7 @@ public class CsboxScreen extends Screen {
     private Optional<Identifier> expectedBoxId = Optional.empty();
 
     public CsboxScreen() {
-        super(Component.literal("cs_screen"));
-        this.minecraft = Minecraft.getInstance();
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("cs_screen"));
         this.itemGroup = new LinkedHashMap<>();
         this.itemsList = new ArrayList<>();
         this.gradeList = new ArrayList<>();

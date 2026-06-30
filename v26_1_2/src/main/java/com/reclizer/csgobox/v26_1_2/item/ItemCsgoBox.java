@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -21,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class ItemCsgoBox extends Item {
@@ -113,18 +115,22 @@ public class ItemCsgoBox extends Item {
 
     /** Adds the configured box contents to the item tooltip. */
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.translatable("tooltips.csgobox.item.cs_box").withStyle(ChatFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                TooltipDisplay display, Consumer<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+        if (display.hideTooltip()) {
+            return;
+        }
+        tooltipComponents.accept(Component.translatable("tooltips.csgobox.item.cs_box").withStyle(ChatFormatting.GRAY));
         getDefinition(stack).ifPresent(def -> {
             for (int i = 0; i < def.grades().size(); i++) {
                 GradeGroup grade = def.grades().get(i);
                 ChatFormatting color = i < TOOLTIP_GRADE_COLORS.length ? TOOLTIP_GRADE_COLORS[i] : ChatFormatting.WHITE;
                 for (ItemStack itemStack : grade.items()) {
-                    tooltipComponents.add(itemStack.getItem().getName(itemStack).copy().withStyle(color));
+                    tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
                 }
             }
             if (def.grades().size() >= BoxDefinition.GRADE_COUNT) {
-                tooltipComponents.add(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
+                tooltipComponents.accept(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
             }
         });
     }

@@ -25,7 +25,7 @@ public class CsLookItemScreen extends Screen {
 
     /** Displays the server-authoritative reward after the progress animation completes. */
     public CsLookItemScreen(ItemStack item, int grade) {
-        super(Component.literal("look_item"));
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("look_item"));
         this.player = Minecraft.getInstance().player;
         this.openItem = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = grade;
