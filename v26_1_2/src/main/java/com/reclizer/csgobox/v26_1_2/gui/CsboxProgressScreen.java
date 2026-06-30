@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
@@ -89,10 +88,6 @@ public class CsboxProgressScreen extends Screen {
         if (this.minecraft == null) return;
         this.minecraft.options.hideGui = true;
 
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-
         if (openTime < 5) return;
 
         float widthNewAdd = renderWidthAdd;
@@ -122,14 +117,11 @@ public class CsboxProgressScreen extends Screen {
         guiGraphics.fill(this.width / 2, goldLineTop,
                 this.width / 2 + 2, goldLineBottom,
                 ColorTools.argbColor(128, 255, 215, 0));
-        RenderSystem.disableBlend();
 
-        RenderSystem.enableBlend();
         guiGraphics.blit(
                 Identifier.parse("csgobox:textures/screens/csgo_background.png"),
                 0, 0, 0, 0, this.width, this.height, this.width, this.height
         );
-        RenderSystem.disableBlend();
     }
 
     @Override

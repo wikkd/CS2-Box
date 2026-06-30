@@ -58,13 +58,13 @@ public final class GuiItemMove {
         poseStack.scale(1.0F, -1.0F, 1.0F);
         poseStack.mulPose(Axis.XP.rotation(angleYComponent));
         poseStack.mulPose(Axis.YP.rotation(angleXComponent));
-        Lighting.setupForEntityInInventory();
+        Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
         poseStack.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
 
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flatLighting = !bakedModel.usesBlockLight();
         if (flatLighting) {
-            Lighting.setupForFlatItems();
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
         }
 
         Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
@@ -84,7 +84,7 @@ public final class GuiItemMove {
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
         if (flatLighting) {
-            Lighting.setupFor3DItems();
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
         }
 
         poseStack.popPose();

@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_1_2.utils.ColorTools;
@@ -66,9 +65,6 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         if (this.minecraft != null) {
             this.minecraft.options.hideGui = true;
         }
@@ -92,7 +88,6 @@ public class CsLookItemScreen extends Screen {
         int innerColor = hoverButton ? 0xFFCC4444 : 0xFFAA0000;
         guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, outerColor);
         guiGraphics.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, innerColor);
-        RenderSystem.disableBlend();
     }
 
     private void renderLabels(GuiGraphicsExtractor guiGraphics) {

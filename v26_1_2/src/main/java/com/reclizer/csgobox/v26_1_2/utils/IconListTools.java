@@ -62,7 +62,7 @@ public final class IconListTools {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean useFlatLighting = !bakedModel.usesBlockLight();
         if (useFlatLighting) {
-            Lighting.setupForFlatItems();
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
         }
 
         Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
@@ -75,7 +75,7 @@ public final class IconListTools {
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
         if (useFlatLighting) {
-            Lighting.setupFor3DItems();
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
         }
 
         poseStack.popPose();
