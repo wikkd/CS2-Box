@@ -6,7 +6,7 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
-import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
+import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;

@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v1_21_1.utils;
+package com.reclizer.csgobox.utils;
 
 public final class ColorTools {
     private ColorTools() {
