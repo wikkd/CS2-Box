@@ -5,15 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -33,8 +26,9 @@ import java.util.Optional;
 /**
  * Reads and writes box definitions under config/csbox.
  *
- * <p>Supported item formats are Minecraft 1.21.1 data components and legacy
- * NBT tags. The legacy path is kept so older config files can still load.</p>
+ * <p>Per-item parsing and serialization is delegated to {@link BoxItemCodec};
+ * default-config generation is delegated to {@link BoxDefaults}. This class
+ * focuses on directory I/O, top-level JSON shape, and registration.</p>
  */
 public final class BoxJsonLoader {
 
@@ -42,7 +36,7 @@ public final class BoxJsonLoader {
     private static final Path BOXES_DIR = FMLPaths.CONFIGDIR.get().resolve("csbox");
 
     private static final String[] GRADE_IDS = {"classified", "restricted", "mil_spec", "industrial", "consumer"};
-    private static final String[] GRADE_NAMES = {"\u4fdd\u5bc6", "\u53d7\u9650", "\u519b\u89c4\u7ea7", "\u5de5\u4e1a\u7ea7", "\u6d88\u8d39\u7ea7"};
+    private static final String[] GRADE_NAMES = {"保密", "受限", "军规级", "工业级", "消费级"};
     private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF4B69FF, 0xFF4B69FF};
 
     private BoxJsonLoader() {
@@ -59,7 +53,7 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        writeDefaultIfEmpty();
+        BoxDefaults.writeDefaultIfEmpty(BOXES_DIR, GSON);
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};
@@ -91,137 +85,6 @@ public final class BoxJsonLoader {
                 scannedFiles.size(), BOXES_DIR, loaded[0], skipped[0]);
     }
 
-    private static void writeDefaultIfEmpty() {
-        List<String> existing = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
-            stream.forEach(p -> existing.add(p.getFileName().toString()));
-            if (!existing.isEmpty()) {
-                CsgoBox.LOGGER.info(
-                        "Skipping default box write: {} already contains {} JSON file(s) ({})",
-                        BOXES_DIR, existing.size(), String.join(", ", existing));
-                return;
-            }
-        } catch (IOException e) {
-            CsgoBox.LOGGER.warn("Could not inspect {} for existing configs: {}", BOXES_DIR, e);
-            return;
-        }
-
-        Path defaultFile = BOXES_DIR.resolve("weapon_supply_box.json");
-        CsgoBox.LOGGER.info("No existing JSON files in {}, creating default: {}", BOXES_DIR, defaultFile);
-
-        JsonObject json = new JsonObject();
-        addTutorial(json);
-        json.addProperty("name", "\u6b66\u5668\u4f9b\u5e94\u7bb1");
-        json.addProperty("key", "csgobox:csgo_key0");
-        json.addProperty("drop", 1.0);
-
-        JsonArray random = new JsonArray();
-        random.add(625);
-        random.add(125);
-        random.add(25);
-        random.add(5);
-        random.add(2);
-        json.add("random", random);
-
-        JsonArray entity = new JsonArray();
-        String[] entities = {
-                "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper",
-                "minecraft:spider", "minecraft:cave_spider", "minecraft:enderman",
-                "minecraft:witch", "minecraft:slime", "minecraft:silverfish",
-                "minecraft:blaze", "minecraft:ghast", "minecraft:magma_cube",
-                "minecraft:zombified_piglin", "minecraft:wither_skeleton",
-                "minecraft:stray", "minecraft:husk", "minecraft:drowned",
-                "minecraft:guardian", "minecraft:elder_guardian", "minecraft:shulker",
-                "minecraft:endermite", "minecraft:evoker", "minecraft:vindicator",
-                "minecraft:pillager", "minecraft:ravager", "minecraft:vex",
-                "minecraft:phantom", "minecraft:piglin", "minecraft:piglin_brute",
-                "minecraft:hoglin", "minecraft:zoglin", "minecraft:zombie_villager"
-        };
-        for (String e : entities) {
-            entity.add(e);
-            entity.add(1);
-        }
-        json.add("entity", entity);
-
-        addDefaultItems(json, "grade5",
-                "minecraft:netherite_sword", "minecraft:netherite_axe", "minecraft:netherite_pickaxe",
-                "minecraft:netherite_shovel", "minecraft:netherite_hoe", "minecraft:diamond_helmet",
-                "minecraft:diamond_chestplate", "minecraft:diamond_leggings", "minecraft:diamond_boots",
-                "minecraft:netherite_helmet", "minecraft:netherite_chestplate", "minecraft:netherite_leggings",
-                "minecraft:netherite_boots");
-        addDefaultItems(json, "grade4",
-                "minecraft:diamond_sword", "minecraft:diamond_axe", "minecraft:diamond_pickaxe",
-                "minecraft:diamond_shovel", "minecraft:diamond_hoe", "minecraft:golden_helmet",
-                "minecraft:golden_chestplate", "minecraft:golden_leggings", "minecraft:golden_boots");
-        addDefaultItems(json, "grade3",
-                "minecraft:golden_sword", "minecraft:golden_axe", "minecraft:golden_pickaxe",
-                "minecraft:golden_shovel", "minecraft:golden_hoe", "minecraft:iron_helmet",
-                "minecraft:iron_chestplate", "minecraft:iron_leggings", "minecraft:iron_boots",
-                "minecraft:shield");
-        addDefaultItems(json, "grade2",
-                "minecraft:iron_sword", "minecraft:iron_axe", "minecraft:iron_pickaxe",
-                "minecraft:iron_shovel", "minecraft:iron_hoe", "minecraft:chainmail_helmet",
-                "minecraft:chainmail_chestplate", "minecraft:chainmail_leggings", "minecraft:chainmail_boots",
-                "minecraft:bow", "minecraft:crossbow");
-        addDefaultItems(json, "grade1",
-                "minecraft:wooden_sword", "minecraft:wooden_axe", "minecraft:wooden_pickaxe",
-                "minecraft:wooden_shovel", "minecraft:wooden_hoe", "minecraft:stone_sword",
-                "minecraft:stone_axe", "minecraft:stone_pickaxe", "minecraft:stone_shovel",
-                "minecraft:stone_hoe", "minecraft:leather_helmet", "minecraft:leather_chestplate",
-                "minecraft:leather_leggings", "minecraft:leather_boots");
-
-        try (Writer writer = Files.newBufferedWriter(defaultFile)) {
-            GSON.toJson(json, writer);
-        } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to write default box JSON: {}", defaultFile, e);
-        }
-    }
-
-    private static void addTutorial(JsonObject json) {
-        JsonObject tutorial = new JsonObject();
-        tutorial.addProperty("note", "JSON does not support real comments, so this _tutorial object is used as documentation and is ignored by the mod loader.");
-        tutorial.addProperty("file_name", "The JSON file name becomes the box id. Example: weapon_supply_box.json becomes csgobox:weapon_supply_box.");
-        tutorial.addProperty("name", "Display name shown on the box item and GUI.");
-        tutorial.addProperty("key", "Required key item id. Use minecraft:air for a box that does not need a key.");
-        tutorial.addProperty("drop", "Default entity drop chance from 0.0 to 1.0. Entity-specific rates below override this value.");
-        tutorial.addProperty("random", "Five weights ordered from grade1 to grade5. Higher weight means more likely. Non-positive values use defaults; values above 10000 are clamped.");
-        tutorial.addProperty("entity", "Either a plain list of entity ids, or alternating entity id and drop rate pairs. Example: [\"minecraft:zombie\", 0.25, \"minecraft:skeleton\", 0.10].");
-        tutorial.addProperty("grades", "grade1 is the lowest rarity and grade5 is the highest rarity. Empty or invalid item entries are skipped.");
-        tutorial.addProperty("item_id", "Each item object must include an id such as minecraft:diamond_sword.");
-        tutorial.addProperty("item_count", "count is optional and defaults to 1.");
-        tutorial.addProperty("components", "For Minecraft 1.21.1, prefer the components object for custom names, lore, enchantments, and other data components.");
-        tutorial.addProperty("legacy_tag", "Legacy tag strings are still accepted for older configs, but components should be used for new configs.");
-
-        JsonArray itemExample = new JsonArray();
-        itemExample.add("{\"id\":\"minecraft:diamond_sword\",\"count\":1}");
-        itemExample.add("{\"id\":\"minecraft:diamond_sword\",\"count\":1,\"components\":{\"minecraft:custom_name\":\"{\\\"text\\\":\\\"Example Sword\\\",\\\"italic\\\":false}\"}}");
-        tutorial.add("item_examples", itemExample);
-
-        JsonArray workflow = new JsonArray();
-        workflow.add("Copy this file and rename it to create another box.");
-        workflow.add("Change name, key, drop, random, entity, and grade item lists.");
-        workflow.add("Restart the game or server so the mod reloads config/csbox/*.json.");
-        workflow.add("Give yourself a configured box item whose box_id component points to csgobox:<file_name_without_json>.");
-        tutorial.add("workflow", workflow);
-
-        json.add("_tutorial", tutorial);
-    }
-
-    private static JsonObject itemJson(String id) {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("id", id);
-        obj.addProperty("count", 1);
-        return obj;
-    }
-
-    private static void addDefaultItems(JsonObject json, String gradeKey, String... itemIds) {
-        JsonArray arr = new JsonArray();
-        for (String id : itemIds) {
-            arr.add(itemJson(id));
-        }
-        json.add(gradeKey, arr);
-    }
-
     private static Optional<BoxDefinition> loadFromFile(Path file) throws IOException {
         String fileName = file.getFileName().toString();
         String boxIdStr = fileName.substring(0, fileName.length() - 5);
@@ -249,7 +112,7 @@ public final class BoxJsonLoader {
                 JsonArray itemsArr = json.getAsJsonArray(gradeKey);
                 List<ItemStack> items = new ArrayList<>();
                 for (JsonElement elem : itemsArr) {
-                    ItemStack stack = parseItem(elem);
+                    ItemStack stack = BoxItemCodec.parseItem(elem);
                     if (stack != null && !stack.isEmpty()) {
                         items.add(stack);
                     }
@@ -341,82 +204,6 @@ public final class BoxJsonLoader {
         }
     }
 
-    /**
-     * Parses an item object, or a legacy JSON string containing that object.
-     */
-    private static ItemStack parseItem(JsonElement elem) {
-        try {
-            JsonObject obj;
-            if (elem.isJsonPrimitive()) {
-                // Legacy configs stored the item object as a JSON string.
-                obj = GSON.fromJson(elem.getAsString(), JsonObject.class);
-            } else {
-                obj = elem.getAsJsonObject();
-            }
-            if (obj == null) return ItemStack.EMPTY;
-            if (!obj.has("id")) {
-                CsgoBox.LOGGER.warn("Skipping item JSON without id: {}", elem);
-                return ItemStack.EMPTY;
-            }
-
-            String id = obj.get("id").getAsString();
-            int count = obj.has("count") ? obj.get("count").getAsInt() : 1;
-
-            Item item = BuiltInRegistries.ITEM.get(Identifier.parse(id)).map(Holder.Reference::value).orElse(null);
-            if (item == null) {
-                CsgoBox.LOGGER.warn("Unknown item in box JSON: {}", id);
-                return ItemStack.EMPTY;
-            }
-
-            // Standard ItemStack(ItemLike, int) is safe here only because
-            // BoxJsonLoader.loadAll now runs from ServerStartingEvent, after
-            // DataComponentInitializers has bound the vanilla items'
-            // intrusive-holder `components` field. Earlier (FMLCommonSetupEvent)
-            // path would NPE on Holder.Reference.components(). The registry
-            // Holder backing this stack carries a ResourceKey, so it survives
-            // later serialization (e.g. into the player_data attachment).
-            ItemStack stack = new ItemStack(item, count);
-
-            if (obj.has("components")) {
-                try {
-                    JsonElement componentsJson = obj.get("components");
-                    DataComponentPatch patch = DataComponentPatch.CODEC.parse(JsonOps.INSTANCE, componentsJson)
-                            .result().orElse(DataComponentPatch.EMPTY);
-                    stack.applyComponents(patch);
-                } catch (Exception e) {
-                    CsgoBox.LOGGER.warn("Failed to parse components for item {}: {}", id, e.getMessage());
-                }
-            } else if (obj.has("tag")) {
-                try {
-                    String tagStr = obj.get("tag").getAsString();
-                    var tag = TagParser.parseCompoundFully(tagStr);
-                    DataComponentPatch patch = DataComponentPatch.CODEC.parse(NbtOps.INSTANCE, tag)
-                            .result().orElse(DataComponentPatch.EMPTY);
-                    stack.applyComponents(patch);
-                } catch (Exception e) {
-                    CsgoBox.LOGGER.warn("Failed to parse NBT tag for item {}: {}", id, e.getMessage());
-                }
-            }
-
-            return stack;
-        } catch (Exception e) {
-            // Log the full exception (use Throwable variant) — the previous
-            // `LOGGER.warn("...{}", elem, e.getMessage())` form silently dropped
-            // `e.getMessage()` because the format string had only one `{}`
-            // placeholder. Real cause became invisible during load failures.
-            CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e);
-            return ItemStack.EMPTY;
-        }
-    }
-
-    private static String getString(JsonObject json, String key, String defaultValue) {
-        return json.has(key) ? json.get(key).getAsString() : defaultValue;
-    }
-
-    private static float getFloat(JsonObject json, String key, float defaultValue) {
-        return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
-    }
-
     public static void saveToFile(BoxDefinition def) {
         try {
             Files.createDirectories(BOXES_DIR);
@@ -460,7 +247,7 @@ public final class BoxJsonLoader {
             JsonArray itemsArr = new JsonArray();
             if (g != null) {
                 for (ItemStack item : g.items()) {
-                    itemsArr.add(serializeItemStack(item));
+                    itemsArr.add(BoxItemCodec.serializeItemStack(item));
                 }
             }
             json.add(gradeKey, itemsArr);
@@ -497,22 +284,11 @@ public final class BoxJsonLoader {
         }
     }
 
-    private static JsonObject serializeItemStack(ItemStack stack) {
-        JsonObject obj = new JsonObject();
-        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        obj.addProperty("id", itemId.toString());
-        obj.addProperty("count", stack.getCount());
+    private static String getString(JsonObject json, String key, String defaultValue) {
+        return json.has(key) ? json.get(key).getAsString() : defaultValue;
+    }
 
-        DataComponentPatch patch = stack.getComponentsPatch();
-        if (!patch.isEmpty()) {
-            try {
-                var result = DataComponentPatch.CODEC.encodeStart(JsonOps.INSTANCE, patch);
-                result.result().ifPresent(elem -> obj.add("components", elem));
-            } catch (Exception e) {
-                CsgoBox.LOGGER.warn("Failed to serialize components for item: {}", itemId, e.getMessage());
-            }
-        }
-
-        return obj;
+    private static float getFloat(JsonObject json, String key, float defaultValue) {
+        return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
     }
 }
