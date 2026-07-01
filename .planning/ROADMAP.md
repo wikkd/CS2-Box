@@ -65,7 +65,7 @@ Legend: `[x]` done · `[~]` in-progress · `[ ]` not started · `[!]` blocked
 
 ---
 
-## Phase 7 — common module full migration [ ] not started
+## Phase 7 — common module full migration [~] partial (stage 1.1 done, stage 1.1B decision pending)
 
 Goal: per `multiloader-refactor-plan.md` §阶段 4-5, lift remaining business code from `v1_21_1/` into `common/`. Required for:
 
@@ -74,6 +74,28 @@ Goal: per `multiloader-refactor-plan.md` §阶段 4-5, lift remaining business c
 - Box business logic (`RandomItem`, `GradeGroup`)
 - Packets / codec (version-neutral wire format)
 - Trigger definitions (`OpenedBoxTrigger`, `ModLoadedTrigger`)
+
+**Stage 1.1 (2026-07-01) ✅ done**: First batch of A-class files (no MC/NeoForge imports) lifted:
+- `common/utils/ColorTools.java` (ARGB color math + per-grade palette)
+- `common/utils/OverlayColor.java` (0xFF333333 background)
+- 8 caller imports in v1_21_1 + v26_1_2 GUI/utils updated
+- `git` recognised the v1_21_1 → common moves as renames
+- Verified `./gradlew :common:compileJava :v26_1_2:compileJava` and (with `active_versions=1.21.1`) `:v1_21_1:compileJava` all BUILD SUCCESSFUL
+
+**Stage 1.1B (2026-07-01) ✅ decided**: B-class candidate review — of the originally-planned 8 A-class files, only 2 actually qualified. The other 6 all import `net.minecraft.*` or `net.neoforged.*` and violate CONSTRAINT-001:
+
+| File | LOC | MC/NeoForge dependency | Decision |
+|---|---|---|---|
+| `box/BoxDefinition.java` | 230 | `ResourceLocation`, `Component`, `RegistryFriendlyByteBuf` | platform-located |
+| `box/BoxRegistry.java` | 50 | `ResourceLocation` + `CsgoBox.LOGGER` | platform-located |
+| `box/GradeGroup.java` | 50 | `ItemStack`, `RegistryFriendlyByteBuf` | platform-located |
+| `config/CsboxConfig.java` | 115 | `ModConfigSpec` (net.neoforged) | platform-located (NeoForge-only API) |
+| `capability/CsboxPlayerData.java` | 23 | `ItemStack` | platform-located |
+| `utils/EntityChineseMap.java` | 191 | `ResourceLocation` | platform-located |
+
+**Decision**: accept duplication — these 6 files stay in each platform module. Future B-class migration (if ever) would need platform abstraction interfaces (`IIdentifier / IItemStack / IComponent / IModConfig`) or relaxation of CONSTRAINT-001 — 6-10 hours of work, deferred.
+
+Cross-version signature gotcha: `v1_21_1` uses `net.minecraft.resources.ResourceLocation`, `v26_1_2` uses `net.minecraft.resources.Identifier` (renamed) — see commit `9b4d319`. Future B-class migration must pick a common name or use a `IIdentifier` abstraction.
 
 Risk gates (per `multiloader-execution-spec.md` CONSTRAINT-005):
 - Stop if `common` requires large one-shot platform shims
@@ -105,6 +127,24 @@ Risk gates (per `multiloader-execution-spec.md` CONSTRAINT-005):
 - Verify GitHub Actions matrix produces both `csbox-1.21.1-1.0.5.jar` and `csbox-26.1.2-1.0.5.jar`
 - Document release process in `docs/DEVELOPMENT.md` or new `docs/RELEASE.md`
 
+## Phase 12 — v26.2 third platform module [~] scaffold landed (2026-07-01)
+
+Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the existing 1.21.1 + 26.1.2 platforms.
+
+**Stage 3 (2026-07-01) ✅ done**: `v26_2/` module scaffold committed (`ef9e616`):
+- `v26_2/build.gradle` (mirror of v26_1_2 with `_26_1_2 → _26_2` variable rename; Java 25 + `--enable-preview` retained)
+- 34 Java files copied from `v26_1_2/src/main/java/...` and sed-renamed `v26_1_2 → v26_2`; `Platform26 → Platform26V2` (`mcVersion()` returns `"26.2"`); `CsgoBox` static block updated
+- 8 resource files (mods.toml, pack.mcmeta, 5 item models, root advancement)
+- `gradle.properties`: 9 new 26.2 variables; 3 are placeholder values pending user confirmation
+- `settings.gradle`: `'26.2' → 'v26_2'` added to `versionModules`
+
+**Stage 4-6 ⏳ blocked on real NeoForge 26.2 versions**:
+- `neo_version_26_2 = 26.2.0.99` (placeholder) — user is fetching from `https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`
+- `neogradle_version_26_2 = 7.2.0` (placeholder) — likely needs 7.2.x minor bump beyond v26_1_2's 7.1.38
+- `pack_format_26_2 = 82` (placeholder)
+- `./gradlew :v26_2:compileJava` currently fails at NeoGradle plugin resolution (7.2.0 not on Gradle Plugin Portal) — expected until real values land
+- Once real values land: v26_2 platform-specific GUI / PIP adaptation (PIP 3D must be preserved per user decision), then three-module build matrix verification, then runtime regression with PIP 3D rotation specifically verified
+
 ---
 
 ## Out-of-scope phases (intentionally not planned)
@@ -126,8 +166,9 @@ Risk gates (per `multiloader-execution-spec.md` CONSTRAINT-005):
 | 4 26.1.2 migration | ✅ | docs/port-26.1.2.md |
 | 5 log + GUI bug fix batch | ✅ | csbox-gui-26.1.2-fix-guide.md |
 | 6 26.1.2 audit | ✅ | this session |
-| 7 common full migration | [ ] | multiloader-refactor-plan.md |
+| 7 common full migration | [~] partial — stage 1.1 (A-class), stage 1.1B (B-class decision); 6 B-class files deferred | multiloader-refactor-plan.md |
 | 8 Container layout | [ ] | csbox-gui-26.1.2-fix-guide.md P1-1 |
 | 9 Per-item baseline | [ ] | csbox-gui-26.1.2-fix-guide.md P1-3 |
 | 10 Design tokens | [ ] | csbox-gui-26.1.2-fix-guide.md P2-2 |
 | 11 Build clean-up | [ ] | multiloader-execution-spec.md |
+| 12 v26.2 third platform | [~] scaffold landed; blocked on real NeoForge 26.2 versions for stage 4-6 | this session |

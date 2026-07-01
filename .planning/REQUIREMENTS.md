@@ -48,6 +48,29 @@ These are observations from ingested DOCs that imply acceptance gates but are no
 | Resource path invariant: `data/csgobox/recipe/` (singular) | AGENTS.md line 59 + multiloader-execution-spec.md CONSTRAINT-002 | done |
 | `CONFIG` is final — no null guards in calling code | AGENTS.md + v1.0.5-REVIEW CR-001/CR-002/CR-003 | done |
 | `common` module cannot import `net.minecraft.*` or `net.neoforged.*` | multiloader-execution-spec.md + multiloader-refactor-plan.md | done |
+| `common/utils/{ColorTools,OverlayColor}` shared across all platform modules | this session (stage 1.1, commit `a0af2ee`) | done |
+| `v26_2/` module exists as a third platform alongside v1_21_1 + v26_1_2 | this session (stage 3, commit `ef9e616`) | done (scaffold only) |
+
+## Explicit REQ entries (this session)
+
+### REQ-v26-2-platform
+
+- **ID**: REQ-v26-2-platform
+- **Source**: this session (2026-07-01); supersedes deferred full-MultiLoader row above
+- **Status**: in-progress
+- **Description**: add Minecraft 26.2 / NeoForge 26.2.x as a third supported platform alongside v1_21_1 and v26_1_2.
+- **Acceptance criteria**:
+  - [x] `v26_2/` Gradle module exists with `build.gradle` + `src/main/{java,resources}` skeleton (commit `ef9e616`)
+  - [x] 34 Java files copied from `v26_1_2/` with `v26_1_2 → v26_2` package rename and `Platform26 → Platform26V2` independent impl
+  - [x] `settings.gradle` `versionModules` map contains `'26.2' → 'v26_2'`
+  - [x] `gradle.properties` has 9 new 26.2 variables block (3 of them placeholders pending user confirmation)
+  - [ ] Real `neo_version_26_2` + `neogradle_version_26_2` + `pack_format_26_2` populated (blocker on stage 4-6)
+  - [ ] `./gradlew :v26_2:compileJava` succeeds (currently fails at NeoGradle plugin resolution with placeholder `7.2.0`)
+  - [ ] `./gradlew :v26_2:processResources` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar`
+  - [ ] `./gradlew :v26_2:runClient` opens world; PIP 3D rotation in `CsLookItemScreen` and `CsboxScreen` works without regression (per user decision: keep 3D, rewrite `gui/pip/` if 26.2 PictureInPictureRenderer API changes)
+  - [ ] Three-module build matrix verified: `./gradlew :v1_21_1:jar :v26_1_2:jar :v26_2:jar` (with three separate `active_versions=` switch rounds)
+  - [ ] Runtime regression checklist passes for v26_2 per `.planning/runtime-verification-checklist.md` RV-1 to RV-4
+- **Scope**: `v26_2/` module, `gradle.properties`, `settings.gradle`, possibly `common/` interface additions if B-class abstraction is needed for cross-platform business code reuse (currently deferred per stage 1.1B)
 
 ## Deferred requirements (per fix guide §4.4 / §4.7)
 

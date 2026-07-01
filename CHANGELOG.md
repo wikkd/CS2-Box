@@ -1,5 +1,20 @@
 # 更新日志
 
+## [未发布] — Multiloader 扩展（v26.2 骨架 + common/utils 首批迁移）
+
+### 新增
+- **v26_2 平台模块骨架。** 新增第三个版本模块 `v26_2/`,通过 `settings.gradle` 动态 include(`active_versions=26.2` 时启用)。当前状态:34 个 Java 文件 + 8 个资源文件从 `v26_1_2/` 复制并完成包名 `v26_1_2 → v26_2` 重命名,`Platform26 → Platform26V2`(独立 `IPlatform` 实现,`mcVersion()` 返回 `"26.2"`),`CsgoBox` 静态块改为 `Platform.set(new Platform26V2())`。NeoForge 26.2 / NeoGradle 占位版本号(等待用户提供真实 release coordinate)。
+- **`common/utils/ColorTools.java` 与 `common/utils/OverlayColor.java`。** 两个纯 A 类文件(无 `net.minecraft.*` / `net.neoforged.*` 依赖)从 `v1_21_1/` 与 `v26_1_2/` 重复实现中抽出至 `common/utils/`,git 识别为 rename(v1_21_1 → common)。8 个 caller 的 import 同步更新(`v{1_21_1,26_1_2}.utils.ColorTools → utils.ColorTools`)。
+- **`.planning/` 目录新增 11 个规划文档 + `intel/` 子目录。** `multiloader-refactor-plan.md`、`multiloader-execution-spec.md`、`phase0-audit.md`、`csbox-gui-26.1.2-fix-guide.md`、`runtime-verification-checklist.md` 等 5 篇主题文档,加 `PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md / INGEST-CONFLICTS.md` 5 张同步状态,加 `intel/{SYNTHESIS,context,constraints}.md` + 19 个 classifications JSON。这些由 `/gsd-ingest-docs` 自动 ingest 后保留在仓库中,供 `/gsd-plan-phase` 等下游命令消费。
+
+### 决定
+- **B 类 6 文件不迁 `common/`(显式选择)。** `BoxDefinition / BoxRegistry / GradeGroup / CsboxConfig / CsboxPlayerData / EntityChineseMap` 全部 `import net.minecraft.*` 或 `import net.neoforged.*`,违反 `.planning/intel/constraints.md` CONSTRAINT-001。它们保留在每个平台模块的副本中(共 3 份)。若未来要做 B 类重构,需要新增平台抽象接口(`IIdentifier / IItemStack / IComponent / IModConfig`)或在 common 中允许数据包装类携带 MC 引用,工作量为 6-10 小时。
+
+### 未完成(等真实 NeoForge 26.2 参数)
+- `gradle.properties` 中 `neo_version_26_2=26.2.0.99 / neogradle_version_26_2=7.2.0` 是占位值。用户从 `https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml` 拿到真实 release artifact id 后覆盖这两个键即可。
+- v26_2 GUI / PIP 系统在 26.2 decoupled API 下的实际编译(目前基于 v26_1_2 实现 copy,需要等真实 NeoForge 26.2 API 验证)。
+- 三模块 build 矩阵验证 + 运行时回归(PIP 3D 旋转在 v26_2 必须工作)。
+
 ## [1.0.5] - 2026-06-29
 
 ### 新增
