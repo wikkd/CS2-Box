@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/MANUAL-TESTING-v1.0.5.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "v1.0.5 手动测试用例",
+  "summary": "Manual test cases for CS2-Box mod v1.0.5 covering regression, achievements, smithing recipes, commands, and stability.",
+  "scope": ["manual testing", "v1.0.5", "regression testing", "achievement system", "smithing recipe", "config system", "command system", "stability"],
+  "cross_refs": [
+    ".planning/codebase/CONCERNS.md",
+    "src/main/java/com/reclizer/csgobox/config/CsboxConfig.java",
+    "src/main/java/com/reclizer/csgobox/advancement/ModLoadedTrigger.java",
+    "src/main/java/com/reclizer/csgobox/advancement/OpenedBoxTrigger.java",
+    "src/main/java/com/reclizer/csgobox/event/ModEvents.java",
+    "src/main/java/com/reclizer/csgobox/event/ClickEvent.java",
+    "src/main/resources/data/csgobox/advancement/root.json",
+    "src/main/resources/data/csgobox/advancement/first_box.json",
+    "src/main/resources/data/csgobox/advancement/shopper.json",
+    "src/main/resources/data/csgobox/recipe/csgo_key3_smithing.json",
+    "runs/client/config/csgobox.toml",
+    "runs/server/config/csgobox.toml"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

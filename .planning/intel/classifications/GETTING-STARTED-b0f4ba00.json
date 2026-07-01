@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/GETTING-STARTED.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2 Box 快速入门",
+  "summary": "Quick-start guide: Java 21 / MC 1.21.1 / NeoForge 21.1.115 prerequisites, clone, build, runClient, /csbox give commands, first box opening.",
+  "scope": ["Java 21", "MC 1.21.1", "NeoForge 21.1.115", "Gradle 8.11", "runClient", "/csbox command"],
+  "cross_refs": ["docs/ARCHITECTURE.md", "docs/CONFIGURATION.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

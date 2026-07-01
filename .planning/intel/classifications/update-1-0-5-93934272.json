@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/update-1.0.5.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "v1.0.5 更新说明",
+  "summary": "Release notes for v1.0.5: achievements system (A Fresh Start + Shopper), Cloth Config removal, csgobox-key3 smithing recipe, config path standardization.",
+  "scope": ["v1.0.5", "achievement system", "Cloth Config removal", "ModConfigSpec", "smithing recipe", "csgo_key3", "config path"],
+  "cross_refs": [".planning/v1.0.5-REVIEW.md", "data/csgobox/recipe/csgo_key3_smithing.json"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/AGENTS.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "CS2-Box — Agent 指南",
+  "summary": "Internal contributor / agent guide: build commands, ModConfigSpec pattern (no Cloth Config), package structure, key items & recipes, CONFIG final invariant.",
+  "scope": ["ModConfigSpec", "CsboxConfig", "package structure", "csgo_key0/1/2/3", "smithing recipe", "build.gradle", "java.toolchain"],
+  "cross_refs": [".planning/v1.0.5-REVIEW.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Project-specific invariant declaration (CONFIG is final, no null guards) overlaps v1.0.5-REVIEW CR-001/CR-002/CR-003 findings. medium confidence — looks like DOC but encodes 'locked-feeling' invariants the synthesizer may need to treat as quasi-ADR."
+}

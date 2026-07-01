@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/CONTRIBUTING.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "为 CS2 Box 贡献代码",
+  "summary": "Contributor guide covering dev environment setup, code style, branch conventions, PR workflow, and bug reporting.",
+  "scope": ["contribution", "code style", "branch conventions", "PR workflow", "Java 21", "Gradle 8.11"],
+  "cross_refs": ["./docs/GETTING-STARTED.md", "./docs/DEVELOPMENT.md", "./docs/CONFIGURATION.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

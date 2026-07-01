@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/multiloader-refactor-plan.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "CS2-Box MultiLoader 重构完整计划",
+  "summary": "完整的多加载器重构计划:9 阶段任务、风险清单、文件级迁移清单、阶段验收门槛。当前工作树未提交改动即基线,所有阶段化任务均基于实时树状态而非历史描述。",
+  "scope": ["MultiLoader refactor", "common/v1_21_1/v26_1_2 modules", "phase 0-9 plan", "constraints", "file-level migration", "verification gate"],
+  "cross_refs": [".planning/multiloader-execution-spec.md", "docs/port-26.1.2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Has '## 关键技术决策' section with 4 embedded decisions, but they lack formal ADR Status/Decision/Consequences form. Whole document is runbook-style with 9 phases — DOC dominant. medium confidence because of embedded decisions."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/multiloader-execution-spec.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2-Box MultiLoader 重构执行规范",
+  "summary": "Refines multiloader-refactor-plan.md into executable phase-by-phase tasks with input/output/dependencies/acceptance criteria, Gradle templates, dependency-direction rules, and module boundaries.",
+  "scope": ["MultiLoader refactor", "Gradle Multi-Project", "common module", "v1_21_1 module", "v26_1_2 module", "NeoGradle 7.0.171 / 7.1.38", "NeoForge 21.1.115 / 26.1.2.76", "Java 21 / 25 toolchain", "dependency direction", "resource layering", "processResources"],
+  "cross_refs": [".planning/multiloader-refactor-plan.md", "docs/port-26.1.2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Filename -spec suffix + content with executable tasks + dependency direction prohibitions + module boundary contracts — strong SPEC signals."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/update-1.0.4.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2 Box 1.0.4 更新说明",
+  "summary": "Release notes for v1.0.4: server-authoritative opening, request-ID matching, JSON tutorial, animation correctness, ESC-cancel non-blocking, network safety.",
+  "scope": ["v1.0.4", "server-authoritative", "PacketBoxOpenResult", "JSON tutorial", "animation", "ESC cancel", "RenderFontTool null fix"],
+  "cross_refs": [".planning/v1.0.5-REVIEW.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

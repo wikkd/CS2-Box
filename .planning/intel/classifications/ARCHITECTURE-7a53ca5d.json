@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/ARCHITECTURE.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2 Box 架构",
+  "summary": "CS2 Box NeoForge 1.21.1 模组的架构概述,涵盖组件图、开箱数据流、核心抽象(BoxDefinition/ItemCsgoBox/PacketCsgoProgress)和目录结构。",
+  "scope": ["CsgoBox", "BoxRegistry", "BoxDefinition", "BoxJsonLoader", "GradeGroup", "ItemCsgoBox", "ItemCsgoKey", "ModItems", "ModCapability", "CsboxPlayerData", "PacketCsgoProgress", "PacketBoxOpenResult", "PacketSyncBoxItems", "PacketRequestBoxItems", "PacketValidation", "CsboxScreen", "CsboxProgressScreen", "CsLookItemScreen", "ClickEvent", "ModEvents", "OpenedBoxTrigger", "ModLoadedTrigger", "CsboxConfig", "CsboxCommand", "ModSounds"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

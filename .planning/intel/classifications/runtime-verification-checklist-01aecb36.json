@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/runtime-verification-checklist.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Runtime Verification Checklist — v26_1_2 3D Animation & Rendering Audit",
+  "summary": "Records runtime visual verification items (RV-1 ~ RV-4), log-pattern checks, and root-cause notes for v26.1.2 3D rendering and config-loading fixes.",
+  "scope": ["CsboxProgressScreen", "CsboxScreen", "RenderFontTool", "GuiItemMove", "BoxJsonLoader", "RenderPipelines blit", "csgo_background.png", "DisplayInfo.background", "Holder.Reference", "ItemStack serialization", "advancement system", "weapon_supply_box.json"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": "Verification runbook — procedural operator instructions, expected vs failed behaviors, log patterns. DOC dominant, high confidence."
+}
