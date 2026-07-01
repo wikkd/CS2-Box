@@ -47,6 +47,16 @@ import org.slf4j.Logger;
 public class CsgoBox {
 
     public static final String MODID = "csgobox";
+    /**
+     * Mod version, set during construction from {@code ModContainer}.
+     * Consumed by {@code BoxDefaults.writeTutorialIfMissing} — the load
+     * runs in {@code FMLCommonSetupEvent.enqueueWork} (1.21.1) or
+     * {@code ServerStartingEvent} (26.x), both of which fire AFTER this
+     * constructor completes. Default {@code "unknown"} is therefore only
+     * observable if the class is loaded before mod init, which is not a
+     * normal code path.
+     */
+    public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final CsboxConfig CONFIG;
     public static final ModConfigSpec CONFIG_SPEC;
@@ -61,6 +71,12 @@ public class CsgoBox {
     }
 
     public CsgoBox(IEventBus modEventBus) {
+        try {
+            MODVERSION = ModLoadingContext.get().getActiveContainer()
+                    .getModInfo().getVersion().toString();
+        } catch (Exception e) {
+            LOGGER.warn("Could not read mod version from container: {}", e.getMessage());
+        }
         ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
         modEventBus.addListener(this::commonSetup);

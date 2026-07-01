@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -18,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +41,14 @@ public final class BoxJsonLoader {
     private static final String[] GRADE_NAMES = {"保密", "受限", "军规级", "工业级", "消费级"};
     private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF4B69FF, 0xFF4B69FF};
 
+    private static final List<LoadError> LAST_LOAD_ERRORS = new ArrayList<>();
+
     private BoxJsonLoader() {
     }
 
     public static void loadAll() {
+        LAST_LOAD_ERRORS.clear();
+
         if (!Files.exists(BOXES_DIR)) {
             try {
                 Files.createDirectories(BOXES_DIR);
@@ -53,13 +59,17 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        BoxDefaults.writeDefaultIfEmpty(BOXES_DIR, GSON);
+        BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};
         int[] skipped = {0};
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
             for (Path file : stream) {
+                String fileName = file.getFileName().toString();
+                if (fileName.startsWith("_")) {
+                    continue;
+                }
                 scannedFiles.add(file);
                 try {
                     Optional<BoxDefinition> result = loadFromFile(file);
@@ -74,6 +84,7 @@ public final class BoxJsonLoader {
                 } catch (Exception e) {
                     CsgoBox.LOGGER.error("Failed to load box JSON file: {}", file, e);
                     skipped[0]++;
+                    recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage(), -1, -1);
                 }
             }
         } catch (IOException e) {
@@ -85,6 +96,37 @@ public final class BoxJsonLoader {
                 scannedFiles.size(), BOXES_DIR, loaded[0], skipped[0]);
     }
 
+    public static List<LoadError> getLastLoadErrors() {
+        return Collections.unmodifiableList(LAST_LOAD_ERRORS);
+    }
+
+    public static boolean hasLoadErrors() {
+        return !LAST_LOAD_ERRORS.isEmpty();
+    }
+
+    private static void recordLoadError(Path file, String fileName, String reason, int line, int column) {
+        String boxId = fileName.endsWith(".json")
+                ? fileName.substring(0, fileName.length() - 5)
+                : fileName;
+        LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, line, column));
+    }
+
+    /**
+     * Extracts the {@code at line N column M} tuple from a Gson error message.
+     * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
+     * to fish the numbers out of the formatted message. Returns {@code {-1,-1}}
+     * when the pattern is not found.
+     */
+    private static int[] parseLocationFromMessage(String message) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("at line (\\d+) column (\\d+)")
+                .matcher(message);
+        if (m.find()) {
+            return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+        }
+        return new int[]{-1, -1};
+    }
+
     private static Optional<BoxDefinition> loadFromFile(Path file) throws IOException {
         String fileName = file.getFileName().toString();
         String boxIdStr = fileName.substring(0, fileName.length() - 5);
@@ -92,58 +134,89 @@ public final class BoxJsonLoader {
         JsonObject json;
         try (Reader reader = Files.newBufferedReader(file)) {
             json = GSON.fromJson(reader, JsonObject.class);
+        } catch (JsonSyntaxException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "unknown syntax error";
+            int[] lc = parseLocationFromMessage(msg);
+            CsgoBox.LOGGER.error("Invalid JSON syntax in {}: {}", file, msg);
+            recordLoadError(file, fileName, "Invalid JSON syntax: " + msg, lc[0], lc[1]);
+            return Optional.empty();
         }
         if (json == null) return Optional.empty();
 
-        String name = getString(json, "name", boxIdStr);
-        Identifier keyItem = Identifier.parse(getString(json, "key", "csgobox:csgo_key0"));
-        float dropRate = getFloat(json, "drop", 0.12F);
+        try {
+            String name = getString(json, "name", boxIdStr);
+            Identifier keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
+            float dropRate = getFloat(json, "drop", 0.12F);
 
-        int[] weights = parseWeights(json);
+            int[] weights = parseWeights(json);
 
-        List<Identifier> dropEntityIds = new ArrayList<>();
-        Map<Identifier, Float> entityDropRates = new HashMap<>();
-        parseEntities(json, dropEntityIds, entityDropRates);
+            List<Identifier> dropEntityIds = new ArrayList<>();
+            Map<Identifier, Float> entityDropRates = new HashMap<>();
+            parseEntities(json, dropEntityIds, entityDropRates);
 
-        List<GradeGroup> grades = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            String gradeKey = "grade" + (5 - i);
-            if (json.has(gradeKey)) {
-                JsonArray itemsArr = json.getAsJsonArray(gradeKey);
-                List<ItemStack> items = new ArrayList<>();
-                for (JsonElement elem : itemsArr) {
-                    ItemStack stack = BoxItemCodec.parseItem(elem);
-                    if (stack != null && !stack.isEmpty()) {
-                        items.add(stack);
+            List<GradeGroup> grades = new ArrayList<>();
+            for (int i = 0; i < 5; i++) {
+                String gradeKey = "grade" + (5 - i);
+                if (json.has(gradeKey)) {
+                    JsonArray itemsArr = json.getAsJsonArray(gradeKey);
+                    List<ItemStack> items = new ArrayList<>();
+                    for (JsonElement elem : itemsArr) {
+                        ItemStack stack = BoxItemCodec.parseItem(elem);
+                        if (stack != null && !stack.isEmpty()) {
+                            items.add(stack);
+                        }
+                    }
+                    if (!items.isEmpty()) {
+                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items));
                     }
                 }
-                if (!items.isEmpty()) {
-                    grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items));
-                }
             }
-        }
 
-        if (grades.isEmpty()) {
-            CsgoBox.LOGGER.warn("Skipping box '{}': all items failed to parse (missing mods?)", boxIdStr);
+            if (grades.isEmpty()) {
+                CsgoBox.LOGGER.warn("Skipping box '{}': all items failed to parse (missing mods?)", boxIdStr);
+                recordLoadError(file, fileName,
+                        "All items failed to parse (missing mods?)", -1, -1);
+                return Optional.empty();
+            }
+
+            BoxDefinition.Builder builder = BoxDefinition.builder(
+                    Identifier.parse("csgobox:" + boxIdStr), name);
+            builder.key(keyItem);
+            builder.dropRate(dropRate);
+            for (Identifier entityId : dropEntityIds) {
+                Float rate = entityDropRates.get(entityId);
+                if (rate != null) {
+                    builder.entityDropRate(entityId.toString(), rate);
+                }
+                builder.dropFrom(entityId.toString());
+            }
+            for (GradeGroup grade : grades) {
+                builder.addGrade(grade);
+            }
+
+            return Optional.of(builder.build());
+        } catch (IllegalArgumentException e) {
+            CsgoBox.LOGGER.error("Invalid identifier in {}: {}", file, e.getMessage());
+            recordLoadError(file, fileName,
+                    "Invalid identifier: " + e.getMessage(), -1, -1);
             return Optional.empty();
         }
+    }
 
-        BoxDefinition.Builder builder = BoxDefinition.builder(
-                Identifier.parse("csgobox:" + boxIdStr), name);
-        builder.key(keyItem);
-        builder.dropRate(dropRate);
-        for (Identifier entityId : dropEntityIds) {
-            Float rate = entityDropRates.get(entityId);
-            if (rate != null) {
-                builder.entityDropRate(entityId.toString(), rate);
-            }
-            builder.dropFrom(entityId.toString());
+    /**
+     * Parses an {@link Identifier} while normalizing any thrown exception to
+     * {@link IllegalArgumentException}. MC's {@code Identifier.parse} throws
+     * a Mojang-specific {@code ResourceLocationException} whose concrete type
+     * changes between versions; the rest of this loader only relies on the
+     * IAE contract.
+     */
+    private static Identifier parseIdentifierSafe(String value, String fieldName) {
+        try {
+            return Identifier.parse(value);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException(
+                    "Field '" + fieldName + "' = \"" + value + "\": " + e.getMessage(), e);
         }
-        for (GradeGroup grade : grades) {
-            builder.addGrade(grade);
-        }
-
-        return Optional.of(builder.build());
     }
 
     /**
@@ -185,7 +258,7 @@ public final class BoxJsonLoader {
         if (entityArr.size() == 1 || (entityArr.get(1).isJsonPrimitive()
                 && entityArr.get(1).getAsJsonPrimitive().isString())) {
             for (JsonElement elem : entityArr) {
-                Identifier entityId = Identifier.parse(elem.getAsString());
+                Identifier entityId = parseIdentifierSafe(elem.getAsString(), "entity");
                 dropEntityIds.add(entityId);
             }
             return;
@@ -198,7 +271,7 @@ public final class BoxJsonLoader {
         for (int i = 0; i + 1 < entityArr.size(); i += 2) {
             String entityIdStr = entityArr.get(i).getAsString();
             float rate = entityArr.get(i + 1).getAsFloat();
-            Identifier entityId = Identifier.parse(entityIdStr);
+            Identifier entityId = parseIdentifierSafe(entityIdStr, "entity");
             dropEntityIds.add(entityId);
             entityDropRates.put(entityId, rate);
         }
