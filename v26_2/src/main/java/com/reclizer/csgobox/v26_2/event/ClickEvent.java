@@ -41,7 +41,7 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.execute(() -> mc.setScreen(new CsboxScreen()));
+                mc.execute(() -> mc.setScreenAndShow(new CsboxScreen()));
             }
         }
     }

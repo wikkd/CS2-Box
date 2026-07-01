@@ -77,8 +77,12 @@ public class CsgoBox {
             if (registryKey.equals(Registries.CUSTOM_STAT)) {
                 event.register(Registries.CUSTOM_STAT, OpenedBoxTrigger.STAT_ID, () -> OpenedBoxTrigger.STAT_ID);
             } else if (registryKey.equals(Registries.TRIGGER_TYPE)) {
-                event.register(Registries.TRIGGER_TYPE, OpenedBoxTrigger.ID, () -> OpenedBoxTrigger.INSTANCE);
-                event.register(Registries.TRIGGER_TYPE, ModLoadedTrigger.ID, () -> ModLoadedTrigger.INSTANCE);
+                // 26.2 javac can't capture the wildcard ? in ResourceKey<Registry<CriterionTrigger<?>>>
+                //    against a concrete Supplier<OpenedBoxTrigger>. Cast the supplier to a raw
+                //    Supplier so the call site type-checks. Safe because the registry is just a
+                //    bag of CriterionTrigger<?> instances.
+                event.register(Registries.TRIGGER_TYPE, OpenedBoxTrigger.ID, (java.util.function.Supplier) () -> OpenedBoxTrigger.INSTANCE);
+                event.register(Registries.TRIGGER_TYPE, ModLoadedTrigger.ID, (java.util.function.Supplier) () -> ModLoadedTrigger.INSTANCE);
             }
         });
 

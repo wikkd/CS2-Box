@@ -98,7 +98,7 @@ public class CsboxProgressScreen extends Screen {
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
         if (this.minecraft == null) return;
-        this.minecraft.options.hideGui = true;
+        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
 
         if (openTime < 5) return;
 
@@ -205,7 +205,7 @@ public class CsboxProgressScreen extends Screen {
 
         if (startTime == totalTicks) {
             if (!resultItem.isEmpty()) {
-                Minecraft.getInstance().setScreen(new CsLookItemScreen(resultItem, resultGrade));
+                Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(resultItem, resultGrade));
             } else {
                 this.onClose();
             }
@@ -251,9 +251,7 @@ public class CsboxProgressScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            this.minecraft.options.hideGui = false;
-        }
+        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
         super.onClose();
     }
 

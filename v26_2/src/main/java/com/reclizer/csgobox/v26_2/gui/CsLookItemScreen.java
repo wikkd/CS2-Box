@@ -98,9 +98,7 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        if (this.minecraft != null) {
-            this.minecraft.options.hideGui = true;
-        }
+        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
         if (openItem.isEmpty()) return;
 
         float scale = previewTextureSize() / 16F;
@@ -213,9 +211,7 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            this.minecraft.options.hideGui = false;
-        }
+        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
         super.onClose();
     }
 

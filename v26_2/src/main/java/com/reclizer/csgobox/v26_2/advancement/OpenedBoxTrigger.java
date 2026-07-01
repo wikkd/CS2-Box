@@ -3,8 +3,8 @@ package com.reclizer.csgobox.v26_2.advancement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.reclizer.csgobox.v26_2.CsgoBox;
-import net.minecraft.advancements.criterion.ContextAwarePredicate;
-import net.minecraft.advancements.criterion.SimpleCriterionTrigger;
+import net.minecraft.advancements.predicates.ContextAwarePredicate;
+import net.minecraft.advancements.triggers.SimpleCriterionTrigger;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
@@ -34,7 +34,7 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
     }
 
     public void trigger(ServerPlayer player) {
-        this.trigger(player, instance -> instance.matches(player));
+        this.trigger(player, (java.util.function.Predicate<TriggerInstance>) instance -> instance.matches(player));
     }
 
     public record TriggerInstance(Optional<ContextAwarePredicate> player, int count) implements SimpleInstance {

@@ -267,7 +267,7 @@ public class CsboxScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.minecraft.player.closeContainer();
-            this.minecraft.options.hideGui = false;
+            // hideGui removed in MC 26.2 — see onClose() comment.
             return true;
         }
         return super.keyPressed(event);
@@ -468,7 +468,7 @@ public class CsboxScreen extends Screen {
                         if (canOpen) {
                             long openRequestId = ThreadLocalRandom.current().nextLong();
                             // Request id only matches the later server result to this animation.
-                            Minecraft.getInstance().setScreen(new CsboxProgressScreen(entity, openRequestId));
+                            Minecraft.getInstance().setScreenAndShow(new CsboxProgressScreen(entity, openRequestId));
                             ClientPacketListener openConn = Minecraft.getInstance().getConnection();
                             if (openConn != null) {
                                 openConn.send(new ServerboundCustomPayloadPacket(new PacketCsgoProgress(openRequestId)));
@@ -487,7 +487,7 @@ public class CsboxScreen extends Screen {
             if (event.x() >= backX && event.x() <= backX + backW && event.y() >= backY && event.y() <= backY + backH) {
                 if (this.minecraft != null && this.minecraft.player != null) {
                     this.minecraft.player.closeContainer();
-                    this.minecraft.options.hideGui = false;
+                    // hideGui removed in MC 26.2 — see onClose() comment.
                 }
                 return true;
             }

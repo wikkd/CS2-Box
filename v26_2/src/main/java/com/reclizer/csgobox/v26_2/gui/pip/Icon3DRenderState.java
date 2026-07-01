@@ -3,7 +3,6 @@ package com.reclizer.csgobox.v26_2.gui.pip;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
-import org.joml.Matrix3x2f;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -57,9 +56,10 @@ public record Icon3DRenderState(
         return new ScreenRectangle(x0, y0, x1 - x0, y1 - y0);
     }
 
-    /** Convenience: GUI-side 2D pose is identity because the parent screen
-     *  already positions the slot via its own Matrix3x2fStack. */
-    public Matrix3x2f pose() {
-        return IDENTITY_POSE;
-    }
+    /** GUI-side 2D pose is identity — the parent interface's default
+     *  ({@link PictureInPictureRenderState#pose}) returns its built-in
+     *  {@code IDENTITY_POSE}, and the parent screen already positions
+     *  the slot via its own Matrix3x2fStack. We rely on the default
+     *  here (no override) so we don't have to keep a mutable Matrix3x2f
+     *  field in sync. */
 }
