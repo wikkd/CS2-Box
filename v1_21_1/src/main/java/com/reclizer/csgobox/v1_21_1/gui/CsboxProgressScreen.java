@@ -47,6 +47,16 @@ public class CsboxProgressScreen extends Screen {
     private float targetScroll = 0F;
     private float soundWidthAdd = 0;
 
+    // Hard cap on tick-sound playback rate. The pixel-accumulator trigger
+    // (soundWidthAdd > soundThreshold) gives the scroll its audible rhythm,
+    // but at peak velocity it can fire every 1-2 ticks, which exceeds the
+    // 8-channel OpenAL pool and floods the log with "Maximum sound pool
+    // size reached" warnings. Wall-clock throttle (not game-time — game-time
+    // is not monotonic across pause/unpause) keeps playback under ~8 Hz
+    // while preserving the per-icon click the user hears.
+    private static final long MIN_TICK_SOUND_INTERVAL_MS = 120L;
+    private long lastTickSoundMs = 0L;
+
     private Integer serverWinningIndex = null;
     private ItemStack resultItem = ItemStack.EMPTY;
     private int resultGrade = 0;
@@ -214,8 +224,12 @@ public class CsboxProgressScreen extends Screen {
             soundWidthAdd = 0;
             float tickVol = CsgoBox.CONFIG.tickSoundVolume() / 100F;
             if (tickVol > 0) {
-                player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
-                        ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
+                long nowMs = System.currentTimeMillis();
+                if (nowMs - lastTickSoundMs >= MIN_TICK_SOUND_INTERVAL_MS) {
+                    lastTickSoundMs = nowMs;
+                    player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
+                            ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
+                }
             }
         }
     }
