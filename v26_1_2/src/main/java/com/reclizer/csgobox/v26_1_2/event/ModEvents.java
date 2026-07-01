@@ -30,6 +30,9 @@ public final class ModEvents {
     @SubscribeEvent
     public static void livingDeath(LivingDeathEvent event) {
         LivingEntity mob = event.getEntity();
+        if (mob.level().isClientSide()) {
+            return;
+        }
         Identifier entityType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
         float lootingMultiplier = lootingMultiplier(event, mob);
 

@@ -61,35 +61,53 @@ public final class BoxJsonLoader {
 
         writeDefaultIfEmpty();
 
+        List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};
+        int[] skipped = {0};
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
             for (Path file : stream) {
+                scannedFiles.add(file);
                 try {
-                    loadFromFile(file).ifPresent(def -> {
-                        BoxRegistry.register(def);
-                        loaded[0]++;
-                        CsgoBox.LOGGER.info("Loaded box from JSON: {} -> {}", file.getFileName(), def.id());
-                    });
+                    Optional<BoxDefinition> result = loadFromFile(file);
+                    if (result.isEmpty()) {
+                        // loadFromFile already logged the per-grade or per-item reason.
+                        skipped[0]++;
+                        continue;
+                    }
+                    BoxRegistry.register(result.get());
+                    loaded[0]++;
+                    CsgoBox.LOGGER.info("Loaded box from JSON: {} -> {}", file.getFileName(), result.get().id());
                 } catch (Exception e) {
                     CsgoBox.LOGGER.error("Failed to load box JSON file: {}", file, e);
+                    skipped[0]++;
                 }
             }
         } catch (IOException e) {
             CsgoBox.LOGGER.error("Failed to list box JSON files in {}", BOXES_DIR, e);
         }
 
-        CsgoBox.LOGGER.info("Loaded {} box(es) from {}", loaded[0], BOXES_DIR);
+        CsgoBox.LOGGER.info(
+                "Scanned {} JSON file(s) in {}; loaded {}, skipped {}",
+                scannedFiles.size(), BOXES_DIR, loaded[0], skipped[0]);
     }
 
     private static void writeDefaultIfEmpty() {
+        List<String> existing = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
-            if (stream.iterator().hasNext()) return;
-        } catch (IOException ignored) {
+            stream.forEach(p -> existing.add(p.getFileName().toString()));
+            if (!existing.isEmpty()) {
+                CsgoBox.LOGGER.info(
+                        "Skipping default box write: {} already contains {} JSON file(s) ({})",
+                        BOXES_DIR, existing.size(), String.join(", ", existing));
+                return;
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.warn("Could not inspect {} for existing configs: {}", BOXES_DIR, e);
             return;
         }
 
         Path defaultFile = BOXES_DIR.resolve("weapon_supply_box.json");
-        CsgoBox.LOGGER.info("No box JSON files found, creating default: {}", defaultFile);
+        CsgoBox.LOGGER.info("No existing JSON files in {}, creating default: {}", BOXES_DIR, defaultFile);
 
         JsonObject json = new JsonObject();
         addTutorial(json);
@@ -350,6 +368,13 @@ public final class BoxJsonLoader {
                 return ItemStack.EMPTY;
             }
 
+            // Standard ItemStack(ItemLike, int) is safe here only because
+            // BoxJsonLoader.loadAll now runs from ServerStartingEvent, after
+            // DataComponentInitializers has bound the vanilla items'
+            // intrusive-holder `components` field. Earlier (FMLCommonSetupEvent)
+            // path would NPE on Holder.Reference.components(). The registry
+            // Holder backing this stack carries a ResourceKey, so it survives
+            // later serialization (e.g. into the player_data attachment).
             ItemStack stack = new ItemStack(item, count);
 
             if (obj.has("components")) {
@@ -375,7 +400,11 @@ public final class BoxJsonLoader {
 
             return stack;
         } catch (Exception e) {
-            CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e.getMessage());
+            // Log the full exception (use Throwable variant) — the previous
+            // `LOGGER.warn("...{}", elem, e.getMessage())` form silently dropped
+            // `e.getMessage()` because the format string had only one `{}`
+            // placeholder. Real cause became invisible during load failures.
+            CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e);
             return ItemStack.EMPTY;
         }
     }

@@ -9,6 +9,8 @@ import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger;
+import com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState;
+import com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderer;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
@@ -32,7 +34,9 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import com.reclizer.csgobox.platform.Platform;
@@ -62,6 +66,7 @@ public class CsgoBox {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
+        modEventBus.addListener(this::registerIcon3DRenderer);
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
                 LOGGER.info("CS2 Box config reloaded");
@@ -94,10 +99,20 @@ public class CsgoBox {
         registrar.playToClient(PacketSyncBoxItems.TYPE, PacketSyncBoxItems.STREAM_CODEC, PacketSyncBoxItems::handle);
     }
 
+    /** Registers the mod's custom PictureInPictureRenderer so 3D-rotated GUI
+     *  item previews (held-box preview, won-item display) render with a
+     *  full PoseStack instead of the deferred 2D icon pipeline. */
+    private void registerIcon3DRenderer(final RegisterPictureInPictureRenderersEvent event) {
+        event.register(Icon3DRenderState.class, Icon3DRenderer::new);
+        LOGGER.info("Registered CS:GO Box 3D icon PIP renderer");
+    }
+
     private void commonSetup(final FMLCommonSetupEvent event) {
-        if (CONFIG.loadDefaultBoxes()) {
-            event.enqueueWork(BoxJsonLoader::loadAll);
-        }
+        // BoxJsonLoader.loadAll deferred to onServerStarting (see below). At
+        // FMLCommonSetupEvent in 26.1.2, vanilla Item.intrusive holders'
+        // `components` field has not been bound yet — DataComponentInitializers
+        // runs during datapack reload, AFTER this event. Constructing
+        // ItemStacks here would NPE on Holder.Reference.components().
         LOGGER.info("CS2 Box initialized successfully");
     }
 
@@ -116,6 +131,19 @@ public class CsgoBox {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
+        // ServerStartingEvent fires on the server thread after registry freeze
+        // — vanilla items' intrusive holders have `components` bound by now,
+        // so BoxJsonLoader can construct registry-backed ItemStacks that
+        // survive later serialization (e.g. into the player's persisted
+        // attachment).
+        if (CONFIG.loadDefaultBoxes()) {
+            BoxJsonLoader.loadAll();
+        }
+        LOGGER.info("CS2 Box server starting, registered box definitions");
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
     }
 
