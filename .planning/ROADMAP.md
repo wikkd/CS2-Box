@@ -127,7 +127,7 @@ Risk gates (per `multiloader-execution-spec.md` CONSTRAINT-005):
 - Verify GitHub Actions matrix produces both `csbox-1.21.1-1.0.5.jar` and `csbox-26.1.2-1.0.5.jar`
 - Document release process in `docs/DEVELOPMENT.md` or new `docs/RELEASE.md`
 
-## Phase 12 — v26.2 third platform module [~] scaffold landed (2026-07-01)
+## Phase 12 — v26.2 third platform module [~] real versions pinned, code adaptation in progress (2026-07-01)
 
 Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the existing 1.21.1 + 26.1.2 platforms.
 
@@ -138,12 +138,25 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 - `gradle.properties`: 9 new 26.2 variables; 3 are placeholder values pending user confirmation
 - `settings.gradle`: `'26.2' → 'v26_2'` added to `versionModules`
 
-**Stage 4-6 ⏳ blocked on real NeoForge 26.2 versions**:
-- `neo_version_26_2 = 26.2.0.99` (placeholder) — user is fetching from `https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`
-- `neogradle_version_26_2 = 7.2.0` (placeholder) — likely needs 7.2.x minor bump beyond v26_1_2's 7.1.38
-- `pack_format_26_2 = 82` (placeholder)
-- `./gradlew :v26_2:compileJava` currently fails at NeoGradle plugin resolution (7.2.0 not on Gradle Plugin Portal) — expected until real values land
-- Once real values land: v26_2 platform-specific GUI / PIP adaptation (PIP 3D must be preserved per user decision), then three-module build matrix verification, then runtime regression with PIP 3D rotation specifically verified
+**Stage 3.1 (2026-07-01) ✅ done**: real versions fetched from `https://maven.neoforged.net/releases/` (`e27612f`):
+- `neo_version_26_2 = 26.2.0.7-beta` (latest; 26.2 still in beta — no 26.2.0 stable yet; 26.2.0.0/0.1/0.2/0.3/0.6/0.7-beta published, 0.4/0.5 skipped)
+- `neogradle_version_26_2 = 7.1.38` (latest userdev; same as v26_1_2 — no 7.2.x published yet)
+- `loader_version_range_26_2 = [11,)` (FML 11.0.13 referenced by the 26.2.0.7-beta POM matches 26.1.2.76)
+- `pack_format_26_2 = 81` (Mojang convention +1 per minor; 26.1.x = 80)
+- `neoform = 26.2-1` (matching NeoForm artifact, stable)
+- Verified `./gradlew :v26_2:compileJava` with `active_versions=26.2`: Gradle plugin resolution succeeds, neoForm pipeline runs end-to-end, compileJava fails with 37 errors (stage 4 work)
+
+**Stage 4 (2026-07-01) ⏳ in-progress**: v26_2 platform-specific GUI / PIP adaptation. Captured compile errors:
+- `net.minecraft.client.renderer.MultiBufferSource` no longer exists (PIP renderer pipeline change)
+- `Minecraft.setScreen(Screen)` signature changed
+- `RegisterEvent.register(ResourceKey<Registry<CriterionTrigger<?>>>, Identifier, Supplier)` no longer accepts the 3-arg form
+- `Icon3DRenderer` constructor now takes a `BufferSource` arg (PIP API restructure)
+- More — full diagnostics captured during the build run above
+
+**Stage 5-6 ⏳ blocked on stage 4**:
+- `./gradlew :v26_2:processResources` + `jar` → `v26_2/build/libs/csgobox-26.2-1.0.5.jar`
+- Three-module build matrix verification (with `active_versions=` switch rounds)
+- Runtime regression with PIP 3D rotation specifically verified (`CsLookItemScreen` + `CsboxScreen`)
 
 ---
 
@@ -171,4 +184,4 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 | 9 Per-item baseline | [ ] | csbox-gui-26.1.2-fix-guide.md P1-3 |
 | 10 Design tokens | [ ] | csbox-gui-26.1.2-fix-guide.md P2-2 |
 | 11 Build clean-up | [ ] | multiloader-execution-spec.md |
-| 12 v26.2 third platform | [~] scaffold landed; blocked on real NeoForge 26.2 versions for stage 4-6 | this session |
+| 12 v26.2 third platform | [~] stage 3 + 3.1 done (real versions pinned); stage 4 in-progress (37 compile errors from 26.2 decoupled API changes) | this session |

@@ -24,7 +24,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 | `common/` | — | — | — | 21 | — | 跨版本业务逻辑 + 共享资源 + platform 接口抽象 |
 | `v1_21_1/` | 1.21.1 | 21.1.115 | 7.0.171 | 21 | 8.11 | 1.21.1 平台实现(`@Mod` 入口、DeferredRegister、Screen、Attachment、网络接线) |
 | `v26_1_2/` | 26.1.2 | 26.1.2.76 | 7.1.38 | 25 `--enable-preview` | 8.14 | 26.1.2 平台实现(迁移到 decoupled rendering API) |
-| `v26_2/` | 26.2 | 待定 | 待定 | 25 `--enable-preview` | 8.14 | 26.2 平台实现（待真实 NeoForge 26.2 版本号落地，目前为占位骨架） |
+| `v26_2/` | 26.2 | 26.2.0.7-beta | 7.1.38 | 25 `--enable-preview` | 8.14 | 26.2 平台实现（最新 beta；待代码适配 26.2 破坏性 API 变更） |
 
 `common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享(v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`)。
 
@@ -52,7 +52,7 @@ cd CS2-Box
 ./gradlew build
 
 # 3. 启动开发客户端
-./gradlew :v26_1_2:runClient   # 或 :v1_21_1:runClient / :v26_2:runClient (待真实 26.2 版本号落地后)
+./gradlew :v26_1_2:runClient   # 或 :v1_21_1:runClient / :v26_2:runClient (待 stage 4 代码适配)
 ```
 
 启动后:
@@ -99,7 +99,7 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 - ✅ Phase 0-6 done:基线冻结、构建系统、common 边界、v1_21_1 稳定、26.1.2 迁移、26.1.2 日志与 GUI 修复批、26.1.2 审计
 - ✅ 阶段 A done:common/utils/ 首批 2 个真正 A 类(ColorTools / OverlayColor)迁移,v1_21_1 + v26_1_2 + v26_2 三模块共存骨架已搭建
 - ⏳ Phase 7+ 未开始:common 完整业务代码迁移(目前 B 类文件保留平台层重复,见 `.planning/PROJECT.md`)、容器化布局(P1-1)、per-item 视觉基线(P1-3)、三档设计 token(P2-2)
-- ⏳ v26_2 真实版本号未落地:目前 `gradle.properties` 中 `neo_version_26_2 / neogradle_version_26_2` 为占位值,`./gradlew :v26_2:compileJava` 在 NeoGradle 插件解析步骤失败,等用户提供真实 NeoForge 26.2 release coordinate
+- ⏳ v26_2 真实版本号已落地(neo_version=26.2.0.7-beta, neogradle=7.1.38, neoform=26.2-1, pack_format=81),Gradle 解析已通过,但 `./gradlew :v26_2:compileJava` 在 stage 4 代码适配前会失败(37 个 API 破坏性变更错误,主要是 `MultiBufferSource` 移除、`RegisterEvent.register` 三参数形式变化、Icon3DRenderer 构造器签名变化等)。
 
 **已禁用范围**(显式延期):Cloth Config 回归、Forge 1.20.1 backport、玩家间交易(loot bind-on-open)。
 

@@ -63,9 +63,14 @@ These are observations from ingested DOCs that imply acceptance gates but are no
   - [x] `v26_2/` Gradle module exists with `build.gradle` + `src/main/{java,resources}` skeleton (commit `ef9e616`)
   - [x] 34 Java files copied from `v26_1_2/` with `v26_1_2 → v26_2` package rename and `Platform26 → Platform26V2` independent impl
   - [x] `settings.gradle` `versionModules` map contains `'26.2' → 'v26_2'`
-  - [x] `gradle.properties` has 9 new 26.2 variables block (3 of them placeholders pending user confirmation)
-  - [ ] Real `neo_version_26_2` + `neogradle_version_26_2` + `pack_format_26_2` populated (blocker on stage 4-6)
-  - [ ] `./gradlew :v26_2:compileJava` succeeds (currently fails at NeoGradle plugin resolution with placeholder `7.2.0`)
+  - [x] `gradle.properties` has 9 new 26.2 variables block — real values now pinned (commit `e27612f`):
+    - `neo_version_26_2 = 26.2.0.7-beta` (latest published; 26.2 still beta)
+    - `neogradle_version_26_2 = 7.1.38` (latest userdev)
+    - `loader_version_range_26_2 = [11,)` (FML 11.0.13)
+    - `pack_format_26_2 = 81` (best estimate, +1 from 26.1.x's 80)
+  - [x] Gradle plugin resolution succeeds for v26_2 (verified via `./gradlew :v26_2:compileJava` — NeoGradle 7.1.38 + NeoForge 26.2.0.7-beta + NeoForm 26.2-1 all resolve from `maven.neoforged.net/releases/`)
+  - [x] neoForm pipeline runs end-to-end for v26_2 (cacheVersionManifest/decompile/patch/recompile all green)
+  - [ ] `./gradlew :v26_2:compileJava` succeeds (currently fails with 37 errors — stage 4 work)
   - [ ] `./gradlew :v26_2:processResources` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar`
   - [ ] `./gradlew :v26_2:runClient` opens world; PIP 3D rotation in `CsLookItemScreen` and `CsboxScreen` works without regression (per user decision: keep 3D, rewrite `gui/pip/` if 26.2 PictureInPictureRenderer API changes)
   - [ ] Three-module build matrix verified: `./gradlew :v1_21_1:jar :v26_1_2:jar :v26_2:jar` (with three separate `active_versions=` switch rounds)
