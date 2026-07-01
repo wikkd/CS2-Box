@@ -6,14 +6,14 @@
 ## Current position
 
 - **Active branch**: `multiloader-refactor`
-- **Last commit**: `e27612f` — `build: pin v26_2 to real NeoForge 26.2.0.7-beta + NeoGradle 7.1.38`
+- **Last commit**: `4c9a004` — `feat(v26.2): complete 26.2 decoupled API adaptation (stage 4)`
 - **Last merge base**: `main`
 - **Recent commits (last 5)**:
+  - `4c9a004` feat(v26.2): complete 26.2 decoupled API adaptation (stage 4)
+  - `ac2136d` docs: reflect real NeoForge 26.2 versions + stage 4 unblocked
   - `e27612f` build: pin v26_2 to real NeoForge 26.2.0.7-beta + NeoGradle 7.1.38
   - `10b5cf0` docs: document v26_2 scaffold + common/utils migration + B-class decision
   - `ef9e616` feat: scaffold v26_2 platform module (stage 3)
-  - `a0af2ee` refactor(common): migrate ColorTools + OverlayColor to common/utils (stage 1.1)
-  - `d9cd3ad` fix(common): remove csgo_box_test.json, refresh background, tighten key recipes
 
 ## Phase status
 
@@ -26,10 +26,11 @@ See `.planning/ROADMAP.md` for full detail. Summary:
 - **Stage 2 (v1_21_1 / v26_1_2 platform convergence)**: partial ✅ — utils/ converged to common; box/, config/, capability/, command/, packet/, advancement/ still duplicated by design
 - **Stage 3 (v26_2 module scaffold)**: ✅ done — 45 files committed (`ef9e616`), code complete with placeholder NeoForge 26.2 versions in gradle.properties
 - **Stage 3.1 (real 26.2 version resolution)**: ✅ done — `e27612f` pins `neo_version_26_2=26.2.0.7-beta`, `neogradle_version_26_2=7.1.38`, `loader_version_range_26_2=[11,)`, `pack_format_26_2=81`. Verified `./gradlew :v26_2:compileJava` with `active_versions=26.2`: Gradle plugin resolution now succeeds (NeoForge 26.2.0.7-beta + NeoForm 26.2-1 + NeoGradle 7.1.38 all resolve from `maven.neoforged.net/releases/`). neoForm pipeline runs end-to-end (cacheVersionManifest/decompile/patch/recompile). compileJava fails with 37 errors — stage 4 adaptation now unblocked.
-- **Stage 4 (v26_2 platform-specific adaptation)**: ⏳ in-progress (compiler diagnostics captured; awaiting code fixes for `MultiBufferSource` removal, `RegisterEvent.register` 3-arg signature change, Icon3DRenderer constructor signature change, `Minecraft.setScreen(Screen)` change)
-- **Stage 5 (three-module build matrix)**: ⏳ blocked on stage 4
-- **Stage 6 (runtime regression, PIP 3D verification)**: ⏳ blocked on stage 5
-- **Stage 7 (documentation close-out: README / CHANGELOG / STATE / ROADMAP / CONTRIBUTING)**: ✅ done (commit `10b5cf0`); doc refresh for real 26.2 versions added in this session
+- **Stage 4 (v26_2 platform-specific adaptation)**: ✅ done — `4c9a004`. 38 → 0 compile errors after applying the 26.2 decoupled API breaking changes (PictureInPictureRenderer constructor + renderToTexture signature, Minecraft.setScreen → setScreenAndShow, Options.hideGui removed, advancement package restructure, GameRenderer.getLighting() → lighting()). PIP 3D rotation preserved per user decision. One visual regression introduced: HUD overlay toggle (`hideGui`) is gone in 26.2, so hotbar/health bar remains visible during box-opening screens (the 4 hideGui assignment lines were removed with explanatory comments).
+- **Stage 4.1 (IDEA debug configs)**: ✅ done — 4 new `.idea/runConfigurations/MC_26_2_*.xml` files (Client / ClientData / Server / ServerData), mirroring the v26_1_2 set with `active_versions=26.2` and `v26_2:*` task names.
+- **Stage 5 (three-module build matrix)**: ✅ done — `:v1_21_1:compileJava` + `:v26_1_2:compileJava` + `:v26_2:compileJava` all BUILD SUCCESSFUL. `:v26_2:jar` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar` (428 KB) with `pack.mcmeta` `pack_format=81` correctly substituted.
+- **Stage 6 (runtime regression, PIP 3D verification)**: ⏳ blocked on user — this environment has no Minecraft runtime / display, so `./gradlew :v26_2:runClient` can't be exercised. User must run it locally and verify (a) the PIP 3D drag-to-rotate in `CsboxScreen` + `CsLookItemScreen` still works, (b) the HUD-overlay regression is acceptable, (c) advancement triggers fire on first open / 200 opens.
+- **Stage 7 (documentation close-out: README / CHANGELOG / STATE / ROADMAP / CONTRIBUTING)**: ✅ done in this session; refresh for stage 4 done + HUD-overlay regression note in progress
 - Phases 8–10 (deferred per csbox-gui-26.1.2-fix-guide §4.4 / §4.7): container layout P1-1, per-item visual baseline P1-3, three-tier design tokens P2-2
 
 ## v26.1.2 audit verdict (2026-07-01)

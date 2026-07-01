@@ -14,9 +14,9 @@
 - **NeoForge 26.2 真实版本号已 pin 到 `gradle.properties`。** 26.2 仍处于 beta 阶段,Mojang / NeoForged 尚未发布 `26.2.0` stable。当前最新:`26.2.0.7-beta`(已发布的 beta 序列是 `26.2.0.0/0.1/0.2/0.3/0.6/0.7-beta`,跳过了 0.4/0.5)。NeoForm 对应 release 是 `26.2-1`(已 stable)。NeoGradle userdev 最新仍是 `7.1.38`,与 v26_1_2 相同(尚未发布 7.2.x)。FML loader `11.0.13` 与 26.1.2.76 一致,所以 `loader_version_range_26_2 = [11,)` 保持不变。`pack_format_26_2 = 81`(按 Mojang 惯例 +1 每小版本,26.1.x = 80)。
 - **Gradle 解析 + neoForm 流水线已跑通 v26_2。** `./gradlew :v26_2:compileJava`(在 `active_versions=26.2` 下)成功解析 NeoForge 26.2.0.7-beta、NeoForm 26.2-1、NeoGradle 7.1.38,完整 neoForm 流水线(cacheVersionManifest / decompile / patch / recompile)全部执行。`compileJava` 任务失败,37 个 API 破坏性变更错误(stage 4 工作):`MultiBufferSource` 被移除、`Minecraft.setScreen(Screen)` 签名变更、`RegisterEvent.register(ResourceKey<Registry<CriterionTrigger<?>>>, Identifier, Supplier)` 不再接受三参数形式、`Icon3DRenderer` 构造器签名变化(改为接收 `BufferSource` 参数)等。
 
-### 未完成(等 stage 4-6)
-- v26_2 GUI / PIP 系统在 26.2 decoupled API 下的实际编译适配(参见上一节列出的破坏性变更)。
-- 三模块 build 矩阵验证 + 运行时回归(PIP 3D 旋转在 v26_2 必须工作)。
+### 未完成(等 stage 6)
+- v26_2 GUI / PIP 运行时回归(参见上一节列出的破坏性变更)。编译已经通过,但实际 3D 旋转在 26.2 decoupled 渲染引擎下需要用户手玩验证。
+- HUD-overlay 回归:MC 26.2 移除了 `Options.hideGui` 字段,开箱时 hotbar/血条仍然显示。需要后续在 26.2 找到新的 HUD 隐藏机制(目前没有等价 API)。
 - 26.2 一旦发布 stable release(去掉 `-beta` 后缀),需要重新刷 `neo_version_26_2` 并验证 `mc_version_range_26_2` 是否需要向前兼容 beta。
 
 ## [1.0.5] - 2026-06-29

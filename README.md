@@ -99,7 +99,7 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 - ✅ Phase 0-6 done:基线冻结、构建系统、common 边界、v1_21_1 稳定、26.1.2 迁移、26.1.2 日志与 GUI 修复批、26.1.2 审计
 - ✅ 阶段 A done:common/utils/ 首批 2 个真正 A 类(ColorTools / OverlayColor)迁移,v1_21_1 + v26_1_2 + v26_2 三模块共存骨架已搭建
 - ⏳ Phase 7+ 未开始:common 完整业务代码迁移(目前 B 类文件保留平台层重复,见 `.planning/PROJECT.md`)、容器化布局(P1-1)、per-item 视觉基线(P1-3)、三档设计 token(P2-2)
-- ⏳ v26_2 真实版本号已落地(neo_version=26.2.0.7-beta, neogradle=7.1.38, neoform=26.2-1, pack_format=81),Gradle 解析已通过,但 `./gradlew :v26_2:compileJava` 在 stage 4 代码适配前会失败(37 个 API 破坏性变更错误,主要是 `MultiBufferSource` 移除、`RegisterEvent.register` 三参数形式变化、Icon3DRenderer 构造器签名变化等)。
+- ⏳ v26_2 真实版本号已落地(neo_version=26.2.0.7-beta, neogradle=7.1.38, neoform=26.2-1, pack_format=81),`./gradlew :v26_2:compileJava` + `:jar` 已 BUILD SUCCESSFUL (`csgobox-26.2-1.0.5.jar` 428 KB)。**HUD 降级提示**:MC 26.2 移除了 `Options.hideGui` 字段,开箱时 hotbar/血条仍然显示 — 需要在 26.2 找到新的 HUD 隐藏机制(目前没有等价 API)。运行时回归(PIP 3D 旋转 + 成就触发)需要用户手玩验证。
 
 **已禁用范围**(显式延期):Cloth Config 回归、Forge 1.20.1 backport、玩家间交易(loot bind-on-open)。
 

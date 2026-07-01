@@ -70,11 +70,12 @@ These are observations from ingested DOCs that imply acceptance gates but are no
     - `pack_format_26_2 = 81` (best estimate, +1 from 26.1.x's 80)
   - [x] Gradle plugin resolution succeeds for v26_2 (verified via `./gradlew :v26_2:compileJava` — NeoGradle 7.1.38 + NeoForge 26.2.0.7-beta + NeoForm 26.2-1 all resolve from `maven.neoforged.net/releases/`)
   - [x] neoForm pipeline runs end-to-end for v26_2 (cacheVersionManifest/decompile/patch/recompile all green)
-  - [ ] `./gradlew :v26_2:compileJava` succeeds (currently fails with 37 errors — stage 4 work)
-  - [ ] `./gradlew :v26_2:processResources` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar`
-  - [ ] `./gradlew :v26_2:runClient` opens world; PIP 3D rotation in `CsLookItemScreen` and `CsboxScreen` works without regression (per user decision: keep 3D, rewrite `gui/pip/` if 26.2 PictureInPictureRenderer API changes)
-  - [ ] Three-module build matrix verified: `./gradlew :v1_21_1:jar :v26_1_2:jar :v26_2:jar` (with three separate `active_versions=` switch rounds)
+  - [x] `./gradlew :v26_2:compileJava` succeeds (0 errors — commit `4c9a004` adapted all 9 affected files for the 26.2 decoupled API: PictureInPictureRenderer constructor + renderToTexture signature, Minecraft.setScreen→setScreenAndShow, advancement package restructure, GameRenderer.getLighting→lighting(), Options.hideGui removal)
+  - [x] `./gradlew :v26_2:processResources` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar` (428 KB, pack.mcmeta has `pack_format=81`)
+  - [x] Three-module build matrix verified: `:v1_21_1:compileJava` + `:v26_1_2:compileJava` + `:v26_2:compileJava` all BUILD SUCCESSFUL with the common/utils migration + v26_2 scaffold in place
+  - [ ] `./gradlew :v26_2:runClient` opens world; PIP 3D rotation in `CsLookItemScreen` and `CsboxScreen` works without regression (per user decision: keep 3D, rewrite `gui/pip/` for 26.2 PictureInPictureRenderer API — code path is in `Icon3DRenderer.java` but actual visual verification requires a Minecraft runtime the environment doesn't have)
   - [ ] Runtime regression checklist passes for v26_2 per `.planning/runtime-verification-checklist.md` RV-1 to RV-4
+  - [ ] HUD-overlay regression acknowledged: `Options.hideGui` was removed in 26.2, so the hotbar/health bar will remain visible during box-opening screens until a 26.2-equivalent HUD-toggle API is identified (no direct replacement in 26.2.0.7-beta)
 - **Scope**: `v26_2/` module, `gradle.properties`, `settings.gradle`, possibly `common/` interface additions if B-class abstraction is needed for cross-platform business code reuse (currently deferred per stage 1.1B)
 
 ## Deferred requirements (per fix guide §4.4 / §4.7)

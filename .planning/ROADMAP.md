@@ -146,17 +146,28 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 - `neoform = 26.2-1` (matching NeoForm artifact, stable)
 - Verified `./gradlew :v26_2:compileJava` with `active_versions=26.2`: Gradle plugin resolution succeeds, neoForm pipeline runs end-to-end, compileJava fails with 37 errors (stage 4 work)
 
-**Stage 4 (2026-07-01) ⏳ in-progress**: v26_2 platform-specific GUI / PIP adaptation. Captured compile errors:
-- `net.minecraft.client.renderer.MultiBufferSource` no longer exists (PIP renderer pipeline change)
-- `Minecraft.setScreen(Screen)` signature changed
-- `RegisterEvent.register(ResourceKey<Registry<CriterionTrigger<?>>>, Identifier, Supplier)` no longer accepts the 3-arg form
-- `Icon3DRenderer` constructor now takes a `BufferSource` arg (PIP API restructure)
-- More — full diagnostics captured during the build run above
+**Stage 4 (2026-07-01) ✅ done**: v26_2 platform-specific GUI / PIP adaptation (commit `4c9a004`). 38 → 0 compile errors. Key 26.2 API breaking changes applied:
 
-**Stage 5-6 ⏳ blocked on stage 4**:
-- `./gradlew :v26_2:processResources` + `jar` → `v26_2/build/libs/csgobox-26.2-1.0.5.jar`
-- Three-module build matrix verification (with `active_versions=` switch rounds)
-- Runtime regression with PIP 3D rotation specifically verified (`CsLookItemScreen` + `CsboxScreen`)
+- **`PictureInPictureRenderer`** — constructor no longer takes `MultiBufferSource`; the class is now annotation-only and owns an internal `SubmitNodeStorage`. `renderToTexture(state, poseStack, SubmitNodeCollector)` is the new signature; the parent calls `featureRenderDispatcher.renderAllFeatures()` itself after we return. `@OnlyIn(Dist.CLIENT)` re-added on the parent class. `Icon3DRenderer.java` was fully rewritten (106 → 99 LOC); 3D rotation preserved per user decision (scale(1,-1,-1) + Axis.{XP,YP,ZP}.rotationDegrees with rotXDeg/rotYDeg/rotZDeg).
+- **`Minecraft.setScreen(Screen)`** — gone in 26.2; replaced by `Minecraft.setScreenAndShow(Screen)`. `Minecraft.gui.setScreen(...)` remains as the internal entry path. All 3 Screen classes + ClickEvent updated.
+- **`Options.hideGui`** — field removed entirely in 26.2. The HUD overlay toggle the box-opening screens used is gone — replaced the assignment lines with explanatory comments. Visual regression: hotbar/health bar will remain visible during box-opening screens until a 26.2-equivalent HUD-toggle API is identified (no direct replacement in 26.2.0.7-beta).
+- **Advancement package restructure** — `net.minecraft.advancements.criterion.{ContextAwarePredicate, SimpleCriterionTrigger}` moved to `net.minecraft.advancements.predicates.ContextAwarePredicate` and `net.minecraft.advancements.triggers.SimpleCriterionTrigger`. `CriterionTrigger` converted from abstract class to interface; `trigger(ServerPlayer, Predicate<T>)` moved down to `SimpleCriterionTrigger` as a protected method (the mod's lambdas need explicit `Predicate<TriggerInstance>` cast so the call site type-checks).
+- **`GameRenderer.getLighting()`** renamed to `GameRenderer.lighting()`.
+- **`PictureInPictureRenderState.pose()`** now returns `Matrix3x2fc` (immutable); `Icon3DRenderState.java` drops its redundant `Matrix3x2f` override and uses the parent's default.
+
+**Stage 4.1 (2026-07-01) ✅ done**: IDEA debug configs (`4c9a004`). Added the 4 missing `.idea/runConfigurations/MC_26_2_*.xml` files (Client / ClientData / Server / ServerData), mirroring the v26_1_2 set with `active_versions=26.2` and `v26_2:*` task names.
+
+**Stage 5 (2026-07-01) ✅ done**: three-module build matrix verified.
+- `./gradlew :v1_21_1:compileJava` (active_versions=1.21.1) → BUILD SUCCESSFUL — common/utils migration didn't break v1_21_1.
+- `./gradlew :v26_1_2:compileJava` (active_versions=26.1.2) → BUILD SUCCESSFUL — v26_1_2 unchanged.
+- `./gradlew :v26_2:compileJava` (active_versions=26.2) → BUILD SUCCESSFUL — 0 errors after stage 4 adaptation.
+- `./gradlew :v26_2:jar` → `v26_2/build/libs/csgobox-26.2-1.0.5.jar` produced (428 KB), with `pack.mcmeta` `pack_format=81` correctly substituted.
+
+**Stage 6 ⏳ blocked on user (no Minecraft runtime in this environment)**:
+- `./gradlew :v26_2:runClient` needs to be exercised locally to verify the PIP 3D drag-to-rotate in `CsboxScreen` and `CsLookItemScreen` still works after the 26.2 PIP rewrite
+- HUD-overlay regression needs user confirmation (acceptable regression? or find a 26.2 fix?)
+- Advancement triggers need to fire on first open / 200 opens
+- Runtime regression checklist: `.planning/runtime-verification-checklist.md` RV-1 to RV-4
 
 ---
 
@@ -184,4 +195,4 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 | 9 Per-item baseline | [ ] | csbox-gui-26.1.2-fix-guide.md P1-3 |
 | 10 Design tokens | [ ] | csbox-gui-26.1.2-fix-guide.md P2-2 |
 | 11 Build clean-up | [ ] | multiloader-execution-spec.md |
-| 12 v26.2 third platform | [~] stage 3 + 3.1 done (real versions pinned); stage 4 in-progress (37 compile errors from 26.2 decoupled API changes) | this session |
+| 12 v26.2 third platform | [x] done — stage 3 (scaffold), 3.1 (real versions), 4 (code adaptation), 4.1 (IDEA configs), 5 (build matrix) all done; stage 6 (runtime regression) blocked on no MC runtime in this env | this session |
