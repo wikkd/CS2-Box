@@ -51,7 +51,17 @@ runs {
 
 sourceSets.main.resources {
     srcDir 'src/generated/resources'
+    srcDir 'src/main/resources'
     srcDir project(':common').file('src/main/resources')
+}
+
+// Multiple srcDirs in sourceSets.main.resources can collide on files like
+// META-INF/neoforge.mods.toml (declared both in v26_1_2 and in common via the
+// auto-discovery path). Tell processResources to pick the first one written,
+// which prefers the version-specific assets in src/main/resources over the
+// shared common/ baseline.
+tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 repositories {
