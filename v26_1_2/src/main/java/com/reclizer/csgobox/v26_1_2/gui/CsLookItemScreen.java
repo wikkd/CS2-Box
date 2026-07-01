@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v26_1_2.gui;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
+import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.v26_1_2.utils.ColorTools;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
@@ -46,6 +47,31 @@ public class CsLookItemScreen extends Screen {
         return Math.max(8, this.width - backButtonWidth() - 16);
     }
 
+    // Preview geometry shared by renderBg (positions the PIP render state)
+    // and mouseDragged (keeps the drag-detection rectangle in lock-step with
+    // what the user actually sees). Mirrors CsboxScreen's helper trio so the
+    // result screen and the box-opening screen render the same held item at
+    // the same on-screen pixel size.
+    private int previewTextureSize() {
+        int containerTop = this.height * 22 / 100;
+        int containerBottom = this.height * 88 / 100;
+        int containerHeight = containerBottom - containerTop;
+        return Math.max(144, Math.min(this.width * 28 / 100, containerHeight * 72 / 100));
+    }
+
+    private int previewPixelX() {
+        return (this.width - previewTextureSize()) / 2;
+    }
+
+    private int previewPixelY() {
+        // Container = vertical band between the grade bar and the divider
+        // above the button. Centre the crate within it so the result focus
+        // sits in the visual middle of the screen.
+        int containerTop = this.height * 22 / 100;
+        int containerBottom = this.height * 88 / 100;
+        return (containerTop + containerBottom - previewTextureSize()) / 2;
+    }
+
     @Override
     public boolean isPauseScreen() {
         return false;
@@ -55,8 +81,13 @@ public class CsLookItemScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         renderLookBackground(guiGraphics);
-        renderLabels(guiGraphics);
+        // renderBg before renderLabels: button rectangle must be drawn first,
+        // then the centered button text on top. Reversed order (the previous
+        // behaviour) caused the text to be hidden behind the rectangle.
+        // Title (y=5%) and grade label (y=11%) sit in their own band, so
+        // swapping the two render calls has no other z-order side-effects.
         renderBg(guiGraphics, mouseX, mouseY);
+        renderLabels(guiGraphics, mouseX, mouseY);
     }
 
     private void renderLookBackground(GuiGraphicsExtractor guiGraphics) {
@@ -72,61 +103,85 @@ public class CsLookItemScreen extends Screen {
         }
         if (openItem.isEmpty()) return;
 
-        int frameWidth = width * 26 / 100;
-        float scale = frameWidth / 16F;
+        float scale = previewTextureSize() / 16F;
         guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100,
                 this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
-        guiGraphics.fill(this.width * 37 / 100, this.height * 16 / 100,
-                this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 30 / 100,
+        guiGraphics.fill(this.width * 33 / 100, this.height * 17 / 100,
+                this.width * 67 / 100, this.height * 17 / 100 + 4, ColorTools.colorItems(grade));
+        // Centre the result preview in the available band; mouseDragged below
+        // uses the same previewPixelX/Y/size so drag-detection matches what
+        // the user sees.
+        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
+                previewPixelX(), previewPixelY(),
                 this.rotX, this.rotY, openItem, this.player, scale);
 
         int btnX = backButtonX();
         int btnY = this.height * 94 / 100;
         int btnW = backButtonWidth();
         int btnH = this.height * 5 / 100;
-        boolean hoverButton = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
-        int outerColor = hoverButton ? 0xFFFF4444 : 0xFFFF0000;
-        int innerColor = hoverButton ? 0xFFCC4444 : 0xFFAA0000;
-        guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, outerColor);
-        guiGraphics.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, innerColor);
+        boolean hoverButton = ButtonPalette.isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
+        ButtonPalette.drawButton(guiGraphics, ButtonPalette.DANGER, btnX, btnY, btnW, btnH, hoverButton);
     }
 
-    private void renderLabels(GuiGraphicsExtractor guiGraphics) {
+    private void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         if (openItem.isEmpty()) return;
 
         Style style = Style.EMPTY.withBold(true);
-        renderText(guiGraphics, openItem.getItem().getName(openItem).getVisualOrderText(),
-                this.width * 45F / 100F, this.height * 5F / 100F, 1.8F);
+        int titleMaxWidth = Math.round(this.width * 54F / 100F);
+        float titleScale = 1.6F;
+        float titleX = centeredTextX(openItem.getItem().getName(openItem).getString(), titleScale, titleMaxWidth);
+        RenderFontTool.drawStringClamped(guiGraphics, this.font, openItem.getItem().getName(openItem),
+                titleX, this.height * 5F / 100F, 0, 0, titleScale,
+                titleMaxWidth, 0xFFFFFFFF);
+        float gradeX = centeredTextX(Component.translatable("gui.csgobox.csgo_box.grade" + grade).getString(), 1.0F,
+                Math.round(this.width * 24F / 100F));
         renderText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.grade" + grade).getVisualOrderText(),
-                this.width * 45F / 100F, this.height * 11F / 100F, 1F);
+                gradeX, this.height * 11.5F / 100F, 1F);
+        // Button text colour tracks the panel painted in renderBg: hovered
+        // button -> textColorHover, otherwise -> textColor. The previous
+        // implementation used a constant white that clashed with the warm
+        // danger fill.
+        int bx = backButtonX();
+        int by = this.height * 94 / 100;
+        int bw = backButtonWidth();
+        int bh = this.height * 5 / 100;
+        boolean backHover = ButtonPalette.isInside(mouseX, mouseY, bx, by, bw, bh);
+        int backText = backHover ? ButtonPalette.DANGER.textColorHover() : ButtonPalette.DANGER.textColor();
         renderCenteredText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.back_box").withStyle(style).getVisualOrderText(),
-                backButtonX(), this.height * 94 / 100, backButtonWidth(), this.height * 5 / 100, 0.8F);
+                bx, by, bw, bh, 0.8F, backText);
     }
 
     private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text, float x, float y, float scale) {
         RenderFontTool.drawString(guiGraphics, this.font, text, x, y, 0, 0, scale, 0xFFFFFFFF);
     }
 
+    private float centeredTextX(String text, float scale, int maxWidth) {
+        float renderedWidth = Math.min(this.font.width(text) * scale, maxWidth);
+        return (this.width - renderedWidth) / 2.0F;
+    }
+
     private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
-                                    int x, int y, int w, int h, float scale) {
+                                    int x, int y, int w, int h, float scale, int color) {
         float textX = x + (w - this.font.width(text) * scale) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
-        RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, 0xFFFFFFFF);
+        RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, color);
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         double mouseX = event.x();
         double mouseY = event.y();
-        float frameWidth = this.width * 26F / 100F;
-        float itemCenterX = this.width * 37F / 100F + frameWidth;
-        float itemCenterY = this.height * 30F / 100F;
-        float range = frameWidth * 0.7F;
-        boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
-                && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
+        // Match the actual rendered crate rectangle (centred horizontally
+        // and vertically inside the 16%–92% container). The previous code
+        // used width*37% + frameWidth as the centre of an upper-left
+        // rectangle, which no longer matched the centred draw site.
+        int size = previewTextureSize();
+        int x = previewPixelX();
+        int y = previewPixelY();
+        boolean isInRange = mouseX >= x && mouseX <= x + size
+                && mouseY >= y && mouseY <= y + size;
         if (event.button() == 0 && isInRange) {
             this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
             this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
@@ -140,15 +195,11 @@ public class CsLookItemScreen extends Screen {
         int btnY = this.height * 94 / 100;
         int btnW = backButtonWidth();
         int btnH = this.height * 5 / 100;
-        if (event.button() == 0 && isInside(event.x(), event.y(), btnX, btnY, btnW, btnH)) {
+        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), btnX, btnY, btnW, btnH)) {
             this.onClose();
             return true;
         }
         return super.mouseClicked(event, doubleClick);
-    }
-
-    private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
-        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
     }
 
     @Override

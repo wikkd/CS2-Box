@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
@@ -46,6 +47,16 @@ public class CsboxProgressScreen extends Screen {
     private float renderWidthAdd = 0F;
     private float targetScroll = 0F;
     private float soundWidthAdd = 0;
+
+    // Hard cap on tick-sound playback rate. The pixel-accumulator trigger
+    // (soundWidthAdd > soundThreshold) gives the scroll its audible rhythm,
+    // but at peak velocity it can fire every 1-2 ticks, which exceeds the
+    // 8-channel OpenAL pool and floods the log with "Maximum sound pool
+    // size reached" warnings. Wall-clock throttle (not game-time — game-time
+    // is not monotonic across pause/unpause) keeps playback under ~8 Hz
+    // while preserving the per-icon click the user hears.
+    private static final long MIN_TICK_SOUND_INTERVAL_MS = 120L;
+    private long lastTickSoundMs = 0L;
 
     private Integer serverWinningIndex = null;
     private ItemStack resultItem = ItemStack.EMPTY;
@@ -91,9 +102,13 @@ public class CsboxProgressScreen extends Screen {
 
         if (openTime < 5) return;
 
-        float widthNewAdd = renderWidthAdd;
+        // Compute the resize-adjusted render position separately from the
+        // lastRenderWidth we keep for next-tick interpolation. lastRenderWidth
+        // must hold the raw tick value so a window resize mid-animation does
+        // not produce a one-frame snap when the lerp runs on the next tick.
+        float renderWidthNow = renderWidthAdd;
         if (this.width != startWidth) {
-            widthNewAdd *= this.width / startWidth;
+            renderWidthNow *= this.width / startWidth;
         }
 
         float progress = Mth.clamp(partialTicks, 0.0F, 1.0F);
@@ -104,14 +119,14 @@ public class CsboxProgressScreen extends Screen {
 
             float itemX = this.width * randomWidth / 100F
                     + i * this.width * 20F / 100F
-                    - Mth.lerp(progress, lastRenderWidth, widthNewAdd);
+                    - Mth.lerp(progress, lastRenderWidth, renderWidthNow);
 
             IconListTools.renderItemProgress(player, guiGraphics, itemStack,
                     itemX, this.height * 37F / 100F,
                     this.width, this.height, gradeInput.get(i));
         }
 
-        lastRenderWidth = widthNewAdd;
+        lastRenderWidth = renderWidthAdd;
 
         int goldLineTop = this.height * 37 / 100;
         int goldLineBottom = goldLineTop + this.height * 25 / 100;
@@ -120,8 +135,16 @@ public class CsboxProgressScreen extends Screen {
                 ColorTools.argbColor(128, 255, 215, 0));
 
         guiGraphics.blit(
+                RenderPipelines.GUI_TEXTURED,
                 Identifier.parse("csgobox:textures/screens/csgo_background.png"),
-                0, 0, 0, 0, this.width, this.height, this.width, this.height
+                0, 0,
+                0F, 0F,
+                this.width, this.height,
+                // Match v1_21.1: use screen size as textureWidth/textureHeight so UV
+                // becomes 0..1, sampling the FULL texture (not just 96% which would
+                // miss the right/bottom frame). Texture is squished 4% to fit screen
+                // (1920/2000 = 0.96) — same aspect ratio, no visual distortion.
+                this.width, this.height
         );
     }
 
@@ -207,8 +230,12 @@ public class CsboxProgressScreen extends Screen {
             soundWidthAdd = 0;
             float tickVol = CsgoBox.CONFIG.tickSoundVolume() / 100F;
             if (tickVol > 0) {
-                player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
-                        ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
+                long nowMs = System.currentTimeMillis();
+                if (nowMs - lastTickSoundMs >= MIN_TICK_SOUND_INTERVAL_MS) {
+                    lastTickSoundMs = nowMs;
+                    player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
+                            ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
+                }
             }
         }
     }

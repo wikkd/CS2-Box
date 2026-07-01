@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
+import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.v26_1_2.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
@@ -91,6 +92,28 @@ public class CsboxScreen extends Screen {
         return openButtonX() + actionButtonWidth() + 8;
     }
 
+    // Geometry for the main 3D preview crate, derived once and reused by both
+    // renderBg (to position the PIP render state) and mouseDragged (to keep the
+    // drag-detection rectangle in lock-step with what's actually drawn).
+    private int previewTextureSize() {
+        int containerTop = this.height * 12 / 100;
+        int containerBottom = this.height * 53 / 100;
+        int containerHeight = containerBottom - containerTop;
+        return Math.max(128, Math.min(this.width * 24 / 100, containerHeight * 82 / 100));
+    }
+
+    private int previewPixelX() {
+        return (this.width - previewTextureSize()) / 2;
+    }
+
+    private int previewPixelY() {
+        // Container = vertical band between subtitle (≈12%) and the
+        // horizontal "物品:" separator at 53%. Center the crate within it.
+        int containerTop = this.height * 12 / 100;
+        int containerBottom = this.height * 53 / 100;
+        return (containerTop + containerBottom - previewTextureSize()) / 2;
+    }
+
     @Override
     public boolean isPauseScreen() {
         return false;
@@ -149,8 +172,15 @@ public class CsboxScreen extends Screen {
     public boolean mouseDragged(MouseButtonEvent event, double pDragX, double pDragY) {
         double pMouseX = event.x();
         double pMouseY = event.y();
-        boolean isInRange = (pMouseX >= this.width * 37F / 100 && pMouseX <= this.width * 37F / 100 + 200)
-                && (pMouseY >= this.height * 12F / 100 && pMouseY <= this.height * 12F / 100 + 176);
+        // Use the actual rendered crate rectangle (centered horizontally and
+        // vertically inside the 12%–53% container) so drag-detection matches
+        // what the user sees — the old width*26% rectangle was for the
+        // 100%-FrameWidth crate, not the current 60%-FrameWidth preview.
+        int size = previewTextureSize();
+        int x = previewPixelX();
+        int y = previewPixelY();
+        boolean isInRange = (pMouseX >= x && pMouseX <= x + size)
+                && (pMouseY >= y && pMouseY <= y + size);
         if (event.button() == 0 && isInRange) {
             this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
             this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
@@ -169,10 +199,13 @@ public class CsboxScreen extends Screen {
         guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, 0xFFD3D3D3);
         guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
 
-        int FrameWidth = width * 26 / 100;
-        float scale = FrameWidth / 16F;
-        if (this.entity != null) {
-            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 12 / 100,
+        float scale = previewTextureSize() / 16F;
+        // Skip the 3D crate when the box has no configured items — the empty
+        // state warning banner (drawn in renderLabels) takes that screen
+        // region instead. Without this guard the banner overlapped the crate,
+        // making both unreadable.
+        if (!boxEmpty && this.entity != null) {
+            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, previewPixelX(), previewPixelY(),
                     this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
         }
 
@@ -208,15 +241,26 @@ public class CsboxScreen extends Screen {
                     this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 
-        drawButton(guiGraphics, openButtonX(), this.height * 94 / 100,
-                actionButtonWidth(), this.height * 5 / 100, 0xFF00AA00, 0xFF00FF00);
-        drawButton(guiGraphics, backButtonX(), this.height * 94 / 100,
-                actionButtonWidth(), this.height * 5 / 100, 0xFFAA0000, 0xFFFF0000);
+        drawOpenButton(guiGraphics, gx, gy);
+        drawBackButton(guiGraphics, gx, gy);
     }
 
-    private void drawButton(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+    private void drawOpenButton(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        int x = openButtonX();
+        int y = this.height * 94 / 100;
+        int w = actionButtonWidth();
+        int h = this.height * 5 / 100;
+        boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, y, w, h);
+        ButtonPalette.drawButton(guiGraphics, ButtonPalette.OPEN, x, y, w, h, hover);
+    }
+
+    private void drawBackButton(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        int x = backButtonX();
+        int y = this.height * 94 / 100;
+        int w = actionButtonWidth();
+        int h = this.height * 5 / 100;
+        boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, y, w, h);
+        ButtonPalette.drawButton(guiGraphics, ButtonPalette.DANGER, x, y, w, h, hover);
     }
 
     @Override
@@ -249,8 +293,15 @@ public class CsboxScreen extends Screen {
             if (grade > 4) break;
             if (showNames) {
                 Component component = itemStack1.getItem().getName(itemStack1);
-                FormattedCharSequence pText = component.getVisualOrderText();
-                renderText(guiGraphics, pText, this.width * 4F / 100 + px * this.width * 9F / 100, this.height * py / 100F, 0.6F);
+                // Clamp to one grid slot (9% of screen width). At scale 0.6,
+                // a natural Chinese name like "下界合金剑" is short enough
+                // to render untruncated, but longer localisation keys or
+                // modded item names would otherwise bleed into the next slot.
+                int slotVisualWidth = Math.round(this.width * 9F / 100F);
+                RenderFontTool.drawStringClamped(guiGraphics, this.font, component,
+                        this.width * 4F / 100 + px * this.width * 9F / 100,
+                        this.height * py / 100F, 0, 0, 0.6F,
+                        slotVisualWidth, 0xFFD3D3D3);
             }
         }
         if (showNames) {
@@ -259,10 +310,17 @@ public class CsboxScreen extends Screen {
                     this.height * y / 100F, 0.6F);
         }
 
-        renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_box").getVisualOrderText(),
-                this.width * 46F / 100F, this.height * 13F / 100F, 0.8F);
-        renderText(guiGraphics, itemMenu.getItem().getName(itemMenu).getVisualOrderText(),
-                this.width * 50F / 100F, this.height * 13F / 100F, 0.8F);
+        // Box item name rendered as a centered title-style heading. Max width
+        // caps a long localised name so it cannot bleed past the screen edge;
+        // when truncation kicks in, the ellipsis stays centered because
+        // centeredTextX clamps the rendered width to maxWidth.
+        int boxNameMaxWidth = Math.round(this.width * 54F / 100F);
+        float boxNameScale = 0.8F;
+        float boxNameX = centeredTextX(itemMenu.getItem().getName(itemMenu).getString(),
+                boxNameScale, boxNameMaxWidth);
+        RenderFontTool.drawStringClamped(guiGraphics, this.font, itemMenu.getItem().getName(itemMenu),
+                boxNameX, this.height * 13F / 100F, 0, 0, boxNameScale,
+                boxNameMaxWidth, 0xFFD3D3D3);
 
         if (itemKey != null && !itemKey.isEmpty()) {
             if (boxKeyCount > 0) {
@@ -290,8 +348,16 @@ public class CsboxScreen extends Screen {
             float warnWidth = this.font.width(warnSeq) * 1.2F;
             int bgX0 = Math.max(8, (int) ((this.width - warnWidth) / 2.0F) - 8);
             int bgX1 = Math.min(this.width - 8, (int) ((this.width + warnWidth) / 2.0F) + 8);
-            int bgY0 = this.height * 23 / 100 - 6;
+            // Banner Y: sit in the same vertical band the 3D crate would have
+            // occupied (the 12%–53% container, centre ≈ 32.5%). The 3D crate
+            // is suppressed in renderBg when boxEmpty, so the banner is now
+            // the sole occupant of that band and can take its full centre.
+            int bgY0 = this.height * 32 / 100 - 6;
             int bgY1 = bgY0 + (int) (this.font.lineHeight * 1.2F) + 10;
+            // Defense-in-depth: renderLabels is invoked after renderBg, so labels
+            // already draw on top of any items in renderBg. The nextStratum() pair
+            // guarantees the warning banner stays above future additions to
+            // renderBg (e.g. additional textured overlays) without re-ordering.
             guiGraphics.nextStratum();
             guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, 0xAA101010);
             RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
@@ -300,13 +366,27 @@ public class CsboxScreen extends Screen {
         }
 
         renderCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.open_box").withStyle(style).getVisualOrderText(),
-                openButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F);
+                openButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F,
+                buttonTextColor(mouseX, mouseY, openButtonX(), this.height * 94 / 100,
+                        actionButtonWidth(), this.height * 5 / 100, ButtonPalette.OPEN));
         renderCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.back_box").withStyle(style).getVisualOrderText(),
-                backButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F);
+                backButtonX(), this.height * 94 / 100, actionButtonWidth(), this.height * 5 / 100, 0.8F,
+                buttonTextColor(mouseX, mouseY, backButtonX(), this.height * 94 / 100,
+                        actionButtonWidth(), this.height * 5 / 100, ButtonPalette.DANGER));
+    }
+
+    private int buttonTextColor(int mouseX, int mouseY, int x, int y, int w, int h, ButtonPalette.Style style) {
+        boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, y, w, h);
+        return hover ? style.textColorHover() : style.textColor();
     }
 
     private float middleOf(String text, float scale) {
         return (this.width - font.width(text) * scale) * 0.5F;
+    }
+
+    private float centeredTextX(String text, float scale, int maxWidth) {
+        float renderedWidth = Math.min(this.font.width(text) * scale, maxWidth);
+        return (this.width - renderedWidth) / 2.0F;
     }
 
     private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText, float px, float py, float scale) {
@@ -314,11 +394,11 @@ public class CsboxScreen extends Screen {
     }
 
     private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
-                                    int x, int y, int w, int h, float scale) {
+                                    int x, int y, int w, int h, float scale, int color) {
         float textW = this.font.width(text) * scale;
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
-        RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, 0xFFD3D3D3);
+        RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, color);
     }
 
     @Override
