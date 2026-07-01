@@ -1,104 +1,141 @@
 <!-- generated-by: gsd-doc-writer -->
-# CS2 Box 快速入门
+# CS2-Box 快速入门
+
+> 5 分钟跑起来 CS2-Box 客户端 + 体验一次开箱。详细的开发配置见 [docs/DEVELOPMENT.md](./DEVELOPMENT.md),架构见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
 ## 前置要求
 
-开发环境需满足以下要求：
+| 要求 | v1_21_1 | v26_1_2 |
+|---|---|---|
+| Java JDK | 21 | 25(`--enable-preview`) |
+| Minecraft | 1.21.1 | 26.1.2 |
+| NeoForge | 21.1.115+ | 26.1.2.76(loader 11+) |
+| Gradle | 8.11 | 8.14 |
+| NeoGradle | 7.0.171 | 7.1.38 |
 
-| 要求 | 版本 | 说明 |
-|-------------|---------|-------|
-| Java JDK | 21 | NeoForge 21.1 开发必需，早期版本不兼容 |
-| Minecraft | 1.21.1 | 客户端和服务端必须都是 1.21.1 |
-| NeoForge | 21.1.115+ | 通过 Minecraft 1.21.1 官方 NeoForge 安装器安装 |
-| Gradle | 8.11 | 项目已包含 Gradle Wrapper，无需单独安装 |
+Java 版本必须与平台对应。Gradle Wrapper 自动下载对应 Gradle 版本。
 
-验证 Java 安装：
+验证 Java:
 
 ```bash
-java -version
-# 应输出：openjdk version "21.x.x" ...
+java -version  # v1_21_1 应输出 21.x.x;v26_1_2 应输出 25.x.x
 ```
 
 ## 安装步骤
 
-1. 克隆仓库：
+1. **克隆仓库**:
 
 ```bash
 git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 ```
 
-2. 设置开发环境：
+2. **选择活动版本**(默认 `26.1.2`):
+
+编辑 `gradle.properties`:
+
+```properties
+active_versions=26.1.2  # 或 1.21.1
+```
+
+3. **验证 Gradle Wrapper**:
 
 ```bash
-# Gradle Wrapper 会自动处理依赖解析
 ./gradlew --version
 ```
 
-3. 构建项目以验证配置：
+4. **构建项目**:
 
 ```bash
 ./gradlew build
 ```
 
-这会编译所有 Java 源代码并将模组打包为 JAR 到 `build/libs/csgobox-<版本>.jar`。
+成功构建后,JAR 位于 `v1_21_1/build/libs/csbox-1.21.1-1.0.5.jar` 或 `v26_1_2/build/libs/csbox-26.1.2-1.0.5.jar`。
 
 ## 首次运行
 
-在开发环境中启动带模组的 Minecraft：
+### 启动开发客户端
 
 ```bash
-./gradlew runClient
+# v26_1_2(默认)
+./gradlew :v26_1_2:runClient
+
+# v1_21_1
+./gradlew :v1_21_1:runClient
 ```
 
-这会启动带模组加载的 Minecraft 客户端。然后你可以：
+启动后:
 
 1. 创建或加载一个世界
-2. 使用 `/csbox give csgobox:csgo_box 1 @p` 获取一个宝箱
-3. 使用 `/csbox give csgobox:csgo_key0 3 @p` 获取钥匙
-4. 手持宝箱右键打开预览界面
-5. 放入对应钥匙点击开启按钮开始开箱动画
+2. 用 `/csbox give @p csgobox:csgo_box 1` 获取一个宝箱
+3. 用 `/csbox give @p csgobox:csgo_key0 3` 获取 3 把铁钥匙
+4. 手持宝箱右键打开预览界面(2 行 × 10 列物品网格)
+5. 放入对应钥匙,点开启按钮开始滚动动画
 
-对于带模组的服务端：
+### 启动专用服务端
 
 ```bash
-./gradlew runServer
+./gradlew :v26_1_2:runServer   # 或 :v1_21_1:runServer
 ```
+
+服务端启动后,从客户端连接 `localhost:25565` 即可加入带模组的世界。
+
+## 常用命令(`/csbox)
+
+| 命令 | 功能 |
+|---|---|
+| `/csbox list` | 列出所有已注册箱子及等级概要 |
+| `/csbox give <box-id> <count> [@p]` | 给自己/指定玩家发放箱子 |
+| `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义(需配合 `/reload`) |
+
+详细命令列表见 `command/CsboxCommand.java`。
 
 ## 常见配置问题
 
 ### Java 版本不匹配
 
-**问题**：构建失败，提示 `Unsupported class file major version 67` 或类似错误。
+**症状**:构建失败,提示 `Unsupported class file major version` 或 `release version N not supported`。
 
-**解决方案**：确保已安装 JDK 21 并设为当前 Java 版本。`build.gradle` 配置了使用 JDK 21 toolchain，但系统必须先安装 JDK 21。
+**解决**:确保当前 Java 版本与目标平台一致。
 
 ```bash
-# 检查当前 Java 版本
-which java
+# macOS 切换
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)  # 或 25
+
+# 检查
 java -version
 ```
 
-### Gradle Daemon 内存问题
+### Gradle 内存不足
 
-**问题**：构建卡住或内存不足（macOS）。
+**症状**:macOS 上构建卡住或 OOM。
 
-**解决方案**：项目在 `gradle.properties` 中禁用了 Gradle daemon。如遇内存问题，配置如下：
+**解决**:在 `gradle.properties` 中调整:
 
 ```properties
 org.gradle.jvmargs=-Xmx3G
 org.gradle.daemon=false
 ```
 
-### 配置文件位置问题
+### 配置不生效
 
-**问题**：修改 `config/csgobox.toml` 后没有生效。
+**症状**:修改 `config/csgobox.toml` 后游戏里没变化。
 
-**解决方案**：模组在启动时读取配置。修改配置后，重启游戏或使用 `/csbox reload` 热重载宝箱定义。
+**解决**:
+
+- TOML:`/reload` 命令或重启游戏
+- JSON:`config/csbox/*.json` 改动**必须重启**(因为 `BoxJsonLoader.loadAll()` 只在 `ServerStartingEvent` 触发)
+
+### 配方加载失败
+
+**症状**:日志出现 `Pack version declaration mismatch` 或 `Couldn't parse data file 'csgobox:csgo_key*'`。
+
+**解决**:v26_1_2 的 `pack.mcmeta` 必须用 `supported_formats` 字段(无 `min_format`/`max_format`);csgo_key 配方的 `ingredients` 字段必须用裸字符串(不是 `{"item": ...}` 包装)。
 
 ## 下一步
 
-- 阅读 [ARCHITECTURE.md](./ARCHITECTURE.md) 了解模组内部结构
-- 阅读 [CONFIGURATION.md](./CONFIGURATION.md) 查看详细配置选项
-- 查看 `src/main/resources/data/csgobox/` 中的数据包和合成表示例
-- 查看 `src/test/` 中的测试文件（如存在）了解测试模式
+- 阅读 [docs/ARCHITECTURE.md](./ARCHITECTURE.md) 了解模块拓扑与渲染管线
+- 阅读 [docs/CONFIGURATION.md](./CONFIGURATION.md) 查看完整配置选项
+- 阅读 [docs/TESTING.md](./TESTING.md) 了解如何运行集成测试
+- 查看 `config/csbox/weapon_supply_box.json` 学习箱子数据格式
+- 在 `.planning/ROADMAP.md` 查看多加载器重构进度

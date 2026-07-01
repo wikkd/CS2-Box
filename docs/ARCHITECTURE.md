@@ -1,153 +1,166 @@
 <!-- generated-by: gsd-doc-writer -->
-# CS2 Box 架构
+# CS2-Box 架构
 
-## 系统概述
+> 跨 v1_21_1 / v26_1_2 双平台的 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流与渲染管线。
 
-CS2 Box 是一个 NeoForge 1.21.1 Minecraft 模组，实现了 CS:GO/CS2 风格的宝箱系统。玩家可以通过开箱获得随机物品，物品稀有度分为 5 个等级（grade1-grade5，从普通到稀有）。模组采用客户端-服务端架构，开箱逻辑由服务端权威执行，客户端负责界面展示和开箱动画。
+## 1. 项目概览
 
-## 组件图
+CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制复刻进 Minecraft。核心抽象都在 `common/` 中,两个平台模块(`v1_21_1/`、`v26_1_2/`)只承担入口注册、Screen 实现、网络接线、Attachment 注册等版本敏感工作。
 
-```
-CsgoBox (主入口)
-    |
-    +-- 宝箱系统
-    |       +-- BoxRegistry（单例宝箱定义）
-    |       +-- BoxDefinition（不可变的宝箱配置记录）
-    |       +-- BoxJsonLoader（从 config/*.json 加载宝箱）
-    |       +-- GradeGroup（物品等级分组）
-    |
-    +-- 物品系统
-    |       +-- ItemCsgoBox（带数据组件的宝箱物品）
-    |       +-- ItemCsgoKey（锁定宝箱的钥匙物品）
-    |       +-- ModItems（物品注册）
-    |
-    +-- Capability 系统
-    |       +-- ModCapability（NeoForge 附件注册）
-    |       +-- CsboxPlayerData（玩家特定状态）
-    |
-    +-- 网络层
-    |       +-- PacketCsgoProgress（客户端 → 服务端开箱请求）
-    |       +-- PacketBoxOpenResult（服务端 → 客户端结果）
-    |       +-- PacketSyncBoxItems（服务端 → 客户端物品列表）
-    |       +-- PacketRequestBoxItems（客户端 → 服务端物品请求）
-    |       +-- PacketValidation
-    |
-    +-- GUI（客户端）
-    |       +-- CsboxScreen（宝箱预览/交互界面）
-    |       +-- CsboxProgressScreen（开箱动画）
-    |       +-- CsLookItemScreen（物品查看）
-    |
-    +-- 事件
-    |       +-- ClickEvent（右键点击处理，客户端）
-    |       +-- ModEvents（服务端事件处理）
-    |
-    +-- 进度
-    |       +-- OpenedBoxTrigger（自定义进度触发器）
-    |       +-- ModLoadedTrigger（模组加载检测）
-    |
-    +-- 配置
-    |       +-- CsboxConfig（TOML 配置）
-    |
-    +-- 命令
-    |       +-- CsboxCommand（服务端命令）
-    |
-    +-- 音效
-            +-- ModSounds（音效事件注册）
-```
+**关键事实**:
 
-## 数据流
+- 模组 ID:`csgobox`,当前版本 `1.0.5`
+- Java toolchain:`v1_21_1` 用 Java 21,`v26_1_2` 用 Java 25 + `--enable-preview`(NeoForm 重编译要求)
+- 共享资源:`common/src/main/resources/` 由两个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(v26_1_2 设置 `duplicatesStrategy = EXCLUDE`)
+- 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*`**(`grep "import net\.minecraft" common/src/main/java` 0 匹配确认)
 
-### 开箱流程
-
-1. **客户端交互**：玩家手持 CSGO 宝箱物品右键点击
-2. **ClickEvent**（`event/ClickEvent.java`）：客户端处理器检测点击并打开 `CsboxScreen`
-3. **CsboxScreen**（`gui/CsboxScreen.java`）：显示宝箱预览界面，向服务端请求物品数据
-4. **PacketRequestBoxItems**：客户端向服务端发送宝箱内容请求
-5. **PacketSyncBoxItems**：服务端返回宝箱定义（物品、等级、钥匙需求）
-6. **用户确认**：玩家点击"开启"按钮
-7. **PacketCsgoProgress**：客户端向服务端发送开箱请求（包含请求 ID）
-8. **服务端处理**（`packet/PacketCsgoProgress.java`）：
-   - 验证玩家是否持有宝箱和钥匙（如需要）
-   - 使用 `SecureRandom` 实现服务端随机性
-   - 通过 `RandomItem` 工具计算动画物品和中奖物品
-   - 将结果存储到玩家 capability
-   - 记录统计并触发进度（如启用）
-9. **PacketBoxOpenResult**：服务端发送结果（中奖物品、动画序列）到客户端
-10. **CsboxProgressScreen**：客户端播放开箱动画并显示结果
-11. **背包更新**：服务端将实际物品给予玩家
-
-### 配置加载流程
-
-1. **模组初始化**：`CsgoBox` 构造函数注册事件监听器
-2. **FMLCommonSetupEvent**：如果 `loadDefaultBoxes` 启用，触发 `BoxJsonLoader.loadAll()`
-3. **BoxJsonLoader**：读取所有 `config/csbox/*.json` 文件，使用 Mojang Codec 解析
-4. **BoxRegistry**：按 `ResourceLocation` 存储解析后的 `BoxDefinition` 对象
-5. **BoxDefinition**：包含宝箱名称、钥匙、掉率、等级和物品池的不可变记录
-
-## 核心抽象
-
-### BoxDefinition（box/BoxDefinition.java）
-包含完整宝箱配置的不可变记录：
-- `id`：唯一的 ResourceLocation 标识符
-- `name`：宝箱的显示组件
-- `keyItem`：所需钥匙的 ResourceLocation（或 `minecraft:air`）
-- `dropRate`：基础实体掉落概率（0.0-1.0）
-- `grades`：按稀有度等级组织的 GradeGroup 物品列表
-- `entityDropRates`：每个实体掉落概率的覆盖值
-
-同时实现 `Codec`（用于 JSON 序列化）和 `StreamCodec`（用于网络传输）。
-
-### ItemCsgoBox（item/ItemCsgoBox.java）
-Minecraft Item 子类，具有以下特性：
-- `BOX_ID` DataComponentType：通过 ResourceLocation 将 ItemStack 链接到 BoxDefinition
-- `getDefinition()`：从 ItemStack 的数据组件获取 BoxDefinition
-- `getItemGroup()`：返回所有可能奖励及其等级
-- `getRandom()`：返回等级权重数组用于概率计算
-
-### PacketCsgoProgress（packet/PacketCsgoProgress.java）
-服务端数据包处理器：
-- 验证玩家状态和物品持有
-- 使用 `SecureRandom` 实现服务端权威随机性
-- 通过 `OPEN_BLOCKED_UNTIL_TICK` map 管理开箱冷却
-- 计算动画序列和中奖物品
-- 更新玩家 capability 中的结果
-- 触发统计和进度奖励
-
-### CsboxPlayerData（capability/CsboxPlayerData.java）
-玩家 capability 数据记录，存储：
-- `seed`：服务端生成的用于动画同步的随机种子
-- `grade`：中奖物品等级（1-5）
-- `item`：中奖的 ItemStack
-- 基于 Codec 的序列化用于网络同步
-
-### ModCapability（capability/ModCapability.java）
-NeoForge AttachmentType 注册，用于持久化玩家数据，使用 `CsboxPlayerData.CODEC` 进行序列化。
-
-## 目录结构说明
+## 2. 模块拓扑
 
 ```
-src/main/java/com/reclizer/csgobox/
-    |-- CsgoBox.java          # 模组入口点，事件总线注册
-    |-- advancement/          # 自定义进度触发器
-    |-- box/                  # 核心宝箱系统：定义、注册、加载
-    |-- capability/          # NeoForge 玩家数据附件
-    |-- command/             # 服务端控制台命令
-    |-- config/              # TOML 配置处理
-    |-- event/               # 事件订阅（客户端/服务端）
-    |-- gui/                 # 客户端 UI 界面
-    |-- item/                # 物品定义和注册
-    |-- packet/              # 网络协议处理
-    |-- sounds/              # 音效事件定义
-    |-- utils/               # 共享工具类（渲染、随机等）
-
-src/main/resources/
-    |-- assets/csgobox/      # 材质、模型、音效、语言文件
-    |-- data/csgobox/        # 数据包（合成表、进度）
++----------------------+        +----------------------+        +----------------------+
+|      v1_21_1/        |        |      v26_1_2/        |        |        common/       |
+|----------------------|        |----------------------|        |----------------------|
+| @Mod 入口 (v1.21.1)  |        | @Mod 入口 (v26.1.2)  |        | platform/* 接口      |
+| DeferredRegister     |        | DeferredRegister     |        | 共享业务逻辑          |
+| AttachmentType       |  <-->  | AttachmentType       |  <-->  | BoxDefinition        |
+| Screen 实现          |        | Screen (extractRender|        | BoxJsonLoader        |
+| GuiGraphics 旧 API   |        | State API + PIP 3D) |        | RandomItem           |
+| 网络接线             |        | 网络接线              |        | 数据包 Codec         |
+| events 订阅          |        | events 订阅           |        | 共享资源(纹理/配方)  |
++----------------------+        +----------------------+        +----------------------+
+         ↑                                ↑                                 ↑
+         └───── shared: common/src/main/resources/ ←────────────────────────┘
 ```
 
-- **box/**：包含独立于 Minecraft 系统的纯数据结构，便于测试
-- **capability/**：将玩家状态管理与游戏逻辑分离
-- **gui/**：客户端专用渲染代码，与服务端逻辑隔离
-- **packet/**：网络协议定义，包含客户端和服务端处理器
-- **event/**：事件订阅按分发类型（客户端 vs 服务端）分离
-- **utils/**：共享工具类，避免跨模块代码重复
+依赖关系:`v1_21_1` → `common`;`v26_1_2` → `common`;`common` 不依赖任何平台模块。`active_versions` 决定单次构建哪个平台。
+
+## 3. 核心抽象(common/)
+
+### 3.1 箱子数据模型
+
+- **`BoxDefinition`** — 不可变 Record,持有箱子 ID、name、所需钥匙 ID、5 档随机权重数组、物品分档清单
+- **`BoxRegistry`** — 全局箱子注册表(按 ID 查 `BoxDefinition`)
+- **`BoxJsonLoader`** — 加载 `config/csbox/*.json`,首次启动时若目录为空则写入默认 `weapon_supply_box.json`(含 `_tutorial` 字段,loader 忽略);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
+- **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
+
+### 3.2 配置
+
+- **`CsboxConfig`** — NeoForge `ModConfigSpec`,11 个配置项,4 个 TOML 分组(general / advanced / sound / animation)
+- 注册为 `ModConfig.Type.COMMON`,TOML 路径 `config/csgobox.toml`
+- `CONFIG` 是 `public static final`,在 `static {}` 块中通过 `ModConfigSpec.Builder().configure(CsboxConfig::new)` 初始化(不用 `init()`,那是一个 v1.0.5 修复的 bug)
+- 监听 `ModConfigEvent.Reloading` 记录日志
+
+### 3.3 物品
+
+- **`ItemCsgoBox`** / **`ItemCsgoKey`** + `ModItems`(DeferredRegister 集中注册)
+- 4 把钥匙:`csgo_key0`(铁)、`csgo_key1`(金)、`csgo_key2`(钻石)、`csgo_key3`(下界合金,仅锻造台配方)
+
+### 3.4 平台接口
+
+- `common/src/main/java/platform/` — 10 个接口,由 `Platform26.java` 等 platform 实现注入
+- 解耦:平台代码不直接 new 业务对象,而是通过 `Platform26.boxRegistry()` 之类的接口方法取
+
+## 4. 开箱数据流
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务端
+    C->>S: PacketRequestBoxItems (右键 csgo_box)
+    S->>S: 服务端选 winningIndex<br/>+ 50 个 animationItems + 最终 item
+    S-->>C: PacketSyncBoxItems (预览数据)
+    C->>S: CsboxCommand 触发开箱(放钥匙点开启)
+    S->>S: SecureRandom 校验冷却 (OPEN_BLOCKED_UNTIL_TICK)<br/>服务器权威 RNG 决定结果
+    S-->>C: PacketCsgoProgress (含 winningIndex、物品、动画列表、requestId)
+    C->>C: CsboxProgressScreen 开始滚动<br/>tick 节流到 120ms
+    C->>C: winningIndex 落入中心金线 → CsLookItemScreen
+```
+
+## 5. GUI 渲染管线(双平台对比)
+
+| 维度 | v1_21_1 (1.21.1) | v26_1_2 (26.1.2) |
+|---|---|---|
+| 入口方法 | `Screen.render(GuiGraphics,...)` | `Screen.extractRenderState(GuiGraphicsExtractor,...)` |
+| 矩阵抽象 | `PoseStack` | `Matrix3x2f` instance API(`guiGraphics.pose()`) |
+| 渲染管道 | 静态 `RenderSystem` 调用 | decoupled rendering 管线(`RenderPipelines.GUI_TEXTURED` 等) |
+| 3D 物品预览 | `BakedModel` 渲染管线 | 自定义 `PictureInPictureRenderState` + `Icon3DRenderer`(走 PIP 3D 路径) |
+| 2D 网格物品 | 直接 blit | `guiGraphics.item(...)` 2D 渲染(deferred item pipeline) |
+| Blit 签名 | 9-arg overload | `guiGraphics.blit(RenderPipeline, Identifier,...)` 新签名 |
+| 按钮色系 | 硬编码 `0xFF00AA00` / `0xFFFF0000` | `ButtonPalette.OPEN` / `ButtonPalette.DANGER` token(hover-aware) |
+| 文本限宽 | 裸 `Font.width` | `RenderFontTool.drawStringClamped` + 省略号 |
+| 渲染状态 | 单 stratum | `guiGraphics.nextStratum()` 分层(stratum 排序由 26.1.2 decoupled 引擎控制) |
+
+### 5.1 v26_1_2 独有工具类
+
+- **`gui/pip/Icon3DRenderer`** — `PictureInPictureRenderer<Icon3DRenderState>`,持有 full PoseStack(允许 3D 模型旋转)
+- **`gui/pip/Icon3DRenderState`** — 携带 ItemStackRenderState、rotX/rotY/rotZ 度数
+- **`utils/ButtonPalette`** — `OPEN` / `DANGER` 常量 + `drawButton(...)` + `isInside(...)` 统一按钮系统
+- **`utils/RenderFontTool`** — `drawString(...)` + `drawStringClamped(...)`(二分截断 + `"…"` 后缀)
+- **`platform/Platform26`** — v26_1_2 平台接口实现,注入到 `common/` 的 Platform 接口
+
+## 6. 网络包
+
+5 个自定义数据包,通过 NeoForge `CustomPacketPayload` 注册:
+
+| 包 | 方向 | 内容 |
+|---|---|---|
+| `PacketCsgoProgress` | S → C | 开箱进度 + 服务端权威 RNG 结果(winningIndex、items、grades、requestId) |
+| `PacketBoxOpenResult` | S → C | 最终开箱结果(用于 CsLookItemScreen) |
+| `PacketSyncBoxItems` | S → C | 预览数据(右键箱子时拉取 50 个 item) |
+| `PacketRequestBoxItems` | C → S | 客户端拉取预览请求 |
+| `PacketValidation` | S → C | 客户端请求校验(防过期响应匹配) |
+
+每个包都有 `Codec`(持久化)和 `StreamCodec`(网络流)。`PacketCsgoProgress` 内置 `SecureRandom` UUID→tick map 做开箱防双击冷却(`OPEN_BLOCKED_UNTIL_TICK`)。
+
+## 7. 事件订阅
+
+- **`ClickEvent`** — `@EventBusSubscriber(value = Dist.CLIENT, modid = CsgoBox.MODID)`,处理右键开箱、点击 Screen 按钮等
+- **`ModEvents`** — `LivingDeathEvent`(生物掉落 csgo_box 投骰)、`ServerStartingEvent`(触发 BoxJsonLoader.loadAll)
+- **成就触发器**:`OpenedBoxTrigger`(主动开箱 → A Fresh Start / Shopper 计数)、`ModLoadedTrigger`(模组加载时)
+
+## 8. 成就系统
+
+通过 Minecraft 原生 `CriteriaTriggers` 持久化,无需新增 Capability,存档迁移无影响:
+
+- **`全新的开始`(A Fresh Start)** — 玩家首次主动右键开启 csgo_box 时解锁(Mob 掉落不算)
+- **`导购`(Shopper)** — 隐藏紫色挑战,累计主动开 200 个 csgo_box 解锁;`hidden: true`,前置条件未达时不显示
+- 数据走 `Stats.CUSTOM` 统计 `csgobox:opened_boxes`,关闭 `enableAchievements` 时仍累加(保留进度),重新开启后恢复触发
+- 注册在 `csgobox:advancement/root.json` 节点下
+
+## 9. 资源分层
+
+```
+common/src/main/resources/         ← 跨版本资源(纹理、音效、lang、配方、advancement)
+  ├── assets/csgobox/textures/      (csgo_background.png 等)
+  ├── assets/csgobox/sounds/
+  ├── data/csgobox/recipe/          (csgo_key0/1/2 + csgo_key3_smithing.json — 注意单数 recipe)
+  └── data/csgobox/advancement/
+
+v26_1_2/src/main/resources/         ← 平台特化资源(独立运行时类路径)
+  └── assets/csgobox/items/         (csgo_box / csgo_key0-3 items)
+
+runs/client/                        ← 运行时测试数据(csgobox.toml、csbox/*.json)
+runs/server/
+```
+
+## 10. 依赖方向约束
+
+来源:`multiloader-execution-spec.md` §1.2 + `multiloader-refactor-plan.md`:
+
+- **`common/` 不允许** `import net.minecraft.*` 或 `import net.neoforged.*`
+- 所有版本敏感代码(GUI 渲染、Attachment 注册、网络上下文、注册表访问)留在平台模块
+- 平台模块不重复实现 common 业务逻辑
+
+## 11. 版本矩阵
+
+| 组件 | v1_21_1 | v26_1_2 |
+|---|---|---|
+| Minecraft | 1.21.1 | 26.1.2 |
+| NeoForge | 21.1.115 | 26.1.2.76 |
+| NeoGradle | 7.0.171 | 7.1.38 |
+| Gradle | 8.11 | 8.14 |
+| Java toolchain | 21 | 25 `--enable-preview` |
+| mod_version | `1.0.5` | `1.0.5-26.1.2`(后缀区分) |
+| pack_format | 34 | 80 |
+| 包名 | `com.reclizer.csgobox.v1_21_1.*` | `com.reclizer.csgobox.v26_1_2.*` |
