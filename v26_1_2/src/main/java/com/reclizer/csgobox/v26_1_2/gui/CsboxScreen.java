@@ -315,11 +315,21 @@ public class CsboxScreen extends Screen {
         // centeredTextX clamps the rendered width to maxWidth.
         int boxNameMaxWidth = Math.round(this.width * 54F / 100F);
         float boxNameScale = 0.8F;
-        float boxNameX = centeredTextX(itemMenu.getItem().getName(itemMenu).getString(),
+        Component boxName = itemMenu.getItem().getName(itemMenu);
+        float boxNameX = centeredTextX(boxName.getString(),
                 boxNameScale, boxNameMaxWidth);
-        RenderFontTool.drawStringClamped(guiGraphics, this.font, itemMenu.getItem().getName(itemMenu),
+        // Pick a title color from the box definition's name style when one was
+        // configured (e.g. via JSON "#RRGGBB ..." prefix), otherwise fall back
+        // to the original 0xFFD3D3D3 light gray so the visual stays identical
+        // for boxes without an explicit color.
+        int titleColor = 0xFFD3D3D3;
+        net.minecraft.network.chat.TextColor tc = boxName.getStyle().getColor();
+        if (tc != null) {
+            titleColor = 0xFF000000 | (tc.getValue() & 0xFFFFFF);
+        }
+        RenderFontTool.drawStringClamped(guiGraphics, this.font, boxName,
                 boxNameX, this.height * 13F / 100F, 0, 0, boxNameScale,
-                boxNameMaxWidth, 0xFFD3D3D3);
+                boxNameMaxWidth, titleColor);
 
         if (itemKey != null && !itemKey.isEmpty()) {
             if (boxKeyCount > 0) {

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Immutable box definition loaded from JSON and referenced by box ItemStacks.
@@ -166,6 +167,7 @@ public record BoxDefinition(
     public static class Builder {
         private final ResourceLocation id;
         private Component name;
+        private OptionalInt nameColor = OptionalInt.empty();
         private ResourceLocation keyItem = NO_KEY;
         private float dropRate = 0.12F;
         private final List<ResourceLocation> dropEntities = new ArrayList<>();
@@ -181,6 +183,14 @@ public record BoxDefinition(
 
         public Builder name(Component name) {
             this.name = Objects.requireNonNull(name, "box name");
+            return this;
+        }
+
+        /** Applies a 0xRRGGBB color to the box's display name when {@link #build()}
+         *  is called. Pass a hex value such as {@code 0xFF5555}; alpha is forced to
+         *  0xFF to match Minecraft's style layer. */
+        public Builder nameColor(int rgb) {
+            this.nameColor = OptionalInt.of(rgb & 0xFFFFFF);
             return this;
         }
 
@@ -222,7 +232,12 @@ public record BoxDefinition(
         }
 
         public BoxDefinition build() {
-            return new BoxDefinition(id, name, keyItem, dropRate,
+            Component finalName = name;
+            if (nameColor.isPresent()) {
+                int argb = 0xFF000000 | nameColor.getAsInt();
+                finalName = name.copy().withStyle(s -> s.withColor(argb));
+            }
+            return new BoxDefinition(id, finalName, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates));
         }

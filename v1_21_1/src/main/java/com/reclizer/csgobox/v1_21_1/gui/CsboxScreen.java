@@ -254,8 +254,19 @@ public class CsboxScreen extends Screen {
 
         renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_box").getVisualOrderText(),
                 this.width * 46F / 100F, this.height * 13F / 100F, 0.8F);
-        renderText(guiGraphics, itemMenu.getItem().getName(itemMenu).getVisualOrderText(),
-                this.width * 50F / 100F, this.height * 13F / 100F, 0.8F);
+        // Box name rendered directly via RenderFontTool (not the local renderText
+        // helper, which hardcodes a gray fallback) so that an optional 0xRRGGBB
+        // color configured on the box's name style is honored. Without an
+        // explicit color, the title falls back to 0xFFD3D3D3 — the previous
+        // visual baseline.
+        Component boxName = itemMenu.getItem().getName(itemMenu);
+        int titleColor = 0xFFD3D3D3;
+        net.minecraft.network.chat.TextColor tc = boxName.getStyle().getColor();
+        if (tc != null) {
+            titleColor = 0xFF000000 | (tc.getValue() & 0xFFFFFF);
+        }
+        RenderFontTool.drawString(guiGraphics, this.font, boxName.getVisualOrderText(),
+                this.width * 50F / 100F, this.height * 13F / 100F, 0, 0, 0.8F, titleColor);
 
         if (itemKey != null && !itemKey.isEmpty()) {
             if (boxKeyCount > 0) {

@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Reads and writes box definitions under config/csbox.
@@ -43,7 +46,44 @@ public final class BoxJsonLoader {
 
     private static final List<LoadError> LAST_LOAD_ERRORS = new ArrayList<>();
 
+    /** Matches an optional leading hex color in the box "name" field, e.g.
+     *  {@code "#FF5555 高级补给箱"}. Group 1 = 6 hex digits, group 2 = display text. */
+    private static final Pattern NAME_COLOR_PREFIX =
+            Pattern.compile("^#([0-9A-Fa-f]{6}) (.*)$");
+
     private BoxJsonLoader() {
+    }
+
+    /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
+    private record ParsedName(String text, OptionalInt color) {}
+
+    /** Strips an optional {@code "#RRGGBB "} prefix from a name and returns the
+     *  bare text + 0xRRGGBB color. If the prefix is absent, malformed, or the
+     *  remaining text is empty, the original string is returned as the text
+     *  and no color is set (matches the pre-color behavior). */
+    private static ParsedName parseColoredName(String raw) {
+        if (raw == null) return new ParsedName("", OptionalInt.empty());
+        Matcher m = NAME_COLOR_PREFIX.matcher(raw);
+        if (!m.matches()) return new ParsedName(raw, OptionalInt.empty());
+        int rgb = Integer.parseInt(m.group(1), 16);
+        String text = m.group(2);
+        if (text.isEmpty()) {
+            CsgoBox.LOGGER.warn("Box name has color prefix but empty text: '{}'", raw);
+            return new ParsedName("", OptionalInt.empty());
+        }
+        return new ParsedName(text, OptionalInt.of(rgb));
+    }
+
+    /** Inverse of {@link #parseColoredName}: serializes a styled Component back
+     *  to a "name" string, prepending the color as a hex prefix when the
+     *  Component carries one. */
+    private static String serializeColoredName(net.minecraft.network.chat.Component name) {
+        if (name == null) return "";
+        String text = name.getString();
+        net.minecraft.network.chat.TextColor tc = name.getStyle().getColor();
+        if (tc == null) return text;
+        int rgb = tc.getValue() & 0xFFFFFF;
+        return String.format("#%06X %s", rgb, text);
     }
 
     public static void loadAll() {
@@ -144,7 +184,7 @@ public final class BoxJsonLoader {
         if (json == null) return Optional.empty();
 
         try {
-            String name = getString(json, "name", boxIdStr);
+            ParsedName parsedName = parseColoredName(getString(json, "name", boxIdStr));
             Identifier keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
             float dropRate = getFloat(json, "drop", 0.12F);
 
@@ -180,7 +220,8 @@ public final class BoxJsonLoader {
             }
 
             BoxDefinition.Builder builder = BoxDefinition.builder(
-                    Identifier.parse("csgobox:" + boxIdStr), name);
+                    Identifier.parse("csgobox:" + boxIdStr), parsedName.text());
+            parsedName.color().ifPresent(builder::nameColor);
             builder.key(keyItem);
             builder.dropRate(dropRate);
             for (Identifier entityId : dropEntityIds) {
@@ -289,7 +330,7 @@ public final class BoxJsonLoader {
         Path tempFile = BOXES_DIR.resolve(def.id().getPath() + ".json.tmp");
 
         JsonObject json = new JsonObject();
-        json.addProperty("name", def.name().getString());
+        json.addProperty("name", serializeColoredName(def.name()));
         json.addProperty("key", def.keyItem().toString());
         json.addProperty("drop", def.dropRate());
 
