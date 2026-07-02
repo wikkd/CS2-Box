@@ -1,159 +1,306 @@
 package com.reclizer.csgobox.v26_1_2.box;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 
+import java.awt.Desktop;
+import java.awt.GraphicsEnvironment;
 import java.io.IOException;
-import java.io.Writer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
- * Generates the default box configuration when the config/csbox directory
- * contains no JSON files. Also encapsulates the human-readable _tutorial
- * block that documents the JSON schema.
+ * Writes tutorial markdown files into the {@code config/csbox/} directory
+ * on first load by downloading them from the configured sources (see
+ * {@link TutorialSources}). The files are not loaded as boxes because
+ * their extension is not {@code .json}.
+ *
+ * <p>Tutorials are versioned: file names embed the mod version, e.g.
+ * {@code _tutorial_v1.0.5.md} and {@code _tutorial_v1.0.5_zh_cn.md}. On
+ * startup, if no file matches the current mod version, every stale
+ * {@code _tutorial_v*_.md} file is moved to a recoverable location —
+ * either the host operating system's recycle bin (Windows Recycle Bin,
+ * macOS Finder Trash, Linux XDG Trash) when available, or a
+ * {@code config/csbox/.trash/} subfolder as a portable fallback.</p>
+ *
+ * <p>The pattern {@code ^_tutorial_v.*\.md$} deliberately does NOT match:
+ * user-authored {@code notes.md}, the older un-versioned
+ * {@code _tutorial.md}, or the {@code _tutorial_sources.json} config.
+ * Only mod-managed tutorial files with a version stamp are candidates
+ * for trashing.</p>
+ *
+ * <p>Tutorials are network-only: if every configured source fails (or the
+ * player is offline), no file is written. Existing files are never
+ * overwritten by name, so user edits to current-version files survive.</p>
  */
 final class BoxDefaults {
 
-    private static final String DEFAULT_BOX_FILE = "weapon_supply_box.json";
+    /**
+     * Filename pattern for mod-managed, version-stamped tutorials. Files
+     * matching this pattern are candidates for trashing on a version
+     * upgrade; anything else in {@code config/csbox/} is left alone.
+     */
+    private static final Pattern STALE_TUTORIAL = Pattern.compile("^_tutorial_v.*\\.md$");
 
-    private static final String[] DEFAULT_ENTITIES = {
-            "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper",
-            "minecraft:spider", "minecraft:cave_spider", "minecraft:enderman",
-            "minecraft:witch", "minecraft:slime", "minecraft:silverfish",
-            "minecraft:blaze", "minecraft:ghast", "minecraft:magma_cube",
-            "minecraft:zombified_piglin", "minecraft:wither_skeleton",
-            "minecraft:stray", "minecraft:husk", "minecraft:drowned",
-            "minecraft:guardian", "minecraft:elder_guardian", "minecraft:shulker",
-            "minecraft:endermite", "minecraft:evoker", "minecraft:vindicator",
-            "minecraft:pillager", "minecraft:ravager", "minecraft:vex",
-            "minecraft:phantom", "minecraft:piglin", "minecraft:piglin_brute",
-            "minecraft:hoglin", "minecraft:zoglin", "minecraft:zombie_villager"
-    };
+    /** Subfolder used as a soft-delete trash bin when the OS has none. Created lazily. */
+    private static final String FALLBACK_TRASH_DIR_NAME = ".trash";
 
     private BoxDefaults() {
     }
 
-    static void writeDefaultIfEmpty(Path boxesDir, Gson gson) {
-        List<String> existing = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.json")) {
-            stream.forEach(p -> existing.add(p.getFileName().toString()));
-            if (!existing.isEmpty()) {
+    /**
+     * Downloads and writes each missing tutorial file from the first
+     * successful source in {@link TutorialSources}. If no tutorial file
+     * for the current mod version is present, every stale versioned
+     * {@code _tutorial_v*_.md} file is moved to a recoverable location.
+     *
+     * <p>The entire body is wrapped in a defensive try-catch so that no
+     * exception (offline, DNS failure, malformed user JSON, JVM resource
+     * exhaustion during HttpClient construction, etc.) can propagate out
+     * and break the surrounding box-loading flow. The worst that can
+     * happen is no tutorial file is written.</p>
+     */
+    static void writeTutorialIfMissing(Path boxesDir) {
+        try {
+            if (needsRefresh(boxesDir)) {
                 CsgoBox.LOGGER.info(
-                        "Skipping default box write: {} already contains {} JSON file(s) ({})",
-                        boxesDir, existing.size(), String.join(", ", existing));
-                return;
+                        "Tutorial version mismatch (current mod is {}); moving stale tutorials",
+                        CsgoBox.MODVERSION);
+                moveStaleTutorials(boxesDir);
+            }
+
+            TutorialSources sources = TutorialSources.loadOrDefault(boxesDir);
+            TutorialFetcher fetcher = new TutorialFetcher();
+
+            for (String fileName : tutorialFileNames()) {
+                Path file = boxesDir.resolve(fileName);
+                if (Files.exists(file)) {
+                    continue;
+                }
+
+                String content = fetcher.fetch(fileName, sources.sources());
+                if (content == null) {
+                    CsgoBox.LOGGER.warn(
+                            "No tutorial available for {} (offline or all sources failed); skipping",
+                            fileName);
+                    continue;
+                }
+                try {
+                    Files.writeString(file, content);
+                    CsgoBox.LOGGER.info("Wrote box configuration reference: {}", file);
+                } catch (IOException e) {
+                    CsgoBox.LOGGER.warn("Failed to write tutorial markdown {}: {}",
+                            file, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            CsgoBox.LOGGER.warn("Tutorial setup skipped due to unexpected error: {}",
+                    e.getMessage());
+        }
+    }
+
+    /** File names that the mod will try to populate, in download order. */
+    private static List<String> tutorialFileNames() {
+        String v = CsgoBox.MODVERSION == null ? "unknown" : CsgoBox.MODVERSION;
+        return List.of(
+                "_tutorial_v" + v + ".md",
+                "_tutorial_v" + v + "_zh_cn.md"
+        );
+    }
+
+    /**
+     * Returns true if no {@code _tutorial_v<currentVersion>*.md} file is
+     * present in {@code boxesDir}. First install and any version change
+     * both trigger a refresh.
+     */
+    private static boolean needsRefresh(Path boxesDir) {
+        String prefix = "_tutorial_v" + CsgoBox.MODVERSION;
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.md")) {
+            for (Path file : stream) {
+                if (file.getFileName().toString().startsWith(prefix)) {
+                    return false;
+                }
             }
         } catch (IOException e) {
-            CsgoBox.LOGGER.warn("Could not inspect {} for existing configs: {}", boxesDir, e);
+            CsgoBox.LOGGER.warn("Failed to scan tutorials in {}: {}", boxesDir, e.getMessage());
+        }
+        return true;
+    }
+
+    /**
+     * Tries the host operating system's recycle bin first (works on
+     * Windows, macOS, and Linux desktops with a trash-aware file
+     * manager). Falls back to a {@code .trash/} subfolder under
+     * {@code boxesDir} when the OS path is unavailable — typical for
+     * headless servers or stripped-down JVMs without {@code java.desktop}.
+     *
+     * <p>Files outside {@link #STALE_TUTORIAL} are never touched on
+     * either path.</p>
+     */
+    private static void moveStaleTutorials(Path boxesDir) {
+        if (canUseOsTrash()) {
+            try {
+                moveToOsTrash(boxesDir);
+                return;
+            } catch (Throwable e) {
+                CsgoBox.LOGGER.warn(
+                        "OS recycle bin refused ({}); falling back to .trash/ folder",
+                        e.getMessage());
+            }
+        }
+        moveToFallbackTrash(boxesDir);
+    }
+
+    /**
+     * Detects whether {@link Desktop#moveToTrash} is callable in this
+     * environment. Returns false on headless servers, missing
+     * {@code java.desktop} module, or platforms without a trash spec.
+     * Any unexpected error is treated as "not supported" so we silently
+     * drop to the fallback.
+     */
+    private static boolean canUseOsTrash() {
+        try {
+            if (GraphicsEnvironment.isHeadless()) {
+                return false;
+            }
+            if (!Desktop.isDesktopSupported()) {
+                return false;
+            }
+            return Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH);
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /**
+     * Sends each stale tutorial file to the OS recycle bin. The user
+     * can recover them via their normal OS UI (Finder Trash, Windows
+     * Recycle Bin, KDE/Gnome Trash). Per-file failures are logged but
+     * do not abort the loop.
+     */
+    private static void moveToOsTrash(Path boxesDir) {
+        List<Path> moved = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.md")) {
+            for (Path file : stream) {
+                if (!STALE_TUTORIAL.matcher(file.getFileName().toString()).matches()) {
+                    continue;
+                }
+                try {
+                    if (Desktop.getDesktop().moveToTrash(file.toFile())) {
+                        moved.add(file);
+                    } else {
+                        CsgoBox.LOGGER.warn("OS trash refused {} (returned false)", file);
+                    }
+                } catch (IllegalArgumentException e) {
+                    CsgoBox.LOGGER.warn("Cannot trash {}: {}", file, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.warn("Failed to enumerate .md files in {}: {}",
+                    boxesDir, e.getMessage());
             return;
         }
 
-        Path defaultFile = boxesDir.resolve(DEFAULT_BOX_FILE);
-        CsgoBox.LOGGER.info("No existing JSON files in {}, creating default: {}", boxesDir, defaultFile);
-
-        JsonObject json = new JsonObject();
-        addTutorial(json);
-        json.addProperty("name", "武器供应箱");
-        json.addProperty("key", "csgobox:csgo_key0");
-        json.addProperty("drop", 1.0);
-
-        JsonArray random = new JsonArray();
-        random.add(625);
-        random.add(125);
-        random.add(25);
-        random.add(5);
-        random.add(2);
-        json.add("random", random);
-
-        JsonArray entity = new JsonArray();
-        for (String e : DEFAULT_ENTITIES) {
-            entity.add(e);
-            entity.add(1);
+        if (!moved.isEmpty()) {
+            CsgoBox.LOGGER.info(
+                    "Moved {} stale tutorial(s) to the system recycle bin (recoverable from there): {}",
+                    moved.size(), moved);
         }
-        json.add("entity", entity);
+    }
 
-        addDefaultItems(json, "grade5",
-                "minecraft:netherite_sword", "minecraft:netherite_axe", "minecraft:netherite_pickaxe",
-                "minecraft:netherite_shovel", "minecraft:netherite_hoe", "minecraft:diamond_helmet",
-                "minecraft:diamond_chestplate", "minecraft:diamond_leggings", "minecraft:diamond_boots",
-                "minecraft:netherite_helmet", "minecraft:netherite_chestplate", "minecraft:netherite_leggings",
-                "minecraft:netherite_boots");
-        addDefaultItems(json, "grade4",
-                "minecraft:diamond_sword", "minecraft:diamond_axe", "minecraft:diamond_pickaxe",
-                "minecraft:diamond_shovel", "minecraft:diamond_hoe", "minecraft:golden_helmet",
-                "minecraft:golden_chestplate", "minecraft:golden_leggings", "minecraft:golden_boots");
-        addDefaultItems(json, "grade3",
-                "minecraft:golden_sword", "minecraft:golden_axe", "minecraft:golden_pickaxe",
-                "minecraft:golden_shovel", "minecraft:golden_hoe", "minecraft:iron_helmet",
-                "minecraft:iron_chestplate", "minecraft:iron_leggings", "minecraft:iron_boots",
-                "minecraft:shield");
-        addDefaultItems(json, "grade2",
-                "minecraft:iron_sword", "minecraft:iron_axe", "minecraft:iron_pickaxe",
-                "minecraft:iron_shovel", "minecraft:iron_hoe", "minecraft:chainmail_helmet",
-                "minecraft:chainmail_chestplate", "minecraft:chainmail_leggings", "minecraft:chainmail_boots",
-                "minecraft:bow", "minecraft:crossbow");
-        addDefaultItems(json, "grade1",
-                "minecraft:wooden_sword", "minecraft:wooden_axe", "minecraft:wooden_pickaxe",
-                "minecraft:wooden_shovel", "minecraft:wooden_hoe", "minecraft:stone_sword",
-                "minecraft:stone_axe", "minecraft:stone_pickaxe", "minecraft:stone_shovel",
-                "minecraft:stone_hoe", "minecraft:leather_helmet", "minecraft:leather_chestplate",
-                "minecraft:leather_leggings", "minecraft:leather_boots");
-
-        try (Writer writer = Files.newBufferedWriter(defaultFile)) {
-            gson.toJson(json, writer);
+    /**
+     * Fallback trash used when the OS recycle bin is unavailable
+     * (headless server, minimal JVM, exotic filesystem). Moves files
+     * into {@code boxesDir/.trash/} with a timestamp prefix to avoid
+     * name collisions. Cross-filesystem moves fall back to
+     * copy+delete.
+     */
+    private static void moveToFallbackTrash(Path boxesDir) {
+        Path trashDir = boxesDir.resolve(FALLBACK_TRASH_DIR_NAME);
+        try {
+            Files.createDirectories(trashDir);
         } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to write default box JSON: {}", defaultFile, e);
+            CsgoBox.LOGGER.warn("Could not create {}; skipping trash: {}",
+                    trashDir, e.getMessage());
+            return;
+        }
+
+        List<Path> moved = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.md")) {
+            for (Path file : stream) {
+                if (!STALE_TUTORIAL.matcher(file.getFileName().toString()).matches()) {
+                    continue;
+                }
+                try {
+                    Path dest = uniqueFallbackPath(trashDir, file.getFileName().toString());
+                    tryMoveOrCopy(file, dest);
+                    moved.add(file);
+                } catch (IOException e) {
+                    CsgoBox.LOGGER.warn("Failed to trash {}: {}", file, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.warn("Failed to enumerate .md files in {}: {}",
+                    boxesDir, e.getMessage());
+            return;
+        }
+
+        if (!moved.isEmpty()) {
+            CsgoBox.LOGGER.info(
+                    "Moved {} stale tutorial(s) to fallback {} (recoverable from there): {}",
+                    moved.size(), trashDir, moved);
         }
     }
 
-    private static void addTutorial(JsonObject json) {
-        JsonObject tutorial = new JsonObject();
-        tutorial.addProperty("note", "JSON does not support real comments, so this _tutorial object is used as documentation and is ignored by the mod loader.");
-        tutorial.addProperty("file_name", "The JSON file name becomes the box id. Example: weapon_supply_box.json becomes csgobox:weapon_supply_box.");
-        tutorial.addProperty("name", "Display name shown on the box item and GUI.");
-        tutorial.addProperty("key", "Required key item id. Use minecraft:air for a box that does not need a key.");
-        tutorial.addProperty("drop", "Default entity drop chance from 0.0 to 1.0. Entity-specific rates below override this value.");
-        tutorial.addProperty("random", "Five weights ordered from grade1 to grade5. Higher weight means more likely. Non-positive values use defaults; values above 10000 are clamped.");
-        tutorial.addProperty("entity", "Either a plain list of entity ids, or alternating entity id and drop rate pairs. Example: [\"minecraft:zombie\", 0.25, \"minecraft:skeleton\", 0.10].");
-        tutorial.addProperty("grades", "grade1 is the lowest rarity and grade5 is the highest rarity. Empty or invalid item entries are skipped.");
-        tutorial.addProperty("item_id", "Each item object must include an id such as minecraft:diamond_sword.");
-        tutorial.addProperty("item_count", "count is optional and defaults to 1.");
-        tutorial.addProperty("components", "For Minecraft 26.1.2, prefer the components object for custom names, lore, enchantments, and other data components.");
-        tutorial.addProperty("legacy_tag", "Legacy tag strings are still accepted for older configs, but components should be used for new configs.");
-
-        JsonArray itemExample = new JsonArray();
-        itemExample.add("{\"id\":\"minecraft:diamond_sword\",\"count\":1}");
-        itemExample.add("{\"id\":\"minecraft:diamond_sword\",\"count\":1,\"components\":{\"minecraft:custom_name\":\"{\\\"text\\\":\\\"Example Sword\\\",\\\"italic\\\":false}\"}}");
-        tutorial.add("item_examples", itemExample);
-
-        JsonArray workflow = new JsonArray();
-        workflow.add("Copy this file and rename it to create another box.");
-        workflow.add("Change name, key, drop, random, entity, and grade item lists.");
-        workflow.add("Restart the game or server so the mod reloads config/csbox/*.json.");
-        workflow.add("Give yourself a configured box item whose box_id component points to csgobox:<file_name_without_json>.");
-        tutorial.add("workflow", workflow);
-
-        json.add("_tutorial", tutorial);
-    }
-
-    private static JsonObject itemJson(String id) {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("id", id);
-        obj.addProperty("count", 1);
-        return obj;
-    }
-
-    private static void addDefaultItems(JsonObject json, String gradeKey, String... itemIds) {
-        JsonArray arr = new JsonArray();
-        for (String id : itemIds) {
-            arr.add(itemJson(id));
+    /**
+     * Cross-filesystem safe move. Tries atomic move first; on
+     * {@link IOException} (typically {@code EXDEV} on Linux/macOS
+     * when source and destination are on different filesystems),
+     * falls back to copy + delete.
+     */
+    private static void tryMoveOrCopy(Path source, Path dest) throws IOException {
+        try {
+            Files.move(source, dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException primary) {
+            try {
+                Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+                Files.delete(source);
+            } catch (IOException secondary) {
+                IOException combined = new IOException(
+                        "Failed to move " + source + " (move: " + primary.getMessage()
+                                + "; copy+delete: " + secondary.getMessage() + ")");
+                combined.addSuppressed(primary);
+                combined.addSuppressed(secondary);
+                throw combined;
+            }
         }
-        json.add(gradeKey, arr);
+    }
+
+    /**
+     * Picks a destination path inside {@code trashDir} that does not
+     * collide with an existing file. The original name is reused when
+     * possible; otherwise a millisecond-precision timestamp prefix is
+     * prepended (with a numeric suffix if even that collides). The
+     * timestamp format {@code yyyyMMdd-HHmmss-SSS} contains only
+     * characters that are legal on every common filesystem
+     * (Windows, macOS APFS/HFS+, Linux ext4/btrfs/xfs).
+     */
+    private static Path uniqueFallbackPath(Path trashDir, String name) throws IOException {
+        Path direct = trashDir.resolve(name);
+        if (!Files.exists(direct)) return direct;
+
+        String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+        for (int i = 0; i < 1000; i++) {
+            String suffix = i == 0 ? "" : ("_" + i);
+            Path dated = trashDir.resolve(stamp + suffix + "_" + name);
+            if (!Files.exists(dated)) return dated;
+        }
+        throw new IOException("Could not find unique fallback trash path for " + name);
     }
 }
