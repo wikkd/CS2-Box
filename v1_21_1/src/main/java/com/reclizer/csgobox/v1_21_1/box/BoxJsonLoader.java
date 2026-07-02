@@ -124,7 +124,7 @@ public final class BoxJsonLoader {
                 } catch (Exception e) {
                     CsgoBox.LOGGER.error("Failed to load box JSON file: {}", file, e);
                     skipped[0]++;
-                    recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage(), -1, -1);
+                    recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage());
                 }
             }
         } catch (IOException e) {
@@ -151,16 +151,22 @@ public final class BoxJsonLoader {
         LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, line, column));
     }
 
+    /** Overload for the common case where the error has no JSON position. */
+    private static void recordLoadError(Path file, String fileName, String reason) {
+        recordLoadError(file, fileName, reason, -1, -1);
+    }
+
     /**
      * Extracts the {@code at line N column M} tuple from a Gson error message.
      * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
      * to fish the numbers out of the formatted message. Returns {@code {-1,-1}}
      * when the pattern is not found.
      */
+    private static final java.util.regex.Pattern GSON_LOCATION_PATTERN =
+            java.util.regex.Pattern.compile("at line (\\d+) column (\\d+)");
+
     private static int[] parseLocationFromMessage(String message) {
-        java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("at line (\\d+) column (\\d+)")
-                .matcher(message);
+        java.util.regex.Matcher m = GSON_LOCATION_PATTERN.matcher(message);
         if (m.find()) {
             return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
         }
@@ -191,7 +197,7 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.warn("Schema issue in {} field {}: {}",
                     file, issue.field(), issue.reason());
             recordLoadError(file, fileName,
-                    "Schema: " + issue.field() + " — " + issue.reason(), -1, -1);
+                    "Schema: " + issue.field() + " — " + issue.reason());
         }
 
         try {
@@ -212,9 +218,12 @@ public final class BoxJsonLoader {
                     JsonArray itemsArr = json.getAsJsonArray(gradeKey);
                     List<ItemStack> items = new ArrayList<>();
                     for (JsonElement elem : itemsArr) {
-                        ItemStack stack = BoxItemCodec.parseItem(elem);
-                        if (stack != null && !stack.isEmpty()) {
-                            items.add(stack);
+                        BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
+                        if (outcome.isSuccess()) {
+                            items.add(outcome.stack());
+                        } else {
+                            recordLoadError(file, fileName,
+                                    "Item: " + outcome.error());
                         }
                     }
                     if (!items.isEmpty()) {
@@ -226,7 +235,7 @@ public final class BoxJsonLoader {
             if (grades.isEmpty()) {
                 CsgoBox.LOGGER.warn("Skipping box '{}': all items failed to parse (missing mods?)", boxIdStr);
                 recordLoadError(file, fileName,
-                        "All items failed to parse (missing mods?)", -1, -1);
+                        "All items failed to parse (missing mods?)");
                 return Optional.empty();
             }
 
@@ -250,7 +259,7 @@ public final class BoxJsonLoader {
         } catch (IllegalArgumentException e) {
             CsgoBox.LOGGER.error("Invalid identifier in {}: {}", file, e.getMessage());
             recordLoadError(file, fileName,
-                    "Invalid identifier: " + e.getMessage(), -1, -1);
+                    "Invalid identifier: " + e.getMessage());
             return Optional.empty();
         }
     }
@@ -290,16 +299,14 @@ public final class BoxJsonLoader {
                             weights[i], gradeKey, BoxDefinition.DEFAULT_WEIGHTS[i]);
                     recordLoadError(file, fileName,
                             "Random[" + (i + 1) + "]: negative weight " + weights[i]
-                                    + ", using default " + BoxDefinition.DEFAULT_WEIGHTS[i],
-                            -1, -1);
+                                    + ", using default " + BoxDefinition.DEFAULT_WEIGHTS[i]);
                 }
                 weights[i] = BoxDefinition.DEFAULT_WEIGHTS[i];
             } else if (weights[i] > 10000) {
                 CsgoBox.LOGGER.warn("Weight {} for {} exceeds maximum, clamping to 10000", weights[i], gradeKey);
                 recordLoadError(file, fileName,
                         "Random[" + (i + 1) + "]: weight " + weights[i]
-                                + " exceeds 10000, clamped",
-                        -1, -1);
+                                + " exceeds 10000, clamped");
                 weights[i] = 10000;
             }
         }
@@ -330,8 +337,7 @@ public final class BoxJsonLoader {
                     entityArr.get(entityArr.size() - 1));
             recordLoadError(file, fileName,
                     "Entity: odd number of entries (" + entityArr.size()
-                            + "), trailing id without drop rate ignored",
-                    -1, -1);
+                            + "), trailing id without drop rate ignored");
         }
         for (int i = 0; i + 1 < entityArr.size(); i += 2) {
             String entityIdStr = entityArr.get(i).getAsString();

@@ -28,9 +28,26 @@ final class BoxItemCodec {
     }
 
     /**
-     * Parses an item object, or a legacy JSON string containing that object.
+     * Result of {@link #parseItem}: the parsed {@link ItemStack} on success,
+     * or a human-readable error string on failure. {@code error == null}
+     * indicates success; callers route the error into the box loader's
+     * LoadError list so it surfaces via {@code /csbox errors} and the
+     * join-time announcement.
      */
-    static ItemStack parseItem(JsonElement elem) {
+    record ParseOutcome(ItemStack stack, String error) {
+        boolean isSuccess() { return error == null; }
+        static ParseOutcome ok(ItemStack stack) { return new ParseOutcome(stack, null); }
+        static ParseOutcome fail(String message) { return new ParseOutcome(ItemStack.EMPTY, message); }
+    }
+
+    /**
+     * Parses an item object, or a legacy JSON string containing that object.
+     * Returns a {@link ParseOutcome} that distinguishes a clean parse from a
+     * skipped item (missing id, unknown item id, malformed components).
+     * Components / NBT tag parse failures remain warn-only — the item body
+     * is still accepted, only its data-component patch is empty.
+     */
+    static ParseOutcome parseItem(JsonElement elem) {
         try {
             JsonObject obj;
             if (elem.isJsonPrimitive()) {
@@ -39,10 +56,12 @@ final class BoxItemCodec {
             } else {
                 obj = elem.getAsJsonObject();
             }
-            if (obj == null) return ItemStack.EMPTY;
+            if (obj == null) {
+                return ParseOutcome.fail("item JSON is null");
+            }
             if (!obj.has("id")) {
                 CsgoBox.LOGGER.warn("Skipping item JSON without id: {}", elem);
-                return ItemStack.EMPTY;
+                return ParseOutcome.fail("missing 'id' field");
             }
 
             String id = obj.get("id").getAsString();
@@ -51,7 +70,7 @@ final class BoxItemCodec {
             Item item = BuiltInRegistries.ITEM.get(Identifier.parse(id)).map(Holder.Reference::value).orElse(null);
             if (item == null) {
                 CsgoBox.LOGGER.warn("Unknown item in box JSON: {}", id);
-                return ItemStack.EMPTY;
+                return ParseOutcome.fail("unknown item id: " + id);
             }
 
             // The registry Holder backing this stack carries a ResourceKey,
@@ -81,12 +100,12 @@ final class BoxItemCodec {
                 }
             }
 
-            return stack;
+            return ParseOutcome.ok(stack);
         } catch (Exception e) {
             // Use Throwable variant so the real cause is not silently dropped
             // when the format string has only one {} placeholder.
             CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e);
-            return ItemStack.EMPTY;
+            return ParseOutcome.fail("parse failed: " + e.getMessage());
         }
     }
 
