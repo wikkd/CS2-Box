@@ -1,23 +1,70 @@
 # 更新日志
 
-## [未发布] — Multiloader 扩展（v26.2 骨架 + common/utils 首批迁移）
+## [1.0.6] - 2026-07-02
+
+### 概述
+本版本完成 **MC 26.2 平台扩展** + **教程系统** 两条主线,涉及 3 个平台模块 (`v1_21_1` / `v26_1_2` / `v26_2`) + 新增 `common/` 业务代码共享层。源码 + 教程文档全部中文;Gitee 公开仓库承担教程分发。MIT 许可证保持不变(2024 Reclizer)。
 
 ### 新增
-- **v26_2 平台模块骨架。** 新增第三个版本模块 `v26_2/`,通过 `settings.gradle` 动态 include(`active_versions=26.2` 时启用)。当前状态:34 个 Java 文件 + 8 个资源文件从 `v26_1_2/` 复制并完成包名 `v26_1_2 → v26_2` 重命名,`Platform26 → Platform26V2`(独立 `IPlatform` 实现,`mcVersion()` 返回 `"26.2"`),`CsgoBox` 静态块改为 `Platform.set(new Platform26V2())`。NeoForge 26.2 / NeoGradle 占位版本号(等待用户提供真实 release coordinate)。
-- **`common/utils/ColorTools.java` 与 `common/utils/OverlayColor.java`。** 两个纯 A 类文件(无 `net.minecraft.*` / `net.neoforged.*` 依赖)从 `v1_21_1/` 与 `v26_1_2/` 重复实现中抽出至 `common/utils/`,git 识别为 rename(v1_21_1 → common)。8 个 caller 的 import 同步更新(`v{1_21_1,26_1_2}.utils.ColorTools → utils.ColorTools`)。
-- **`.planning/` 目录新增 11 个规划文档 + `intel/` 子目录。** `multiloader-refactor-plan.md`、`multiloader-execution-spec.md`、`phase0-audit.md`、`csbox-gui-26.1.2-fix-guide.md`、`runtime-verification-checklist.md` 等 5 篇主题文档,加 `PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md / INGEST-CONFLICTS.md` 5 张同步状态,加 `intel/{SYNTHESIS,context,constraints}.md` + 19 个 classifications JSON。这些由 `/gsd-ingest-docs` 自动 ingest 后保留在仓库中,供 `/gsd-plan-phase` 等下游命令消费。
+
+#### 多平台 / 26.2 beta 支持
+- **v26_2 平台模块(第三个版本模块)。** 通过 `settings.gradle` 动态 include(`active_versions=26.2` 时启用),从 `v26_1_2/` 完整复制并包名重命名(`v26_1_2 → v26_2`,`Platform26 → Platform26V2`,独立 `IPlatform` 实现 `mcVersion()` 返回 `"26.2"`)。资源文件 `META-INF/neoforge.mods.toml`、`pack.mcmeta`、`assets/csgobox/items/*.json`、`data/csgobox/recipe/*.json`、`data/csgobox/advancement/*.json` 一并迁移。Gradle `settings.gradle` 与 `gradle.properties` 新增 8 个 `*_26_2` 变量。
+- **26.2 decoupled API 破坏性变更适配** (`commit 4c9a004`,38 → 0 compile error)。`PictureInPictureRenderer` 构造器不再接收 `MultiBufferSource`(新签名为 `renderToTexture(state, poseStack, SubmitNodeCollector)`,`featureRenderDispatcher.renderAllFeatures()` 由父类负责触发);`Minecraft.setScreen(Screen)` → `Minecraft.setScreenAndShow(Screen)`;advancement `CriterionTrigger` 从抽象类改为 interface,`SimpleCriterionTrigger.trigger` 改为 protected(`Predicate<TriggerInstance>` 强制类型转换);`GameRenderer.getLighting()` → `lighting()`;`Options.hideGui` 字段整体移除(运行时回归阶段用户确认 HUD-overlay 降级可接受)。
+- **`v26_2/gui/pip/Icon3DRenderer.java` 完全重写** (106 → 99 LOC)。3D 旋转保留:`scale(1,-1,-1)` + `Axis.{XP,YP,ZP}.rotationDegrees` 驱动 `rotXDeg/rotYDeg/rotZDeg`。运行时回归验证 `CsboxScreen` 与 `CsLookItemScreen` 的鼠标拖拽 3D 旋转均工作正常。
+- **`common/` 业务代码共享层**。首批 A 类文件(无 MC 依赖)迁移:`common/utils/ColorTools.java` + `common/utils/OverlayColor.java`,git 识别为 rename(`v1_21_1 → common`),8 个 caller 的 import 同步更新。后续阶段 1 完整 B 类迁移(见 `multiloader-execution-spec.md`)将 `BoxDefinition / BoxRegistry / GradeGroup / CsboxConfig` 等业务核心统一到 `common/`,本版本暂保留 3 平台各一份。
+- **真实 NeoForge 26.2 版本号 pin** 到 `gradle.properties`:`neo_version_26_2=26.2.0.7-beta`(26.2 当前最新,跳过 0.4/0.5)、`neogradle_version_26_2=7.1.38`(与 v26_1_2 同)、`neoform_release=26.2-1`、`loader_version_range_26_2=[11,)`、`pack_format_26_2=81`(按 Mojang 惯例 +1 每小版本)。
+- **三模块 build 矩阵**。`./gradlew :v1_21_1:compileJava` + `:v26_1_2:compileJava` + `:v26_2:compileJava` 全部 BUILD SUCCESSFUL;`:v26_2:jar` 产出 `csgobox-26.2-1.0.6.jar`(pack_format=81)。
+- **`.planning/` 规划制品**。`multiloader-refactor-plan.md`、`multiloader-execution-spec.md`、`phase0-audit.md`、`csbox-gui-26.1.2-fix-guide.md`、`runtime-verification-checklist.md` 等 5 篇主题文档 + `PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md` 状态卡 + `intel/` 子目录 19 个 classifications + 3 张 synthesis(`SYNTHESIS/context/constraints`),由 `/gsd-ingest-docs` 自动 ingest 后保留。
+
+#### 教程系统(教程 JSON 自动下载 + 版本管理 + 跨平台回收站)
+- **网络下载教程文档**。教程 markdown 改为从网络拉取,不再硬编码在 JAR 里。新增 `box/TutorialSources.java`(读取 `config/csbox/_tutorial_sources.json` 源列表,默认指向 `https://gitee.com/hou-xiangling/CS2-Box/raw/main/docs/tutorials/`,玩家可手动创建该 JSON 加镜像 / 调超时)+ `box/TutorialFetcher.java`(Java 11+ `HttpClient`,`HttpClient.Redirect.ALWAYS` 自动跟随 302,5s 连接 / 8s 单请求超时,异常全部 catch 不冒泡)。`BoxJsonLoader.loadAll()` 在创建 `config/csbox/` 后调用 `BoxDefaults.writeTutorialIfMissing()`。
+- **教程文档自带版本号**。文件名嵌入 mod 版本,例如 `_tutorial_v1.0.6.md` / `_tutorial_v1.0.6_zh_cn.md`,源仓库路径 `gitee.com/hou-xiangling/CS2-Box/docs/tutorials/` 已上传对应文件。下次 mod 升 1.0.7 时,玩家机器上的 `_tutorial_v1.0.6*.md` 会被自动清理并下载新版。
+- **跨平台回收站 + 安全过滤**。`BoxDefaults.moveStaleTutorials()` 三重安全:(1) 优先调用 `java.awt.Desktop.moveToTrash()` 走系统原生回收站(Windows Recycle Bin / macOS Finder Trash / Linux XDG Trash);(2) 无 GUI(headless server)或 `java.desktop` 缺失时降级到 `config/csbox/.trash/` 子文件夹,文件名冲突自动加毫秒时间戳前缀;(3) 严格正则白名单 `^_tutorial_v.*\.md$`,绝不触碰 `notes.md` 等用户文件、`_tutorial_sources.json` 配置、旧版无版本号 `_tutorial.md` 等。跨分区移动自动 `Files.move` → `Files.copy + Files.delete` 降级。
+- **离线安全**。整个 `writeTutorialIfMissing` 体被 `try { ... } catch (Exception e)` 包裹,任何意外(网络异常、HttpClient 构造失败、磁盘写入失败)只记 WARN 日志,游戏正常启动运行。
+- **教程文档内容**(中英双版本,源仓库 `docs/tutorials/`)。涵盖字段说明(顶层字段 / entity / 物品对象 / 等级 / 钥匙 / 校验规则 / 故障排查)、JSON 示例(自定义名 / 附魔 / 玩家头颅)、锻造台 `csgo_key3` 唯一获取路径说明。
+
+#### JSON 加载错误玩家可见纠错
+- **`box/LoadError.java`** 记录单条 JSON 加载失败:`Path file / String boxId / String reason / int line / int column / Throwable cause`,自带 `toChatMessage()` 返回红色 `Component`(行/列已知时显示 `"第 N 行第 M 列"`)。
+- **`box/BoxJsonLoader.java` 错误收集**:`LAST_LOAD_ERRORS` 静态列表,`loadAll()` 开头清空,`loadFromFile()` 把所有异常分支(`JsonSyntaxException` / `Identifier.parse` 失败 / 空箱子跳过)收集为 `LoadError` 而非只写日志。Gson 2.13+ 不再提供 `JsonSyntaxException.getLocation()`,用正则 `at line (\d+) column (\d+)` 从错误消息里抓取行/列。新增公开 API `getLastLoadErrors() / hasLoadErrors()`。
+- **`event/LoadErrorAnnouncer.java`** 在 `PlayerEvent.PlayerLoggedInEvent` 触发,根据 `ErrorChatAudience` 配置(`OP_ONLY` 默认 / `EVERYONE`)向玩家推送加载错误。v26.x 用 `sp.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)`,v1_21_1 用 `sp.hasPermissions(2)`。
+- **`config/CsboxConfig.java` 新增** `ErrorChatAudience` 枚举 + `jsonErrorAudienceValue`(`defineEnum` 落到 `CONFIG_SPEC`,玩家可在 `config/csgobox.toml` 改)。
+- **`command/CsboxCommand.java` 新增** `/csbox errors` 子命令,OP 权限,显示当前所有加载错误(无错误时显示绿色 "当前无箱子加载错误")。
 
 ### 决定
 - **B 类 6 文件不迁 `common/`(显式选择)。** `BoxDefinition / BoxRegistry / GradeGroup / CsboxConfig / CsboxPlayerData / EntityChineseMap` 全部 `import net.minecraft.*` 或 `import net.neoforged.*`,违反 `.planning/intel/constraints.md` CONSTRAINT-001。它们保留在每个平台模块的副本中(共 3 份)。若未来要做 B 类重构,需要新增平台抽象接口(`IIdentifier / IItemStack / IComponent / IModConfig`)或在 common 中允许数据包装类携带 MC 引用,工作量为 6-10 小时。
+- **教程分发仓库选择 Gitee(用户私有仓库)而非 GitHub**。原因:国内访问速度 + 用户主仓库路径 `gitee.com/hou-xiangling/CS2-Box`。教程 markdown 文件单独存放于 `docs/tutorials/` 子目录,与 mod 源码解耦。玩家可在 `config/csbox/_tutorial_sources.json` 里加 GitHub / 自建 CDN 作为镜像。
+- **回收站优先 OS 原生**(`Desktop.moveToTrash()`)。原因:玩家可在熟悉的 OS UI(Finder Trash / Windows Recycle Bin / Linux 文件管理器)恢复,跨平台 API 自 Java 9 起稳定;headless server 与极简 JVM 自然降级到 `.trash/` 文件夹。
+- **教程文件名带版本号**(例 `_tutorial_v1.0.6.md`)。原因:教程内容可能随版本更新而调整(mod 字段、命令、配方可能变更),带版本号保证玩家读到的文档与 mod 行为匹配;升级时旧版本自动移到回收站。
 
-### 已落地(2026-07-01,基于直接 curl `maven.neoforged.net/releases/`)
-- **NeoForge 26.2 真实版本号已 pin 到 `gradle.properties`。** 26.2 仍处于 beta 阶段,Mojang / NeoForged 尚未发布 `26.2.0` stable。当前最新:`26.2.0.7-beta`(已发布的 beta 序列是 `26.2.0.0/0.1/0.2/0.3/0.6/0.7-beta`,跳过了 0.4/0.5)。NeoForm 对应 release 是 `26.2-1`(已 stable)。NeoGradle userdev 最新仍是 `7.1.38`,与 v26_1_2 相同(尚未发布 7.2.x)。FML loader `11.0.13` 与 26.1.2.76 一致,所以 `loader_version_range_26_2 = [11,)` 保持不变。`pack_format_26_2 = 81`(按 Mojang 惯例 +1 每小版本,26.1.x = 80)。
-- **Gradle 解析 + neoForm 流水线已跑通 v26_2。** `./gradlew :v26_2:compileJava`(在 `active_versions=26.2` 下)成功解析 NeoForge 26.2.0.7-beta、NeoForm 26.2-1、NeoGradle 7.1.38,完整 neoForm 流水线(cacheVersionManifest / decompile / patch / recompile)全部执行。`compileJava` 任务失败,37 个 API 破坏性变更错误(stage 4 工作):`MultiBufferSource` 被移除、`Minecraft.setScreen(Screen)` 签名变更、`RegisterEvent.register(ResourceKey<Registry<CriterionTrigger<?>>>, Identifier, Supplier)` 不再接受三参数形式、`Icon3DRenderer` 构造器签名变化(改为接收 `BufferSource` 参数)等。
+### 修复
+- **`TutorialFetcher` HttpClient 默认不跟随 302 重定向。** Gitee raw URL 返回 HTTP 302(走 ADAS 网关),Java HttpClient 默认行为是失败。修复:构造时显式 `.followRedirects(HttpClient.Redirect.ALWAYS)`。
+- **`BoxJsonLoader` 把教程源文件当箱子加载。** `tutorial_sources.json` 文件名不以 `_` 开头时会被 loader 当箱子解析并报 "All items failed to parse"。修复:文件名前加 `_` 前缀(`_tutorial_sources.json`),自动被 loader 跳过(`Files.newDirectoryStream` 跳过 `_` 开头文件)。
+- **教程源配置 JSON 自动写入 config/csbox/ 产生冗余 clutter。** 第一版会在首次启动自动写 `_tutorial_sources.json`,玩家认为是无用文件。修复:改为"只在玩家手动创建时读取,默认情况下不写盘",99% 玩家看到干净 `config/csbox/`。
+- **删除老 `_tutorial.md` 等旧版无版本号文件。** Gitee 仓库旧版文件已删除;`/tmp/cs2-tutorials-v2` worktree 用 `git mv` 重命名为带版本号文件名,提交 `e29200f` 推送到 gitee。
 
-### 未完成(等 stage 6)
-- v26_2 GUI / PIP 运行时回归(参见上一节列出的破坏性变更)。编译已经通过,但实际 3D 旋转在 26.2 decoupled 渲染引擎下需要用户手玩验证。
-- HUD-overlay 回归:MC 26.2 移除了 `Options.hideGui` 字段,开箱时 hotbar/血条仍然显示。需要后续在 26.2 找到新的 HUD 隐藏机制(目前没有等价 API)。
-- 26.2 一旦发布 stable release(去掉 `-beta` 后缀),需要重新刷 `neo_version_26_2` 并验证 `mc_version_range_26_2` 是否需要向前兼容 beta。
+### 移除
+- **教程硬编码常量。** `BoxDefaults.TUTORIAL_CONTENT_EN` / `TUTORIAL_CONTENT_ZH`(原约 200 行 Java 嵌入 markdown)整段删除,改为运行时从 Gitee 拉取。
+- **HUD-overlay 隐 GUI 功能在 26.2 不可用**(NeoForge 26.2 移除 `Options.hideGui` 字段)。开箱时 hotbar/血条仍可见,用户确认接受此降级,延后到 26.2 stable + 出现等价 API 时再补。
+- **测试用 JSON 文件清理。** `runs/client/config/csbox/test_*.json`(LoadError 功能验证时临时写入的)从 3 平台 `runs/` 全部删除。
+
+### 更改
+- **配置可见性默认值**:`jsonErrorAudience` 默认 `OP_ONLY`(非 OP 玩家登录时收不到加载错误推送)。OP 自身执行 `/csbox errors` 不受此配置影响(命令本身已 OP-only)。
+- **配置文件命名**:`config/csgobox.toml`(1.0.5 后续调整后保持此名)。所有玩家配置文件路径不变。
+- **PIP 3D 旋转在 26.2 的实现**:`v26_2/gui/pip/Icon3DRenderer.java` 因 `PictureInPictureRenderer` API 变动完全重写,3D 鼠标拖拽行为与 v26_1_2 视觉一致。
+
+### 备注
+- **构建产物**:
+  - `csgobox-1.21.1-1.0.6.jar`(MC 1.21.1 + NeoForge 21.1.115)
+  - `csgobox-26.1.2-1.0.6.jar`(MC 26.1.2 + NeoForge 26.1.2.76)
+  - `csgobox-26.2-1.0.6.jar`(MC 26.2 + NeoForge 26.2.0.7-beta,**注意 26.2 仍 beta,生产环境慎用**)
+- **教程文档源**:`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`,公开仓库,无需认证。玩家想自托管可 fork 该仓库后改 `_tutorial_sources.json`。
+- **SSH 密钥**(`~/.ssh/id_ed25519_gitee`,用户机器本地)用于教程维护者推送更新到 Gitee,与 mod 运行时下载无关(下载走 HTTPS 公开访问)。
+- **运行时回归**:v1_21_1 / v26_1_2 / v26_2 三平台客户端均已验证箱子加载、开箱动画、PIP 3D 旋转、成就触发、`/csbox reload`、`/csbox errors`、教程下载/版本升级迁移/回收站恢复。
+
+### 未完成
+- 一旦 26.2 发布 stable release(去掉 `-beta` 后缀),需要重新刷 `neo_version_26_2` 并验证 `mc_version_range_26_2` 是否需要向前兼容 beta。
+- 阶段 1 完整 B 类迁移:common 业务代码(B 类文件保留平台层重复)、P1-1 容器化布局、P1-3 per-item 视觉基线、P2-2 三档设计 token(均显式延期)。
+- 教程系统可考虑增量:`/csbox tutorial refresh` 命令手动刷新;`.trash/` 自动清理(保留最近 N 份或 N 天内);启动时打印回收站内容提示。
 
 ## [1.0.5] - 2026-06-29
 

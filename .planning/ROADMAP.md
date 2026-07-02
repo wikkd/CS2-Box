@@ -127,7 +127,7 @@ Risk gates (per `multiloader-execution-spec.md` CONSTRAINT-005):
 - Verify GitHub Actions matrix produces both `csbox-1.21.1-1.0.5.jar` and `csbox-26.1.2-1.0.5.jar`
 - Document release process in `docs/DEVELOPMENT.md` or new `docs/RELEASE.md`
 
-## Phase 12 — v26.2 third platform module [~] real versions pinned, code adaptation in progress (2026-07-01)
+## Phase 12 — v26.2 third platform module ✅ done (2026-07-01)
 
 Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the existing 1.21.1 + 26.1.2 platforms.
 
@@ -163,11 +163,12 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 - `./gradlew :v26_2:compileJava` (active_versions=26.2) → BUILD SUCCESSFUL — 0 errors after stage 4 adaptation.
 - `./gradlew :v26_2:jar` → `v26_2/build/libs/csgobox-26.2-1.0.5.jar` produced (428 KB), with `pack.mcmeta` `pack_format=81` correctly substituted.
 
-**Stage 6 ⏳ blocked on user (no Minecraft runtime in this environment)**:
-- `./gradlew :v26_2:runClient` needs to be exercised locally to verify the PIP 3D drag-to-rotate in `CsboxScreen` and `CsLookItemScreen` still works after the 26.2 PIP rewrite
-- HUD-overlay regression needs user confirmation (acceptable regression? or find a 26.2 fix?)
-- Advancement triggers need to fire on first open / 200 opens
-- Runtime regression checklist: `.planning/runtime-verification-checklist.md` RV-1 to RV-4
+**Stage 6 (2026-07-01) ✅ done**: runtime regression verified by user on v26_2 client.
+- PIP 3D drag-to-rotate works in `CsboxScreen` (open preview) and `CsLookItemScreen` (result preview) — mouse-drag rotation preserved on 26.2 after the `PictureInPictureRenderer` rewrite in stage 4
+- Opening / progress / reveal scroll animations run end-to-end without breaks
+- Advancement triggers fire on first open (`A Fresh Start`) and accumulate `csgobox:opened_boxes` toward `Shopkeeper` (200)
+- `/csbox reload` re-scans `config/csbox/*.json` without exceptions
+- HUD-overlay regression (`Options.hideGui` removed in 26.2; hotbar/health bar visible during box-opening screens) accepted by user — no equivalent API in 26.2.0.7-beta; revisit only if/when 26.2 ships one
 
 ---
 
@@ -195,4 +196,4 @@ Goal: extend multiloader to Minecraft 26.2 / NeoForge 26.2.x, alongside the exis
 | 9 Per-item baseline | [ ] | csbox-gui-26.1.2-fix-guide.md P1-3 |
 | 10 Design tokens | [ ] | csbox-gui-26.1.2-fix-guide.md P2-2 |
 | 11 Build clean-up | [ ] | multiloader-execution-spec.md |
-| 12 v26.2 third platform | [x] done — stage 3 (scaffold), 3.1 (real versions), 4 (code adaptation), 4.1 (IDEA configs), 5 (build matrix) all done; stage 6 (runtime regression) blocked on no MC runtime in this env | this session |
+| 12 v26.2 third platform | [x] done — stage 3 (scaffold), 3.1 (real versions), 4 (code adaptation), 4.1 (IDEA configs), 5 (build matrix), 6 (runtime regression) all done; HUD-overlay regression accepted | this session |

@@ -58,6 +58,10 @@ sourceSets.main.resources {
     srcDir project(':common').file('src/main/resources')
 }
 
+sourceSets.main.java {
+    srcDir project(':common').file('src/main/java')
+}
+
 repositories {
     maven {
         name = 'LocalPatchedLibraries'

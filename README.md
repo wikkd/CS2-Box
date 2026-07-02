@@ -24,7 +24,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 | `common/` | — | — | — | 21 | — | 跨版本业务逻辑 + 共享资源 + platform 接口抽象 |
 | `v1_21_1/` | 1.21.1 | 21.1.115 | 7.0.171 | 21 | 8.11 | 1.21.1 平台实现(`@Mod` 入口、DeferredRegister、Screen、Attachment、网络接线) |
 | `v26_1_2/` | 26.1.2 | 26.1.2.76 | 7.1.38 | 25 `--enable-preview` | 8.14 | 26.1.2 平台实现(迁移到 decoupled rendering API) |
-| `v26_2/` | 26.2 | 26.2.0.7-beta | 7.1.38 | 25 `--enable-preview` | 8.14 | 26.2 平台实现（最新 beta；待代码适配 26.2 破坏性 API 变更） |
+| `v26_2/` | 26.2 | 26.2.0.7-beta | 7.1.38 | 25 `--enable-preview` | 8.14 | 26.2 平台实现（最新 beta；已完成 decoupled API 适配 + PIP 3D 重写） |
 
 `common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享(v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`)。
 
@@ -52,7 +52,7 @@ cd CS2-Box
 ./gradlew build
 
 # 3. 启动开发客户端
-./gradlew :v26_1_2:runClient   # 或 :v1_21_1:runClient / :v26_2:runClient (待 stage 4 代码适配)
+./gradlew :v26_1_2:runClient   # 或 :v1_21_1:runClient / :v26_2:runClient
 ```
 
 启动后:
@@ -99,7 +99,7 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 - ✅ Phase 0-6 done:基线冻结、构建系统、common 边界、v1_21_1 稳定、26.1.2 迁移、26.1.2 日志与 GUI 修复批、26.1.2 审计
 - ✅ 阶段 A done:common/utils/ 首批 2 个真正 A 类(ColorTools / OverlayColor)迁移,v1_21_1 + v26_1_2 + v26_2 三模块共存骨架已搭建
 - ⏳ Phase 7+ 未开始:common 完整业务代码迁移(目前 B 类文件保留平台层重复,见 `.planning/PROJECT.md`)、容器化布局(P1-1)、per-item 视觉基线(P1-3)、三档设计 token(P2-2)
-- ⏳ v26_2 真实版本号已落地(neo_version=26.2.0.7-beta, neogradle=7.1.38, neoform=26.2-1, pack_format=81),`./gradlew :v26_2:compileJava` + `:jar` 已 BUILD SUCCESSFUL (`csgobox-26.2-1.0.5.jar` 428 KB)。**HUD 降级提示**:MC 26.2 移除了 `Options.hideGui` 字段,开箱时 hotbar/血条仍然显示 — 需要在 26.2 找到新的 HUD 隐藏机制(目前没有等价 API)。运行时回归(PIP 3D 旋转 + 成就触发)需要用户手玩验证。
+- ✅ v26_2 已落地:`neo_version=26.2.0.7-beta`, `neogradle=7.1.38`, `neoform=26.2-1`, `pack_format=81`。`./gradlew :v26_2:compileJava` + `:jar` BUILD SUCCESSFUL(`csgobox-26.2-1.0.5.jar` 428 KB);PIP 3D 旋转已重写适配;运行时回归(开箱/进度/查看动画 + 成就触发)用户在 26.2 客户端验证通过。**HUD 提示**:MC 26.2 移除了 `Options.hideGui` 字段,开箱时 hotbar/血条仍可见 —— 用户确认可接受,后续若 26.2 出现等价 API 再补。
 
 **已禁用范围**(显式延期):Cloth Config 回归、Forge 1.20.1 backport、玩家间交易(loot bind-on-open)。
 

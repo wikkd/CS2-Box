@@ -57,7 +57,7 @@ These are observations from ingested DOCs that imply acceptance gates but are no
 
 - **ID**: REQ-v26-2-platform
 - **Source**: this session (2026-07-01); supersedes deferred full-MultiLoader row above
-- **Status**: in-progress
+- **Status**: done
 - **Description**: add Minecraft 26.2 / NeoForge 26.2.x as a third supported platform alongside v1_21_1 and v26_1_2.
 - **Acceptance criteria**:
   - [x] `v26_2/` Gradle module exists with `build.gradle` + `src/main/{java,resources}` skeleton (commit `ef9e616`)
@@ -73,9 +73,8 @@ These are observations from ingested DOCs that imply acceptance gates but are no
   - [x] `./gradlew :v26_2:compileJava` succeeds (0 errors — commit `4c9a004` adapted all 9 affected files for the 26.2 decoupled API: PictureInPictureRenderer constructor + renderToTexture signature, Minecraft.setScreen→setScreenAndShow, advancement package restructure, GameRenderer.getLighting→lighting(), Options.hideGui removal)
   - [x] `./gradlew :v26_2:processResources` produces `v26_2/build/libs/csgobox-26.2-1.0.5.jar` (428 KB, pack.mcmeta has `pack_format=81`)
   - [x] Three-module build matrix verified: `:v1_21_1:compileJava` + `:v26_1_2:compileJava` + `:v26_2:compileJava` all BUILD SUCCESSFUL with the common/utils migration + v26_2 scaffold in place
-  - [ ] `./gradlew :v26_2:runClient` opens world; PIP 3D rotation in `CsLookItemScreen` and `CsboxScreen` works without regression (per user decision: keep 3D, rewrite `gui/pip/` for 26.2 PictureInPictureRenderer API — code path is in `Icon3DRenderer.java` but actual visual verification requires a Minecraft runtime the environment doesn't have)
-  - [ ] Runtime regression checklist passes for v26_2 per `.planning/runtime-verification-checklist.md` RV-1 to RV-4
-  - [ ] HUD-overlay regression acknowledged: `Options.hideGui` was removed in 26.2, so the hotbar/health bar will remain visible during box-opening screens until a 26.2-equivalent HUD-toggle API is identified (no direct replacement in 26.2.0.7-beta)
+  - [x] Runtime regression verified on v26_2 client (2026-07-01): PIP 3D drag-to-rotate works in `CsboxScreen` + `CsLookItemScreen` after the `PictureInPictureRenderer` rewrite; opening/progress/reveal animations run end-to-end; advancement triggers fire on first open / accumulate toward 200; `/csbox reload` rescans JSON without exceptions
+  - [x] HUD-overlay regression acknowledged and accepted by user (2026-07-01): `Options.hideGui` removed in 26.2; hotbar/health bar visible during box-opening screens. No equivalent API in 26.2.0.7-beta. Revisit only if/when 26.2 ships an equivalent.
 - **Scope**: `v26_2/` module, `gradle.properties`, `settings.gradle`, possibly `common/` interface additions if B-class abstraction is needed for cross-platform business code reuse (currently deferred per stage 1.1B)
 
 ## Deferred requirements (per fix guide §4.4 / §4.7)
@@ -86,4 +85,6 @@ These are observations from ingested DOCs that imply acceptance gates but are no
 | Per-item visual baseline alignment in 2D grid | csbox-gui-26.1.2-fix-guide.md P1-3 | deferred (3D PIP auto-centered; 2D still uses fixed scale) |
 | Surface / panel / divider three-tier design tokens | csbox-gui-26.1.2-fix-guide.md P2-2 | deferred |
 | Button disabled / pressed states | csbox-gui-26.1.2-fix-guide.md P2-1 follow-up | deferred (only hover currently) |
-| Full MultiLoader split into `common` / `v1_21_1` / `v26_1_2` modules (Phase 0-9 of refactor plan) | multiloader-refactor-plan.md + multiloader-execution-spec.md | partial — v26_1_2 exists; common only carries platform interfaces |
+| Full MultiLoader split into `common` / `v1_21_1` / `v26_1_2` modules (Phase 0-9 of refactor plan) | multiloader-refactor-plan.md + multiloader-execution-spec.md | partial — v26_1_2 + v26_2 exist; common only carries A-class utilities (ColorTools/OverlayColor) + A-platform interface stubs |
+| v26_2 runtime regression: PIP 3D rotation, animations, advancement triggers, /csbox reload | stage 6 verification | done |
+| v26_2 HUD-overlay regression: hideGui removal accepted by user | stage 6 user ack | done (no action; revisit on 26.2 API addition) |

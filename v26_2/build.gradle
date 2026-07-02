@@ -55,6 +55,10 @@ sourceSets.main.resources {
     srcDir project(':common').file('src/main/resources')
 }
 
+sourceSets.main.java {
+    srcDir project(':common').file('src/main/java')
+}
+
 // Multiple srcDirs in sourceSets.main.resources can collide on files like
 // META-INF/neoforge.mods.toml (declared both in v26_2 and in common via the
 // auto-discovery path). Tell processResources to pick the first one written,
