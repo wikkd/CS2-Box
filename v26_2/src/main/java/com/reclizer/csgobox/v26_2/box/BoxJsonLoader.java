@@ -183,16 +183,27 @@ public final class BoxJsonLoader {
         }
         if (json == null) return Optional.empty();
 
+        // Structural validation runs before any field-level fallback so problems
+        // surface as LoadError entries (visible via /csbox errors) rather than
+        // silent fallbacks. Field-level fallback (default weights, etc.) still
+        // runs below — schema issues are diagnostic, not load-blocking.
+        for (BoxJsonSchemaValidator.SchemaIssue issue : BoxJsonSchemaValidator.validate(json)) {
+            CsgoBox.LOGGER.warn("Schema issue in {} field {}: {}",
+                    file, issue.field(), issue.reason());
+            recordLoadError(file, fileName,
+                    "Schema: " + issue.field() + " — " + issue.reason(), -1, -1);
+        }
+
         try {
             ParsedName parsedName = parseColoredName(getString(json, "name", boxIdStr));
             Identifier keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
             float dropRate = getFloat(json, "drop", 0.12F);
 
-            int[] weights = parseWeights(json);
+            int[] weights = parseWeights(json, file, fileName);
 
             List<Identifier> dropEntityIds = new ArrayList<>();
             Map<Identifier, Float> entityDropRates = new HashMap<>();
-            parseEntities(json, dropEntityIds, entityDropRates);
+            parseEntities(json, dropEntityIds, entityDropRates, file, fileName);
 
             List<GradeGroup> grades = new ArrayList<>();
             for (int i = 0; i < 5; i++) {
@@ -263,7 +274,7 @@ public final class BoxJsonLoader {
     /**
      * JSON "random" is ordered grade1 -> grade5.
      */
-    private static int[] parseWeights(JsonObject json) {
+    private static int[] parseWeights(JsonObject json, Path file, String fileName) {
         int[] weights = BoxDefinition.DEFAULT_WEIGHTS.clone();
         if (json.has("random")) {
             JsonArray randomArr = json.getAsJsonArray("random");
@@ -277,10 +288,18 @@ public final class BoxJsonLoader {
                 if (weights[i] < 0) {
                     CsgoBox.LOGGER.warn("Negative weight {} for {} in box config, using default: {}",
                             weights[i], gradeKey, BoxDefinition.DEFAULT_WEIGHTS[i]);
+                    recordLoadError(file, fileName,
+                            "Random[" + (i + 1) + "]: negative weight " + weights[i]
+                                    + ", using default " + BoxDefinition.DEFAULT_WEIGHTS[i],
+                            -1, -1);
                 }
                 weights[i] = BoxDefinition.DEFAULT_WEIGHTS[i];
             } else if (weights[i] > 10000) {
                 CsgoBox.LOGGER.warn("Weight {} for {} exceeds maximum, clamping to 10000", weights[i], gradeKey);
+                recordLoadError(file, fileName,
+                        "Random[" + (i + 1) + "]: weight " + weights[i]
+                                + " exceeds 10000, clamped",
+                        -1, -1);
                 weights[i] = 10000;
             }
         }
@@ -291,7 +310,8 @@ public final class BoxJsonLoader {
      * Parses either a plain entity id list or alternating entity id/drop-rate pairs.
      */
     private static void parseEntities(JsonObject json, List<Identifier> dropEntityIds,
-                                       Map<Identifier, Float> entityDropRates) {
+                                       Map<Identifier, Float> entityDropRates,
+                                       Path file, String fileName) {
         if (!json.has("entity")) return;
         JsonArray entityArr = json.getAsJsonArray("entity");
         if (entityArr.size() == 0) return;
@@ -308,6 +328,10 @@ public final class BoxJsonLoader {
         if ((entityArr.size() & 1) != 0) {
             CsgoBox.LOGGER.warn("Ignoring trailing entity entry without drop rate: {}",
                     entityArr.get(entityArr.size() - 1));
+            recordLoadError(file, fileName,
+                    "Entity: odd number of entries (" + entityArr.size()
+                            + "), trailing id without drop rate ignored",
+                    -1, -1);
         }
         for (int i = 0; i + 1 < entityArr.size(); i += 2) {
             String entityIdStr = entityArr.get(i).getAsString();
