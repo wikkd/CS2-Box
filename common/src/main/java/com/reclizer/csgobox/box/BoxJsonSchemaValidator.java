@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v26_2.box;
+package com.reclizer.csgobox.box;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -9,13 +9,13 @@ import java.util.List;
 
 /**
  * Structural validator for box JSON files. Runs after Gson syntax parsing and
- * before any field-level fallback logic in {@link BoxJsonLoader}, so problems
- * here surface as {@link LoadError} entries (visible via {@code /csbox errors})
+ * before any field-level fallback logic in the box loader, so problems here
+ * surface as {@link LoadError} entries (visible via {@code /csbox errors})
  * rather than silent fallbacks.
  *
- * <p>The validator is a pure {@link JsonElement} function — it never touches
- * Minecraft types — so the same source compiles against every platform with
- * only the package name changing.</p>
+ * <p>Pure {@link JsonElement} function — no Minecraft or platform imports —
+ * so the same source compiles in the common module and is reused by every
+ * platform loader.</p>
  */
 public final class BoxJsonSchemaValidator {
 

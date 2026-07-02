@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.reclizer.csgobox.box.BoxJsonSchemaValidator;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
