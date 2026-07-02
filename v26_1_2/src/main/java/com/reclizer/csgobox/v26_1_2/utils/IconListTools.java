@@ -48,7 +48,7 @@ public final class IconListTools {
                 GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT);
     }
 
-    public static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
+    private static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
         guiGraphics.fillGradient(pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
         guiGraphics.fill(pX0, pY0, pX0 + 2, toY, color);
     }

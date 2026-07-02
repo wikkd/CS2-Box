@@ -24,7 +24,7 @@ public final class IconListTools {
     private IconListTools() {
     }
 
-    public static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
+    private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
         guiGraphics.fillGradient(pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
         guiGraphics.fill(pX0, pY0, pX0 + 2, toY, color);
     }

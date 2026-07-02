@@ -7,6 +7,7 @@ public class CsboxConfig {
     private final ModConfigSpec.BooleanValue loadDefaultBoxesValue;
     private final ModConfigSpec.BooleanValue enableDebugLoggingValue;
     private final ModConfigSpec.BooleanValue enableAchievementsValue;
+    private final ModConfigSpec.BooleanValue enableHotReloadValue;
     private final ModConfigSpec.IntValue openSoundVolumeValue;
     private final ModConfigSpec.IntValue tickSoundVolumeValue;
     private final ModConfigSpec.IntValue finishSoundVolumeValue;
@@ -37,6 +38,9 @@ public class CsboxConfig {
         this.enableAchievementsValue = builder
                 .comment("Enable the achievement system (stats are still accumulated when off)")
                 .define("enableAchievements", true);
+        this.enableHotReloadValue = builder
+                .comment("Watch config/csbox/*.json and auto-reload on file changes (300ms debounce)")
+                .define("enableHotReload", true);
         this.jsonErrorAudienceValue = builder
                 .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
                 .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);
@@ -77,6 +81,10 @@ public class CsboxConfig {
 
     public boolean enableAchievements() {
         return enableAchievementsValue.get();
+    }
+
+    public boolean enableHotReload() {
+        return enableHotReloadValue.get();
     }
 
     public int openSoundVolume() {

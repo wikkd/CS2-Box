@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_1_2;
 
 import com.mojang.logging.LogUtils;
+import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v26_1_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.capability.ModCapability;
@@ -9,19 +10,22 @@ import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger;
-import com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState;
-import com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderer;
+import com.reclizer.csgobox.v26_1_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxOpenResult;
+import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,16 +36,24 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
-import com.reclizer.csgobox.platform.Platform;
-import com.reclizer.csgobox.v26_1_2.platform.Platform26;
 import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Mod(CsgoBox.MODID)
 public class CsgoBox {
@@ -62,8 +74,31 @@ public class CsgoBox {
     public static final ModConfigSpec CONFIG_SPEC;
     public static Stat<Identifier> OPENED_BOXES_STAT;
 
+    /**
+     * Background thread pool used by {@code PacketCsgoBulkProgress} to compute
+     * K random results off the main thread. Two daemon threads are enough for
+     * concurrent bulk requests from two operators; further requests queue.
+     * Shut down on mod unload via {@link FMLCommonSetupEvent} shutdown hook.
+     */
+    public static final ExecutorService BULK_COMPUTE_POOL = Executors.newFixedThreadPool(2, new ThreadFactory() {
+        private final AtomicInteger counter = new AtomicInteger();
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "csgobox-bulk-compute-" + counter.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        }
+    });
+
+    /**
+     * Watches {@code config/csbox/} for JSON changes and triggers a debounced
+     * reload. Created during {@link #commonSetup} when {@code enableHotReload}
+     * is true, shut down during {@link #onServerStopping}.
+     */
+    private static BoxFileWatcher boxWatcher;
+
     static {
-        Platform.set(new Platform26());
         var pair = new ModConfigSpec.Builder()
                 .configure(CsboxConfig::new);
         CONFIG = pair.getLeft();
@@ -82,7 +117,7 @@ public class CsgoBox {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
-        modEventBus.addListener(this::registerIcon3DRenderer);
+        modEventBus.addListener(this::registerDynamicBoxItems);
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
                 LOGGER.info("CS2 Box config reloaded");
@@ -110,26 +145,30 @@ public class CsgoBox {
     private void registerPayloads(final RegisterPayloadHandlersEvent event) {
         var registrar = event.registrar(MODID);
         registrar.playToServer(PacketCsgoProgress.TYPE, PacketCsgoProgress.STREAM_CODEC, PacketCsgoProgress::handleServer);
+        registrar.playToServer(PacketCsgoBulkProgress.TYPE, PacketCsgoBulkProgress.STREAM_CODEC, PacketCsgoBulkProgress::handleServer);
         registrar.playToClient(PacketBoxOpenResult.TYPE, PacketBoxOpenResult.STREAM_CODEC, PacketBoxOpenResult::handle);
+        registrar.playToClient(PacketBoxBulkResult.TYPE, PacketBoxBulkResult.STREAM_CODEC, PacketBoxBulkResult::handle);
         registrar.playToServer(PacketRequestBoxItems.TYPE, PacketRequestBoxItems.STREAM_CODEC, PacketRequestBoxItems::handle);
         registrar.playToClient(PacketSyncBoxItems.TYPE, PacketSyncBoxItems.STREAM_CODEC, PacketSyncBoxItems::handle);
     }
 
-    /** Registers the mod's custom PictureInPictureRenderer so 3D-rotated GUI
-     *  item previews (held-box preview, won-item display) render with a
-     *  full PoseStack instead of the deferred 2D icon pipeline. */
-    private void registerIcon3DRenderer(final RegisterPictureInPictureRenderersEvent event) {
-        event.register(Icon3DRenderState.class, Icon3DRenderer::new);
-        LOGGER.info("Registered CS:GO Box 3D icon PIP renderer");
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        if (CONFIG.enableHotReload()) {
+            event.enqueueWork(this::startBoxWatcher);
+        }
+        LOGGER.info("CS2 Box initialized successfully");
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        // BoxJsonLoader.loadAll deferred to onServerStarting (see below). At
-        // FMLCommonSetupEvent in 26.1.2, vanilla Item.intrusive holders'
-        // `components` field has not been bound yet — DataComponentInitializers
-        // runs during datapack reload, AFTER this event. Constructing
-        // ItemStacks here would NPE on Holder.Reference.components().
-        LOGGER.info("CS2 Box initialized successfully");
+    private void startBoxWatcher() {
+        if (boxWatcher != null) {
+            return;
+        }
+        Path boxesDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
+        boxWatcher = BoxFileWatcher.start(
+                boxesDir,
+                BoxJsonLoader::reloadPreserving,
+                msg -> LOGGER.info("[BoxFileWatcher] {}", msg),
+                (msg, err) -> LOGGER.error("[BoxFileWatcher] {}", msg, err));
     }
 
     private void resolveOpenedBoxesStat(final FMLCommonSetupEvent event) {
@@ -145,22 +184,92 @@ public class CsgoBox {
         return CONFIG.enableDebugLogging();
     }
 
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
-        // ServerStartingEvent fires on the server thread after registry freeze
-        // — vanilla items' intrusive holders have `components` bound by now,
-        // so BoxJsonLoader can construct registry-backed ItemStacks that
-        // survive later serialization (e.g. into the player's persisted
-        // attachment).
-        if (CONFIG.loadDefaultBoxes()) {
-            BoxJsonLoader.loadAll();
+    /**
+     * Scan {@code config/csbox/*.json} and register one dynamic
+     * {@link ItemCsgoBox} per file so vanilla {@code /give} can address any
+     * box by its file name. The dynamic item's {@code box_id} is pre-set to
+     * the same id as the file name, so {@code /give @p csgobox:weapon_supply_box 5}
+     * hands the player 5 ready-to-open boxes.
+     *
+     * <p>Trade-off: items without a matching model file
+     * ({@code assets/csgobox/models/item/<name>.json}) render as missing-texture.
+     * Functional behavior (open, RNG, give) is unaffected. Drop a model file
+     * to fix the icon.</p>
+     *
+     * <p>Registered via {@link RegisterEvent} using deferred suppliers so the
+     * {@link Item} instances are constructed during registry finalization,
+     * <em>before</em> the registry freezes. The previous implementation
+     * scheduled this work through {@code FMLCommonSetupEvent.enqueueWork},
+     * which in MC 26.1.2 fires AFTER the item registry has frozen and therefore
+     * crashed with {@code IllegalStateException: Registry is already frozen}.</p>
+     */
+    private void registerDynamicBoxItems(final RegisterEvent event) {
+        if (!event.getRegistryKey().equals(Registries.ITEM)) {
+            return;
         }
-        LOGGER.info("CS2 Box server starting, registered box definitions");
+        Path configDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
+        if (!Files.isDirectory(configDir)) {
+            return;
+        }
+        int registered = 0;
+        int skipped = 0;
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDir, "*.json")) {
+            for (Path file : stream) {
+                String filename = file.getFileName().toString();
+                if (filename.startsWith("_") || !filename.endsWith(".json")) {
+                    continue;
+                }
+                String idStr = filename.substring(0, filename.length() - 5);
+                if (idStr.isEmpty()) {
+                    continue;
+                }
+                Identifier itemId;
+                try {
+                    itemId = Identifier.fromNamespaceAndPath(MODID, idStr);
+                } catch (Exception e) {
+                    LOGGER.warn("[csgo-dynamic-items] skip invalid filename '{}': {}", filename, e.getMessage());
+                    continue;
+                }
+                if (BuiltInRegistries.ITEM.containsKey(itemId)) {
+                    skipped++;
+                    continue;
+                }
+                final Identifier boxId = itemId;
+                final ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, itemId);
+                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().stacksTo(16).setId(itemKey)) {
+                    @Override
+                    public ItemStack getDefaultInstance() {
+                        ItemStack stack = super.getDefaultInstance();
+                        ItemCsgoBox.setBoxId(boxId, stack);
+                        return stack;
+                    }
+                });
+                registered++;
+            }
+        } catch (IOException e) {
+            LOGGER.warn("[csgo-dynamic-items] scan of {} failed: {}", configDir, e.getMessage());
+            return;
+        }
+        if (registered > 0 || skipped > 0) {
+            LOGGER.info("[csgo-dynamic-items] registered {} dynamic box item(s) from config/csbox/ ({} skipped as already registered)",
+                    registered, skipped);
+        }
     }
 
     @SubscribeEvent
-    public void onServerStarted(ServerStartedEvent event) {
+    public void onServerStarting(ServerStartingEvent event) {
+        if (CONFIG.loadDefaultBoxes()) {
+            BoxJsonLoader.loadAll();
+        }
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        if (boxWatcher != null) {
+            boxWatcher.stop();
+            boxWatcher = null;
+        }
     }
 
     @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
@@ -170,6 +279,27 @@ public class CsgoBox {
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        }
+
+        /**
+         * Register the {@link com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderer}
+         * for our custom {@link com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState}.
+         *
+         * <p>Without this listener, every {@code submitPictureInPictureRenderState}
+         * call from {@code GuiItemMove} hits a renderer map that has no entry
+         * keyed by {@code Icon3DRenderState.class}, so the 3D rotation in
+         * {@code CsboxScreen} / {@code CsLookItemScreen} silently draws nothing
+         * — only the 2D fallback slot background is visible. The original
+         * 1.0.6 release forgot this listener; this commit closes that gap.</p>
+         */
+        @SubscribeEvent
+        public static void onRegisterPictureInPictureRenderers(RegisterPictureInPictureRenderersEvent event) {
+            // 26.1.2's PictureInPictureRenderer constructor takes a BufferSource;
+            // the registration factory therefore must accept one. 26.2 dropped
+            // the parameter and switched to a Supplier-based register signature.
+            event.register(
+                    com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState.class,
+                    bufferSource -> new com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderer(bufferSource));
         }
     }
 }

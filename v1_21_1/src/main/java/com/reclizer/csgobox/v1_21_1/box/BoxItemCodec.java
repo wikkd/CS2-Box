@@ -96,7 +96,9 @@ final class BoxItemCodec {
 
             return ParseOutcome.ok(stack);
         } catch (Exception e) {
-            CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e.getMessage());
+            // Use Throwable variant so the real cause is not silently dropped
+            // when the format string has only one {} placeholder.
+            CsgoBox.LOGGER.warn("Failed to parse item JSON: {}", elem, e);
             return ParseOutcome.fail("parse failed: " + e.getMessage());
         }
     }

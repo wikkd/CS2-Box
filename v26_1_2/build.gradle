@@ -163,6 +163,15 @@ tasks.named('jar', Jar).configure {
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
+    // Exclude anonymous/inner-class stubs left over by incremental javac when
+    // a class is moved to a new package between source revisions (e.g. the
+    // v1.0.5 -> v1.0.6 common/ migration rewrote IGuiGraphics / IRegistry
+    // / IAttachmentRegistrar etc., and the * 2.class / * 3.class / * 4.class
+    // / * 5.class stale copies accumulated in build/classes/ — that single
+    // regression pushed the v26_1.2 jar from 370 KB to 832 KB without any
+    // feature change). The pattern matches "<path>/<ClassName> <N>.<ext>"
+    // which is javac's anonymous-class naming convention.
+    exclude '**/*+[0-9]+*'
 }
 
 tasks.withType(JavaCompile).configureEach {

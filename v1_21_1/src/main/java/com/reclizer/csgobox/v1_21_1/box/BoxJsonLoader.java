@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxJsonSchemaValidator;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import net.minecraft.resources.ResourceLocation;
@@ -22,10 +23,12 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -137,6 +140,90 @@ public final class BoxJsonLoader {
                 scannedFiles.size(), BOXES_DIR, loaded[0], skipped[0]);
     }
 
+    /**
+     * Re-scan the box directory and update {@link BoxRegistry} in place.
+     *
+     * <p>Unlike {@link #loadAll()} this does NOT call {@code BoxRegistry.clear()}:
+     * <ul>
+     *   <li>Files that fail to parse leave the previous {@link BoxDefinition}
+     *       in place (no wholesale data loss from one bad JSON).</li>
+     *   <li>Files that parse successfully {@code put}-overwrite the entry with
+     *       the same id.</li>
+     *   <li>Files that disappeared since the previous load are explicitly
+     *       {@link BoxRegistry#remove removed} so the registry mirrors disk.</li>
+     * </ul>
+     *
+     * <p>Used by the {@code /csbox reload} command and by the common
+     * {@code BoxFileWatcher} when JSON files change on disk.</p>
+     *
+     * <p>Does NOT call {@link BoxDefaults#writeTutorialIfMissing} so that
+     * auto-reload never resurrects the sample config the user deleted.</p>
+     */
+    public static void reloadPreserving() {
+        LAST_LOAD_ERRORS.clear();
+
+        if (!Files.exists(BOXES_DIR)) {
+            CsgoBox.LOGGER.info("Reload preserving skipped: {} does not exist", BOXES_DIR);
+            return;
+        }
+
+        Set<ResourceLocation> previousIds = new HashSet<>(BoxRegistry.getIds());
+        Set<ResourceLocation> seenIds = new HashSet<>();
+        int[] loaded = {0};
+        int[] skipped = {0};
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
+            for (Path file : stream) {
+                String fileName = file.getFileName().toString();
+                if (fileName.startsWith("_")) {
+                    continue;
+                }
+                String boxIdStr = fileName.substring(0, fileName.length() - 5);
+                ResourceLocation boxId;
+                try {
+                    boxId = ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, boxIdStr);
+                } catch (Exception e) {
+                    CsgoBox.LOGGER.error("Invalid box id from filename {}: {}", file, e.getMessage());
+                    recordLoadError(file, fileName, "Invalid identifier: " + e.getMessage());
+                    skipped[0]++;
+                    continue;
+                }
+                seenIds.add(boxId);
+                try {
+                    Optional<BoxDefinition> result = loadFromFile(file);
+                    if (result.isPresent()) {
+                        BoxRegistry.register(result.get());
+                        loaded[0]++;
+                        CsgoBox.LOGGER.info("Reloaded box from JSON: {} -> {}", fileName, result.get().id());
+                    } else {
+                        // loadFromFile already logged the per-grade or per-item reason.
+                        skipped[0]++;
+                    }
+                } catch (Exception e) {
+                    CsgoBox.LOGGER.error("Failed to load box JSON file: {}", file, e);
+                    skipped[0]++;
+                    recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.error("Failed to list box JSON files in {}", BOXES_DIR, e);
+            return;
+        }
+
+        Set<ResourceLocation> toRemove = new HashSet<>(previousIds);
+        toRemove.removeAll(seenIds);
+        int removed = 0;
+        for (ResourceLocation id : toRemove) {
+            BoxRegistry.remove(id);
+            removed++;
+            CsgoBox.LOGGER.info("Removed box no longer present in config: {}", id);
+        }
+
+        CsgoBox.LOGGER.info(
+                "Reload preserving: scanned {} (of {} previously registered); loaded {}, skipped {}, removed {}",
+                seenIds.size(), previousIds.size(), loaded[0], skipped[0], removed);
+    }
+
     public static List<LoadError> getLastLoadErrors() {
         return Collections.unmodifiableList(LAST_LOAD_ERRORS);
     }
@@ -190,10 +277,7 @@ public final class BoxJsonLoader {
         }
         if (json == null) return Optional.empty();
 
-        // Structural validation runs before any field-level fallback so problems
-        // surface as LoadError entries (visible via /csbox errors) rather than
-        // silent fallbacks. Field-level fallback (default weights, etc.) still
-        // runs below — schema issues are diagnostic, not load-blocking.
+        // Schema issues surface as LoadError entries (diagnostic, not load-blocking); field fallback still runs below.
         for (BoxJsonSchemaValidator.SchemaIssue issue : BoxJsonSchemaValidator.validate(json)) {
             CsgoBox.LOGGER.warn("Schema issue in {} field {}: {}",
                     file, issue.field(), issue.reason());

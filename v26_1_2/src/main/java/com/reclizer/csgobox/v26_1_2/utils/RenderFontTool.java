@@ -58,13 +58,11 @@ public final class RenderFontTool {
         int ellipsisScaled = Math.round(font.width(ellipsis) * scale);
         int availableScaled = maxPixelWidth - ellipsisScaled;
         if (availableScaled <= 0) {
-            // Even the ellipsis alone doesn't fit; render it anyway so the
-            // caller gets visual feedback instead of a silent empty draw.
+            // Even the ellipsis alone doesn't fit; render it anyway for feedback.
             return drawString(guiGraphics, font, FormattedCharSequence.forward(ellipsis, Style.EMPTY),
                     pX, pY, ox, oy, scale, pColor);
         }
-        // Binary search for the longest prefix that, when rendered at scale,
-        // still fits within availableScaled pixels.
+        // Binary search the longest prefix that fits within availableScaled pixels.
         int bestLen = 0;
         int low = 0;
         int high = text.length();

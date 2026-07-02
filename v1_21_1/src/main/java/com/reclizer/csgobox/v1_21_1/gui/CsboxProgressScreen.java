@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v1_21_1.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
+import com.reclizer.csgobox.v1_21_1.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
@@ -198,8 +199,26 @@ public class CsboxProgressScreen extends Screen {
         }
 
         if (startTime == totalTicks) {
-            if (!resultItem.isEmpty()) {
-                Minecraft.getInstance().setScreen(new CsLookItemScreen(resultItem, resultGrade));
+            PacketBoxBulkResult bulk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId);
+            // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
+            // Screen.removed() (not onClose()), so the onClose hideGui=false
+            // reset below would never run otherwise, leaving the HUD hidden
+            // after bulk open completes.
+            if (this.minecraft != null) {
+                this.minecraft.options.hideGui = false;
+            }
+            if (bulk != null && !bulk.items().isEmpty()) {
+                List<ItemStack> allItems = new ArrayList<>();
+                List<Integer> allGrades = new ArrayList<>();
+                if (!this.resultItem.isEmpty()) {
+                    allItems.add(this.resultItem.copy());
+                    allGrades.add(this.resultGrade);
+                }
+                allItems.addAll(bulk.items());
+                allGrades.addAll(bulk.grades());
+                Minecraft.getInstance().setScreen(new CsboxBulkResultScreen(this.player, allItems, allGrades));
+            } else if (!this.resultItem.isEmpty()) {
+                Minecraft.getInstance().setScreen(new CsLookItemScreen(this.resultItem, this.resultGrade));
             } else {
                 this.onClose();
             }

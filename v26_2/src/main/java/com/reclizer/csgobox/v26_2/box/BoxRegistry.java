@@ -40,10 +40,6 @@ public final class BoxRegistry {
         BOX_REGISTRY.clear();
     }
 
-    public static boolean contains(Identifier id) {
-        return BOX_REGISTRY.containsKey(id);
-    }
-
     public static void remove(Identifier id) {
         BOX_REGISTRY.remove(id);
     }

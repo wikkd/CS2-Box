@@ -40,10 +40,6 @@ public final class BoxRegistry {
         BOX_REGISTRY.clear();
     }
 
-    public static boolean contains(ResourceLocation id) {
-        return BOX_REGISTRY.containsKey(id);
-    }
-
     public static void remove(ResourceLocation id) {
         BOX_REGISTRY.remove(id);
     }

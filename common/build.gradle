@@ -30,10 +30,18 @@ tasks.withType(Jar).configureEach {
             "Implementation-Version": project.version
         )
     }
+    // Exclude anonymous/inner-class stubs left over by incremental javac when
+    // a class is moved to a new package between source revisions. See
+    // v26_1_2/build.gradle for the rationale.
+    exclude '**/*+[0-9]+*'
 }
 
 dependencies {
     api 'com.google.code.gson:gson:2.10.1'
+    // BoxDefaults / TutorialFetcher / TutorialSources (migrated from per-platform
+    // copies in the v1.0.7 dedup pass) use SLF4J directly. SLF4J is provided
+    // transitively by neoforge at runtime, so we only need the API here.
+    api 'org.slf4j:slf4j-api:2.0.13'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

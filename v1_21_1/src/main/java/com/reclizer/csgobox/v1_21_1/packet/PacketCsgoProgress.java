@@ -4,6 +4,7 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v1_21_1.capability.ModCapability;
+import com.reclizer.csgobox.v1_21_1.command.CsboxCommand;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.utils.RandomItem;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -63,7 +64,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            if (isOpenBlocked(player)) {
+            if (isOpenBlockedStatic(player)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
                 }
@@ -86,7 +87,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            if (!tryConsumeKeys(player, box)) {
+            if (!tryConsumeKeys(player, box, 1)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
                 }
@@ -134,7 +135,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 animationGrades.set(winningIndex, finalGrade);
             }
 
-            blockFurtherOpens(player);
+            blockFurtherOpensStatic(player);
 
             player.setData(ModCapability.PLAYER_DATA,
                     new CsboxPlayerData(0L, 0, ItemStack.EMPTY, 0));
@@ -162,6 +163,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             if (player instanceof ServerPlayer sp) {
                 sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
+                CsboxCommand.syncOpenedBoxesToScoreboard(sp);
                 if (CsgoBox.CONFIG.enableAchievements()) {
                     OpenedBoxTrigger.INSTANCE.trigger(sp);
                 }
@@ -191,7 +193,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         ));
     }
 
-    private static boolean isOpenBlocked(Player player) {
+    static boolean isOpenBlockedStatic(Player player) {
         long now = player.level().getGameTime();
         Long blockedUntil = OPEN_BLOCKED_UNTIL_TICK.get(player.getUUID());
         if (blockedUntil == null || now >= blockedUntil) {
@@ -201,7 +203,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return true;
     }
 
-    private static void blockFurtherOpens(Player player) {
+    static void blockFurtherOpensStatic(Player player) {
         long now = player.level().getGameTime();
         OPEN_BLOCKED_UNTIL_TICK.put(player.getUUID(), now + serverOpenCooldownTicks());
     }
@@ -219,17 +221,105 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return Mth.clamp(fallback, 1, 5);
     }
 
-    private static boolean tryConsumeKeys(Player entity, ItemStack box) {
+    /**
+     * Consume up to {@code count} keys matching the box's key id from anywhere
+     * in the player's inventory (items, armor, offhand). If the box has no key
+     * requirement, returns true without touching inventory. Returns true only
+     * when the requested count was fully consumed (or none was required).
+     *
+     * <p>Scans all 41 player inventory slots — the previous implementation
+     * only walked {@code items} (36 hotbar + main slots), so a player holding
+     * the key in offhand or wearing a key-as-armor would be silently
+     * under-deducted. The bulk path would then crash with a "missing keys"
+     * assertion and refund the boxes; the operator-facing log only saw the
+     * refund, never the under-count cause.</p>
+     */
+    static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
         ResourceLocation keyId = ItemCsgoBox.getKey(box);
-        if (keyId == null || keyId.equals(ResourceLocation.parse("minecraft:air"))) {
+        return tryConsumeKeys(entity, keyId, count);
+    }
+
+    /**
+     * Consume keys by their id directly. This avoids repeated lookups of the key id
+     * from the box, which could return different values if the player's hand changes
+     * between calls (e.g., during bulk operations).
+     */
+    static boolean tryConsumeKeys(Player entity, ResourceLocation keyId, int count) {
+        if (keyId == null || keyId.toString().equals("minecraft:air")) {
             return true;
         }
-        for (ItemStack stack : entity.getInventory().items) {
-            if (keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                stack.shrink(1);
-                return true;
-            }
+        if (count <= 0) {
+            return true;
         }
-        return false;
+        int remaining = count;
+        remaining = consumeFromList(entity.getInventory().items, keyId, null, remaining);
+        if (remaining > 0) remaining = consumeFromList(entity.getInventory().armor, keyId, null, remaining);
+        if (remaining > 0) remaining = consumeFromList(entity.getInventory().offhand, keyId, null, remaining);
+        return remaining == 0;
+    }
+
+    /**
+     * Consume up to {@code count} boxes matching the template (same item,
+     * same components) from anywhere in the player's inventory (items, armor,
+     * offhand). Returns true only when the full count was consumed.
+     */
+    static boolean tryConsumeBoxes(Player entity, ItemStack box, int count) {
+        if (count <= 0) {
+            return true;
+        }
+        int remaining = count;
+        remaining = consumeFromList(entity.getInventory().items, null, box, remaining);
+        if (remaining > 0) remaining = consumeFromList(entity.getInventory().armor, null, box, remaining);
+        if (remaining > 0) remaining = consumeFromList(entity.getInventory().offhand, null, box, remaining);
+        return remaining == 0;
+    }
+
+    /**
+     * Shrinks matching stacks from the given inventory slice until either the
+     * requested count is satisfied or the slice is exhausted. Returns the
+     * remaining (un-fulfilled) count.
+     *
+     * <p>Either {@code keyId} (for keys) or {@code boxTemplate} (for boxes)
+     * must be non-null; the other is ignored. Keys match by item id; boxes
+     * match by item type + components ({@code
+     * ItemStack.isSameItemSameComponents}).</p>
+     */
+    private static int consumeFromList(java.util.List<ItemStack> stacks,
+                                       ResourceLocation keyId,
+                                       ItemStack boxTemplate,
+                                       int remaining) {
+        for (ItemStack stack : stacks) {
+            if (remaining <= 0) {
+                return 0;
+            }
+            if (stack.isEmpty()) {
+                continue;
+            }
+            boolean matches;
+            if (keyId != null) {
+                // CRITICAL: skip box instances. ItemCsgoBox.getKey(box) returns
+                // the box's own configured key id (via getBoxId → ITEM.getKey
+                // fallback), so a naive "keyId equals getKey(stack.item)"
+                // check would match boxes that the player also happens to own
+                // and would shrink them under the guise of "key consumption".
+                // In the bulk path this led to boxes being double-counted
+                // (once as boxes, once as keys) — 5 boxes + 5 keys opened
+                // 5 times would drain 5 boxes + 5 boxes = 10 boxes total.
+                if (stack.getItem() instanceof ItemCsgoBox) {
+                    continue;
+                }
+                matches = keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            } else {
+                matches = stack.getItem() instanceof ItemCsgoBox
+                        && ItemStack.isSameItemSameComponents(stack, boxTemplate);
+            }
+            if (!matches) {
+                continue;
+            }
+            int take = Math.min(remaining, stack.getCount());
+            stack.shrink(take);
+            remaining -= take;
+        }
+        return remaining;
     }
 }

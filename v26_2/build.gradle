@@ -163,6 +163,10 @@ tasks.named('jar', Jar).configure {
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
+    // Exclude anonymous/inner-class stubs left over by incremental javac when
+    // a class is moved to a new package between source revisions. See
+    // v26_1_2/build.gradle for the rationale.
+    exclude '**/*+[0-9]+*'
 }
 
 tasks.withType(JavaCompile).configureEach {

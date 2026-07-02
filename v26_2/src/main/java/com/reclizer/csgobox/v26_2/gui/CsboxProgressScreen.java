@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.gui;
 
 import com.reclizer.csgobox.v26_2.CsgoBox;
+import com.reclizer.csgobox.v26_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
@@ -204,8 +205,19 @@ public class CsboxProgressScreen extends Screen {
         }
 
         if (startTime == totalTicks) {
-            if (!resultItem.isEmpty()) {
-                Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(resultItem, resultGrade));
+            PacketBoxBulkResult bulk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId);
+            if (bulk != null && !bulk.items().isEmpty()) {
+                List<ItemStack> allItems = new ArrayList<>();
+                List<Integer> allGrades = new ArrayList<>();
+                if (!this.resultItem.isEmpty()) {
+                    allItems.add(this.resultItem.copy());
+                    allGrades.add(this.resultGrade);
+                }
+                allItems.addAll(bulk.items());
+                allGrades.addAll(bulk.grades());
+                Minecraft.getInstance().setScreenAndShow(new CsboxBulkResultScreen(this.player, allItems, allGrades));
+            } else if (!this.resultItem.isEmpty()) {
+                Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(this.resultItem, this.resultGrade));
             } else {
                 this.onClose();
             }

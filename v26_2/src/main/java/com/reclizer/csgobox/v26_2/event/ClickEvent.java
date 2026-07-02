@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.event;
 
 import com.reclizer.csgobox.v26_2.CsgoBox;
+import com.reclizer.csgobox.v26_2.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.v26_2.gui.CsboxScreen;
 import com.reclizer.csgobox.v26_2.item.ModItems;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
@@ -41,7 +42,14 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.execute(() -> mc.setScreenAndShow(new CsboxScreen()));
+                boolean shift = mc.options.keyShift.isDown();
+                mc.execute(() -> {
+                    if (shift) {
+                        mc.setScreenAndShow(new CsboxBulkOverviewScreen());
+                    } else {
+                        mc.setScreenAndShow(new CsboxScreen());
+                    }
+                });
             }
         }
     }

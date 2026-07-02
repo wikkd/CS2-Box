@@ -52,21 +52,24 @@ public class ItemCsgoBox extends Item {
         super(properties.stacksTo(16).rarity(Rarity.EPIC));
     }
 
-    // canPerformAction override deliberately omitted in 26.1.2: Item.canPerformAction
-    // no longer exists on the base class (ItemAbility class still lives in
-    // net.neoforged.neoforge.common, but the dispatch point on Item was removed).
-    // Defer fully-removing this hook until runtime semantics are confirmed.
-    public boolean canPerformAction(ItemStack stack, net.neoforged.neoforge.common.ItemAbility itemAbility) {
-        return false;
-    }
-
     public static Optional<BoxDefinition> getDefinition(ItemStack stack) {
         Identifier id = getBoxId(stack);
         return id == null ? Optional.empty() : Optional.ofNullable(BoxRegistry.get(id));
     }
 
     public static Identifier getBoxId(ItemStack stack) {
-        return stack.getItem() instanceof ItemCsgoBox ? stack.get(BOX_ID.get()) : null;
+        Identifier id = stack.get(BOX_ID.get());
+        if (id != null) {
+            return id;
+        }
+        // Fallback for vanilla /give: use the item's own registry id as the
+        // default box_id so `/give @p csgobox:csgo_box` Just Works without any
+        // components syntax. The player can still override via vanilla
+        // components: `/give @p csgobox:csgo_box[csgobox:box_id='"csgobox:..."']`
+        if (stack.getItem() instanceof ItemCsgoBox) {
+            return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        }
+        return null;
     }
 
     public static ItemStack setBoxId(Identifier boxId, ItemStack stack) {

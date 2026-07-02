@@ -13,23 +13,6 @@ public final class RandomItem {
     private RandomItem() {
     }
 
-    public static ItemStack randomItems(Random rng, int grade, Map<ItemStack, Integer> itemMap) {
-        if (itemMap == null || itemMap.isEmpty()) {
-            return ItemStack.EMPTY;
-        }
-        List<ItemStack> candidates = new ArrayList<>();
-        for (Map.Entry<ItemStack, Integer> entry : itemMap.entrySet()) {
-            ItemStack stack = entry.getKey();
-            if (stack != null && !stack.isEmpty() && entry.getValue() != null && entry.getValue() == grade) {
-                candidates.add(stack);
-            }
-        }
-        if (candidates.isEmpty()) {
-            return ItemStack.EMPTY;
-        }
-        return candidates.get(rng.nextInt(candidates.size())).copy();
-    }
-
     public static int randomItemsGrade(Random rng, int[] weights) {
         if (weights == null || weights.length == 0) return 1;
         long totalWeight = 0L;

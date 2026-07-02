@@ -62,7 +62,18 @@ public class ItemCsgoBox extends Item {
     }
 
     public static ResourceLocation getBoxId(ItemStack stack) {
-        return stack.getItem() instanceof ItemCsgoBox ? stack.get(BOX_ID.get()) : null;
+        ResourceLocation id = stack.get(BOX_ID.get());
+        if (id != null) {
+            return id;
+        }
+        // Fallback for vanilla /give: use the item's own registry id as the
+        // default box_id so `/give @p csgobox:csgo_box` Just Works without any
+        // components syntax. The player can still override via vanilla
+        // components: `/give @p csgobox:csgo_box[csgobox:box_id='"csgobox:..."']`
+        if (stack.getItem() instanceof ItemCsgoBox) {
+            return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        }
+        return null;
     }
 
     public static ItemStack setBoxId(ResourceLocation boxId, ItemStack stack) {

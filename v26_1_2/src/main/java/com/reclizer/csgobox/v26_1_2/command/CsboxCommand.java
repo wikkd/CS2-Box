@@ -17,10 +17,19 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stat;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.server.ServerScoreboard;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxJsonLoader;
@@ -59,6 +68,8 @@ public final class CsboxCommand {
         return builder.buildFuture();
     };
 
+    private static final String SCOREBOARD_OBJECTIVE_NAME = "csbox_opened";
+
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
@@ -76,36 +87,6 @@ public final class CsboxCommand {
                         .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .executes(ctx -> showBoxInfo(IdentifierArgument.getId(ctx, "box"), ctx.getSource()))))
-                .then(Commands.literal("add")
-                        .then(Commands.argument("box", StringArgumentType.string())
-                                .suggests((ctx, builder) -> {
-                                    SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
-                                    return builder.buildFuture();
-                                })
-                                .then(Commands.argument("grade", StringArgumentType.word())
-                                        .suggests(CsboxCommand::gradeSuggestions)
-                                        .then(Commands.literal("hand")
-                                                .then(Commands.argument("count", IntegerArgumentType.integer(1))
-                                                        .executes(ctx -> addHandItem(
-                                                                StringArgumentType.getString(ctx, "box"),
-                                                                StringArgumentType.getString(ctx, "grade"),
-                                                                IntegerArgumentType.getInteger(ctx, "count"),
-                                                                ctx.getSource().getPlayerOrException()
-                                                        )))
-                                        )
-                                        .then(Commands.literal("inventory")
-                                                .executes(ctx -> addInventoryItems(
-                                                        StringArgumentType.getString(ctx, "box"),
-                                                        StringArgumentType.getString(ctx, "grade"),
-                                                        ctx.getSource().getPlayerOrException()
-                                                )))
-                                )
-                                .executes(ctx -> addBoxByName(StringArgumentType.getString(ctx, "box"), ctx.getSource()))
-                        )
-                        .executes(ctx -> {
-                            ctx.getSource().sendSuccess(() -> Component.translatable("commands.csgobox.add.usage"), false);
-                            return Command.SINGLE_SUCCESS;
-                        }))
                 .then(Commands.literal("set")
                         .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
@@ -137,46 +118,24 @@ public final class CsboxCommand {
                                 )
                         )
                 )
-                .then(Commands.literal("give")
-                        .then(Commands.argument("box", IdentifierArgument.id())
-                                .suggests(BOX_SUGGESTIONS)
-                                .executes(ctx -> giveBox(
-                                        IdentifierArgument.getId(ctx, "box"),
-                                        1,
-                                        List.of(ctx.getSource().getPlayerOrException()),
-                                        ctx.getSource()
-                                ))
-                                .then(Commands.argument("count", IntegerArgumentType.integer(1))
-                                        .executes(ctx -> giveBox(
-                                                IdentifierArgument.getId(ctx, "box"),
-                                                IntegerArgumentType.getInteger(ctx, "count"),
-                                                List.of(ctx.getSource().getPlayerOrException()),
-                                                ctx.getSource()
-                                        ))
-                                        .then(Commands.argument("player", EntityArgument.player())
-                                                .executes(ctx -> giveBox(
-                                                        IdentifierArgument.getId(ctx, "box"),
-                                                        IntegerArgumentType.getInteger(ctx, "count"),
-                                                        EntityArgument.getPlayers(ctx, "player"),
-                                                        ctx.getSource()
-                                                ))
-                                        )
-                                )
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(ctx -> giveBox(
-                                                IdentifierArgument.getId(ctx, "box"),
-                                                1,
-                                                EntityArgument.getPlayers(ctx, "player"),
-                                                ctx.getSource()
-                                        ))
-                                )
-                        )
-                )
                 .then(Commands.literal("reload")
                         .executes(CsboxCommand::reloadBoxes)
                 )
                 .then(Commands.literal("errors")
                         .executes(CsboxCommand::showLoadErrors)
+                )
+                .then(Commands.literal("scoreboard")
+                        .executes(CsboxCommand::scoreboardStatus)
+                        .then(Commands.literal("on")
+                                .executes(CsboxCommand::scoreboardOn))
+                        .then(Commands.literal("off")
+                                .executes(CsboxCommand::scoreboardOff))
+                        .then(Commands.literal("list")
+                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.LIST)))
+                        .then(Commands.literal("sidebar")
+                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.SIDEBAR)))
+                        .then(Commands.literal("belowName")
+                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.BELOW_NAME)))
                 )
         );
     }
@@ -187,13 +146,11 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.list"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.list_detail"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.info"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.add_create"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.add_item"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.add_inventory"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_count"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_weight"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.scoreboard"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
     }
@@ -271,92 +228,6 @@ public final class CsboxCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int addBoxByName(String name, CommandSourceStack source) {
-        Identifier boxId = resolveBoxId(name);
-        if (BoxRegistry.contains(boxId)) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.already_exists",
-                    boxId.toString()), false);
-            return Command.SINGLE_SUCCESS;
-        }
-        BoxDefinition newBox = BoxDefinition.builder(boxId, name).build();
-        BoxRegistry.register(newBox);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.success", boxId.toString()), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_steps"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_add", boxId.toString()), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_info", boxId.toString()), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.add.create.next_give", boxId.toString()), false);
-        BoxJsonLoader.saveToFile(newBox);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int addHandItem(String boxArg, String gradeId, int count, ServerPlayer player) throws CommandSyntaxException {
-        Identifier boxId = resolveBoxId(boxArg);
-        BoxDefinition def = getBoxOrThrow(boxId);
-        ItemStack handItem = player.getMainHandItem();
-        if (handItem.isEmpty()) {
-            player.sendSystemMessage(Component.translatable("commands.csgobox.add.item.empty_hand"));
-            return 0;
-        }
-        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
-        List<ItemStack> newItems = new ArrayList<>(targetGrade.items());
-        newItems.add(handItem.copyWithCount(count));
-        GradeGroup updatedGrade = new GradeGroup(
-                targetGrade.id(), targetGrade.displayName(),
-                targetGrade.color(), targetGrade.weight(), newItems
-        );
-        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
-        BoxRegistry.register(updatedBox);
-        player.sendSystemMessage(Component.translatable("commands.csgobox.add.item.success",
-                handItem.getItem().getName(handItem).getString(), count, boxId.toString(), gradeId));
-        BoxJsonLoader.saveToFile(updatedBox);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int addInventoryItems(String boxArg, String gradeId, ServerPlayer player) throws CommandSyntaxException {
-        Identifier boxId = resolveBoxId(boxArg);
-        BoxDefinition def = getBoxOrThrow(boxId);
-        if (player.isCreative()) {
-            player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.creative_mode"));
-            return 0;
-        }
-        GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
-        List<ItemStack> existingItems = new ArrayList<>(targetGrade.items());
-        List<ItemStack> newItemsToAdd = new ArrayList<>();
-        int addedCount = 0;
-        int skippedCount = 0;
-        for (ItemStack item : player.getInventory().getNonEquipmentItems()) {
-            if (item.isEmpty()) continue;
-            boolean alreadyExists = existingItems.stream().anyMatch(existing ->
-                    ItemStack.isSameItemSameComponents(existing, item));
-            if (!alreadyExists) {
-                newItemsToAdd.add(item.copy());
-                existingItems.add(item.copy());
-                addedCount++;
-            } else {
-                skippedCount++;
-            }
-        }
-        if (addedCount == 0) {
-            player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.no_items"));
-            return 0;
-        }
-        GradeGroup updatedGrade = new GradeGroup(
-                targetGrade.id(),
-                targetGrade.displayName(),
-                targetGrade.color(),
-                targetGrade.weight(),
-                new ArrayList<>(existingItems)
-        );
-        BoxDefinition updatedBox = def.withUpdatedGrade(gradeId, updatedGrade);
-        BoxRegistry.register(updatedBox);
-        player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.success", addedCount, boxId.toString(), gradeId));
-        if (skippedCount > 0) {
-            player.sendSystemMessage(Component.translatable("commands.csgobox.add.inventory.skipped", skippedCount));
-        }
-        BoxJsonLoader.saveToFile(updatedBox);
-        return addedCount;
-    }
-
     private static int setItemCount(Identifier boxId, String gradeId, int index, int count, CommandSourceStack source) throws CommandSyntaxException {
         BoxDefinition def = getBoxOrThrow(boxId);
         GradeGroup targetGrade = getGradeOrThrow(def, gradeId);
@@ -408,31 +279,9 @@ public final class CsboxCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int giveBox(Identifier boxId, int count, Collection<ServerPlayer> targets, CommandSourceStack source) throws CommandSyntaxException {
-        BoxDefinition def = getBoxOrThrow(boxId);
-        ItemStack boxStack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
-        ItemCsgoBox.setBoxId(boxId, boxStack);
-        boxStack.setCount(Math.min(count, boxStack.getMaxStackSize()));
-        for (ServerPlayer player : targets) {
-            boolean added = player.getInventory().add(boxStack.copy());
-            if (!added) {
-                ItemEntity entity = player.drop(boxStack, false);
-                if (entity != null) {
-                    entity.setNoPickUpDelay();
-                    entity.setTarget(player.getUUID());
-                }
-            }
-            player.containerMenu.broadcastChanges();
-        }
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.give.success",
-                def.name().getString(), String.valueOf(count), targets.iterator().next().getName().getString()), true);
-        return targets.size();
-    }
-
     private static int reloadBoxes(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
-        BoxRegistry.clear();
-        BoxJsonLoader.loadAll();
+        BoxJsonLoader.reloadPreserving();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
     }
@@ -454,6 +303,115 @@ public final class CsboxCommand {
             source.sendSuccess(err::toChatMessage, false);
         }
         return errors.size();
+    }
+
+    private static int scoreboardStatus(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        MinecraftServer server = source.getServer();
+        if (server == null) {
+            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
+            return 0;
+        }
+        Scoreboard sb = server.getScoreboard();
+        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
+        if (obj == null) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.status_off"), false);
+            return 0;
+        }
+        String slot = currentDisplaySlotName(sb, obj);
+        source.sendSuccess(() -> Component.translatable(
+                "commands.csgobox.scoreboard.status_on", slot), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int scoreboardOn(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        MinecraftServer server = source.getServer();
+        if (server == null) {
+            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
+            return 0;
+        }
+        Scoreboard sb = server.getScoreboard();
+        if (sb.getObjective(SCOREBOARD_OBJECTIVE_NAME) != null) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.already_on"), false);
+            return 0;
+        }
+        Objective obj = sb.addObjective(
+                SCOREBOARD_OBJECTIVE_NAME,
+                ObjectiveCriteria.DUMMY,
+                Component.translatable("commands.csgobox.scoreboard.objective_display_name"),
+                ObjectiveCriteria.RenderType.INTEGER,
+                true,
+                null
+        );
+        if (sb instanceof ServerScoreboard ssb) {
+            ssb.setDisplayObjective(DisplaySlot.LIST, obj);
+        }
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            syncOpenedBoxesToScoreboard(p);
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.on_success"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int scoreboardOff(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        MinecraftServer server = source.getServer();
+        if (server == null) {
+            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
+            return 0;
+        }
+        Scoreboard sb = server.getScoreboard();
+        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
+        if (obj == null) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.off_not_found"), false);
+            return 0;
+        }
+        sb.removeObjective(obj);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.off_success"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int scoreboardSetDisplay(CommandContext<CommandSourceStack> ctx, DisplaySlot slot) {
+        CommandSourceStack source = ctx.getSource();
+        MinecraftServer server = source.getServer();
+        if (server == null) {
+            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
+            return 0;
+        }
+        Scoreboard sb = server.getScoreboard();
+        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
+        if (obj == null) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.display_not_set"), false);
+            return 0;
+        }
+        if (sb instanceof ServerScoreboard ssb) {
+            ssb.setDisplayObjective(slot, obj);
+        }
+        source.sendSuccess(() -> Component.translatable(
+                "commands.csgobox.scoreboard.display_changed", slot.getSerializedName()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static String currentDisplaySlotName(Scoreboard sb, Objective obj) {
+        if (sb.getDisplayObjective(DisplaySlot.LIST) == obj) return "list";
+        if (sb.getDisplayObjective(DisplaySlot.SIDEBAR) == obj) return "sidebar";
+        if (sb.getDisplayObjective(DisplaySlot.BELOW_NAME) == obj) return "belowName";
+        return "none";
+    }
+
+    public static void syncOpenedBoxesToScoreboard(ServerPlayer player) {
+        Stat<Identifier> stat = CsgoBox.OPENED_BOXES_STAT;
+        if (stat == null) return;
+        MinecraftServer server = player.level().getServer();
+        if (server == null) return;
+        Scoreboard sb = server.getScoreboard();
+        Objective objective = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
+        if (objective == null) return;
+        int value = player.getStats().getValue(stat);
+        ScoreHolder holder = ScoreHolder.forNameOnly(player.getScoreboardName());
+        ScoreAccess score = sb.getOrCreatePlayerScore(holder, objective);
+        score.set(value);
     }
 
     private static Identifier resolveBoxId(String boxArg) {
