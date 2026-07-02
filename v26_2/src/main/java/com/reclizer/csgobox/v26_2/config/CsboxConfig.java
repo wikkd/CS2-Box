@@ -15,6 +15,7 @@ public class CsboxConfig {
     private final ModConfigSpec.BooleanValue showItemNamesValue;
     private final ModConfigSpec.EnumValue<AnimationSpeed> animationSpeedValue;
     private final ModConfigSpec.IntValue globalDropRatePercentValue;
+    private final ModConfigSpec.EnumValue<ErrorChatAudience> jsonErrorAudienceValue;
 
     public CsboxConfig(ModConfigSpec.Builder builder) {
         builder.comment("General settings").push("general");
@@ -36,6 +37,9 @@ public class CsboxConfig {
         this.enableAchievementsValue = builder
                 .comment("Enable the achievement system (stats are still accumulated when off)")
                 .define("enableAchievements", true);
+        this.jsonErrorAudienceValue = builder
+                .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
+                .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);
         builder.pop();
 
         builder.comment("Sound settings").push("sound");
@@ -107,9 +111,18 @@ public class CsboxConfig {
         return globalDropRatePercentValue.get();
     }
 
+    public ErrorChatAudience jsonErrorAudience() {
+        return jsonErrorAudienceValue.get();
+    }
+
     public enum AnimationSpeed {
         SLOW,
         NORMAL,
         FAST
+    }
+
+    public enum ErrorChatAudience {
+        OP_ONLY,
+        EVERYONE
     }
 }

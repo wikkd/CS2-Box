@@ -25,6 +25,7 @@ import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxJsonLoader;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.box.GradeGroup;
+import com.reclizer.csgobox.v1_21_1.box.LoadError;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -172,6 +173,9 @@ public final class CsboxCommand {
                 )
                 .then(Commands.literal("reload")
                         .executes(CsboxCommand::reloadBoxes)
+                )
+                .then(Commands.literal("errors")
+                        .executes(CsboxCommand::showLoadErrors)
                 )
         );
     }
@@ -430,6 +434,25 @@ public final class CsboxCommand {
         BoxJsonLoader.loadAll();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
+    }
+
+    private static int showLoadErrors(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        java.util.List<LoadError> errors = BoxJsonLoader.getLastLoadErrors();
+
+        if (errors.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("[CS2-Box] 当前无箱子加载错误")
+                    .withStyle(s -> s.withColor(net.minecraft.ChatFormatting.GREEN)), false);
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.literal(
+                "[CS2-Box] 当前 " + errors.size() + " 个加载错误:")
+                .withStyle(s -> s.withColor(net.minecraft.ChatFormatting.YELLOW)), false);
+        for (LoadError err : errors) {
+            source.sendSuccess(err::toChatMessage, false);
+        }
+        return errors.size();
     }
 
     private static ResourceLocation resolveBoxId(String boxArg) {
