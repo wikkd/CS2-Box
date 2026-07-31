@@ -20,7 +20,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.security.SecureRandom;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -36,7 +36,7 @@ import java.util.ArrayList;
 public record PacketCsgoProgress(long requestId) implements CustomPacketPayload {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new HashMap<>();
+    private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new ConcurrentHashMap<>();
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
@@ -207,6 +207,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         long now = player.level().getGameTime();
         OPEN_BLOCKED_UNTIL_TICK.put(player.getUUID(), now + serverOpenCooldownTicks());
     }
+    /**
+     * Removes expired cooldown entries so the map does not grow without bound.
+     * Invoked periodically from the server tick loop ({@code ModEvents#serverTick}).
+     */
+    public static void tickOpenBlockMap(long nowGameTime) {
+        OPEN_BLOCKED_UNTIL_TICK.entrySet().removeIf(entry -> nowGameTime >= entry.getValue());
+    }
+
 
     private static int serverOpenCooldownTicks() {
         return 10;

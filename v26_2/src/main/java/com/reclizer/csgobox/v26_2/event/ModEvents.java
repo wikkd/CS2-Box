@@ -16,6 +16,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.Random;
 
@@ -73,4 +74,15 @@ public final class ModEvents {
             com.reclizer.csgobox.v26_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
         }
     }
+    /**
+     * Periodically prunes expired open-cooldown entries from
+     * {@link com.reclizer.csgobox.v26_2.packet.PacketCsgoProgress#tickOpenBlockMap(long)} so the map stays bounded.
+     */
+    @SubscribeEvent
+    public static void serverTick(ServerTickEvent.Pre event) {
+        if (event.getServer().getTickCount() % 100 == 0) {
+            com.reclizer.csgobox.v26_2.packet.PacketCsgoProgress.tickOpenBlockMap(event.getServer().overworld().getGameTime());
+        }
+    }
+
 }

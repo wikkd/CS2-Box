@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v1_21_11.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v1_21_11.CsgoBox;
 import com.reclizer.csgobox.v1_21_11.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v1_21_11.packet.PacketBoxOpenResult;
@@ -11,7 +10,8 @@ import com.reclizer.csgobox.utils.OverlayColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
@@ -65,7 +65,7 @@ public class CsboxProgressScreen extends Screen {
     private int waitingTicks = 0;
 
     public CsboxProgressScreen(Player player, long requestId) {
-        super(Component.literal("cs_progress"));
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("cs_progress"));
         this.player = player;
         this.expectedRequestId = requestId;
         this.randomWidth = ThreadLocalRandom.current().nextFloat() * (111F - 93.5F) + 93.5F;
@@ -101,15 +101,15 @@ public class CsboxProgressScreen extends Screen {
         if (this.minecraft == null) return;
         this.minecraft.options.hideGui = true;
 
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-
         if (openTime < 5) return;
 
-        float widthNewAdd = renderWidthAdd;
+        // Compute the resize-adjusted render position separately from the
+        // lastRenderWidth we keep for next-tick interpolation. lastRenderWidth
+        // must hold the raw tick value so a window resize mid-animation does
+        // not produce a one-frame snap when the lerp runs on the next tick.
+        float renderWidthNow = renderWidthAdd;
         if (this.width != startWidth) {
-            widthNewAdd *= this.width / startWidth;
+            renderWidthNow *= this.width / startWidth;
         }
 
         float progress = Mth.clamp(partialTicks, 0.0F, 1.0F);
@@ -120,27 +120,33 @@ public class CsboxProgressScreen extends Screen {
 
             float itemX = this.width * randomWidth / 100F
                     + i * this.width * 20F / 100F
-                    - Mth.lerp(progress, lastRenderWidth, widthNewAdd);
+                    - Mth.lerp(progress, lastRenderWidth, renderWidthNow);
 
             IconListTools.renderItemProgress(player, guiGraphics, itemStack,
                     itemX, this.height * 37F / 100F,
                     this.width, this.height, gradeInput.get(i));
         }
 
-        lastRenderWidth = widthNewAdd;
+        lastRenderWidth = renderWidthAdd;
 
         int goldLineTop = this.height * 37 / 100;
         int goldLineBottom = goldLineTop + this.height * 25 / 100;
         guiGraphics.fill(this.width / 2, goldLineTop,
                 this.width / 2 + 2, goldLineBottom,
                 ColorTools.argbColor(128, 255, 215, 0));
-        RenderSystem.disableBlend();
 
-        RenderSystem.enableBlend();
-        Identifier bgTex = Identifier.parse("csgobox:textures/screens/csgo_background.png");
-        guiGraphics.blit(RenderType.GUI_TEXTURED,
-                bgTex, 0, 0, 0F, 0F, this.width, this.height, this.width, this.height, 0xFFFFFFFF);
-        RenderSystem.disableBlend();
+        guiGraphics.blit(
+                RenderPipelines.GUI_TEXTURED,
+                Identifier.parse("csgobox:textures/screens/csgo_background.png"),
+                0, 0,
+                0F, 0F,
+                this.width, this.height,
+                // Match v1_21.1: use screen size as textureWidth/textureHeight so UV
+                // becomes 0..1, sampling the FULL texture (not just 96% which would
+                // miss the right/bottom frame). Texture is squished 4% to fit screen
+                // (1920/2000 = 0.96) — same aspect ratio, no visual distortion.
+                this.width, this.height
+        );
     }
 
     @Override
@@ -254,7 +260,7 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+    public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.onClose();
             return true;

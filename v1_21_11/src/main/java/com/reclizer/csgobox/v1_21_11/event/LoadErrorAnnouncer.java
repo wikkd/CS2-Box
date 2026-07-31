@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v1_21_11.box.LoadError;
 import com.reclizer.csgobox.v1_21_11.config.CsboxConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permissions;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -29,7 +30,8 @@ public final class LoadErrorAnnouncer {
         if (!BoxJsonLoader.hasLoadErrors()) return;
 
         CsboxConfig.ErrorChatAudience audience = CsgoBox.CONFIG.jsonErrorAudience();
-        if (audience == CsboxConfig.ErrorChatAudience.OP_ONLY && !sp.hasPermissions(2)) {
+        if (audience == CsboxConfig.ErrorChatAudience.OP_ONLY
+                && !sp.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
             return;
         }
 

@@ -2,26 +2,32 @@ package com.reclizer.csgobox.v1_21_11.utils;
 
 import com.reclizer.csgobox.utils.ColorTools;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * Utilities for rendering item icons and rarity frames in GUI overlays.
- * Adapted from v26_1_2 for NeoForge 21.x / MC 1.21.3+ API.
- */
 public final class IconListTools {
 
     private static final Identifier GOLD_ITEM_TEXTURE =
             Identifier.parse("csgobox:textures/screens/gold_item.png");
 
+    // Real pixel dimensions of gold_item.png (verified via `file`).
+    // Required as textureWidth / textureHeight in 26.1.2's
+    // blit(RenderPipeline, Identifier, x, y, u0, v0, w, h, texW, texH).
     private static final int GOLD_ITEM_TEX_WIDTH = 32;
     private static final int GOLD_ITEM_TEX_HEIGHT = 24;
 
     private IconListTools() {
     }
 
+    // Letterbox the 32x24 gold_item icon into an arbitrary destination
+    // rectangle while preserving its native 4:3 aspect ratio. The grade-5
+    // slot is slightly more square than the source on a 16:9 screen, so a
+    // plain scale-to-fit stretches the gem vertically and squashes the
+    // chain links. The padding that falls out of letterboxing is left as
+    // background gradient (drawn by the caller) rather than retinted, so
+    // the gold bar at the slot edges stays visible.
     private static void blitGoldItemAspect(GuiGraphics guiGraphics,
                                            int x, int y, int availW, int availH) {
         int drawW;
@@ -35,13 +41,11 @@ public final class IconListTools {
         }
         int drawX = x + (availW - drawW) / 2;
         int drawY = y + (availH - drawH) / 2;
-        guiGraphics.blit(RenderType.GUI_TEXTURED,
-                GOLD_ITEM_TEXTURE,
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GOLD_ITEM_TEXTURE,
                 drawX, drawY,
                 0F, 0F,
                 drawW, drawH,
-                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
-                0xFFFFFFFF);
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT);
     }
 
     private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
@@ -62,6 +66,8 @@ public final class IconListTools {
         if (grade == 5) {
             guiGraphics.fillGradient(pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
             guiGraphics.fill(pX, pY, pX + 2, toY, color);
+            // 26.1.2 changed blit: must pass RenderPipeline explicitly and
+            // last two ints are textureWidth/textureHeight (pixels), not UVs.
             blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
                     frameWidth - 4, frameHeight - 4);
         } else {
@@ -72,12 +78,14 @@ public final class IconListTools {
 
     public static void renderGuiItem(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
         if (itemStack == null || itemStack.isEmpty() || entity == null) return;
-        int seed = (int) (entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(pX, pY, 0.0);
-        if (scale != 1.0F) guiGraphics.pose().scale(scale, scale, 1.0F);
+        int seed = (int)(entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
+        // Anchor-relative scale: translate to the target pixel first, then
+        // apply the scale so that drawing at (0,0) lands at the original (pX,pY).
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(pX, pY);
+        if (scale != 1.0F) guiGraphics.pose().scale(scale, scale);
         guiGraphics.renderItem(entity, itemStack, 0, 0, seed);
-        guiGraphics.pose().popPose();
+        guiGraphics.pose().popMatrix();
     }
 
     public static void renderItemProgress(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
@@ -85,8 +93,8 @@ public final class IconListTools {
         float frameWidth = width * 18 / 100F;
         float frameHeight = height * 25 / 100F;
         float scale = frameWidth * 60F / 100F / 16F;
-        int toX = (int) (pX + frameWidth);
-        int toY = (int) (pY + frameHeight);
+        int toX = (int)(pX + frameWidth);
+        int toY = (int)(pY + frameHeight);
         float itemX = pX + frameWidth * 20 / 100F;
         float itemY = pY + frameHeight * 10 / 100F;
         if (grade == 5) {

@@ -6,6 +6,8 @@ import com.reclizer.csgobox.v1_21_11.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -18,6 +20,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import com.reclizer.csgobox.v1_21_11.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_11.packet.PacketCsgoBulkProgress;
+
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -34,13 +39,13 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int boxCount;
     private int keyCount;
     private int openableCount;
+    private long lastRecountTick = -1;
 
     private float rotX = 0;
     private float rotY = 0;
 
     public CsboxBulkOverviewScreen() {
-        super(Component.literal("csgo_bulk_overview"));
-        this.minecraft = Minecraft.getInstance();
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("csgo_bulk_overview"));
         this.player = this.minecraft != null ? this.minecraft.player : null;
         this.templateBox = this.player != null ? this.player.getItemInHand(InteractionHand.MAIN_HAND).copy() : ItemStack.EMPTY;
         Identifier resolvedKey = null;
@@ -58,27 +63,34 @@ public class CsboxBulkOverviewScreen extends Screen {
             openableCount = 0;
             return;
         }
+        if (this.minecraft != null && this.minecraft.level != null) {
+            long now = this.minecraft.level.getGameTime();
+            if (lastRecountTick >= 0 && now - lastRecountTick < 10) {
+                return;
+            }
+            lastRecountTick = now;
+        }
         int totalBoxes = 0;
-        for (ItemStack stack : this.player.getInventory().items) {
+        int totalKeys = 0;
+        boolean noKeyRequired = this.keyId == null || this.keyId.equals(Identifier.parse("minecraft:air"));
+        for (ItemStack stack : this.player.getInventory().getNonEquipmentItems()) {
             if (stack.getItem() instanceof ItemCsgoBox
                     && ItemStack.isSameItemSameComponents(stack, this.templateBox)) {
                 totalBoxes += stack.getCount();
-            }
-        }
-        int totalKeys;
-        if (this.keyId == null || this.keyId.equals(Identifier.parse("minecraft:air"))) {
-            totalKeys = Integer.MAX_VALUE;
-        } else {
-            totalKeys = 0;
-            for (ItemStack stack : this.player.getInventory().items) {
-                if (this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                    totalKeys += stack.getCount();
-                }
+            } else if (!noKeyRequired
+                    && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                totalKeys += stack.getCount();
             }
         }
         this.boxCount = totalBoxes;
-        this.keyCount = (totalKeys == Integer.MAX_VALUE) ? totalBoxes : totalKeys;
-        this.openableCount = Math.min(totalBoxes, totalKeys == Integer.MAX_VALUE ? totalBoxes : totalKeys);
+        this.keyCount = noKeyRequired ? totalBoxes : totalKeys;
+        this.openableCount = Math.min(totalBoxes, this.keyCount);
+    }
+
+    private static ItemStack keySample(Identifier keyId) {
+        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
+        if (ref == null) return ItemStack.EMPTY;
+        return ref.value().getDefaultInstance();
     }
 
     @Override
@@ -121,26 +133,41 @@ public class CsboxBulkOverviewScreen extends Screen {
 
         int centerX = this.width / 2;
         int centerY = this.height * 42 / 100;
-        float frameWidth = this.width * 22 / 100F;
-        float scale = frameWidth / 16F;
+        int textureSize = Math.max(144, Math.min(this.width * 22 / 100, this.height * 30 / 100));
+        float scale = textureSize / 16F;
 
-        guiGraphics.fillGradient(centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
-                centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
+        guiGraphics.fillGradient(centerX - textureSize / 2, centerY - textureSize / 2,
+                centerX + textureSize / 2, centerY + textureSize / 2,
                 0xFF1a1a2e, 0xFF0f3460);
 
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, centerX, centerY,
+        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
+                centerX - textureSize / 2, centerY - textureSize / 2,
                 this.rotX, this.rotY, this.templateBox, this.player, scale);
+    }
+
+    // Preview geometry shared by render3DBox and mouseDragged
+    private int previewTextureSize() {
+        return Math.max(144, Math.min(this.width * 22 / 100, this.height * 30 / 100));
+    }
+
+    private int previewPixelX() {
+        return (this.width - previewTextureSize()) / 2;
+    }
+
+    private int previewPixelY() {
+        return this.height * 42 / 100 - previewTextureSize() / 2;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        float frameWidth = this.width * 22F / 100F;
-        float itemCenterX = this.width / 2F;
-        float itemCenterY = this.height * 42F / 100F;
-        float range = frameWidth * 0.7F;
-        boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
-                && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
-        if (button == 0 && isInRange) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int size = previewTextureSize();
+        int x = previewPixelX();
+        int y = previewPixelY();
+        boolean isInRange = mouseX >= x && mouseX <= x + size
+                && mouseY >= y && mouseY <= y + size;
+        if (event.button() == 0 && isInRange) {
             this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
             this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
         }
@@ -163,11 +190,11 @@ public class CsboxBulkOverviewScreen extends Screen {
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_count", this.boxCount).withStyle(row),
                 rowY, 0xFF55FF55);
         rowY += rowSpacing;
-        String keyDisplay = (this.keyId == null) ? "—" : keyName(this.keyId);
         if (this.keyId == null) {
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_no_key", this.boxCount).withStyle(row),
                     rowY, 0xFF55FF55);
         } else {
+            String keyDisplay = keyName(this.keyId);
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count", keyDisplay, this.keyCount).withStyle(row),
                     rowY, 0xFF55FF55);
         }
@@ -190,9 +217,9 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     private static String keyName(Identifier keyId) {
-        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
-        if (ref == null) return keyId.toString();
-        ItemStack sample = ref.value().getDefaultInstance();
+        var item = BuiltInRegistries.ITEM.get(keyId).orElse(null);
+        if (item == null) return keyId.toString();
+        ItemStack sample = item.value().getDefaultInstance();
         return sample.getHoverName().getString();
     }
 
@@ -238,8 +265,10 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleClick) {
-        if (button == 0) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) {
+            double mouseX = event.x();
+            double mouseY = event.y();
             int btnY = this.height * 78 / 100;
             int btnH = this.height * 5 / 100;
             int openX = openButtonX();
@@ -247,7 +276,10 @@ public class CsboxBulkOverviewScreen extends Screen {
             int w = buttonWidth();
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
                 long reqId = ThreadLocalRandom.current().nextLong();
-                PacketDistributor.sendToServer(new PacketCsgoBulkProgress(reqId));
+                ClientPacketListener conn = Minecraft.getInstance().getConnection();
+                if (conn != null) {
+                    conn.send(new ServerboundCustomPayloadPacket(new PacketCsgoBulkProgress(reqId)));
+                }
                 Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
@@ -256,11 +288,11 @@ public class CsboxBulkOverviewScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(event, isDoubleClick);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+    public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.onClose();
             return true;

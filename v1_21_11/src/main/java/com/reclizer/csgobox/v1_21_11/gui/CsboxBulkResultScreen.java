@@ -1,12 +1,14 @@
 package com.reclizer.csgobox.v1_21_11.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_11.utils.IconListTools;
 import com.reclizer.csgobox.v1_21_11.utils.RenderFontTool;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
@@ -41,7 +43,7 @@ public class CsboxBulkResultScreen extends Screen {
     private boolean showAllItems = false;
 
     public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
-        super(Component.literal("csgo_bulk_result"));
+        super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("csgo_bulk_result"));
         this.player = player;
         this.allItems = new ArrayList<>();
         for (ItemStack s : items) {
@@ -109,7 +111,6 @@ public class CsboxBulkResultScreen extends Screen {
             guiGraphics.fillGradient(0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
-        RenderSystem.setShaderColor(1, 1, 1, 1);
         renderHeader(guiGraphics);
         renderEntries(guiGraphics, partialTicks);
         renderFooter(guiGraphics, mouseX, mouseY);
@@ -161,11 +162,9 @@ public class CsboxBulkResultScreen extends Screen {
             guiGraphics.fill(itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
             if (e.stack.isEmpty()) {
                 guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | 0xFF333333);
-            } else {
-                if (this.player != null) {
-                    IconListTools.renderItemFrame(this.player, guiGraphics, e.stack,
-                            itemX + 2, itemY, colW, itemSize, e.grade);
-                }
+            } else if (this.player != null) {
+                IconListTools.renderItemFrame(this.player, guiGraphics, e.stack,
+                        itemX + 2, itemY, colW, itemSize, e.grade);
             }
             String label = e.stack.isEmpty()
                     ? "(" + e.index + ")"
@@ -307,8 +306,10 @@ public class CsboxBulkResultScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleClick) {
-        if (button == 0 && cursor >= allItems.size() && visible.isEmpty()) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0 && cursor >= allItems.size() && visible.isEmpty()) {
+            double mouseX = event.x();
+            double mouseY = event.y();
             int btnW = Math.max(120, this.width * 14 / 100);
             int btnH = this.height * 5 / 100;
             int btnY = this.height * 86 / 100;
@@ -320,6 +321,7 @@ public class CsboxBulkResultScreen extends Screen {
                     return true;
                 }
             } else {
+                // Show both buttons
                 int btnSpacing = 16;
                 int totalBtnWidth = btnW * 2 + btnSpacing;
                 int showAllX = (this.width - totalBtnWidth) / 2;
@@ -335,11 +337,11 @@ public class CsboxBulkResultScreen extends Screen {
                 }
             }
         }
-        return super.mouseClicked(event, isDoubleClick);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+    public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.onClose();
             return true;

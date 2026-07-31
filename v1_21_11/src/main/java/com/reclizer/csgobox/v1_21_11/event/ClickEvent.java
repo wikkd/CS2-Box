@@ -42,8 +42,7 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                boolean shift = mc.options.keyShift.isDown()
-                        || net.minecraft.client.gui.screens.Screen.hasShiftDown();
+                boolean shift = mc.options.keyShift.isDown();
                 mc.execute(() -> {
                     if (shift) {
                         mc.setScreen(new CsboxBulkOverviewScreen());

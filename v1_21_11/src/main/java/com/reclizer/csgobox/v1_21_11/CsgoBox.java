@@ -39,6 +39,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -199,8 +200,8 @@ public class CsgoBox {
      * {@link Item} instances are constructed during registry finalization,
      * <em>before</em> the registry freezes. The previous implementation
      * scheduled this work through {@code FMLCommonSetupEvent.enqueueWork},
-     * which fires AFTER the item registry has frozen and therefore crashed
-     * with {@code IllegalStateException: Registry is already frozen}.</p>
+     * which in MC 26.1.2 fires AFTER the item registry has frozen and therefore
+     * crashed with {@code IllegalStateException: Registry is already frozen}.</p>
      */
     private void registerDynamicBoxItems(final RegisterEvent event) {
         if (!event.getRegistryKey().equals(Registries.ITEM)) {
@@ -234,7 +235,8 @@ public class CsgoBox {
                     continue;
                 }
                 final Identifier boxId = itemId;
-                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox() {
+                final ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, itemId);
+                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().stacksTo(16).setId(itemKey)) {
                     @Override
                     public ItemStack getDefaultInstance() {
                         ItemStack stack = super.getDefaultInstance();
@@ -270,13 +272,34 @@ public class CsgoBox {
         }
     }
 
-    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
     public static class ClientModEvents {
 
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        }
+
+        /**
+         * Register the {@link com.reclizer.csgobox.v1_21_11.gui.pip.Icon3DRenderer}
+         * for our custom {@link com.reclizer.csgobox.v1_21_11.gui.pip.Icon3DRenderState}.
+         *
+         * <p>Without this listener, every {@code submitPictureInPictureRenderState}
+         * call from {@code GuiItemMove} hits a renderer map that has no entry
+         * keyed by {@code Icon3DRenderState.class}, so the 3D rotation in
+         * {@code CsboxScreen} / {@code CsLookItemScreen} silently draws nothing
+         * — only the 2D fallback slot background is visible. The original
+         * 1.0.6 release forgot this listener; this commit closes that gap.</p>
+         */
+        @SubscribeEvent
+        public static void onRegisterPictureInPictureRenderers(RegisterPictureInPictureRenderersEvent event) {
+            // 26.1.2's PictureInPictureRenderer constructor takes a BufferSource;
+            // the registration factory therefore must accept one. 26.2 dropped
+            // the parameter and switched to a Supplier-based register signature.
+            event.register(
+                    com.reclizer.csgobox.v1_21_11.gui.pip.Icon3DRenderState.class,
+                    bufferSource -> new com.reclizer.csgobox.v1_21_11.gui.pip.Icon3DRenderer(bufferSource));
         }
     }
 }

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import com.reclizer.csgobox.v1_21_11.CsgoBox;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
@@ -66,12 +67,16 @@ final class BoxItemCodec {
             String id = obj.get("id").getAsString();
             int count = obj.has("count") ? obj.get("count").getAsInt() : 1;
 
-            Item item = BuiltInRegistries.ITEM.get(Identifier.parse(id)).map(net.minecraft.core.Holder.Reference::value).orElse(null);
+            Item item = BuiltInRegistries.ITEM.get(Identifier.parse(id)).map(Holder.Reference::value).orElse(null);
             if (item == null) {
                 CsgoBox.LOGGER.warn("Unknown item in box JSON: {}", id);
                 return ParseOutcome.fail("unknown item id: " + id);
             }
 
+            // The registry Holder backing this stack carries a ResourceKey,
+            // so it survives later serialization (e.g. into the player_data
+            // attachment). Constructing a raw ItemStack without a key would
+            // break box opening on the next launch.
             ItemStack stack = new ItemStack(item, count);
 
             if (obj.has("components")) {
@@ -86,7 +91,7 @@ final class BoxItemCodec {
             } else if (obj.has("tag")) {
                 try {
                     String tagStr = obj.get("tag").getAsString();
-                    var tag = TagParser.parseTag(tagStr);
+                    var tag = TagParser.parseCompoundFully(tagStr);
                     DataComponentPatch patch = DataComponentPatch.CODEC.parse(NbtOps.INSTANCE, tag)
                             .result().orElse(DataComponentPatch.EMPTY);
                     stack.applyComponents(patch);
