@@ -38,6 +38,11 @@
   "gui.csgobox.bulk.all_rewards_title": "全部奖励",
   "gui.csgobox.bulk.waterfall_empty": "等待结果中...",
 
+  "gui.csgobox.bulk.confirm_title": "确认批量开箱",
+  "gui.csgobox.bulk.confirm_will_consume": "将消耗 %s 个箱子与 %s 个钥匙",
+  "gui.csgobox.bulk.confirm_confirm": "确认开启",
+  "gui.csgobox.bulk.confirm_back": "返回",
+
   "commands.csgobox.prefix": "[CSBox] ",
   "commands.csgobox.help.title": "---- /csbox 箱子管理帮助 ----",
   "commands.csgobox.help.line.list": "/csbox list",

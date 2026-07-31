@@ -38,6 +38,11 @@
   "gui.csgobox.bulk.all_rewards_title": "All Rewards",
   "gui.csgobox.bulk.waterfall_empty": "Waiting for results...",
 
+  "gui.csgobox.bulk.confirm_title": "Confirm Bulk Open",
+  "gui.csgobox.bulk.confirm_will_consume": "Will consume %s boxes and %s keys",
+  "gui.csgobox.bulk.confirm_confirm": "CONFIRM",
+  "gui.csgobox.bulk.confirm_back": "BACK",
+
   "commands.csgobox.prefix": "[CSBox] ",
   "commands.csgobox.help.title": "---- /csbox box management help ----",
   "commands.csgobox.help.line.list": "/csbox list",
