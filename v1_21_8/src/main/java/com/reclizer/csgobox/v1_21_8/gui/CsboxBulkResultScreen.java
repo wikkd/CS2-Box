@@ -159,7 +159,7 @@ public class CsboxBulkResultScreen extends Screen {
             guiGraphics.fill(x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
             guiGraphics.fill(itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
             if (e.stack.isEmpty()) {
-                guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | 0xFF333333);
+                guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.dividerDim());
             } else {
                 if (this.player != null) {
                     IconListTools.renderItemFrame(this.player, guiGraphics, e.stack,

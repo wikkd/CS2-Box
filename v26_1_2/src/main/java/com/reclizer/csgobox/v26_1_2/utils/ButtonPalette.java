@@ -59,6 +59,16 @@ public final class ButtonPalette {
             0xFFFFFFFF
     );
 
+    /** Disabled action — cannot be triggered (e.g. zero openable boxes). */
+    public static final Style DISABLED = new Style(
+            0xFF2A2A33,
+            0xFF2A2A33,
+            0xFF4A4A55,
+            0xFF4A4A55,
+            0xFF8A8A96,
+            0xFF8A8A96
+    );
+
     /**
      * Draw the button's outer + inner rectangles using the given style and
      * hover state. Returns the text colour the caller should pass to

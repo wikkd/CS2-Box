@@ -138,7 +138,7 @@ public class CsboxBulkOverviewScreen extends Screen {
 
         guiGraphics.fillGradient(centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
                 centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
-                0xFF1a1a2e, 0xFF0f3460);
+                OverlayColor.panel(), OverlayColor.panelHover());
 
         GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, centerX, centerY,
                 this.rotX, this.rotY, this.templateBox, this.player, scale);
@@ -217,8 +217,8 @@ public class CsboxBulkOverviewScreen extends Screen {
         boolean openHover = isInside(mouseX, mouseY, openX, btnY, w, btnH);
         boolean backHover = isInside(mouseX, mouseY, backX, btnY, w, btnH);
         boolean canOpen = this.openableCount > 0;
-        int openFill = canOpen ? (openHover ? 0xFF00CC00 : 0xFF008800) : 0xFF555555;
-        int openBorder = canOpen ? (openHover ? 0xFF00FF00 : 0xFF00AA00) : 0xFF333333;
+        int openFill = canOpen ? (openHover ? 0xFF00CC00 : 0xFF008800) : OverlayColor.panelDisabled();
+        int openBorder = canOpen ? (openHover ? 0xFF00FF00 : 0xFF00AA00) : OverlayColor.dividerDim();
         drawButton(guiGraphics, openX, btnY, w, btnH, openFill, openBorder);
         int backFill = backHover ? 0xFFCC4444 : 0xFFAA0000;
         int backBorder = backHover ? 0xFFFF4444 : 0xFFFF0000;

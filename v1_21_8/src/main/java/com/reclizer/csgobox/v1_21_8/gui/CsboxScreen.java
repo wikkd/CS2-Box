@@ -160,7 +160,7 @@ public class CsboxScreen extends Screen {
     }
 
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int gx, int gy) {
-        guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, 0xFFD3D3D3);
+        guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, OverlayColor.divider());
         guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
 
         int FrameWidth = width * 26 / 100;

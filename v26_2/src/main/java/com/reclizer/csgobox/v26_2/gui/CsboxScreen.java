@@ -196,7 +196,7 @@ public class CsboxScreen extends Screen {
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
-        guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, 0xFFD3D3D3);
+        guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, OverlayColor.divider());
         guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
 
         float scale = previewTextureSize() / 16F;
@@ -369,7 +369,7 @@ public class CsboxScreen extends Screen {
             // guarantees the warning banner stays above future additions to
             // renderBg (e.g. additional textured overlays) without re-ordering.
             guiGraphics.nextStratum();
-            guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, 0xAA101010);
+            guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, OverlayColor.panel());
             RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
                     (this.width - warnWidth) / 2.0F, bgY0 + 5, 0, 0, 1.2F, 0xFFFF4444);
             guiGraphics.nextStratum();
