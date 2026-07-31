@@ -1,13 +1,11 @@
-package com.reclizer.csgobox.v1_21_1.utils;
-
-import net.minecraft.resources.ResourceLocation;
+package com.reclizer.csgobox.utils;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public final class EntityChineseMap {
 
-    private static final Map<ResourceLocation, String> ZH_MAP = new HashMap<>();
+    private static final Map<String, String> ZH_MAP = new HashMap<>();
 
     private EntityChineseMap() {
     }
@@ -22,13 +20,13 @@ public final class EntityChineseMap {
         putAllMisc();
     }
 
-    public static String getDisplayName(ResourceLocation entityId) {
+    public static String getDisplayName(String entityId) {
         String zh = ZH_MAP.get(entityId);
         if (zh != null) return zh;
-        return entityId.getPath();
+        return entityId.contains(":") ? entityId.substring(entityId.indexOf(":") + 1) : entityId;
     }
 
-    public static String getDisplayNameFull(ResourceLocation entityId) {
+    public static String getDisplayNameFull(String entityId) {
         String zh = ZH_MAP.get(entityId);
         if (zh != null) return zh + " (" + entityId + ")";
         return entityId.toString();
@@ -36,7 +34,7 @@ public final class EntityChineseMap {
 
     private static void putAll(String[][] entries) {
         for (String[] entry : entries) {
-            ZH_MAP.put(ResourceLocation.parse(entry[0]), entry[1]);
+            ZH_MAP.put(entry[0], entry[1]);
         }
     }
 
@@ -121,11 +119,11 @@ public final class EntityChineseMap {
     }
 
     private static void putAllNeutral() {
-        ZH_MAP.put(ResourceLocation.parse("minecraft:piglin"), "猪灵");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:piglin_brute"), "猪灵蛮兵");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:hoglin"), "疣猪兽");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:dolphin"), "海豚");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:llama"), "羊驼");
+        ZH_MAP.put("minecraft:piglin", "猪灵");
+        ZH_MAP.put("minecraft:piglin_brute", "猪灵蛮兵");
+        ZH_MAP.put("minecraft:hoglin", "疣猪兽");
+        ZH_MAP.put("minecraft:dolphin", "海豚");
+        ZH_MAP.put("minecraft:llama", "羊驼");
     }
 
     private static void putAllBoss() {
@@ -136,56 +134,56 @@ public final class EntityChineseMap {
     }
 
     private static void putAllAquatic() {
-        ZH_MAP.put(ResourceLocation.parse("minecraft:cod"), "鳕鱼");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:salmon"), "鲑鱼");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:pufferfish"), "河豚");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:tropical_fish"), "热带鱼");
+        ZH_MAP.put("minecraft:cod", "鳕鱼");
+        ZH_MAP.put("minecraft:salmon", "鲑鱼");
+        ZH_MAP.put("minecraft:pufferfish", "河豚");
+        ZH_MAP.put("minecraft:tropical_fish", "热带鱼");
     }
 
     private static void putAllVehicle() {
-        ZH_MAP.put(ResourceLocation.parse("minecraft:boat"), "船");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:chest_boat"), "运输船");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:minecart"), "矿车");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:chest_minecart"), "运输矿车");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:furnace_minecart"), "动力矿车");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:hopper_minecart"), "漏斗矿车");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:tnt_minecart"), "TNT矿车");
+        ZH_MAP.put("minecraft:boat", "船");
+        ZH_MAP.put("minecraft:chest_boat", "运输船");
+        ZH_MAP.put("minecraft:minecart", "矿车");
+        ZH_MAP.put("minecraft:chest_minecart", "运输矿车");
+        ZH_MAP.put("minecraft:furnace_minecart", "动力矿车");
+        ZH_MAP.put("minecraft:hopper_minecart", "漏斗矿车");
+        ZH_MAP.put("minecraft:tnt_minecart", "TNT矿车");
     }
 
     private static void putAllMisc() {
-        ZH_MAP.put(ResourceLocation.parse("minecraft:item"), "物品");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:item_frame"), "物品展示框");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:glow_item_frame"), "荧光物品展示框");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:painting"), "画");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:armor_stand"), "盔甲架");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:leash_knot"), "拴绳结");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:experience_orb"), "经验球");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:experience_bottle"), "附魔之瓶");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:egg"), "鸡蛋");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:snowball"), "雪球");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:ender_pearl"), "末影珍珠");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:eye_of_ender"), "末影之眼");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:potion"), "药水");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:arrow"), "箭");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:spectral_arrow"), "光灵箭");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:trident"), "三叉戟");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:fireball"), "火球");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:small_fireball"), "小火球");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:wither_skull"), "凋灵之首");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:dragon_fireball"), "末影龙火球");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:shulker_bullet"), "潜影贝导弹");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:llama_spit"), "羊驼唾沫");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:falling_block"), "掉落方块");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:tnt"), "TNT");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:lightning_bolt"), "闪电");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:fishing_bobber"), "浮漂");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:evoker_fangs"), "唤魔者尖牙");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:player"), "玩家");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:area_effect_cloud"), "区域效果云");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:marker"), "标记");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:interaction"), "交互实体");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:text_display"), "文本展示");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:block_display"), "方块展示");
-        ZH_MAP.put(ResourceLocation.parse("minecraft:item_display"), "物品展示");
+        ZH_MAP.put("minecraft:item", "物品");
+        ZH_MAP.put("minecraft:item_frame", "物品展示框");
+        ZH_MAP.put("minecraft:glow_item_frame", "荧光物品展示框");
+        ZH_MAP.put("minecraft:painting", "画");
+        ZH_MAP.put("minecraft:armor_stand", "盔甲架");
+        ZH_MAP.put("minecraft:leash_knot", "拴绳结");
+        ZH_MAP.put("minecraft:experience_orb", "经验球");
+        ZH_MAP.put("minecraft:experience_bottle", "附魔之瓶");
+        ZH_MAP.put("minecraft:egg", "鸡蛋");
+        ZH_MAP.put("minecraft:snowball", "雪球");
+        ZH_MAP.put("minecraft:ender_pearl", "末影珍珠");
+        ZH_MAP.put("minecraft:eye_of_ender", "末影之眼");
+        ZH_MAP.put("minecraft:potion", "药水");
+        ZH_MAP.put("minecraft:arrow", "箭");
+        ZH_MAP.put("minecraft:spectral_arrow", "光灵箭");
+        ZH_MAP.put("minecraft:trident", "三叉戟");
+        ZH_MAP.put("minecraft:fireball", "火球");
+        ZH_MAP.put("minecraft:small_fireball", "小火球");
+        ZH_MAP.put("minecraft:wither_skull", "凋灵之首");
+        ZH_MAP.put("minecraft:dragon_fireball", "末影龙火球");
+        ZH_MAP.put("minecraft:shulker_bullet", "潜影贝导弹");
+        ZH_MAP.put("minecraft:llama_spit", "羊驼唾沫");
+        ZH_MAP.put("minecraft:falling_block", "掉落方块");
+        ZH_MAP.put("minecraft:tnt", "TNT");
+        ZH_MAP.put("minecraft:lightning_bolt", "闪电");
+        ZH_MAP.put("minecraft:fishing_bobber", "浮漂");
+        ZH_MAP.put("minecraft:evoker_fangs", "唤魔者尖牙");
+        ZH_MAP.put("minecraft:player", "玩家");
+        ZH_MAP.put("minecraft:area_effect_cloud", "区域效果云");
+        ZH_MAP.put("minecraft:marker", "标记");
+        ZH_MAP.put("minecraft:interaction", "交互实体");
+        ZH_MAP.put("minecraft:text_display", "文本展示");
+        ZH_MAP.put("minecraft:block_display", "方块展示");
+        ZH_MAP.put("minecraft:item_display", "物品展示");
     }
 }
