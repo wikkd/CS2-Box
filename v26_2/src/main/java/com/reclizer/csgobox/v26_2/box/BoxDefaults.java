@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * player is offline), no file is written. Existing files are never
  * overwritten by name, so user edits to current-version files survive.</p>
  */
-final class BoxDefaults {
+public final class BoxDefaults {
 
     /**
      * Filename pattern for mod-managed, version-stamped tutorials. Files
@@ -101,6 +101,42 @@ final class BoxDefaults {
             }
         } catch (Exception e) {
             CsgoBox.LOGGER.warn("Tutorial setup skipped due to unexpected error: {}",
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * Forces a re-download of every tutorial file for the current mod
+     * version, overwriting existing copies. Used by
+     * {@code /csbox tutorial refresh}; unlike {@link #writeTutorialIfMissing}
+     * this does not consult {@link #needsRefresh} and does not touch stale
+     * versioned tutorials.
+     *
+     * <p>Same defensive try-catch contract as the startup path: a network
+     * failure leaves existing files untouched and only logs a warning.</p>
+     */
+    public static void refreshTutorials(Path boxesDir) {
+        try {
+            TutorialSources sources = TutorialSources.loadOrDefault(boxesDir);
+            TutorialFetcher fetcher = new TutorialFetcher();
+            for (String fileName : tutorialFileNames()) {
+                String content = fetcher.fetch(fileName, sources.sources());
+                if (content == null) {
+                    CsgoBox.LOGGER.warn(
+                            "No tutorial available for {} (offline or all sources failed); skipping",
+                            fileName);
+                    continue;
+                }
+                try {
+                    Files.writeString(boxesDir.resolve(fileName), content);
+                    CsgoBox.LOGGER.info("Refreshed tutorial: {}", fileName);
+                } catch (IOException e) {
+                    CsgoBox.LOGGER.warn("Failed to write tutorial markdown {}: {}",
+                            fileName, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            CsgoBox.LOGGER.warn("Tutorial refresh skipped due to unexpected error: {}",
                     e.getMessage());
         }
     }
@@ -255,6 +291,54 @@ final class BoxDefaults {
             CsgoBox.LOGGER.info(
                     "Moved {} stale tutorial(s) to fallback {} (recoverable from there): {}",
                     moved.size(), trashDir, moved);
+        }
+
+        pruneFallbackTrash(trashDir);
+    }
+
+    /**
+     * Keeps the fallback trash directory bounded: the {@code KEEP} most
+     * recently moved files survive (by file mtime), anything older is
+     * deleted. Prevents unbounded growth across many mod-version bumps on
+     * headless servers that have no OS recycle bin.
+     */
+    private static void pruneFallbackTrash(Path trashDir) {
+        final int keep = 5;
+        List<Path> files = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(trashDir)) {
+            for (Path file : stream) {
+                if (Files.isRegularFile(file)) {
+                    files.add(file);
+                }
+            }
+        } catch (IOException e) {
+            CsgoBox.LOGGER.warn("Failed to enumerate {} for pruning: {}", trashDir, e.getMessage());
+            return;
+        }
+        if (files.size() <= keep) {
+            return;
+        }
+        files.sort((a, b) -> Long.compare(lastModified(b), lastModified(a)));
+        int removed = 0;
+        for (int i = keep; i < files.size(); i++) {
+            try {
+                Files.delete(files.get(i));
+                removed++;
+            } catch (IOException e) {
+                CsgoBox.LOGGER.warn("Failed to prune {}: {}", files.get(i), e.getMessage());
+            }
+        }
+        if (removed > 0) {
+            CsgoBox.LOGGER.info("Pruned {} old file(s) from fallback trash {} (keeping {} most recent)",
+                    removed, trashDir, keep);
+        }
+    }
+
+    private static long lastModified(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toMillis();
+        } catch (IOException e) {
+            return 0L;
         }
     }
 

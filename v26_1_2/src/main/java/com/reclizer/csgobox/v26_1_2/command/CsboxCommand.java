@@ -31,6 +31,7 @@ import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
+import com.reclizer.csgobox.v26_1_2.box.BoxDefaults;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
@@ -40,6 +41,7 @@ import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.ArrayList;
@@ -120,6 +122,10 @@ public final class CsboxCommand {
                 )
                 .then(Commands.literal("reload")
                         .executes(CsboxCommand::reloadBoxes)
+                )
+                .then(Commands.literal("tutorial")
+                        .then(Commands.literal("refresh")
+                                .executes(CsboxCommand::refreshTutorials))
                 )
                 .then(Commands.literal("errors")
                         .executes(CsboxCommand::showLoadErrors)
@@ -284,6 +290,14 @@ public final class CsboxCommand {
         BoxJsonLoader.reloadPreserving();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
+    }
+
+    /** Force re-download of the tutorial markdown files. */
+    private static int refreshTutorials(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        BoxDefaults.refreshTutorials(FMLPaths.CONFIGDIR.get().resolve("csbox"));
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.tutorial.refresh.success"), false);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int showLoadErrors(CommandContext<CommandSourceStack> ctx) {
