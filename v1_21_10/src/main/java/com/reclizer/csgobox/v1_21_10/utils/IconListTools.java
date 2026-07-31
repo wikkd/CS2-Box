@@ -3,6 +3,10 @@ package com.reclizer.csgobox.v1_21_10.utils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.reclizer.csgobox.utils.ColorTools;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -74,6 +78,26 @@ public final class IconListTools {
     public static void renderGuiItem(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
         if (itemStack == null || itemStack.isEmpty() || entity == null) return;
         int seed = (int) (entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
+        // Per-item visual baseline (P1-3): measure the model's true extents
+        // and offset the draw so the visual centre of every item (swords,
+        // tools, armour, boxes) lands on the same pixel.
+        Minecraft mc = Minecraft.getInstance();
+        float offsetX = 0;
+        float offsetY = 0;
+        if (mc != null) {
+            try {
+                TrackingItemStackRenderState tracked = new TrackingItemStackRenderState();
+                mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
+                AABB bounds = tracked.getModelBoundingBox();
+                if (bounds != null) {
+                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D));
+                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D));
+                }
+            } catch (Throwable ignored) {
+                // Model measurement is best-effort; fall back to the previous
+                // top-left anchored draw on any resolver hiccup.
+            }
+        }
         PoseStack poseStack = new PoseStack();
         poseStack.pushPose();
         poseStack.translate(pX, pY, 0.0);

@@ -1,11 +1,15 @@
 package com.reclizer.csgobox.v26_2.utils;
 
 import com.reclizer.csgobox.utils.ColorTools;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 
 public final class IconListTools {
 
@@ -79,11 +83,35 @@ public final class IconListTools {
     public static void renderGuiItem(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
         if (itemStack == null || itemStack.isEmpty() || entity == null) return;
         int seed = (int)(entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
+        // Per-item visual baseline (P1-3): measure the model's true extents
+        // and offset the draw so the visual centre of every item (swords,
+        // tools, armour, boxes) lands on the same pixel, instead of letting
+        // the model's own asymmetry float it within the slot.
+        Minecraft mc = Minecraft.getInstance();
+        float offsetX = 0;
+        float offsetY = 0;
+        if (mc != null) {
+            try {
+                TrackingItemStackRenderState tracked = new TrackingItemStackRenderState();
+                mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
+                AABB bounds = tracked.getModelBoundingBox();
+                if (bounds != null) {
+                    // Model space is roughly -8..+8 for a 16px item. Shift so
+                    // the measured centre sits at the slot centre.
+                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D));
+                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D));
+                }
+            } catch (Throwable ignored) {
+                // Model measurement is best-effort; fall back to the previous
+                // top-left anchored draw on any resolver hiccup.
+            }
+        }
         // Anchor-relative scale: translate to the target pixel first, then
         // apply the scale so that drawing at (0,0) lands at the original (pX,pY).
         guiGraphics.pose().pushMatrix();
         guiGraphics.pose().translate(pX, pY);
         if (scale != 1.0F) guiGraphics.pose().scale(scale, scale);
+        guiGraphics.pose().translate(offsetX, offsetY);
         guiGraphics.item(entity, itemStack, 0, 0, seed);
         guiGraphics.pose().popMatrix();
     }
