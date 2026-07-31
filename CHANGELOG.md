@@ -1,5 +1,35 @@
 # 更新日志
 
+## [1.0.8] - 2026-07-31
+
+### 概述
+收尾批次：多版本矩阵扩展至 9 平台、并发安全、动态模型修复、批量开箱增强（确认屏 + 上限配置）、26.2 HUD 修复、GUI 设计系统（token + 容器化 + per-item 基线）、教程系统增量、CI 矩阵。工作基线为 1.0.7 后未提交的 WIP。
+
+### 新增
+- **9 平台版本矩阵**：`settings.gradle` + `gradle.properties` 扩展到 `v1_21_3/4/5/8/10/11`，全部 9 模块 clean compileJava 验证通过。
+- **`/csbox tutorial refresh`** 子命令：强制重下当前版本教程（覆盖已存在），`BoxDefaults.refreshTutorials` 与启动路径共用 TutorialSources/TutorialFetcher。
+- **`.trash/` 自动清理**：`pruneFallbackTrash` 按 mtime 保留最近 5 份，防 headless 服务器无限增长。
+- **`bulkOpenCount` 配置**（`[advanced]`，0=无上限，默认 0）：服务端权威截断，客户端总览屏镜像 clamp。
+- **ConfirmationScreen 二次确认**：总览屏「全部开启」先跳确认屏（展示消耗量），确认后才发 `PacketCsgoBulkProgress`。
+- **26.2 HUD 隐藏恢复**：`HudVisibility` 工具类（`Minecraft.gui.hud.toggle()/isHidden()` set 语义包装），开箱动画屏自动隐藏 hotbar/血条，消除 1.0.6 遗留降级。
+- **三档设计 token**（P2-2）：`common/utils/OverlayColor` 扩展 surface/panel/divider/panelHover/panelPressed/panelDisabled；`ButtonPalette.DISABLED`。
+- **容器化布局**（P1-1）：`common/utils/GuiRegion` 命名区域（title/preview/list/actions/actionPair），CsboxBulkOverviewScreen 与 CsboxScreen 落地。
+- **per-item 视觉基线**（P1-3）：`IconListTools.renderGuiItem` 用 `ItemModelResolver` + `getModelBoundingBox()` 测量模型范围并居中（26.x + 1.21.8/10/11）。
+- **GitHub Actions matrix**（`.github/workflows/build.yml`）：9 版本顺序构建 + common 测试 + jar 产物上传。
+- **`docs/RELEASE.md`**：发布流程、质量门（含增量缓存假象警告）。
+- **`EntityChineseMap` 迁 common**：String key 纯数据版，9 平台副本删除（B 类迁移 #1/6）。
+
+### 修复
+- **`OPEN_BLOCKED_UNTIL_TICK` 并发安全**：HashMap → ConcurrentHashMap + `tickOpenBlockMap` 每 100 tick 清理（9 平台）。
+- **v1_21_11 从未真正编译通过**（clean 编译 80 错误）：1.21.11 的 GuiGraphics 已是 decoupled API（Matrix3x2fStack/RenderPipeline/无 RenderSystem），以 v26_1_2 为蓝本完整适配。
+- **动态 box item 紫黑纹理**：`DataComponents.ITEM_MODEL` 复用 `csgobox:csgo_box` 模型（8 平台）；1.21.5+ 补 `items/*.json` 定义（这些版本此前静态 item 模型也损坏）。
+- **GRADE_COLORS 第 3-5 档同色**：按 CS:GO 官方 quality 色系修正（industrial 0xFF5E98D9 / consumer 0xFFB0C3D9）。
+
+### 备注
+- 26.2 仍为 beta（最新 26.2.0.40-beta），保持 26.2.0.7-beta 不升级。
+- B 类迁移剩余 5 文件（BoxDefinition/GradeGroup/CsboxConfig/CsboxPlayerData/BoxRegistry）依赖 ItemStack/ModConfigSpec/Component/StreamCodec，common 编译环境无 MC classpath，需平台抽象接口（IItemStack/IComponent/IModConfig），ROADMAP 1.1B 判定 6-10h 工程，保留平台层。
+- 1.21.1~1.21.5 无 ItemModelResolver API，IconListTools 保持原锚定绘制。
+
 ## [1.0.7] - 2026-07-02
 
 ### 概述
