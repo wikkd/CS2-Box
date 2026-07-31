@@ -46,7 +46,7 @@ public final class BoxJsonLoader {
 
     private static final String[] GRADE_IDS = {"classified", "restricted", "mil_spec", "industrial", "consumer"};
     private static final String[] GRADE_NAMES = {"保密", "受限", "军规级", "工业级", "消费级"};
-    private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF4B69FF, 0xFF4B69FF};
+    private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF5E98D9, 0xFFB0C3D9};
 
     private static final List<LoadError> LAST_LOAD_ERRORS = new ArrayList<>();
 
