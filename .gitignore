@@ -139,3 +139,7 @@ init.gradle
 
 # Local deployment script
 build_and_deploy.ps1
+
+# Local dev-only auxiliary files (never part of the build)
+net/
+.qoder/

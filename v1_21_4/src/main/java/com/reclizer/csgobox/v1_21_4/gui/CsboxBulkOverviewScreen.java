@@ -1,0 +1,270 @@
+package com.reclizer.csgobox.v1_21_4.gui;
+
+import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.v1_21_4.utils.GuiItemMove;
+import com.reclizer.csgobox.v1_21_4.utils.RenderFontTool;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import com.reclizer.csgobox.v1_21_4.item.ItemCsgoBox;
+import com.reclizer.csgobox.v1_21_4.packet.PacketCsgoBulkProgress;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+/**
+ * Total overview for a bulk box open. Shift+right-click the held box to
+ * reach this screen; it counts matching boxes+keys client-side, lets the
+ * player confirm, then sends the bulk request and opens the progress screen.
+ */
+public class CsboxBulkOverviewScreen extends Screen {
+    private final Player player;
+    private final ItemStack templateBox;
+    private final ResourceLocation keyId;
+
+    private int boxCount;
+    private int keyCount;
+    private int openableCount;
+
+    private float rotX = 0;
+    private float rotY = 0;
+
+    public CsboxBulkOverviewScreen() {
+        super(Component.literal("csgo_bulk_overview"));
+        this.minecraft = Minecraft.getInstance();
+        this.player = this.minecraft != null ? this.minecraft.player : null;
+        this.templateBox = this.player != null ? this.player.getItemInHand(InteractionHand.MAIN_HAND).copy() : ItemStack.EMPTY;
+        ResourceLocation resolvedKey = null;
+        if (this.templateBox.getItem() instanceof ItemCsgoBox) {
+            resolvedKey = ItemCsgoBox.getKey(this.templateBox);
+        }
+        this.keyId = resolvedKey;
+        recount();
+    }
+
+    private void recount() {
+        if (this.player == null) {
+            boxCount = 0;
+            keyCount = 0;
+            openableCount = 0;
+            return;
+        }
+        int totalBoxes = 0;
+        for (ItemStack stack : this.player.getInventory().items) {
+            if (stack.getItem() instanceof ItemCsgoBox
+                    && ItemStack.isSameItemSameComponents(stack, this.templateBox)) {
+                totalBoxes += stack.getCount();
+            }
+        }
+        int totalKeys;
+        if (this.keyId == null || this.keyId.equals(ResourceLocation.parse("minecraft:air"))) {
+            totalKeys = Integer.MAX_VALUE;
+        } else {
+            totalKeys = 0;
+            for (ItemStack stack : this.player.getInventory().items) {
+                if (this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                    totalKeys += stack.getCount();
+                }
+            }
+        }
+        this.boxCount = totalBoxes;
+        this.keyCount = (totalKeys == Integer.MAX_VALUE) ? totalBoxes : totalKeys;
+        this.openableCount = Math.min(totalBoxes, totalKeys == Integer.MAX_VALUE ? totalBoxes : totalKeys);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    private int buttonWidth() {
+        return Math.max(96, this.width * 12 / 100);
+    }
+
+    private int openButtonX() {
+        return Math.max(8, this.width / 2 - buttonWidth() - 8);
+    }
+
+    private int backButtonX() {
+        return this.width / 2 + 8;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        recount();
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        if (this.minecraft != null && this.minecraft.level != null) {
+            guiGraphics.fillGradient(0, 0, this.width, this.height,
+                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+        }
+        render3DBox(guiGraphics, mouseX, mouseY);
+        renderLabels(guiGraphics);
+        renderButtons(guiGraphics, mouseX, mouseY);
+    }
+
+    private void render3DBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (this.templateBox.isEmpty() || this.player == null) return;
+
+        int centerX = this.width / 2;
+        int centerY = this.height * 42 / 100;
+        float frameWidth = this.width * 22 / 100F;
+        float scale = frameWidth / 16F;
+
+        guiGraphics.fillGradient(centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
+                centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
+                0xFF1a1a2e, 0xFF0f3460);
+
+        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, centerX, centerY,
+                this.rotX, this.rotY, this.templateBox, this.player, scale);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        float frameWidth = this.width * 22F / 100F;
+        float itemCenterX = this.width / 2F;
+        float itemCenterY = this.height * 42F / 100F;
+        float range = frameWidth * 0.7F;
+        boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
+                && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
+        if (button == 0 && isInRange) {
+            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
+            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    private void renderLabels(GuiGraphics guiGraphics) {
+        Style titleStyle = Style.EMPTY.withBold(true);
+        Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
+        RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
+                (this.width - this.font.width(title)) * 0.5F, this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
+
+        int rowY = this.height * 28 / 100;
+        int rowSpacing = this.font.lineHeight + 6;
+        Component boxName = this.templateBox.getItem().getName(this.templateBox);
+        Style row = Style.EMPTY;
+        drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_name", boxName.getString()).withStyle(row),
+                rowY, 0xFFEFEFEF);
+        rowY += rowSpacing * 2;
+        drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_count", this.boxCount).withStyle(row),
+                rowY, 0xFF55FF55);
+        rowY += rowSpacing;
+        String keyDisplay = (this.keyId == null) ? "—" : keyName(this.keyId);
+        if (this.keyId == null) {
+            drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_no_key", this.boxCount).withStyle(row),
+                    rowY, 0xFF55FF55);
+        } else {
+            drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count", keyDisplay, this.keyCount).withStyle(row),
+                    rowY, 0xFF55FF55);
+        }
+        rowY += rowSpacing;
+        drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.openable_count", this.openableCount).withStyle(row.withBold(true)),
+                rowY, 0xFFFFD700);
+
+        if (this.openableCount == 0) {
+            rowY += rowSpacing * 2;
+            drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.cannot_open").withStyle(row.withBold(true)),
+                    rowY, 0xFFFF4444);
+        }
+    }
+
+    private void drawCentered(GuiGraphics guiGraphics, Component text, int y, int color) {
+        FormattedCharSequence seq = text.getVisualOrderText();
+        float w = this.font.width(seq);
+        RenderFontTool.drawString(guiGraphics, this.font, seq,
+                (this.width - w) * 0.5F, y, 0, 0, 1F, color);
+    }
+
+    private static String keyName(ResourceLocation keyId) {
+        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
+        if (ref == null) return keyId.toString();
+        ItemStack sample = ref.value().getDefaultInstance();
+        return sample.getHoverName().getString();
+    }
+
+    private void renderButtons(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int btnY = this.height * 78 / 100;
+        int btnH = this.height * 5 / 100;
+        int openX = openButtonX();
+        int backX = backButtonX();
+        int w = buttonWidth();
+        boolean openHover = isInside(mouseX, mouseY, openX, btnY, w, btnH);
+        boolean backHover = isInside(mouseX, mouseY, backX, btnY, w, btnH);
+        boolean canOpen = this.openableCount > 0;
+        int openFill = canOpen ? (openHover ? 0xFF00CC00 : 0xFF008800) : 0xFF555555;
+        int openBorder = canOpen ? (openHover ? 0xFF00FF00 : 0xFF00AA00) : 0xFF333333;
+        drawButton(guiGraphics, openX, btnY, w, btnH, openFill, openBorder);
+        int backFill = backHover ? 0xFFCC4444 : 0xFFAA0000;
+        int backBorder = backHover ? 0xFFFF4444 : 0xFFFF0000;
+        drawButton(guiGraphics, backX, btnY, w, btnH, backFill, backBorder);
+
+        Style style = Style.EMPTY.withBold(true);
+        drawCenteredText(guiGraphics, Component.translatable("gui.csgobox.bulk.confirm").withStyle(style),
+                openX, btnY, w, btnH, 0.9F, canOpen ? 0xFFFFFFFF : 0xFFAAAAAA);
+        drawCenteredText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.back_box").withStyle(style),
+                backX, btnY, w, btnH, 0.9F, 0xFFFFFFFF);
+    }
+
+    private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
+        guiGraphics.fill(x, y, x + w, y + h, borderColor);
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+    }
+
+    private void drawCenteredText(GuiGraphics guiGraphics, Component text,
+                                   int x, int y, int w, int h, float scale, int color) {
+        FormattedCharSequence seq = text.getVisualOrderText();
+        float textW = this.font.width(seq) * scale;
+        float textX = x + (w - textW) / 2.0F;
+        float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
+        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, scale, color);
+    }
+
+    private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
+        return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            int btnY = this.height * 78 / 100;
+            int btnH = this.height * 5 / 100;
+            int openX = openButtonX();
+            int backX = backButtonX();
+            int w = buttonWidth();
+            if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
+                long reqId = ThreadLocalRandom.current().nextLong();
+                PacketDistributor.sendToServer(new PacketCsgoBulkProgress(reqId));
+                Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
+                return true;
+            }
+            if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {
+                this.onClose();
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int key, int b, int c) {
+        if (key == 256) {
+            this.onClose();
+            return true;
+        }
+        return super.keyPressed(key, b, c);
+    }
+}
