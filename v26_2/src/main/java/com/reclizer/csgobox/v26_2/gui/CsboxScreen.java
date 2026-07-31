@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_2.gui;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.packet.PacketCsgoProgress;
+import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_2.utils.ButtonPalette;
@@ -266,7 +267,7 @@ public class CsboxScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.minecraft.player.closeContainer();
-            // hideGui removed in MC 26.2 — see onClose() comment.
+            HudVisibility.show();
             return true;
         }
         return super.keyPressed(event);
@@ -496,7 +497,7 @@ public class CsboxScreen extends Screen {
             if (event.x() >= backX && event.x() <= backX + backW && event.y() >= backY && event.y() <= backY + backH) {
                 if (this.minecraft != null && this.minecraft.player != null) {
                     this.minecraft.player.closeContainer();
-                    // hideGui removed in MC 26.2 — see onClose() comment.
+                    HudVisibility.show();
                 }
                 return true;
             }

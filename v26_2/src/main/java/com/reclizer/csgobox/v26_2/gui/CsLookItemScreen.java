@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_2.gui;
 
+import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_2.utils.ButtonPalette;
@@ -98,7 +99,7 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
+        HudVisibility.hide();
         if (openItem.isEmpty()) return;
 
         float scale = previewTextureSize() / 16F;
@@ -211,7 +212,7 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public void onClose() {
-        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
+        HudVisibility.show();
         super.onClose();
     }
 

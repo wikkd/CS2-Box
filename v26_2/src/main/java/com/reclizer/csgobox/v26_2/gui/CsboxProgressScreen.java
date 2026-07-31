@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_2.gui;
 
+import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxOpenResult;
@@ -99,7 +100,7 @@ public class CsboxProgressScreen extends Screen {
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
         if (this.minecraft == null) return;
-        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
+        HudVisibility.hide();
 
         if (openTime < 5) return;
 
@@ -215,8 +216,10 @@ public class CsboxProgressScreen extends Screen {
                 }
                 allItems.addAll(bulk.items());
                 allGrades.addAll(bulk.grades());
+                HudVisibility.show();
                 Minecraft.getInstance().setScreenAndShow(new CsboxBulkResultScreen(this.player, allItems, allGrades));
             } else if (!this.resultItem.isEmpty()) {
+                HudVisibility.show();
                 Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(this.resultItem, this.resultGrade));
             } else {
                 this.onClose();
@@ -263,7 +266,7 @@ public class CsboxProgressScreen extends Screen {
 
     @Override
     public void onClose() {
-        // hideGui removed in MC 26.2 — see CsboxScreen.onClose() comment.
+        HudVisibility.show();
         super.onClose();
     }
 
