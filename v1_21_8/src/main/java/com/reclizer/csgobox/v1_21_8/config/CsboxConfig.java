@@ -8,6 +8,7 @@ public class CsboxConfig {
     private final ModConfigSpec.BooleanValue enableDebugLoggingValue;
     private final ModConfigSpec.BooleanValue enableAchievementsValue;
     private final ModConfigSpec.BooleanValue enableHotReloadValue;
+    private final ModConfigSpec.IntValue bulkOpenCountValue;
     private final ModConfigSpec.IntValue openSoundVolumeValue;
     private final ModConfigSpec.IntValue tickSoundVolumeValue;
     private final ModConfigSpec.IntValue finishSoundVolumeValue;
@@ -41,6 +42,9 @@ public class CsboxConfig {
         this.enableHotReloadValue = builder
                 .comment("Watch config/csbox/*.json and auto-reload on file changes (300ms debounce)")
                 .define("enableHotReload", true);
+        this.bulkOpenCountValue = builder
+                .comment("Max boxes per bulk open (0 = unlimited, default). Server-enforced; the overview screen clamps its estimate to this value.")
+                .defineInRange("bulkOpenCount", 0, 0, 576);
         this.jsonErrorAudienceValue = builder
                 .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
                 .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);
@@ -85,6 +89,10 @@ public class CsboxConfig {
 
     public boolean enableHotReload() {
         return enableHotReloadValue.get();
+    }
+
+    public int bulkOpenCount() {
+        return bulkOpenCountValue.get();
     }
 
     public int openSoundVolume() {

@@ -82,6 +82,16 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (K <= 0) {
                 return;
             }
+            // Server-enforced per-open cap (0 = unlimited). The client overview
+            // screen clamps its estimate to the same value, but the server is
+            // authoritative: a crafted packet can never open more than this.
+            int limit = CsgoBox.CONFIG.bulkOpenCount();
+            if (limit > 0) {
+                K = Math.min(K, limit);
+            }
+            if (K <= 0) {
+                return;
+            }
 
             PacketCsgoProgress.blockFurtherOpensStatic(player);
             final int requestedK = K;

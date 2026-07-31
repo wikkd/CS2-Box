@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_5.gui;
 
+import com.reclizer.csgobox.v1_21_5.CsgoBox;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_5.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_5.utils.RenderFontTool;
@@ -29,6 +30,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int boxCount;
     private int keyCount;
     private int openableCount;
+    private long lastRecountTick = -1;
 
     private float rotX = 0;
     private float rotY = 0;
@@ -53,6 +55,13 @@ public class CsboxBulkOverviewScreen extends Screen {
             openableCount = 0;
             return;
         }
+        if (this.minecraft != null && this.minecraft.level != null) {
+            long now = this.minecraft.level.getGameTime();
+            if (lastRecountTick >= 0 && now - lastRecountTick < 10) {
+                return;
+            }
+            lastRecountTick = now;
+        }
         int totalBoxes = 0;
         for (int i = 0; i < 36; i++) {
             ItemStack stack = this.player.getInventory().getItem(i);
@@ -76,6 +85,12 @@ public class CsboxBulkOverviewScreen extends Screen {
         this.boxCount = totalBoxes;
         this.keyCount = (totalKeys == Integer.MAX_VALUE) ? totalBoxes : totalKeys;
         this.openableCount = Math.min(totalBoxes, totalKeys == Integer.MAX_VALUE ? totalBoxes : totalKeys);
+        // Mirror the server-enforced bulkOpenCount cap (0 = unlimited) so the
+        // UI never promises more than the server will actually open.
+        int limit = CsgoBox.CONFIG.bulkOpenCount();
+        if (limit > 0) {
+            this.openableCount = Math.min(this.openableCount, limit);
+        }
     }
 
     @Override

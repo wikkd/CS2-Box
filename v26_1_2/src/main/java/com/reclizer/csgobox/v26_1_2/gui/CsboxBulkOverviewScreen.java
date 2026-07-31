@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
 
@@ -85,6 +86,12 @@ public class CsboxBulkOverviewScreen extends Screen {
         this.boxCount = totalBoxes;
         this.keyCount = noKeyRequired ? totalBoxes : totalKeys;
         this.openableCount = Math.min(totalBoxes, this.keyCount);
+        // Mirror the server-enforced bulkOpenCount cap (0 = unlimited) so the
+        // UI never promises more than the server will actually open.
+        int limit = CsgoBox.CONFIG.bulkOpenCount();
+        if (limit > 0) {
+            this.openableCount = Math.min(this.openableCount, limit);
+        }
     }
 
     private static ItemStack keySample(Identifier keyId) {
