@@ -100,7 +100,7 @@ public final class BoxFileWatcher {
             try {
                 ws.close();
             } catch (IOException ignored) {
-                // ignore during shutdown
+                // shutdown in progress — safe to ignore
             }
             return null;
         }
@@ -136,6 +136,7 @@ public final class BoxFileWatcher {
         try {
             watchService.close();
         } catch (IOException ignored) {
+            // stop() called during shutdown — safe to ignore
         }
 
         Thread t = pollThread;
