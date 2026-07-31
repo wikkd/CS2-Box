@@ -39,6 +39,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int boxCount;
     private int keyCount;
     private int openableCount;
+    private long lastRecountTick = -1;
 
     private float rotX = 0;
     private float rotY = 0;
@@ -62,27 +63,28 @@ public class CsboxBulkOverviewScreen extends Screen {
             openableCount = 0;
             return;
         }
+        if (this.minecraft != null && this.minecraft.level != null) {
+            long now = this.minecraft.level.getGameTime();
+            if (lastRecountTick >= 0 && now - lastRecountTick < 10) {
+                return;
+            }
+            lastRecountTick = now;
+        }
         int totalBoxes = 0;
+        int totalKeys = 0;
+        boolean noKeyRequired = this.keyId == null || this.keyId.equals(Identifier.parse("minecraft:air"));
         for (ItemStack stack : this.player.getInventory().getNonEquipmentItems()) {
             if (stack.getItem() instanceof ItemCsgoBox
                     && ItemStack.isSameItemSameComponents(stack, this.templateBox)) {
                 totalBoxes += stack.getCount();
-            }
-        }
-        int totalKeys;
-        if (this.keyId == null || this.keyId.equals(Identifier.parse("minecraft:air"))) {
-            totalKeys = Integer.MAX_VALUE;
-        } else {
-            totalKeys = 0;
-            for (ItemStack stack : this.player.getInventory().getNonEquipmentItems()) {
-                if (this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                    totalKeys += stack.getCount();
-                }
+            } else if (!noKeyRequired
+                    && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                totalKeys += stack.getCount();
             }
         }
         this.boxCount = totalBoxes;
-        this.keyCount = (totalKeys == Integer.MAX_VALUE) ? totalBoxes : totalKeys;
-        this.openableCount = Math.min(totalBoxes, totalKeys == Integer.MAX_VALUE ? totalBoxes : totalKeys);
+        this.keyCount = noKeyRequired ? totalBoxes : totalKeys;
+        this.openableCount = Math.min(totalBoxes, this.keyCount);
     }
 
     private static ItemStack keySample(Identifier keyId) {

@@ -15,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4fStack;
 
 public final class GuiItemMove {
+    private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
+
     private GuiItemMove() {
     }
 
@@ -71,11 +73,13 @@ public final class GuiItemMove {
         modelViewStack.pushMatrix();
         modelViewStack.mul(poseStack.last().pose());
         RenderSystem.applyModelViewMatrix();
+        PoseStack renderStack = REUSABLE_POSE_STACK;
+        renderStack.setIdentity();
         Minecraft.getInstance().getItemRenderer().render(
                 itemStack,
                 ItemDisplayContext.GUI,
                 false,
-                new PoseStack(),
+                renderStack,
                 bufferSource,
                 15728880,
                 OverlayTexture.NO_OVERLAY,

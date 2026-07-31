@@ -138,8 +138,6 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             blockFurtherOpensStatic(player);
 
             player.setData(ModCapability.PLAYER_DATA,
-                    new CsboxPlayerData(0L, 0, ItemStack.EMPTY, 0));
-            player.setData(ModCapability.PLAYER_DATA,
                     new CsboxPlayerData(serverSeed, 0, giveItem.copy(), finalGrade));
 
             context.reply(new PacketBoxOpenResult(

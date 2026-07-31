@@ -20,6 +20,7 @@ public final class IconListTools {
 
     private static final ResourceLocation GOLD_ITEM_TEXTURE =
             ResourceLocation.parse("csgobox:textures/screens/gold_item.png");
+    private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
 
     private IconListTools() {
     }
@@ -71,8 +72,10 @@ public final class IconListTools {
         modelViewStack.mul(poseStack.last().pose());
         RenderSystem.applyModelViewMatrix();
 
+        PoseStack renderStack = REUSABLE_POSE_STACK;
+        renderStack.setIdentity();
         Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GUI, false,
-                new PoseStack(), bufferSource, 15728880, OverlayTexture.NO_OVERLAY, bakedModel);
+                renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, bakedModel);
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
         if (useFlatLighting) {
