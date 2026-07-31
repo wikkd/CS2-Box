@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
+import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
@@ -106,15 +107,15 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     private int buttonWidth() {
-        return Math.max(96, this.width * 12 / 100);
+        return GuiRegion.actionPair(this.width, this.height, 8)[0].w();
     }
 
     private int openButtonX() {
-        return Math.max(8, this.width / 2 - buttonWidth() - 8);
+        return GuiRegion.actionPair(this.width, this.height, 8)[0].x();
     }
 
     private int backButtonX() {
-        return this.width / 2 + 8;
+        return GuiRegion.actionPair(this.width, this.height, 8)[1].x();
     }
 
     @Override
@@ -138,13 +139,14 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void render3DBox(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         if (this.templateBox.isEmpty() || this.player == null) return;
 
-        int centerX = this.width / 2;
-        int centerY = this.height * 42 / 100;
-        int textureSize = Math.max(144, Math.min(this.width * 22 / 100, this.height * 30 / 100));
+        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
+        int centerX = preview.centerX();
+        int centerY = preview.centerY();
+        int textureSize = preview.w();
         float scale = textureSize / 16F;
 
-        guiGraphics.fillGradient(centerX - textureSize / 2, centerY - textureSize / 2,
-                centerX + textureSize / 2, centerY + textureSize / 2,
+        guiGraphics.fillGradient(preview.x(), preview.y(),
+                preview.right(), preview.bottom(),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
         GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
@@ -154,15 +156,15 @@ public class CsboxBulkOverviewScreen extends Screen {
 
     // Preview geometry shared by render3DBox and mouseDragged
     private int previewTextureSize() {
-        return Math.max(144, Math.min(this.width * 22 / 100, this.height * 30 / 100));
+        return GuiRegion.preview(this.width, this.height).w();
     }
 
     private int previewPixelX() {
-        return (this.width - previewTextureSize()) / 2;
+        return GuiRegion.preview(this.width, this.height).x();
     }
 
     private int previewPixelY() {
-        return this.height * 42 / 100 - previewTextureSize() / 2;
+        return GuiRegion.preview(this.width, this.height).y();
     }
 
     @Override

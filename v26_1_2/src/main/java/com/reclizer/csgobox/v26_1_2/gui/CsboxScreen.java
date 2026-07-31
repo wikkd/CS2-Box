@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
+import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
@@ -195,8 +196,10 @@ public class CsboxScreen extends Screen {
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
-        guiGraphics.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, OverlayColor.divider());
-        guiGraphics.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, OverlayColor.divider());
+        GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
+        guiGraphics.fill(listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
+        GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
+        guiGraphics.fill(footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
 
         float scale = previewTextureSize() / 16F;
         // Skip the 3D crate when the box has no configured items — the empty
@@ -225,13 +228,13 @@ public class CsboxScreen extends Screen {
                 y = py;
                 if (grade == 5) break;
                 IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
-                        this.width * 4 / 100 + px * this.width * 9 / 100,
-                        this.height * py / 100, this.width, this.height, grade);
+                        listArea.x() + px * GuiRegion.pctW(this.width, 9),
+                        GuiRegion.pctH(this.height, py), this.width, this.height, grade);
             }
             if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
                 IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
-                        this.width * 4 / 100 + x * this.width * 9 / 100,
-                        this.height * y / 100, this.width, this.height, 5);
+                        listArea.x() + x * GuiRegion.pctW(this.width, 9),
+                        GuiRegion.pctH(this.height, y), this.width, this.height, 5);
             }
         }
 

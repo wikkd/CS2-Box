@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_8.gui;
 
 import com.reclizer.csgobox.v1_21_8.CsgoBox;
+import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_8.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_8.utils.RenderFontTool;
@@ -99,15 +100,15 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     private int buttonWidth() {
-        return Math.max(96, this.width * 12 / 100);
+        return GuiRegion.actionPair(this.width, this.height, 8)[0].w();
     }
 
     private int openButtonX() {
-        return Math.max(8, this.width / 2 - buttonWidth() - 8);
+        return GuiRegion.actionPair(this.width, this.height, 8)[0].x();
     }
 
     private int backButtonX() {
-        return this.width / 2 + 8;
+        return GuiRegion.actionPair(this.width, this.height, 8)[1].x();
     }
 
     @Override
