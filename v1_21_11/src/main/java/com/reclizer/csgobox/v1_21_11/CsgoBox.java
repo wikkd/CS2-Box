@@ -23,6 +23,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -241,6 +242,11 @@ public class CsgoBox {
                     public ItemStack getDefaultInstance() {
                         ItemStack stack = super.getDefaultInstance();
                         ItemCsgoBox.setBoxId(boxId, stack);
+                        // Reuse the base csgo_box item model so dynamic boxes
+                        // (registered from config/csbox/*.json filenames) render
+                        // with a real icon instead of the missing-texture
+                        // checkerboard.
+                        stack.set(DataComponents.ITEM_MODEL, Identifier.parse(MODID + ":csgo_box"));
                         return stack;
                     }
                 });

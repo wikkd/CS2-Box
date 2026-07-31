@@ -18,6 +18,7 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
@@ -241,6 +242,12 @@ public class CsgoBox {
                     public ItemStack getDefaultInstance() {
                         ItemStack stack = super.getDefaultInstance();
                         ItemCsgoBox.setBoxId(boxId, stack);
+                        // Reuse the base csgo_box item model so dynamic boxes
+                        // (registered from config/csbox/*.json filenames) render
+                        // with a real icon instead of the missing-texture
+                        // checkerboard. ITEM_MODEL is resolved against
+                        // assets/csgobox/items/<id>.json in 26.x.
+                        stack.set(DataComponents.ITEM_MODEL, Identifier.parse(MODID + ":csgo_box"));
                         return stack;
                     }
                 });
