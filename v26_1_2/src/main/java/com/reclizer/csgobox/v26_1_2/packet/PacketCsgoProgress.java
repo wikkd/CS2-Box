@@ -4,7 +4,7 @@ import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v26_1_2.capability.ModCapability;
-import com.reclizer.csgobox.v26_1_2.command.CsboxCommand;
+import com.reclizer.csgobox.v26_1_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.utils.RandomItem;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -17,6 +17,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.security.SecureRandom;
@@ -159,11 +160,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             if (player instanceof ServerPlayer sp) {
                 sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
-                CsboxCommand.syncOpenedBoxesToScoreboard(sp);
                 if (CsgoBox.CONFIG.enableAchievements()) {
                     OpenedBoxTrigger.INSTANCE.trigger(sp);
                 }
             }
+
+            Identifier boxId = ItemCsgoBox.getBoxId(box);
+            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));
         });
     }
 

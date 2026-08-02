@@ -4,7 +4,7 @@ import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.box.BulkBoxContext;
 import com.reclizer.csgobox.v26_1_2.box.BulkOpenResult;
-import com.reclizer.csgobox.v26_1_2.command.CsboxCommand;
+import com.reclizer.csgobox.v26_1_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import com.reclizer.csgobox.v26_1_2.utils.RandomItem;
@@ -17,6 +17,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -311,10 +312,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (!sp.getInventory().add(toGive) && !toGive.isEmpty()) {
                 sp.drop(toGive, false);
             }
+            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, snapshot.boxId(), r.resultItem().copy(), r.resultGrade(), true));
         }
 
         sp.awardStat(CsgoBox.OPENED_BOXES_STAT, actualK);
-        CsboxCommand.syncOpenedBoxesToScoreboard(sp);
         if (CsgoBox.CONFIG.enableAchievements()) {
             for (int i = 0; i < actualK; i++) {
                 OpenedBoxTrigger.INSTANCE.trigger(sp);
