@@ -1,0 +1,17 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/CHANGELOG.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "更新日志",
+  "summary": "项目各版本(v1.0.5/v1.0.4/v1.0.2)新增功能、修复、更改及移除项的中文发布记录。",
+  "scope": ["achievements", "ModConfigSpec", "csgo_key3 smithing recipe", "box opening animation", "/csbox command", "KubeJS integration", "client-server network", "1.20.1→1.21.1 migration"],
+  "cross_refs": [
+    "data/csgobox/recipe/csgo_key3_smithing.json",
+    ".planning/v1.0.5-REVIEW.md",
+    "config/csgobox.toml"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

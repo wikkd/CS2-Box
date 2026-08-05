@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/README.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2-Box README",
+  "summary": "Project README: feature overview, installation, requirements (Java 21, NeoForge 21.1.115+, MC 1.21.1), gameplay screenshots, configuration link.",
+  "scope": ["CS2-Box", "CS:GO box", "NeoForge", "MC 1.21.1", "installation"],
+  "cross_refs": ["docs/GETTING-STARTED.md", "docs/CONFIGURATION.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

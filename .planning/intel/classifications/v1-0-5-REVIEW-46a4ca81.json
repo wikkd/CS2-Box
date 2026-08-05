@@ -1,0 +1,27 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/v1.0.5-REVIEW.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "代码审查:v1.0.5 变更集",
+  "summary": "v1.0.5 版本代码审查报告,涵盖 Cloth Config → ModConfigSpec 迁移与锻造配方的 7 项发现(4 严重、2 警告、1 信息)。",
+  "scope": ["CsboxConfig", "ModConfigSpec", "csgo_key3_smithing", "Cloth Config migration", "server-authoritative RNG", "NeoForge config API", "data pack recipe path", "CR-001", "CR-002", "CR-003"],
+  "cross_refs": [
+    "src/main/java/com/reclizer/csgobox/CsgoBox.java",
+    "src/main/java/com/reclizer/csgobox/config/CsboxConfig.java",
+    "src/main/java/com/reclizer/csgobox/event/ClickEvent.java",
+    "src/main/java/com/reclizer/csgobox/event/ModEvents.java",
+    "src/main/java/com/reclizer/csgobox/gui/CsLookItemScreen.java",
+    "src/main/java/com/reclizer/csgobox/gui/CsboxProgressScreen.java",
+    "src/main/java/com/reclizer/csgobox/gui/CsboxScreen.java",
+    "src/main/resources/META-INF/neoforge.mods.toml",
+    "src/main/resources/data/csgobox/recipe/csgo_key0.json",
+    "src/main/resources/data/csgobox/recipe/csgo_key1.json",
+    "src/main/resources/data/csgobox/recipe/csgo_key2.json",
+    "src/main/resources/data/csgobox/recipe/csgo_key3_smithing.json",
+    "AGENTS.md"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Code review findings document. No ADR markers (no Decision/Consequences status), but captures 'CR-001' style findings that may be treated as quasi-decisions by the synthesizer."
+}

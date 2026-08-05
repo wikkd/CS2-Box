@@ -1,5 +1,9 @@
 # User-specific stuff
 .idea/
+!.idea/
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/*.xml
 
 *.iml
 *.ipr
@@ -135,3 +139,10 @@ init.gradle
 
 # Local deployment script
 build_and_deploy.ps1
+
+# Local dev-only auxiliary files (never part of the build)
+net/
+.qoder/
+
+# Independent testhelper repo (nested git)
+/testhelper/

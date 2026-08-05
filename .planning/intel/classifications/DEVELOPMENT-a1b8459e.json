@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/DEVELOPMENT.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "开发指南",
+  "summary": "CS2-Box 模组的本地开发配置、构建命令和数据生成运行手册。",
+  "scope": ["JDK 21", "Gradle", "MC 1.21.1", "NeoForge 21.1.115", "runClient", "runServer", "runGameTestServer", "data generation"],
+  "cross_refs": ["README.md", "CONFIGURATION.md", "ARCHITECTURE.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

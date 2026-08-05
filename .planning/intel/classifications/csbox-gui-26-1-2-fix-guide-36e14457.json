@@ -1,0 +1,20 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/csbox-gui-26.1.2-fix-guide.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "CS2-Box 26.1.2 GUI 修复指南",
+  "summary": "GUI 修复指南:P0/P1/P2 三级问题分层、根因分析(布局/渲染/文本/物品网格/状态/视觉)、修复方案、验证标准;覆盖按钮文本可见性、主预览居中、未配置态 banner、按钮色系 token、文本限宽。",
+  "scope": ["P0-1", "P0-2", "P0-3", "P1-2", "P2-1", "extractRenderState", "ButtonPalette", "RenderFontTool.drawStringClamped", "CsLookItemScreen", "CsboxScreen", "CsboxProgressScreen", "IconListTools"],
+  "cross_refs": [
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/gui/CsLookItemScreen.java",
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/gui/CsboxScreen.java",
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/gui/CsboxProgressScreen.java",
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/utils/ButtonPalette.java",
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/utils/RenderFontTool.java",
+    "v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2/utils/IconListTools.java"
+  ],
+  "locked": false,
+  "precedence": null,
+  "notes": "Runbook-style fix guide with prioritized P0/P1/P2 bugs, root cause, fix plan, verification. Not an ADR (no locked status markers). Not PRD (no user stories). High DOC confidence."
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/TESTING.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "测试指南",
+  "summary": "CS2-Box 模组的 NeoForge GameTest 测试指南,涵盖运行、编写、调试测试和 CI 集成。",
+  "scope": ["GameTest", "NeoForge", "Gradle", "CI/CD", "JUnit", "@GameTestHolder", "@GameTest", "GitHub Actions"],
+  "cross_refs": ["build.gradle"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

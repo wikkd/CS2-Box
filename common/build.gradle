@@ -1,0 +1,57 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+}
+
+base {
+    archivesName = "${mod_id}-common"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(java_toolchain_version as int)
+    }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+            "Specification-Title": mod_id,
+            "Specification-Vendor": mod_authors,
+            "Specification-Version": "1",
+            "Implementation-Title": project.name,
+            "Implementation-Version": project.version
+        )
+    }
+    // Exclude anonymous/inner-class stubs left over by incremental javac when
+    // a class is moved to a new package between source revisions. See
+    // v26_1_2/build.gradle for the rationale.
+    exclude '**/*+[0-9]+*'
+}
+
+dependencies {
+    api 'com.google.code.gson:gson:2.10.1'
+    // BoxDefaults / TutorialFetcher / TutorialSources (migrated from per-platform
+    // copies in the v1.0.7 dedup pass) use SLF4J directly. SLF4J is provided
+    // transitively by neoforge at runtime, so we only need the API here.
+    api 'org.slf4j:slf4j-api:2.0.13'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = false
+    }
+}

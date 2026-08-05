@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/port-26.1.2.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "CSBox 26.1.2 移植说明",
+  "summary": "Records MC 1.21.1 → 26.1.2 / NeoForge 21.1.115 → 26.1.2.76 migration: build environment changes, mod_version suffix, gradle wrapper, settings.gradle.",
+  "scope": ["MC 26.1.2", "NeoForge 26.1.2.76", "NeoGradle 7.1.38", "Java 25 toolchain", "--enable-preview", "mod_version suffix", "gradle.properties"],
+  "cross_refs": [".planning/multiloader-execution-spec.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Prose-heavy migration journal. API change tables are retrospective, not prescriptive forward contracts — DOC dominant. medium confidence because API tables could superficially suggest SPEC."
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "D",
+    "D",
+    "D"
+  ],
+  "key": {
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "count": 1,
+    "id": "csgobox:csgo_key2"
+  }
+}

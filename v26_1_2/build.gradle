@@ -1,0 +1,180 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version "${neogradle_version_26_1_2}"
+}
+
+group = mod_group_id
+version = mod_version
+
+base {
+    archivesName = "${mod_id}-${mc_version_26_1_2}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+def jdk25 = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.withType(JavaExec).configureEach {
+    executable = jdk25.get().executablePath.asFile.path
+    jvmArgs += '--enable-preview'
+}
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'forge.enabledGameTestNamespaces', mod_id
+    }
+
+    server {
+        systemProperty 'forge.enabledGameTestNamespaces', mod_id
+    }
+
+    gameTestServer {
+        systemProperty 'forge.enabledGameTestNamespaces', mod_id
+    }
+
+}
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    srcDir 'src/main/resources'
+    srcDir project(':common').file('src/main/resources')
+}
+
+sourceSets.main.java {
+    srcDir project(':common').file('src/main/java')
+}
+
+// Multiple srcDirs in sourceSets.main.resources can collide on files like
+// META-INF/neoforge.mods.toml (declared both in v26_1_2 and in common via the
+// auto-discovery path). Tell processResources to pick the first one written,
+// which prefers the version-specific assets in src/main/resources over the
+// shared common/ baseline.
+tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+repositories {
+    maven {
+        name = 'LocalPatchedLibraries'
+        url = rootProject.file('local-repo')
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+    }
+    maven { url = 'https://maven.neoforged.net/releases' }
+    // Mojang libraries host hosts the patched lwjgl-freetype natives
+    // (lwjgl-freetype-3.3.3-natives-macos-patch.jar) required by NeoForm.
+    maven { url = 'https://libraries.minecraft.net' }
+    mavenCentral()
+    maven { url = 'https://maven.blamejared.com' }
+    maven { url = 'https://modmaven.dev' }
+    maven { url = 'https://www.cursemaven.com' }
+    maven {
+        url = 'https://maven.latvian.dev/releases'
+        content {
+            includeGroup 'dev.latvian.mods'
+            includeGroup 'dev.latvian.apps'
+        }
+    }
+}
+
+dependencies {
+    implementation project(':common')
+    implementation "net.neoforged:neoforge:${neo_version_26_1_2}"
+}
+
+def removeStaleBuildResources = { task ->
+    def buildRes = file("$buildDir/resources/main")
+    if (!buildRes.exists()) {
+        return
+    }
+    def staleArtifacts = []
+    buildRes.eachFileRecurse(groovy.io.FileType.ANY) { f ->
+        if (f.name ==~ /.+ [0-9]+(\..+)?/) {
+            staleArtifacts << f
+        }
+    }
+    staleArtifacts.sort { -it.path.length() }.each { f ->
+        if (!f.exists()) {
+            return
+        }
+        if (f.isDirectory()) {
+            f.deleteDir()
+        } else {
+            f.delete()
+        }
+        task.logger.lifecycle("Removed stale build artifact: ${f}")
+    }
+}
+
+def purgeStaleBuildResources = tasks.register('purgeStaleBuildResources') {
+    doLast {
+        removeStaleBuildResources(delegate)
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    dependsOn purgeStaleBuildResources
+
+    var replaceProperties = [
+            minecraft_version: mc_version_26_1_2,
+            minecraft_version_range: mc_version_range_26_1_2,
+            pack_format: pack_format_26_1_2,
+            neo_version: neo_version_26_1_2,
+            neo_version_range: neo_version_range_26_1_2,
+            loader_version_range: loader_version_range_26_1_2,
+            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors: mod_authors, mod_description: mod_description,
+    ]
+
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName = "${mod_id}-${mc_version_26_1_2}-${version}.jar"
+    manifest {
+        attributes([
+                "Specification-Title": mod_id,
+                "Specification-Vendor": mod_authors,
+                "Specification-Version": "1",
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.jar.archiveVersion,
+                "Implementation-Vendor": mod_authors,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    // Exclude anonymous/inner-class stubs left over by incremental javac when
+    // a class is moved to a new package between source revisions (e.g. the
+    // v1.0.5 -> v1.0.6 common/ migration rewrote IGuiGraphics / IRegistry
+    // / IAttachmentRegistrar etc., and the * 2.class / * 3.class / * 4.class
+    // / * 5.class stale copies accumulated in build/classes/ — that single
+    // regression pushed the v26_1.2 jar from 370 KB to 832 KB without any
+    // feature change). The pattern matches "<path>/<ClassName> <N>.<ext>"
+    // which is javac's anonymous-class naming convention.
+    exclude '**/*+[0-9]+*'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['--enable-preview']
+}

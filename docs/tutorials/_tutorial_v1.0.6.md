@@ -16,18 +16,18 @@ To create a new box:
 
 ## Top-level fields
 
-| Field    | Type                  | Required | Default                | Description                                                                  |
-|----------|-----------------------|----------|------------------------|------------------------------------------------------------------------------|
-| `name`   | string                | yes      | the file name          | Display name shown on the box item tooltip and the GUI title.                |
-| `key`    | resource_location     | yes      | `csgobox:csgo_key0`    | Item id the player must hold to open this box. Use `minecraft:air` for none. |
-| `drop`   | float                 | no       | `0.12`                 | Default drop chance (0.0 to 1.0) for any mob in the `entity` list.           |
-| `random` | array of 5 integers   | no       | `[625, 125, 25, 5, 2]` | Weights for `grade1..grade5`. Higher = more likely.                          |
-| `entity` | array                 | no       | `[]`                   | Mob entity ids that drop this box. Two formats accepted (see below).         |
-| `grade1` | array of item objects | no       | `[]`                   | Consumer-grade items (lowest rarity, light blue).                            |
-| `grade2` | array of item objects | no       | `[]`                   | Industrial-grade items (light blue).                                         |
-| `grade3` | array of item objects | no       | `[]`                   | Mil-spec grade items (blue).                                                 |
-| `grade4` | array of item objects | no       | `[]`                   | Restricted-grade items (purple).                                             |
-| `grade5` | array of item objects | no       | `[]`                   | Classified-grade items (highest rarity, pink).                               |
+| Field    | Type                  | Required | Default                | Description                                                                                                                                              |
+|----------|-----------------------|----------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`   | string                | yes      | the file name          | Display name shown on the box item tooltip and the GUI title. An optional `#RRGGBB ` prefix sets a custom color; see [Box name colors](#box-name-colors). |
+| `key`    | resource_location     | yes      | `csgobox:csgo_key0`    | Item id the player must hold to open this box. Use `minecraft:air` for none.                                                                             |
+| `drop`   | float                 | no       | `0.12`                 | Default drop chance (0.0 to 1.0) for any mob in the `entity` list.                                                                                       |
+| `random` | array of 5 integers   | no       | `[625, 125, 25, 5, 2]` | Weights for `grade1..grade5`. Higher = more likely.                                                                                                      |
+| `entity` | array                 | no       | `[]`                   | Mob entity ids that drop this box. Two formats accepted (see below).                                                                                     |
+| `grade1` | array of item objects | no       | `[]`                   | Consumer-grade items (lowest rarity, light blue).                                                                                                        |
+| `grade2` | array of item objects | no       | `[]`                   | Industrial-grade items (light blue).                                                                                                                     |
+| `grade3` | array of item objects | no       | `[]`                   | Mil-spec grade items (blue).                                                                                                                             |
+| `grade4` | array of item objects | no       | `[]`                   | Restricted-grade items (purple).                                                                                                                         |
+| `grade5` | array of item objects | no       | `[]`                   | Classified-grade items (highest rarity, pink).                                                                                                           |
 
 ### Entity formats
 
@@ -46,6 +46,30 @@ The `entity` field accepts two formats.
 ```
 
 Rates must be between 0.0 and 1.0. Values outside this range are accepted as-is and not clamped.
+
+## Box name colors
+
+A box can carry a colored display name by prefixing the `name` value with a hex color and a single ASCII space:
+
+```json
+{
+  "name": "#FF5555 Premium Crate",
+  "key":  "csgobox:csgo_key0",
+  "drop": 0.12,
+  "random": [625, 125, 25, 5, 2],
+  "entity": ["minecraft:zombie"],
+  "grade5": [{"id": "minecraft:diamond_sword"}]
+}
+```
+
+The prefix format is `#RRGGBB ` — a `#`, six hexadecimal digits (case-insensitive), and one space. The color is applied to:
+
+- The box item's display name in the inventory, tooltip, and held-in-hand render.
+- The centered title at the top of the open-box GUI.
+
+When no prefix is present, the title falls back to the default `0xFFD3D3D3` light gray — the same color used before this feature was added, so existing boxes are visually unchanged. If the prefix is malformed (for example `#GG5555 Crate` or `#FFF Crate` — wrong number of hex digits), the whole string is used as the name without a color and a warning is logged to the server console; the box still loads.
+
+The color is round-trip safe: when the mod re-saves a box JSON via `/csbox save` or a programmatic save, the configured prefix is rewritten back into the file unchanged.
 
 ## Item object
 
@@ -130,6 +154,7 @@ Use `minecraft:air` as the `key` field for a box that requires no key. `csgobox:
 - Unknown item ids are skipped with a warning; the rest of the grade still loads.
 - Item count must be a positive integer; non-positive values are treated as 1.
 - The loader tolerates extra unknown top-level keys; they are ignored without warning.
+- A `name` that contains a malformed `#RRGGBB ` prefix is preserved verbatim and used as the plain name (no color). See [Box name colors](#box-name-colors).
 
 ## Troubleshooting
 
@@ -141,6 +166,9 @@ All `grade1..grade5` arrays are empty or every item in them failed to parse. Che
 
 **Drop rate does not match expectations.**
 Entity drop rates are taken from the per-entity rate if present, else the default `drop` field. The Looting enchantment adds +50% per level (capped at 100%).
+
+**Box name color does not show up.**
+The prefix must be `#` followed by exactly six hex digits and one space, at the very start of the `name` string. Anything else (e.g. `#FFF Name`, `#GG5555 Name`, no trailing space) is treated as a plain name. Check `latest.log` for a `Box name has color prefix but empty text` warning if you expected a color.
 
 **Want to remove a box.**
 Delete the corresponding `.json` file and run `/csbox reload` (or restart the server).

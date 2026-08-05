@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/docs/CONFIGURATION.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "配置指南",
+  "summary": "Guides users through configuring CS2 Box mod options via csgobox.toml and custom box JSON files, including all configurable fields, defaults, and reload instructions.",
+  "scope": ["ModConfigSpec", "csgobox.toml", "config/csbox/*.json", "animation settings", "sound settings", "box JSON schema"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

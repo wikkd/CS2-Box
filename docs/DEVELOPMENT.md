@@ -1,21 +1,16 @@
 <!-- generated-by: gsd-doc-writer -->
-# 开发指南
+# CS2-Box 开发指南
 
-本文档涵盖 CS2 Box Minecraft 模组的本地开发配置、构建命令和贡献指南。
+> 本文档涵盖 CS2-Box Minecraft 模组的本地开发配置、构建命令、代码规范、分支约定与贡献流程。
 
 ## 前置要求
 
-- **Java 开发工具包（JDK）**：版本 21 或更高
-- **Gradle**：通过 Gradle Wrapper 附带（无需系统安装）
-- **Minecraft**：版本 1.21.1
-- **NeoForge**：版本 21.1.115（loader 版本 4+）
+| 平台 | Java | Minecraft | NeoForge | Gradle | NeoGradle |
+|---|---|---|---|---|---|
+| `v1_21_1/` | 21 | 1.21.1 | 21.1.115 | 8.11 | 7.0.171 |
+| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.76 | 8.14 | 7.1.38 |
 
-验证 Java 安装：
-
-```bash
-java -version
-# 应输出：openjdk version "21.x.x" 或更高版本
-```
+Gradle Wrapper 自带,无需系统安装。
 
 ## 本地配置
 
@@ -26,122 +21,133 @@ git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 ```
 
-### 2. 构建项目
+### 2. 选择活动版本
 
-首次构建会下载 NeoForge 依赖，可能需要几分钟：
+`gradle.properties`:
 
-```bash
-./gradlew build
+```properties
+active_versions=26.1.2  # 或 1.21.1
 ```
 
-这会编译所有 Java 源代码并在 `build/libs/` 生成 JAR 文件。
+### 3. 构建项目
 
-### 3. 运行模组进行开发
-
-启动带模组的 Minecraft：
+首次构建会下载 NeoForge 依赖,可能需要几分钟:
 
 ```bash
-# 运行客户端（创造模式单人游戏）
-./gradlew runClient
-
-# 运行专用服务端
-./gradlew runServer
-
-# 运行带游戏测试的版本
-./gradlew runGameTestServer
+./gradlew :v26_1_2:build
 ```
 
-游戏客户端会打开，可以进行游戏内功能测试。
+构建产物:
 
-### 4. 生成数据文件
+- `v1_21_1/build/libs/csbox-1.21.1-1.0.5.jar`
+- `v26_1_2/build/libs/csbox-26.1.2-1.0.5.jar`
 
-某些功能需要数据生成（进度 JSON、战利品表、合成表）：
+### 4. 运行开发客户端
 
 ```bash
-./gradlew runData
-```
+# 客户端(单人创造模式)
+./gradlew :v26_1_2:runClient
 
-这会从源码树中的数据提供者重新生成 `src/generated/resources/` 中的文件。
+# 专用服务端
+./gradlew :v26_1_2:runServer
+
+# GameTest 集成测试
+./gradlew gameTestServer
+```
 
 ## 构建命令
 
-所有命令使用 Gradle Wrapper（`./gradlew`），它会自动下载正确版本的 Gradle。
-
 | 命令 | 说明 |
-|---------|-------------|
-| `./gradlew build` | 编译源码并构建可分发 JAR |
-| `./gradlew runClient` | 启动带模组的 Minecraft 客户端 |
-| `./gradlew runServer` | 启动专用服务端实例 |
-| `./gradlew runGameTestServer` | 在测试服务器中运行集成测试 |
-| `./gradlew runData` | 运行数据生成器（进度、战利品表、合成表） |
-| `./gradlew clean` | 删除构建产物 |
-| `./gradlew tasks --all` | 列出所有可用的 Gradle 任务 |
-
-### 构建产物
-
-成功构建后，JAR 文件位于：
-
-```
-build/libs/CsgoBox-<version>.jar
-```
+|---|---|
+| `./gradlew build` | 编译所有模块(由 `active_versions` 决定) |
+| `./gradlew :v26_1_2:compileJava` | 仅编译 v26_1_2,快速检查语法 |
+| `./gradlew :v26_1_2:runClient` | 启动 v26_1_2 客户端 |
+| `./gradlew :v26_1_2:runServer` | 启动 v26_1_2 专用服务端 |
+| `./gradlew :v1_21_1:runClient` | 启动 v1_21_1 客户端 |
+| `./gradlew gameTestServer` | 在测试服务器中运行集成测试 |
+| `./gradlew clean` | 删除所有 build/ 目录 |
+| `./gradlew tasks --all` | 列出所有可用 Gradle 任务 |
 
 ## 代码规范
 
-本项目使用标准 Java 规范：
+- **缩进**:4 空格(不用 Tab)
+- **行尾**:Unix 风格(LF)
+- **编码**:UTF-8
+- **Java 命名**:标准 Java 命名约定
+- **最大行长度**:120 字符
+- **公共 API**:必须加 Javadoc
+- **不可变数据**:用 `Record` 类(参见 `BoxDefinition.java`)
+- **数据序列化**:用 NeoForge `Codec`(持久化)和 `StreamCodec`(网络流)
 
-- **缩进**：4 空格（不使用 Tab）
-- **换行**：Unix 风格（LF）
-- **编码**：UTF-8
+### Multiloader 关键约束
 
-项目中没有配置格式检查工具。贡献代码时请与周围代码保持一致。
+- **`common/` 不允许** `import net.minecraft.*` 或 `import net.neoforged.*`
+- 所有 GUI / Attachment / 网络上下文 / 注册表访问留在平台模块
+- 修改 `common/` 后**必须**在两个平台都重新构建验证
+- `CONFIG` 是 `public static final`,**不要写 `null` 守卫**
 
-### 关键约定
+### 双平台 API 差异
 
-- **包结构**：`com.reclizer.csgobox.<模块>`，模块包括 `advancement`、`box`、`capability`、`command`、`config`、`event`、`gui`、`item`、`packet`、`sounds` 或 `utils`
-- **注册**：使用 NeoForge 的注册系统注册方块、物品和其他游戏对象
-- **配置**：使用 `CsboxConfig` 处理模组特定设置
+| 维度 | v1_21_1 | v26_1_2 |
+|---|---|---|
+| Screen 渲染入口 | `render(GuiGraphics,...)` | `extractRenderState(GuiGraphicsExtractor,...)` |
+| 矩阵 API | `PoseStack` | `Matrix3x2f`(`guiGraphics.pose()`) |
+| 渲染管道 | 静态 `RenderSystem` | decoupled `RenderPipelines` |
+| 3D 物品预览 | `BakedModel` 管线 | `Icon3DRenderer`(PIP 3D) |
+| Blit 签名 | 9-arg overload | `guiGraphics.blit(RenderPipeline,...)` |
+
+GUI 代码先在 v1_21_1 落地,再迁移到 v26_1_2。
 
 ## 分支约定
 
-项目中没有正式的分支命名规范。请使用描述性分支名：
-
-- `feat/<功能名>` 用于新功能
-- `fix/<问题名>` 用于 bug 修复
-- `docs/<主题>` 用于文档更改
-
-主分支为 `main`。
+- `main` — 稳定发布分支(1.21.1 主分支)
+- `multiloader-refactor` — v26.1.2 迁移分支(当前活跃)
+- 功能分支命名:`feat/描述`、`fix/描述`、`docs/描述`、`refactor/描述`
+- 所有 PR 指向目标开发分支
 
 ## Pull Request 流程
 
-提交更改时：
-
-1. 从 `main` 创建功能分支
-2. 确保模组构建成功（`./gradlew build`）
-3. 使用 `./gradlew runClient` 在游戏中测试更改
-4. 如修改了数据提供者，运行数据生成（`./gradlew runData`）
-5. 提交包含清晰更改描述的 Pull Request
+1. 从目标分支创建功能分支
+2. 在改动的模块下运行 `./gradlew :<module>:build` 确保编译成功
+3. 用 `./gradlew :<module>:runClient` 在游戏中测试更改
+4. 跨平台验证(如改动影响 `common/`)
+5. 提交包含清晰更改描述的 PR
 
 ## 项目结构
 
 ```
-src/main/java/com/reclizer/csgobox/
-├── CsgoBox.java          # 主模组入口
-├── advancement/          # 成就/触发器定义
-├── box/                 # 核心宝箱功能
-├── capability/          # 玩家 capability 处理
-├── command/             # 控制台命令
-├── config/              # 配置系统
-├── event/               # 事件监听器
-├── gui/                 # UI 界面和组件
-├── item/                # 自定义物品定义
-├── packet/              # 网络数据包（客户端/服务端同步）
-├── sounds/              # 音效事件定义
-└── utils/               # 工具类
-
-src/main/resources/
-├── assets/csgobox/      # 材质、模型、语言文件
-├── data/csgobox/        # 进度、战利品表、合成表
-└── META-INF/            # NeoForge 模组清单
+CS2-Box/
+├── common/                              # 跨版本业务逻辑 + 共享资源 + platform 接口
+│   ├── src/main/java/com/reclizer/csgobox/
+│   │   ├── platform/                    # Platform 接口(由 v1_21_1 / v26_1_2 实现)
+│   │   ├── box/                         # BoxDefinition / BoxRegistry / BoxJsonLoader / RandomItem
+│   │   ├── packet/                      # 数据包 Codec / StreamCodec
+│   │   └── sounds/                      # 音效事件定义(共享)
+│   └── src/main/resources/              # 共享资源(纹理、配方、advancement)
+│
+├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.115 / Java 21
+│   └── src/main/java/com/reclizer/csgobox/v1_21_1/
+│       ├── CsgoBox.java                 # 模组入口
+│       ├── advancement/                 # OpenedBoxTrigger / ModLoadedTrigger
+│       ├── capability/                  # 玩家数据附件
+│       ├── command/                     # /csbox 命令
+│       ├── config/                      # CsboxConfig (ModConfigSpec)
+│       ├── event/                       # ClickEvent / ModEvents
+│       ├── gui/                         # CsboxScreen / CsboxProgressScreen / CsLookItemScreen
+│       ├── item/                        # ItemCsgoBox / ItemCsgoKey / ModItems
+│       ├── packet/                      # 网络协议接线
+│       └── utils/                       # 共享工具类
+│
+├── v26_1_2/                             # MC 26.1.2 / NeoForge 26.1.2.76 / Java 25
+│   └── src/main/java/com/reclizer/csgobox/v26_1_2/
+│       ├── (同 v1_21_1 结构)
+│       ├── gui/pip/                     # 独有:Icon3DRenderer / Icon3DRenderState
+│       ├── platform/                    # 独有:Platform26 (实现 common 的 Platform 接口)
+│       └── utils/                       # 独有:ButtonPalette / RenderFontTool
+│
+├── settings.gradle                       # 模块注册 + active_versions 切换
+├── gradle.properties                     # mod_version / pack_format / active_versions
+└── docs/                                 # 项目文档
 ```
 
 ## IDE 配置
@@ -149,9 +155,9 @@ src/main/resources/
 ### IntelliJ IDEA
 
 1. 打开项目根目录
-2. 出现提示时选择"Import Gradle Project"
+2. 出现提示时选择 "Import Gradle Project"
 3. 等待 Gradle 同步完成
-4. 运行配置会自动生成（如 `runClient`、`runServer` 等）
+4. 运行配置自动生成(`runClient`、`runServer` 等)
 
 ### Eclipse
 
@@ -161,35 +167,37 @@ src/main/resources/
 
 然后导入生成的 Eclipse 项目文件。
 
+### VS Code
+
+需安装 `Extension Pack for Java` + `Gradle for Java` 扩展。
+
 ## 故障排除
 
 ### JDK 版本错误导致构建失败
 
-确保已安装并选择 JDK 21：
 ```bash
 # 检查 Java 版本
 java -version
 
-# 如需要，从 https://adoptium.net/ 安装 JDK 21
+# 如需要,从 https://adoptium.net/ 安装 JDK 21 / 25
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
 ### Gradle Daemon 问题
 
-项目在 `gradle.properties` 中禁用了 daemon。如遇问题：
 ```bash
 ./gradlew --stop
-./gradlew build
+./gradlew :v26_1_2:build
 ```
 
-### 修改资源后材质缺失
+### 资源缺失
 
-运行数据生成器确保所有资源正确处理：
-```bash
-./gradlew runData
-```
+`common/src/main/resources/` 由两个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
 
 ## 相关文档
 
-- [README.md](README.md) - 项目概述
-- [CONFIGURATION.md](CONFIGURATION.md) - 配置选项
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 系统设计
+- [README.md](../README.md) — 项目概述
+- [docs/ARCHITECTURE.md](./ARCHITECTURE.md) — 系统设计
+- [docs/CONFIGURATION.md](./CONFIGURATION.md) — 配置选项
+- [docs/TESTING.md](./TESTING.md) — 测试指南
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — 贡献流程

@@ -1,0 +1,89 @@
+name: Build Matrix
+
+on:
+  push:
+    branches: [main, multiloader-refactor]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.mc }} (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mc: 1.21.1
+            version_key: 1.21.1
+            module: v1_21_1
+            java: 21
+          - mc: 1.21.3
+            version_key: 1.21.3
+            module: v1_21_3
+            java: 21
+          - mc: 1.21.4
+            version_key: 1.21.4
+            module: v1_21_4
+            java: 21
+          - mc: 1.21.5
+            version_key: 1.21.5
+            module: v1_21_5
+            java: 21
+          - mc: 1.21.8
+            version_key: 1.21.8
+            module: v1_21_8
+            java: 21
+          - mc: 1.21.10
+            version_key: 1.21.10
+            module: v1_21_10
+            java: 21
+          - mc: 1.21.11
+            version_key: 1.21.11
+            module: v1_21_11
+            java: 21
+          - mc: 26.1.2
+            version_key: 26.1.2
+            module: v26_1_2
+            java: 25
+          - mc: 26.2
+            version_key: 26.2
+            module: v26_2
+            java: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ matrix.mc }}-${{ hashFiles('**/*.gradle', 'gradle.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Compile ${{ matrix.module }}
+        run: ./gradlew :${{ matrix.module }}:compileJava -Pactive_versions=${{ matrix.version_key }} --console=plain
+
+      - name: Run common unit tests
+        run: ./gradlew :common:test --console=plain
+
+      - name: Assemble jar
+        run: ./gradlew :${{ matrix.module }}:jar -Pactive_versions=${{ matrix.version_key }} --console=plain
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: csgobox-${{ matrix.mc }}
+          path: ${{ matrix.module }}/build/libs/*.jar
+          if-no-files-found: error

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/shuangyuexingxun/Desktop/CS2-Box/.planning/phase0-audit.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Phase 0 基线审计记录",
+  "summary": "多加载器重构 Phase 0 阶段对仓库当前模块结构、资源分布、构建配置与类级归属的基线审计记录(现状清单 / 类级归属表 / 构建阻塞点 / 失败处理预案)。",
+  "scope": ["baseline audit", "module structure", "resource distribution", "build config", "class ownership", "common/v1_21_1 modules"],
+  "cross_refs": [".planning/multiloader-refactor-plan.md", ".planning/multiloader-execution-spec.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Prose-heavy baseline audit describing current state observations. No ADR markers, no PRD signals, no API contracts — DOC dominant."
+}

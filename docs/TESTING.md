@@ -1,63 +1,58 @@
 <!-- generated-by: gsd-doc-writer -->
-# 测试指南
+# CS2-Box 测试指南
 
-本文档涵盖 CS2-Box Minecraft 模组的测试基础设施。
+> CS2-Box 使用 NeoForge 内置的 GameTest 框架进行集成测试,加上手动测试覆盖 GUI 与运行时行为。
 
-## 测试框架和配置
+## 测试框架与配置
 
-CS2-Box 使用 **NeoForge GameTest 框架**进行集成测试。GameTest 是 Minecraft 内置的测试系统，在实际游戏实例中运行测试，允许模组在受控测试环境中验证方块行为、物品交互和游戏事件。
+CS2-Box 使用 **NeoForge GameTest 框架**进行集成测试。GameTest 是 Minecraft 内置的测试系统,在实际游戏实例中运行测试,允许模组在受控测试环境中验证方块行为、物品交互和游戏事件。
 
-GameTest 框架随 NeoForged 提供，无需额外依赖。
+GameTest 框架随 NeoForged 提供,无需额外依赖。
 
-**前置要求：**
-- Java 21（见 `build.gradle` 中的 `java.toolchain.languageVersion`）
-- 带 NeoForged userdev 插件的 Gradle（在 `build.gradle` 中已配置）
+## 前置要求
+
+- **Java 21**(v1_21_1)或 **Java 25 + `--enable-preview`**(v26_1_2),由 `java.toolchain.languageVersion` 强制
+- Gradle Wrapper(项目自带)
+- NeoForged userdev 插件(`build.gradle` 已配置)
 
 ## 运行测试
 
-### GameTest 服务器（主要方式）
-
-使用专用测试服务器运行所有已注册的 GameTest：
+### GameTest 服务器(主要方式)
 
 ```bash
 ./gradlew gameTestServer
 ```
 
-这会启动一个在无头环境中运行测试的专用 Minecraft 服务器实例。
+启动专用测试服务器,在无头环境中运行所有已注册的 GameTest。
 
 ### 客户端 GameTest
-
-在可见客户端窗口中运行测试：
 
 ```bash
 ./gradlew runGameTestClient
 ```
 
-### 单个测试方法
+在可见客户端窗口中运行测试,可视化测试结构(成功/失败用绿/红标记)。
 
-要运行特定测试批次，使用 `--tests` 参数：
+### 单个测试方法
 
 ```bash
 ./gradlew gameTestServer --tests "csgobox.*"
+./gradlew gameTestServer --tests "csgobox.BoxOpeningTest.testBoxOpens"
 ```
-
-将模式替换为完全限定的测试类名或批次名。
 
 ## 编写新测试
 
 ### 文件位置
 
-在 `src/test/java/` 目录创建测试类（此目录尚不存在，需手动创建）：
+测试代码放在对应模块的 `src/test/java/` 目录(默认不存在,需手动创建):
 
 ```
-src/
-  main/java/     # 源代码
-  test/java/     # 测试代码（如不存在需创建）
+common/src/test/java/        # 跨版本测试
+v1_21_1/src/test/java/       # 1.21.1 平台特化测试
+v26_1_2/src/test/java/       # 26.1.2 平台特化测试
 ```
 
 ### 测试类结构
-
-GameTest 类使用 `net.neoforged.neoforge.gametest` 中的注解：
 
 ```java
 package com.reclizer.csgobox.test;
@@ -78,24 +73,26 @@ public class BoxOpeningTest {
 }
 ```
 
-**关键注解：**
-- `@GameTestHolder("csgobox")` - 此模组测试的命名空间
-- `@GameTest` - 标记测试方法
-  - `batch` - 将相关测试分组（一起运行）
-  - `setupTicks` - 测试运行前等待的 tick 数
+**关键注解**:
+
+- `@GameTestHolder("csgobox")` — 此模组测试的命名空间(用 mod ID)
+- `@GameTest` — 标记测试方法
+  - `batch` — 分组相关测试一起运行(如 `box_loot`、`smithing_recipe`)
+  - `setupTicks` — 测试运行前等待的 tick 数
 
 ### 测试辅助方法
 
-使用 `GameTestHelper` 方法与测试世界交互：
-- `helper.succeed()` - 标记测试通过
-- `helper.fail(String message)` - 标记测试失败
-- `helper.assertItemStackPresent(ItemStack stack, String message)` - 断言物品存在
-- `helper.setBlock(pos, block)` - 放置方块
-- `helper.getBlock(pos)` - 获取指定位置的方块
+`GameTestHelper` 提供测试世界交互 API:
+
+- `helper.succeed()` — 标记测试通过
+- `helper.fail(String message)` — 标记测试失败
+- `helper.assertItemStackPresent(ItemStack stack, String message)` — 断言物品存在
+- `helper.setBlock(pos, block)` — 放置方块
+- `helper.getBlock(pos)` — 查询指定位置的方块
 
 ### 批次组织
 
-使用 `batch` 参数按功能分组测试：
+按功能分组:
 
 ```java
 @GameTest(batch = "box_loot")
@@ -103,15 +100,43 @@ public void testRareItemDrop(GameTestHelper helper) { }
 
 @GameTest(batch = "box_loot")
 public void testCommonItemDrop(GameTestHelper helper) { }
+
+@GameTest(batch = "smithing_recipe")
+public void testNetheriteKeySmithing(GameTestHelper helper) { }
 ```
 
-## 覆盖率要求
+## 手动测试
 
-本项目未配置覆盖率阈值。测试覆盖率目前是临时性的。
+GUI 渲染、动画、音效、CS:GO 风格的滚动体验等无法用 GameTest 自动化覆盖,需要手动测试。
+
+### v26_1_2 GUI 验收清单
+
+来自 `.planning/csbox-gui-26.1.2-fix-guide.md`:
+
+- [ ] CsboxScreen 主预览的物品视觉居中(屏幕宽度约 16%)
+- [ ] CsLookItemScreen 返回按钮的白色加粗文案清晰可见(不被矩形覆盖)
+- [ ] 未配置箱子的 banner 居中显示,不与 3D 预览重叠
+- [ ] ButtonPalette 按钮色在 hover 时切换深浅
+- [ ] RenderFontTool 限宽省略号正确截断(长物品名)
+- [ ] csgo_background.png 在 CsboxProgressScreen 上显示完整镜片框 + dim 灰色外层
+
+### v1.0.5 功能验收清单
+
+来自 `docs/MANUAL-TESTING-v1.0.5.md`:
+
+- [ ] TC-1:右键 csgo_box 打开预览界面,显示 2×10 物品网格
+- [ ] TC-2:放入对应钥匙,点开启按钮触发滚动动画
+- [ ] TC-3:服务端授权 RNG 决定结果,客户端动画与服务端一致
+- [ ] TC-4:动画结束显示 CsLookItemScreen,展示结果物品
+- [ ] TC-5:`/csbox list` 显示所有已注册箱子
+- [ ] TC-6:`/csbox give` 正确发放箱子物品
+- [ ] TC-7:`全新的开始` 成就首次主动开箱时解锁
+- [ ] TC-8:`导购` 成就累计 200 个箱子后解锁
+- [ ] TC-9:csgo_key3 通过锻造台配方升级 csgo_key2
 
 ## CI 集成
 
-本项目未配置 CI/CD 流水线。如需将游戏测试添加到 CI，在 `.github/workflows/gametest.yml` 创建工作流文件：
+本项目未配置 CI/CD 流水线。如需将游戏测试添加到 CI,在 `.github/workflows/gametest.yml` 创建:
 
 ```yaml
 name: Game Tests
@@ -122,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
         with:
           java-version: 21
       - name: Run GameTest Server
@@ -131,17 +156,15 @@ jobs:
 
 ## 测试命名规范
 
-GameTest 类应遵循以下规范：
-- 类名：`XxxTest.java`（如 `BoxOpeningTest.java`）
-- 方法名：`testXxx`（如 `testBoxOpens`）
-- 批次名：小写下划线分隔（如 `box_loot`）
-- 测试命名空间：使用模组 ID `csgobox`
+- 类名:`XxxTest.java`(如 `BoxOpeningTest.java`)
+- 方法名:`testXxx`(如 `testBoxOpens`)
+- 批次名:小写下划线分隔(如 `box_loot`、`smithing_recipe`)
+- 测试命名空间:用 mod ID `csgobox`
 
-## 调试测试
+## 调试失败的测试
 
-调试失败的测试：
-
-1. 使用客户端运行：`./gradlew runGameTestClient`
-2. 测试结构会在游戏中以红/绿标记可视化
-3. 使用 F3+T 重新加载结构模板
-4. 查看 `forge logs/test/` 获取详细错误输出
+1. **可视化运行**:`./gradlew runGameTestClient`
+2. **测试结构**在游戏中用红/绿标记可视化
+3. **重载结构模板**:F3+T 重新加载
+4. **详细日志**:`forge logs/test/` 或 `.minecraft/logs/`
+5. **断点**:IntelliJ IDEA 中以 Debug 模式启动 `runGameTestClient`,在测试方法上打断点
