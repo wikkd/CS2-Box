@@ -185,7 +185,7 @@ tasks.named('jar', Jar).configure {
     exclude '**/*+[0-9]+*'
 }
 
-// ProGuard / R8 minify was attempted in the 1.0.7 cleanup pass but rolled
+// ProGuard / R8 minify was attempted in the 1.0.6 cleanup pass but rolled
 // back: R8 outputs Android .dex bytecode (incompatible with mc 1.21.1's
 // Java class loader), and ProGuard 7.x Gradle plugin (7.4.2) is
 // incompatible with Gradle 8's strict plugins{} block ordering. ProGuard

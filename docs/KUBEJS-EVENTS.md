@@ -115,7 +115,7 @@ public class CsboxEventHandler {
 
 ```groovy
 dependencies {
-    compileOnly files('libs/csgobox-1.21.1-1.0.7.jar') // 对应版本
+    compileOnly files('libs/csgobox-1.21.1-1.0.6.jar') // 对应版本
 }
 ```
 

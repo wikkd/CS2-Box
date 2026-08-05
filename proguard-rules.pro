@@ -1,6 +1,6 @@
 # ProGuard / R8 minify rules for CS2-Box mod.
 # Applied via: ./gradlew :v1_21_1:minifyJar -Pactive_versions=1.21.1
-# (or :v26_1_2 / :v26_2). Output: build/libs/csgobox-<mc>-1.0.7-minified.jar.
+# (or :v26_1_2 / :v26_2). Output: build/libs/csgobox-<mc>-1.0.6-minified.jar.
 
 # ---- 1. Mod entry point ----
 # The @Mod entry class is discovered by string-key lookup in mods.toml.

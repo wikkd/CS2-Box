@@ -1,6 +1,6 @@
 # Release Process
 
-> 适用于 1.0.7+ 的多平台发布流程。版本矩阵见 `gradle.properties` 的 `active_versions`。
+> 适用于 1.0.6+ 的多平台发布流程。版本矩阵见 `gradle.properties` 的 `active_versions`。
 
 ## 1. 版本号同步（四处在升级时必须一致）
 
@@ -28,7 +28,7 @@ for v in 1.21.1 1.21.3 1.21.4 1.21.5 1.21.8 1.21.10 1.21.11 26.1.2 26.2; do
 done
 ```
 
-产物命名：`<module>/build/libs/csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-1.0.7.jar`）。
+产物命名：`<module>/build/libs/csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
 
 ## 3. 质量门（发布前必须全绿）
 
