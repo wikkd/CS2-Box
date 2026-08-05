@@ -11,10 +11,11 @@
 - **Java**: 21（legacy 平台）/ 25 + `--enable-preview`（v26_1_2/v26_2）。toolchain 由各模块 build.gradle 指定。
 - **每次 Gradle 调用只能构建一个 MC 版本**（NeoGradle userdev IDEA 扩展冲突，历史限制）。用 `-Pactive_versions=<v>` 覆盖 `gradle.properties` 的默认值（当前默认 26.1.2）。
 - **9 个平台模块**：`v1_21_1` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。
+- **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），源码**未提交**（本地 WIP），**不在 CI 矩阵**，不参与 mirror/镜像纪律；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。勿误当正式平台发布。
 
 ## 架构约束（CONSTRAINT-001）
 
-- **`common/` 不得 import 任何 `net.minecraft.*` / `net.neoforged.*`**（编译环境无 MC classpath，违反即编译失败）。共享资源（纹理/音效/lang/配方/成就）也放在 `common/src/main/resources/`。
+- **`common/` 不得 import 任何 `net.minecraft.*` / `net.neoforged.*`**（编译环境无 MC classpath，违反即编译失败）。共享资源（纹理/音效/lang/配方/成就）也放在 `common/src/main/resources/`。该约束由 `:common:checkCommonArchitecture` Gradle task 自动化执行（挂载在 `compileJava` 依赖上，任何编译/测试都会触发，含 forge_26_1_2 把 common 源码编进自身 classpath 的场景）。
 - 平台模块通过 `srcDir project(':common').file('src/main/resources')` 共享资源。
 - 依赖方向：`平台 → common`，`common` 不依赖任何平台。
 
@@ -25,13 +26,13 @@
 跨平台改动的正确姿势：
 
 1. 先改基准模块：legacy 用 `v1_21_1`，new 用 `v26_1_2`
-2. `scripts/mirror.sh legacy|new|all <rel-path>` — 仅用于**无适配差异**的纯新增文件
+2. `scripts/mirror.sh legacy|new|all <rel-path>` — 仅用于**无适配差异**的纯新增文件（目标已存在会警告跳过，`--force` 覆盖，`--dry-run` 预演不写盘）
 3. 有适配差异的文件用**定点合入**（`scripts/merge-cooldown-fix.py` 是幂等合入脚本的范例），或用 `scripts/port-12111.py` 做规则化转换
 4. 每平台 `compileJava` 验证（增量缓存可能造假象——**改动涉及平台时用 `clean` 编译确认**）
 
 ## 版本号管理（升级时四处同步）
 
-`gradle.properties` 的 `mod_version=` + `neoforge.mods.toml`（模板变量 `${mod_version}` 自动注入）+ `CHANGELOG.md` + `README.md`。发布流程见 `docs/RELEASE.md`。
+`gradle.properties` 的 `mod_version=` + `neoforge.mods.toml`（模板变量 `${mod_version}` 自动注入）+ `CHANGELOG.md` + `README.md`。发布流程见 `docs/RELEASE.md`。一致性检查：`scripts/check-version.sh`（CI 的 `common-test` job 已接入）。
 
 ## 关键文件
 
@@ -53,5 +54,7 @@
 
 ## 测试
 
-- `common` 有 JUnit 5（`BoxJsonSchemaValidatorTest` 24 用例）：`./gradlew :common:test`
-- 平台层无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
+- `common` 有 JUnit 5（`BoxJsonSchemaValidatorTest` 24 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
+- `common` 架构约束检查由 `:common:checkCommonArchitecture` 自动挂载在编译上（见「架构约束」节）
+- 平台层最小测试：`v26_1_2` 有 `PlatformSmokeTest`（JUnit 5，验证入口类可加载，不初始化 MC 运行时）：`./gradlew :v26_1_2:test -Pactive_versions=26.1.2`
+- 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
