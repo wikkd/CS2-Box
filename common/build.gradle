@@ -39,7 +39,7 @@ tasks.withType(Jar).configureEach {
 dependencies {
     api 'com.google.code.gson:gson:2.10.1'
     // BoxDefaults / TutorialFetcher / TutorialSources (migrated from per-platform
-    // copies in the v1.0.7 dedup pass) use SLF4J directly. SLF4J is provided
+    // copies in the v1.0.6 dedup pass) use SLF4J directly. SLF4J is provided
     // transitively by neoforge at runtime, so we only need the API here.
     api 'org.slf4j:slf4j-api:2.0.13'
 
@@ -55,3 +55,43 @@ tasks.withType(Test).configureEach {
         showStandardStreams = false
     }
 }
+
+// CONSTRAINT-001 enforcement: common/ must never depend on Minecraft or its
+// loaders. The platform modules compile common sources *together with* the
+// MC/NeoForge classpath (e.g. forge_26_1_2 srcDir's common/src/main/java), so a
+// stray import can slip through platform builds even though plain :common:compileJava
+// has no MC classpath. Fail fast with file:line instead of relying on convention.
+def checkCommonArchitecture = tasks.register('checkCommonArchitecture') {
+    group = 'verification'
+    description = 'CONSTRAINT-001: refuse net.minecraft.* / net.neoforged.* / net.minecraftforge.* imports in common/ sources.'
+    def sourceDirs = ['src/main/java', 'src/test/java'].collect { file(it) }
+    inputs.files sourceDirs
+    outputs.upToDateWhen { true }
+    doLast {
+        def violations = []
+        sourceDirs.each { dir ->
+            if (!dir.isDirectory()) {
+                return
+            }
+            dir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                if (!f.name.endsWith('.java')) {
+                    return
+                }
+                f.eachLine('UTF-8') { line, idx ->
+                    boolean bad = line ==~ /^\s*import\s+(static\s+)?(net\.minecraft\.[\w.*]+|net\.neoforged\.[\w.*]+|net\.minecraftforge\.[\w.*]+)\s*;/
+                    if (bad) {
+                        violations << "${projectDir.toPath().relativize(f.toPath())}:${idx + 1}: ${line.trim()}"
+                    }
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException(
+                'CONSTRAINT-001 violated — common/ must not import Minecraft / NeoForge / Forge classes:\n' +
+                violations.join('\n'))
+        }
+        logger.lifecycle 'checkCommonArchitecture: no Minecraft/NeoForge/Forge imports in common/ sources'
+    }
+}
+
+tasks.named('compileJava').configure { dependsOn(checkCommonArchitecture) }
