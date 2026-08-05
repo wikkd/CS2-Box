@@ -30,6 +30,7 @@
 | `loadDefaultBoxes` | 布尔 | `true` | 启动时自动从 `config/csbox/*.json` 加载默认宝箱 |
 | `enableDebugLogging` | 布尔 | `false` | 启用控制台详细调试日志 |
 | `enableAchievements` | 布尔 | `true` | 启用成就系统;关闭时仍累积统计(保留进度) |
+| `damageItemByWear` | 布尔 | `true` | 抽出的物品若有耐久,按磨损值百分比损耗耐久(不会碎裂) |
 
 ### 2.3 `[sound]` 音效设置
 

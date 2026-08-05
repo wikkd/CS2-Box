@@ -18,6 +18,7 @@ public class CsboxConfig {
     private final ModConfigSpec.EnumValue<AnimationSpeed> animationSpeedValue;
     private final ModConfigSpec.IntValue globalDropRatePercentValue;
     private final ModConfigSpec.EnumValue<ErrorChatAudience> jsonErrorAudienceValue;
+    private final ModConfigSpec.BooleanValue damageItemByWearValue;
 
     public CsboxConfig(ModConfigSpec.Builder builder) {
         builder.comment("General settings").push("general");
@@ -48,6 +49,9 @@ public class CsboxConfig {
         this.jsonErrorAudienceValue = builder
                 .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
                 .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);
+        this.damageItemByWearValue = builder
+                .comment("Drawn items with durability lose durability by their wear value percentage (default on)")
+                .define("damageItemByWear", true);
         builder.pop();
 
         builder.comment("Sound settings").push("sound");
@@ -129,6 +133,10 @@ public class CsboxConfig {
 
     public ErrorChatAudience jsonErrorAudience() {
         return jsonErrorAudienceValue.get();
+    }
+
+    public boolean damageItemByWear() {
+        return damageItemByWearValue.get();
     }
 
     public enum AnimationSpeed {
