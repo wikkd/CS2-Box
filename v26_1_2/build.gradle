@@ -97,6 +97,21 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation "net.neoforged:neoforge:${neo_version_26_1_2}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    // main classes are compiled with --enable-preview (Java 25), so the test
+    // JVM must enable preview too when it loads them.
+    jvmArgs += ['--enable-preview']
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = false
+    }
 }
 
 def removeStaleBuildResources = { task ->

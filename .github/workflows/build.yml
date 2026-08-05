@@ -75,8 +75,9 @@ jobs:
       - name: Compile ${{ matrix.module }}
         run: ./gradlew :${{ matrix.module }}:compileJava -Pactive_versions=${{ matrix.version_key }} --console=plain
 
-      - name: Run common unit tests
-        run: ./gradlew :common:test --console=plain
+      - name: Run platform smoke tests (${{ matrix.module }})
+        if: matrix.module == 'v26_1_2'
+        run: ./gradlew :${{ matrix.module }}:test -Pactive_versions=${{ matrix.version_key }} --console=plain
 
       - name: Assemble jar
         run: ./gradlew :${{ matrix.module }}:jar -Pactive_versions=${{ matrix.version_key }} --console=plain
@@ -87,3 +88,36 @@ jobs:
           name: csgobox-${{ matrix.mc }}
           path: ${{ matrix.module }}/build/libs/*.jar
           if-no-files-found: error
+
+  common-test:
+    name: common unit tests + checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-common-${{ hashFiles('**/*.gradle', 'gradle.properties') }}
+          restore-keys: gradle-common-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Check version sync (gradle.properties / CHANGELOG / README / mods.toml)
+        run: scripts/check-version.sh
+
+      - name: Architecture constraint check (CONSTRAINT-001)
+        run: ./gradlew :common:checkCommonArchitecture --console=plain
+
+      - name: Run common unit tests
+        run: ./gradlew :common:test --console=plain
