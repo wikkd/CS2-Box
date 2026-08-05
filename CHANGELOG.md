@@ -13,7 +13,8 @@
 ### 新增
 - **9 平台版本矩阵**：`settings.gradle` + `gradle.properties` 扩展到 `v1_21_3/4/5/8/10/11`，全部 9 模块 clean compileJava 验证通过。
 - **`/csbox tutorial refresh`** 子命令：强制重下当前版本教程（覆盖已存在），`BoxDefaults.refreshTutorials` 与启动路径共用 TutorialSources/TutorialFetcher。
-- **`.trash/` 自动清理**：`pruneFallbackTrash` 按 mtime 保留最近 5 份，防 headless 服务器无限增长。
+- **教程系统收敛到 common**：9 平台 `BoxDefaults.java` 副本整体删除，`refreshTutorials` 上移 `common/box/BoxDefaults.java`（B 类迁移 #1/6 收尾）。
+- **旧版本教程直接删除**：取代 OS 回收站 + `.trash/` 两级回收机制（含 `canUseOsTrash` / `moveToOsTrash` / `moveToFallbackTrash` / `pruneFallbackTrash` / `tryMoveOrCopy` / `uniqueFallbackPath` 全部移除）。`deleteStaleTutorials` 按 `^_tutorial_v.*\.md$` 白名单直接 `Files.delete`，单文件失败仅 warn 不中断。
 - **`bulkOpenCount` 配置**（`[advanced]`，0=无上限，默认 0）：服务端权威截断，客户端总览屏镜像 clamp。
 - **ConfirmationScreen 二次确认**：总览屏「全部开启」先跳确认屏（展示消耗量），确认后才发 `PacketCsgoBulkProgress`。
 - **26.2 HUD 隐藏恢复**：`HudVisibility` 工具类（`Minecraft.gui.hud.toggle()/isHidden()` set 语义包装），开箱动画屏自动隐藏 hotbar/血条，消除 1.0.6 遗留降级。
@@ -29,6 +30,7 @@
 - **v1_21_11 从未真正编译通过**（clean 编译 80 错误）：1.21.11 的 GuiGraphics 已是 decoupled API（Matrix3x2fStack/RenderPipeline/无 RenderSystem），以 v26_1_2 为蓝本完整适配。
 - **动态 box item 紫黑纹理**：`DataComponents.ITEM_MODEL` 复用 `csgobox:csgo_box` 模型（8 平台）；1.21.5+ 补 `items/*.json` 定义（这些版本此前静态 item 模型也损坏）。
 - **GRADE_COLORS 第 3-5 档同色**：按 CS:GO 官方 quality 色系修正（industrial 0xFF5E98D9 / consumer 0xFFB0C3D9）。
+- **记分板彻底原版化**：移除 `/csbox scoreboard` 子命令（on/off/list/sidebar/belowName/status）与全部配套代码（`scoreboardStatus/On/Off/SetDisplay/currentDisplaySlotName/syncOpenedBoxesToScoreboard` + 11 个 i18n key）。记分板改由玩家用原版指令管理：`/scoreboard objectives add <名> minecraft:custom:csgobox:opened_box`（自定义统计 `csgobox:opened_box` 已注册，原版自动实时读取 stat 值，不再需要模组手动写分）；旧存档的 `csbox_opened`（DUMMY）objective 需先 `remove` 再按新方式重建。
 
 ### 备注
 - 26.2 仍为 beta（最新 26.2.0.40-beta），保持 26.2.0.7-beta 不升级。

@@ -41,6 +41,7 @@ done
    - 成就触发（`csgobox:opened_boxes` 累计）
    - `/csbox reload`、`/csbox tutorial refresh`、`/csbox errors`
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）
+   - GUI 渲染验证走自动化工作流：`docs/RUNTIME-UI-TESTING.md`（CGEvent 驱动 + 帧缓冲像素断言）
 
 ## 4. 发布产物
 
