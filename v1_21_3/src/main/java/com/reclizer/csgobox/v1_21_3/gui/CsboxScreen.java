@@ -118,7 +118,26 @@ public class CsboxScreen extends Screen {
         return itemStacks;
     }
 
+    private static final int ITEMS_PER_PAGE = 20;
+
+    private int page;
+
+    private int renderableCount() {
+        int count = 0;
+        for (int i = 0; i < itemsList.size(); i++) {
+            if (gradeList.get(i) > 4) break;
+            count++;
+        }
+        return count;
+    }
+
+    private int pageCount() {
+        int n = renderableCount();
+        return Math.max(1, (n + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE);
+    }
+
     private int boxKeyCount;
+
 
     private int countKeys() {
         int total = 0;
@@ -176,23 +195,25 @@ public class CsboxScreen extends Screen {
         int y = 0;
 
         if (this.entity != null) {
-            for (int i = 0; i < itemsList.size(); i++) {
+            int startIdx = this.page * ITEMS_PER_PAGE;
+            for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
                 int py = 55;
-                int px = i;
-                if (i > 9) {
+                int px = i - startIdx;
+                if (px > 9) {
                     py = 73;
-                    px = i - 10;
+                    px -= 10;
                 }
                 ItemStack itemStack1 = itemsList.get(i);
                 int grade = gradeList.get(i);
                 x = px;
                 y = py;
-                if (grade == 5) break;
+                if (grade > 4) break;
                 IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
                         listArea.x() + px * GuiRegion.pctW(this.width, 9),
                         GuiRegion.pctH(this.height, py), this.width, this.height, grade);
             }
-            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
+            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
+                    && this.page == pageCount() - 1) {
                 IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
                         listArea.x() + x * GuiRegion.pctW(this.width, 9),
                         GuiRegion.pctH(this.height, y), this.width, this.height, 5);
@@ -225,18 +246,31 @@ public class CsboxScreen extends Screen {
         return super.keyPressed(key, b, c);
     }
 
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (verticalAmount != 0 && pageCount() > 1) {
+            int target = this.page + (verticalAmount > 0 ? -1 : 1);
+            if (target >= 0 && target < pageCount()) {
+                this.page = target;
+            }
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         Style style = Style.EMPTY.withBold(true);
         int x = 0;
         int y = 0;
         boolean showNames = CsgoBox.CONFIG.showItemNames();
 
-        for (int i = 0; i < itemsList.size(); i++) {
+        int startIdx = this.page * ITEMS_PER_PAGE;
+        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
             int py = 67;
-            int px = i;
-            if (i > 9) {
+            int px = i - startIdx;
+            if (px > 9) {
                 py = 85;
-                px = i - 10;
+                px -= 10;
             }
             ItemStack itemStack1 = itemsList.get(i);
             int grade = gradeList.get(i);
@@ -253,6 +287,10 @@ public class CsboxScreen extends Screen {
             renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
                     this.width * 4 / 100F + x * this.width * 9 / 100F,
                     this.height * y / 100F, 0.6F);
+        }
+        if (pageCount() > 1) {
+            renderText(guiGraphics, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
+                    this.width * 88 / 100F, this.height * 54 / 100F, 0.6F);
         }
 
         renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_box").getVisualOrderText(),
@@ -353,6 +391,7 @@ public class CsboxScreen extends Screen {
             this.openClicked = this.itemGroup.isEmpty();
             this.boxEmpty = this.itemGroup.isEmpty();
             this.boxKeyCount = countKeys();
+            this.page = 0;
         }
     }
 

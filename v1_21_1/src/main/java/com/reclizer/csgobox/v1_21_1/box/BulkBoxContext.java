@@ -1,10 +1,8 @@
 package com.reclizer.csgobox.v1_21_1.box;
 
+import com.reclizer.csgobox.logic.GradeMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Server-side snapshot of the data needed to compute bulk box results off the
@@ -14,10 +12,12 @@ import java.util.Map;
 public record BulkBoxContext(
         ResourceLocation boxId,
         int[] weights,
-        Map<Integer, List<ItemStack>> gradeMap
+        GradeMap<ItemStack> gradeMap
 ) {
     public BulkBoxContext {
         weights = weights == null ? new int[0] : weights.clone();
-        gradeMap = gradeMap == null ? Map.of() : Map.copyOf(gradeMap);
+        if (gradeMap == null) {
+            gradeMap = new GradeMap<>(null, stack -> !stack.isEmpty(), ItemStack::copy);
+        }
     }
 }

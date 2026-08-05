@@ -30,8 +30,8 @@ import java.util.Map;
  */
 public class CsboxBulkResultScreen extends Screen {
     private static final int MAX_VISIBLE = 8;
-    private static final long LIFE_TICKS = 100;
-    private static final int TICKS_PER_ENTRY = 4;
+    private static final long LIFE_TICKS = 5000;
+    private static final long TICKS_PER_ENTRY = 200;
 
     private final Player player;
     private final List<ItemStack> allItems;
@@ -78,9 +78,10 @@ public class CsboxBulkResultScreen extends Screen {
     public void tick() {
         super.tick();
         if (this.minecraft == null || this.minecraft.level == null) {
+            com.reclizer.csgobox.v26_2.CsgoBox.LOGGER.info("[csbox-bulk-result] tick skip level-null");
             return;
         }
-        long now = this.minecraft.level.getGameTime();
+        long now = System.currentTimeMillis();
         if (lastTickTime == 0) {
             lastTickTime = now;
             lastAddTick = now;
@@ -132,7 +133,7 @@ public class CsboxBulkResultScreen extends Screen {
         if (this.minecraft == null || this.minecraft.level == null) {
             return;
         }
-        long now = this.minecraft.level.getGameTime();
+        long now = System.currentTimeMillis();
 
         int rowH = this.height / 22;
         int baseY = this.height * 92 / 100;
@@ -141,7 +142,7 @@ public class CsboxBulkResultScreen extends Screen {
 
         int index = 0;
         for (Entry e : visible) {
-            float age = (float) (now - e.appearTick + partialTicks) / LIFE_TICKS;
+            float age = (float) (now - e.appearTick) / LIFE_TICKS;
             float alpha;
             if (age < 0.10F) {
                 alpha = age / 0.10F;

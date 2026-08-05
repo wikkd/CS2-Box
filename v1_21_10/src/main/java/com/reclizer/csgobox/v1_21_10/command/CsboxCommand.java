@@ -17,20 +17,10 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.stats.Stat;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.server.ServerScoreboard;
-import net.minecraft.world.scores.DisplaySlot;
-import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.ScoreAccess;
-import net.minecraft.world.scores.ScoreHolder;
-import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.criteria.ObjectiveCriteria;
+import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.v1_21_10.CsgoBox;
-import com.reclizer.csgobox.v1_21_10.box.BoxDefaults;
 import com.reclizer.csgobox.v1_21_10.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_10.box.BoxJsonLoader;
 import com.reclizer.csgobox.v1_21_10.box.BoxRegistry;
@@ -67,8 +57,6 @@ public final class CsboxCommand {
         SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
         return builder.buildFuture();
     };
-
-    private static final String SCOREBOARD_OBJECTIVE_NAME = "csbox_opened";
 
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
@@ -128,19 +116,6 @@ public final class CsboxCommand {
                 .then(Commands.literal("errors")
                         .executes(CsboxCommand::showLoadErrors)
                 )
-                .then(Commands.literal("scoreboard")
-                        .executes(CsboxCommand::scoreboardStatus)
-                        .then(Commands.literal("on")
-                                .executes(CsboxCommand::scoreboardOn))
-                        .then(Commands.literal("off")
-                                .executes(CsboxCommand::scoreboardOff))
-                        .then(Commands.literal("list")
-                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.LIST)))
-                        .then(Commands.literal("sidebar")
-                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.SIDEBAR)))
-                        .then(Commands.literal("belowName")
-                                .executes(ctx -> scoreboardSetDisplay(ctx, DisplaySlot.BELOW_NAME)))
-                )
         );
     }
 
@@ -154,7 +129,6 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_weight"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.scoreboard"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
     }
@@ -315,115 +289,6 @@ public final class CsboxCommand {
             source.sendSuccess(err::toChatMessage, false);
         }
         return errors.size();
-    }
-
-    private static int scoreboardStatus(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack source = ctx.getSource();
-        MinecraftServer server = source.getServer();
-        if (server == null) {
-            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
-            return 0;
-        }
-        Scoreboard sb = server.getScoreboard();
-        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
-        if (obj == null) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.status_off"), false);
-            return 0;
-        }
-        String slot = currentDisplaySlotName(sb, obj);
-        source.sendSuccess(() -> Component.translatable(
-                "commands.csgobox.scoreboard.status_on", slot), false);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int scoreboardOn(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack source = ctx.getSource();
-        MinecraftServer server = source.getServer();
-        if (server == null) {
-            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
-            return 0;
-        }
-        Scoreboard sb = server.getScoreboard();
-        if (sb.getObjective(SCOREBOARD_OBJECTIVE_NAME) != null) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.already_on"), false);
-            return 0;
-        }
-        Objective obj = sb.addObjective(
-                SCOREBOARD_OBJECTIVE_NAME,
-                ObjectiveCriteria.DUMMY,
-                Component.translatable("commands.csgobox.scoreboard.objective_display_name"),
-                ObjectiveCriteria.RenderType.INTEGER,
-                true,
-                null
-        );
-        if (sb instanceof ServerScoreboard ssb) {
-            ssb.setDisplayObjective(DisplaySlot.LIST, obj);
-        }
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            syncOpenedBoxesToScoreboard(p);
-        }
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.on_success"), false);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int scoreboardOff(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack source = ctx.getSource();
-        MinecraftServer server = source.getServer();
-        if (server == null) {
-            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
-            return 0;
-        }
-        Scoreboard sb = server.getScoreboard();
-        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
-        if (obj == null) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.off_not_found"), false);
-            return 0;
-        }
-        sb.removeObjective(obj);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.off_success"), false);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static int scoreboardSetDisplay(CommandContext<CommandSourceStack> ctx, DisplaySlot slot) {
-        CommandSourceStack source = ctx.getSource();
-        MinecraftServer server = source.getServer();
-        if (server == null) {
-            source.sendFailure(Component.literal("[CS2-Box] Server context unavailable"));
-            return 0;
-        }
-        Scoreboard sb = server.getScoreboard();
-        Objective obj = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
-        if (obj == null) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.scoreboard.display_not_set"), false);
-            return 0;
-        }
-        if (sb instanceof ServerScoreboard ssb) {
-            ssb.setDisplayObjective(slot, obj);
-        }
-        source.sendSuccess(() -> Component.translatable(
-                "commands.csgobox.scoreboard.display_changed", slot.getSerializedName()), false);
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private static String currentDisplaySlotName(Scoreboard sb, Objective obj) {
-        if (sb.getDisplayObjective(DisplaySlot.LIST) == obj) return "list";
-        if (sb.getDisplayObjective(DisplaySlot.SIDEBAR) == obj) return "sidebar";
-        if (sb.getDisplayObjective(DisplaySlot.BELOW_NAME) == obj) return "belowName";
-        return "none";
-    }
-
-    public static void syncOpenedBoxesToScoreboard(ServerPlayer player) {
-        Stat<ResourceLocation> stat = CsgoBox.OPENED_BOXES_STAT;
-        if (stat == null) return;
-        MinecraftServer server = player.level().getServer();
-        if (server == null) return;
-        Scoreboard sb = server.getScoreboard();
-        Objective objective = sb.getObjective(SCOREBOARD_OBJECTIVE_NAME);
-        if (objective == null) return;
-        int value = player.getStats().getValue(stat);
-        ScoreHolder holder = ScoreHolder.forNameOnly(player.getScoreboardName());
-        ScoreAccess score = sb.getOrCreatePlayerScore(holder, objective);
-        score.set(value);
     }
 
     private static ResourceLocation resolveBoxId(String boxArg) {

@@ -15,7 +15,8 @@ public record BulkOpenResult(
         long serverSeed,
         int winningIndex,
         List<ItemStack> animationItems,
-        List<Integer> animationGrades
+        List<Integer> animationGrades,
+        float wear
 ) {
     public BulkOpenResult {
         resultItem = resultItem == null ? ItemStack.EMPTY : resultItem.copy();

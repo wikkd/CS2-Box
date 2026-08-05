@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.packet;
 
+import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -33,9 +34,9 @@ public record PacketBoxOpenResult(
         List<Integer> animationGrades
 ) implements CustomPacketPayload {
 
-    public static final int ANIMATION_ITEM_COUNT = 50;
-    public static final int MIN_WINNING_INDEX = 35;
-    public static final int MAX_WINNING_INDEX = 44;
+    public static final int ANIMATION_ITEM_COUNT = AnimationStrip.ITEM_COUNT;
+    public static final int MIN_WINNING_INDEX = AnimationStrip.MIN_WINNING_INDEX;
+    public static final int MAX_WINNING_INDEX = AnimationStrip.MAX_WINNING_INDEX;
     private static final int MAX_PENDING_RESULTS = 8;
 
     public static final Type<PacketBoxOpenResult> TYPE = new Type<>(

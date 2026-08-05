@@ -5,8 +5,11 @@ import com.reclizer.csgobox.v1_21_11.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_11.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v1_21_11.capability.ModCapability;
 import com.reclizer.csgobox.v1_21_11.event.BoxOpenedEvent;
+import com.reclizer.csgobox.logic.AnimationStrip;
+import com.reclizer.csgobox.logic.GradeMap;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.v1_21_11.item.ItemCsgoBox;
-import com.reclizer.csgobox.v1_21_11.utils.RandomItem;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -99,22 +102,25 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
-            var gradeMap = RandomItem.precomputeGradeMap(itemList);
+            var gradeMap = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy);
 
-            List<ItemStack> animationItems = new ArrayList<>(PacketBoxOpenResult.ANIMATION_ITEM_COUNT);
-            List<Integer> animationGrades = new ArrayList<>(PacketBoxOpenResult.ANIMATION_ITEM_COUNT);
-            for (int i = 0; i < PacketBoxOpenResult.ANIMATION_ITEM_COUNT; i++) {
-                int grade = RandomItem.randomItemsGrade(rng, weights);
-                ItemStack itemStack = RandomItem.randomItemsFromGradeMap(rng, grade, gradeMap);
-                if (itemStack.isEmpty()) {
-                    itemStack = RandomItem.findFallbackFromGradeMap(grade, gradeMap);
+            List<ItemStack> animationItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+            List<Integer> animationGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+            for (int i = 0; i < AnimationStrip.ITEM_COUNT; i++) {
+                int grade = OddsCalculator.pickGrade(rng, weights);
+                ItemStack itemStack = gradeMap.pickRandom(rng, grade);
+                if (itemStack == null) {
+                    itemStack = gradeMap.findFallback(grade);
+                }
+                if (itemStack == null) {
+                    itemStack = ItemStack.EMPTY;
                 }
                 animationGrades.add(Mth.clamp(grade, 1, 5));
                 animationItems.add(itemStack);
             }
 
-            int winningIndex = randomWinningIndex(animationItems.size());
-            winningIndex = RandomItem.clampToValidItem(animationItems, winningIndex);
+            int winningIndex = AnimationStrip.randomWinningIndex(SECURE_RANDOM, animationItems.size());
+            winningIndex = AnimationStrip.findNearestValid(animationItems, winningIndex, stack -> !stack.isEmpty());
             if (winningIndex < 0) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
@@ -126,7 +132,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             int finalGrade = animationGrades.get(winningIndex);
 
             if (giveItem.isEmpty()) {
-                giveItem = RandomItem.findFallback(1, itemList);
+                giveItem = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy).findFallback(1);
+                if (giveItem == null) giveItem = ItemStack.EMPTY;
                 if (giveItem.isEmpty()) {
                     if (player instanceof ServerPlayer sp) {
                         sendRejected(sp, message.requestId());
@@ -136,6 +143,12 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 finalGrade = resolveGrade(giveItem, itemList, 1);
                 animationItems.set(winningIndex, giveItem.copy());
                 animationGrades.set(winningIndex, finalGrade);
+            }
+
+            float wear = 0F;
+            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.isDamageableItem()) {
+                wear = rng.nextFloat();
+                applyWearDamage(giveItem, wear);
             }
 
             blockFurtherOpensStatic(player);
@@ -176,15 +189,6 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         });
     }
 
-    private static int randomWinningIndex(int itemCount) {
-        int maxIndex = itemCount - 1;
-        int min = Math.min(PacketBoxOpenResult.MIN_WINNING_INDEX, maxIndex);
-        int max = Math.min(PacketBoxOpenResult.MAX_WINNING_INDEX, maxIndex);
-        if (max <= min) {
-            return min;
-        }
-        return min + SECURE_RANDOM.nextInt(max - min + 1);
-    }
 
     private static void sendRejected(ServerPlayer player, long requestId) {
         PacketDistributor.sendToPlayer(player, new PacketBoxOpenResult(
@@ -223,6 +227,20 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
     private static int serverOpenCooldownTicks() {
         return 10;
+    }
+
+    /**
+     * Damages a durable item stack by a fraction of its max durability
+     * proportional to the wear value (0..1). Clamped so the item never breaks
+     * (damage is at most maxDamage - 1) and never goes negative.
+     */
+    static void applyWearDamage(ItemStack stack, float wear) {
+        int maxDamage = stack.getMaxDamage();
+        if (maxDamage <= 0) {
+            return;
+        }
+        int damage = Math.max(0, Math.min(Math.round(wear * maxDamage), maxDamage - 1));
+        stack.set(DataComponents.DAMAGE, damage);
     }
 
     private static int resolveGrade(ItemStack item, Map<ItemStack, Integer> itemList, int fallback) {

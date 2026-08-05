@@ -6,8 +6,10 @@ import com.reclizer.csgobox.v26_1_2.box.BulkBoxContext;
 import com.reclizer.csgobox.v26_1_2.box.BulkOpenResult;
 import com.reclizer.csgobox.v26_1_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.logic.AnimationStrip;
+import com.reclizer.csgobox.logic.GradeMap;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
-import com.reclizer.csgobox.v26_1_2.utils.RandomItem;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -99,7 +101,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             final int requestedK = K;
             final long requestId = message.requestId();
             final Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
-            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, RandomItem.precomputeGradeMap(itemList));
+            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy));
 
             final Player playerFinal = player;
             CompletableFuture
@@ -186,55 +188,52 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
             if (i == 0) {
-                List<ItemStack> animItems = new ArrayList<>(PacketBoxOpenResult.ANIMATION_ITEM_COUNT);
-                List<Integer> animGrades = new ArrayList<>(PacketBoxOpenResult.ANIMATION_ITEM_COUNT);
-                for (int j = 0; j < PacketBoxOpenResult.ANIMATION_ITEM_COUNT; j++) {
-                    int g = RandomItem.randomItemsGrade(rng, snapshot.weights());
-                    ItemStack s = RandomItem.randomItemsFromGradeMap(rng, g, snapshot.gradeMap());
-                    if (s.isEmpty()) {
-                        s = RandomItem.findFallbackFromGradeMap(g, snapshot.gradeMap());
+                List<ItemStack> animItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+                List<Integer> animGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+                for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
+                    int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                    ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
+                    if (s == null) {
+                        s = snapshot.gradeMap().findFallback(g);
+                    }
+                    if (s == null) {
+                        s = ItemStack.EMPTY;
                     }
                     animItems.add(s);
                     animGrades.add(Mth.clamp(g, 1, 5));
                 }
-                int winningIndex = randomWinningIndex(rng, animItems.size());
-                winningIndex = RandomItem.clampToValidItem(animItems, winningIndex);
+                int winningIndex = AnimationStrip.randomWinningIndex(rng, animItems.size());
+                winningIndex = AnimationStrip.findNearestValid(animItems, winningIndex, stack -> !stack.isEmpty());
                 if (winningIndex < 0) {
                     winningIndex = 0;
                 }
                 ItemStack giveItem = animItems.get(winningIndex);
                 int finalGrade = animGrades.get(winningIndex);
                 if (giveItem.isEmpty()) {
-                    ItemStack fb = RandomItem.findFallbackFromGradeMap(1, snapshot.gradeMap());
-                    if (!fb.isEmpty()) {
+                    ItemStack fb = snapshot.gradeMap().findFallback(1);
+                    if (fb != null && !fb.isEmpty()) {
                         giveItem = fb;
                         finalGrade = 1;
                         animItems.set(winningIndex, giveItem.copy());
                         animGrades.set(winningIndex, finalGrade);
                     }
                 }
-                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, animItems, animGrades));
+                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, animItems, animGrades, rng.nextFloat()));
             } else {
-                int g = RandomItem.randomItemsGrade(rng, snapshot.weights());
-                ItemStack s = RandomItem.randomItemsFromGradeMap(rng, g, snapshot.gradeMap());
-                if (s.isEmpty()) {
-                    s = RandomItem.findFallbackFromGradeMap(g, snapshot.gradeMap());
+                int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
+                if (s == null) {
+                    s = snapshot.gradeMap().findFallback(g);
                 }
-                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of()));
+                if (s == null) {
+                    s = ItemStack.EMPTY;
+                }
+                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), rng.nextFloat()));
             }
         }
         return out;
     }
 
-    private static int randomWinningIndex(Random rng, int itemCount) {
-        int maxIndex = itemCount - 1;
-        int min = Math.min(PacketBoxOpenResult.MIN_WINNING_INDEX, maxIndex);
-        int max = Math.min(PacketBoxOpenResult.MAX_WINNING_INDEX, maxIndex);
-        if (max <= min) {
-            return min;
-        }
-        return min + rng.nextInt(max - min + 1);
-    }
 
     /**
      * Main-thread finalization. Re-validates inventory (boxes/keys might have
@@ -265,6 +264,25 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
 
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
         List<BulkOpenResult> truncated = results.subList(0, actualK);
+
+        // Wear-based durability damage, applied on the main thread. The first
+        // box's animation strip shares the winner stack, so damage it too for a
+        // consistent reveal.
+        if (CsgoBox.CONFIG.damageItemByWear()) {
+            for (BulkOpenResult r : truncated) {
+                if (r.wear() > 0F && r.resultItem().isDamageableItem()) {
+                    PacketCsgoProgress.applyWearDamage(r.resultItem(), r.wear());
+                    if (!r.animationItems().isEmpty()
+                            && r.winningIndex() >= 0
+                            && r.winningIndex() < r.animationItems().size()) {
+                        ItemStack animWinner = r.animationItems().get(r.winningIndex());
+                        if (!animWinner.isEmpty() && animWinner.isDamageableItem()) {
+                            PacketCsgoProgress.applyWearDamage(animWinner, r.wear());
+                        }
+                    }
+                }
+            }
+        }
 
         // Now consume exactly actualK boxes + keys.
         if (!PacketCsgoProgress.tryConsumeBoxes(sp, templateBox, actualK)) {
