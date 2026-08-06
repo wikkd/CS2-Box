@@ -88,7 +88,7 @@ public class CsboxBulkOverviewScreen extends Screen {
         this.keyCount = this.player.getAbilities().instabuild
                 ? Integer.MAX_VALUE
                 : ((totalKeys == Integer.MAX_VALUE) ? totalBoxes : totalKeys);
-        this.openableCount = Math.min(totalBoxes, totalKeys == Integer.MAX_VALUE ? totalBoxes : totalKeys);
+        this.openableCount = Math.min(totalBoxes, this.keyCount);
         // Mirror the server-enforced bulkOpenCount cap (0 = unlimited) so the
         // UI never promises more than the server will actually open.
         int limit = CsgoBox.CONFIG.bulkOpenCount();
