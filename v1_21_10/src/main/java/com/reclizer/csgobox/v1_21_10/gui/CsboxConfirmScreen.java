@@ -81,9 +81,11 @@ public class CsboxConfirmScreen extends Screen {
                 rowY, 0xFF55FF55);
         rowY += rowSpacing;
         drawCentered(guiGraphics, Component.translatable(
-                        this.keyCount == Integer.MAX_VALUE
-                                ? "gui.csgobox.bulk.key_count_no_key"
-                                : "gui.csgobox.bulk.key_count",
+                        this.player.getAbilities().instabuild
+                                ? "gui.csgobox.bulk.key_count_infinite"
+                                : this.keyCount == Integer.MAX_VALUE
+                                        ? "gui.csgobox.bulk.key_count_no_key"
+                                        : "gui.csgobox.bulk.key_count",
                         this.keyCount == Integer.MAX_VALUE ? this.boxCount : this.keyCount),
                 rowY, 0xFF55FF55);
         rowY += rowSpacing * 2;
