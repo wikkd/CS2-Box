@@ -135,6 +135,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         if (keyId == null || keyId.equals(ResourceLocation.parse("minecraft:air"))) {
             return Integer.MAX_VALUE;
         }
+        if (player.getAbilities().instabuild) {
+            return Integer.MAX_VALUE;
+        }
         int total = 0;
         // Main inventory: slots 0-35
         for (int i = 0; i < 36; i++) {
