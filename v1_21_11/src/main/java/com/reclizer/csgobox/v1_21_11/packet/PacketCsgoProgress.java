@@ -283,6 +283,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         if (count <= 0) {
             return true;
         }
+        if (entity.getAbilities().instabuild) {
+            return true;
+        }
         int remaining = count;
         // Main inventory: slots 0-35 (36 slots)
         for (int i = 0; i < 36 && remaining > 0; i++) {

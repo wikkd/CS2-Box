@@ -168,6 +168,9 @@ public class CsboxScreen extends Screen {
 
     private int countKeys() {
         int total = 0;
+        if (this.entity != null && this.entity.getAbilities().instabuild) {
+            return Integer.MAX_VALUE;
+        }
         if (keyRl != null && this.entity != null) {
             for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
                 if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
@@ -374,7 +377,9 @@ public class CsboxScreen extends Screen {
 
         if (itemKey != null && !itemKey.isEmpty()) {
             if (boxKeyCount > 0) {
-                String count = " \u00D7 " + boxKeyCount;
+                String count = boxKeyCount == Integer.MAX_VALUE
+                        ? " \u00D7 \u221E"
+                        : " \u00D7 " + boxKeyCount;
                 renderText(guiGraphics, Component.literal(count).getVisualOrderText(), this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
             } else {
                 renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_open").getVisualOrderText(),
@@ -509,10 +514,14 @@ public class CsboxScreen extends Screen {
                         boolean canOpen = true;
                         if (keyRl != null && !keyRl.equals(Identifier.parse("minecraft:air"))) {
                             canOpen = false;
-                            for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
-                                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                                    canOpen = true;
-                                    break;
+                            if (entity.getAbilities().instabuild) {
+                                canOpen = true;
+                            } else {
+                                for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
+                                    if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                                        canOpen = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
