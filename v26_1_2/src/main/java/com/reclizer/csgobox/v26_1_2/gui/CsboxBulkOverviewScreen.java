@@ -85,7 +85,9 @@ public class CsboxBulkOverviewScreen extends Screen {
             }
         }
         this.boxCount = totalBoxes;
-        this.keyCount = noKeyRequired ? totalBoxes : totalKeys;
+        this.keyCount = this.player.getAbilities().instabuild
+                ? Integer.MAX_VALUE
+                : (noKeyRequired ? totalBoxes : totalKeys);
         this.openableCount = Math.min(totalBoxes, this.keyCount);
         // Mirror the server-enforced bulkOpenCount cap (0 = unlimited) so the
         // UI never promises more than the server will actually open.
@@ -199,11 +201,14 @@ public class CsboxBulkOverviewScreen extends Screen {
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_count", this.boxCount).withStyle(row),
                 rowY, 0xFF55FF55);
         rowY += rowSpacing;
-        if (this.keyId == null) {
+        String keyDisplay = (this.keyId == null) ? "—" : keyName(this.keyId);
+        if (this.keyId != null && this.player.getAbilities().instabuild) {
+            drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_infinite").withStyle(row),
+                    rowY, 0xFF55FF55);
+        } else if (this.keyId == null) {
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_no_key", this.boxCount).withStyle(row),
                     rowY, 0xFF55FF55);
         } else {
-            String keyDisplay = keyName(this.keyId);
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count", keyDisplay, this.keyCount).withStyle(row),
                     rowY, 0xFF55FF55);
         }
