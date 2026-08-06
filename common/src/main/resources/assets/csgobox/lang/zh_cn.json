@@ -30,6 +30,7 @@
   "gui.csgobox.bulk.box_count": "背包内箱数: %s",
   "gui.csgobox.bulk.key_count": "%s 数: %s",
   "gui.csgobox.bulk.key_count_no_key": "无钥匙需求: %s 个箱",
+  "gui.csgobox.bulk.key_count_infinite": "钥匙数: ∞",
   "gui.csgobox.bulk.openable_count": "本次可开: %s",
   "gui.csgobox.bulk.cannot_open": "箱子或钥匙不足，无法开始",
   "gui.csgobox.bulk.confirm": "全部开启",

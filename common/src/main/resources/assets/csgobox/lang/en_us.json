@@ -30,6 +30,7 @@
   "gui.csgobox.bulk.box_count": "Boxes in inventory: %s",
   "gui.csgobox.bulk.key_count": "%s in inventory: %s",
   "gui.csgobox.bulk.key_count_no_key": "No key required: %s boxes",
+  "gui.csgobox.bulk.key_count_infinite": "Keys: ∞",
   "gui.csgobox.bulk.openable_count": "Will open: %s",
   "gui.csgobox.bulk.cannot_open": "Not enough boxes or keys to start",
   "gui.csgobox.bulk.confirm": "OPEN ALL",
