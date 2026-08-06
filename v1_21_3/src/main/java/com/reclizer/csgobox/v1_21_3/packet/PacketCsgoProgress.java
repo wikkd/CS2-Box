@@ -280,6 +280,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         if (count <= 0) {
             return true;
         }
+        if (entity.getAbilities().instabuild) {
+            return true;
+        }
         int remaining = count;
         remaining = consumeFromList(entity.getInventory().items, keyId, null, remaining);
         if (remaining > 0) remaining = consumeFromList(entity.getInventory().armor, keyId, null, remaining);
