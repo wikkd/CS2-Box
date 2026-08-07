@@ -153,3 +153,6 @@ __pycache__/
 
 # Experimental Forge module (local WIP, not committed — see AGENTS.md)
 /forge_26_1_2/
+
+# TACZ compileOnly jar (~57MB), downloaded on demand by scripts/download-tacz.sh
+/local-repo/com/tacz/

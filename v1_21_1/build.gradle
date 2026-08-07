@@ -113,6 +113,14 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation "net.neoforged:neoforge:${neo_version_1_21_1}"
+    // TACZ (Timeless & Classics Guns: Zero, unofficial 1.21.1 port) — optional
+    // compileOnly dependency for the CsLookItemScreen inspect viewport. The jar
+    // is NOT committed (~57MB): run scripts/download-tacz.sh to populate
+    // local-repo first. Guarded at runtime via ModList.isLoaded("tacz").
+    compileOnly 'com.tacz:tacz:1.1.8-hotfix-r6'
+    // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer; extracted
+    // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
+    compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.1-neoforge+mc1.21.1'
 }
 
 def removeStaleBuildResources = { task ->

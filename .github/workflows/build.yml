@@ -76,6 +76,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Download TACZ compileOnly jar (v1_21_1 inspect viewport)
+        if: matrix.module == 'v1_21_1'
+        run: scripts/download-tacz.sh
+
       - name: Compile ${{ matrix.module }}
         run: ./gradlew :${{ matrix.module }}:compileJava -Pactive_versions=${{ matrix.version_key }} --console=plain
 
