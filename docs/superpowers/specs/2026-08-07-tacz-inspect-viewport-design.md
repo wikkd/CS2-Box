@@ -9,8 +9,13 @@
 1.0.7 引入"检视"功能：开箱抽出物品界面（`CsLookItemScreen`）的底部工具栏"手套"按钮
 （index 1）原先无功能，现作为检视入口。第一阶段只兼容
 [TaCZ]永恒枪械工坊：零（非官方 1.21.1 移植，https://github.com/MUKSC/TACZ-1.21.1，
-mod id `tacz`）自带的检视动画：点击手套按钮后，屏幕中央展示区由 2D 物品图标切换为
-3D 检视视口，播放该枪的 inspect 动画与音效；再点一次切回 2D。
+mod id `tacz`）自带的检视动画。
+
+TACZ 枪抽中后默认即进入 3D 展示视口（idle 静止模型）：TACZ 自身的 GUI 物品渲染
+（`GunItemRendererWrapper.renderByItem` 的 `transformType == GUI` 分支）只画平面槽位
+贴图，走原版 item renderer 只会得到 2D 图标，因此必须绕过它、自驱 TACZ 渲染器。
+手套按钮语义为"播放/重播检视"：视口已激活时触发动画与音效，自动进入失败时兜底
+完整进入视口。关闭屏幕时清理音效与状态机。
 
 已确认的产品决策：
 
@@ -19,9 +24,9 @@ mod id `tacz`）自带的检视动画：点击手套按钮后，屏幕中央展�
   `catch (Throwable)` 静默降级。无 TACZ 环境功能完全隐形。
 - **现屏内嵌切换**：不新开屏幕，复用现有展示区坐标体系
   （`width*37/100`、`height*30/100`、`scale = frameWidth/16`）。
-- **交互仅检视音效**：无拖拽旋转、无重播按钮（YAGNI）。
-- **降级为无响应**：未装 TACZ / 物品不是 TACZ 枪 / 枪无动画状态机时，点击手套按钮
-  无任何反应（按钮保持显示，tooltip 照常）。
+- **交互仅检视音效**：无拖拽旋转（视口固定展示角度）、手套按钮可重复触发检视。
+- **降级为无响应/2D**：未装 TACZ / 物品不是 TACZ 枪 / 枪无动画状态机时，展示区保持
+  原版 2D 物品图标，点击手套按钮无任何反应（按钮保持显示，tooltip 照常）。
 - **直接集成**：不抽象 Provider 层；未来接入其他枪械模组时再评估。
 
 ## TACZ API 分析结论（源码核实）
@@ -77,6 +82,9 @@ mod id `tacz`）自带的检视动画：点击手套按钮后，屏幕中央展�
   `setContext(renderer.initContext(...)) + initialize()`（**不触发 draw**，避免检视
   信号被抽出动画状态吞掉）；`triggerAnimation(stack, INPUT_INSPECT)`；按空仓判定播放
   检视音效。
+- `enterDisplay(ItemStack, LocalPlayer)`：仅初始化状态机、不触发 inspect，用于默认
+  3D 静止展示（TACZ 原生 GUI 渲染只画槽位贴图，需绕过）。
+- `triggerInspect(ItemStack, LocalPlayer)`：视口已激活时重播 inspect 动画与音效。
 - `renderViewport(GuiGraphics, ..., centerX, centerY, scale)`：每帧
   `processContextIfExist(ctx -> renderer.updateContext(...)) + stateMachine.update()`
   推进状态机，随后以固定展示角度（不随玩家视角）做 PoseStack 变换
@@ -90,8 +98,10 @@ mod id `tacz`）自带的检视动画：点击手套按钮后，屏幕中央展�
 
 ### Screen 接线：`CsLookItemScreen`
 
-- 字段 `taczViewportActive`；手套按钮点击切换（开→`enter()`、关→`exit()`、
-  不可用→不响应）。
+- 字段 `taczViewportActive` + 一次性守卫 `taczDisplayChecked`。`renderBg` 首帧对 TACZ
+  枪自动 `enterDisplay()`（只初始化状态机、不触发 inspect），默认展示 3D 静止模型。
+- 手套按钮点击：视口已激活 → `triggerInspect()` 播放检视动画与音效；未激活但可用 →
+  `enter()` 兜底进入；不可用 → 不响应。
 - `renderBg`：视口激活且 `renderViewport` 返回 true 时替代
   `GuiItemMove.renderItemInInventoryFollowsMouse`；渲染失败当帧回退 2D 并永久关闭视口。
 - 工具栏 active 高亮扩展为 `(i == 3 && showInfoPanel) || (i == 1 && taczViewportActive)`。
@@ -109,7 +119,7 @@ mod id `tacz`）自带的检视动画：点击手套按钮后，屏幕中央展�
 ## 验证
 
 - `./gradlew :v1_21_1:clean compileJava -Pactive_versions=1.21.1`（clean 防增量假象）
-- 无 TACZ 运行时：开箱后点手套按钮无任何反应、无报错日志
-- 有 TACZ 运行时：TACZ 枪配入测试箱 → 抽中 → 手套按钮 → 3D 模型 + inspect 动画 +
-  音效 → 再点切回 2D → 关屏无残留音效；手持同枪第一人称检视仍正常
+- 无 TACZ 运行时：开箱后展示区与手套按钮行为与旧版一致（2D 图标、点击无响应、无报错日志）
+- 有 TACZ 运行时：TACZ 枪配入测试箱 → 抽中 → 展示区直接显示 3D 模型 → 手套按钮播放
+  inspect 动画与音效（可重复）→ 关屏无残留音效；手持同枪第一人称检视仍正常
 - `./gradlew :common:test` 回归
