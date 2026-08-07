@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v1_21_1.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
+import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
@@ -29,6 +30,8 @@ public class CsLookItemScreen extends Screen {
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
+    /** TACZ inspect viewport visibility, toggled by the gloves toolbar button. */
+    private boolean taczViewportActive = false;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -142,7 +145,7 @@ public class CsLookItemScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderLookBackground(guiGraphics);
         renderLabels(guiGraphics);
-        renderBg(guiGraphics, mouseX, mouseY);
+        renderBg(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
     private void renderLookBackground(GuiGraphics guiGraphics) {
@@ -152,7 +155,7 @@ public class CsLookItemScreen extends Screen {
         }
     }
 
-    private void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -168,8 +171,21 @@ public class CsLookItemScreen extends Screen {
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
         guiGraphics.fill(this.width * 37 / 100, this.height * 16 / 100,
                 this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 30 / 100,
-                this.rotX, this.rotY, openItem, this.player, scale);
+        boolean viewportRendered = false;
+        if (this.taczViewportActive && this.minecraft != null && this.minecraft.player != null) {
+            viewportRendered = TaczInspectViewport.renderViewport(guiGraphics, openItem,
+                    this.minecraft.player, partialTicks,
+                    this.width * 37 / 100 + (int) (8 * scale), this.height * 30 / 100 + (int) (8 * scale),
+                    scale);
+            if (!viewportRendered) {
+                // Viewport lost (e.g. TACZ error mid-frame): fall back to 2D for good.
+                this.taczViewportActive = false;
+            }
+        }
+        if (!viewportRendered) {
+            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 30 / 100,
+                    this.rotX, this.rotY, openItem, this.player, scale);
+        }
 
         int btnX = backButtonX();
         int btnY = backButtonY();
@@ -197,7 +213,7 @@ public class CsLookItemScreen extends Screen {
             if (hover) {
                 this.hoveredButton = i;
             }
-            boolean active = i == 3 && this.showInfoPanel;
+            boolean active = (i == 3 && this.showInfoPanel) || (i == 1 && this.taczViewportActive);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             guiGraphics.fill(x, y, x + size, y + size, outer);
@@ -339,6 +355,19 @@ public class CsLookItemScreen extends Screen {
             return true;
         }
         int infoSize = toolbarButtonSize();
+        int glovesX = toolbarButtonX(1);
+        int glovesY = toolbarButtonY();
+        if (button == 0 && isInside(mouseX, mouseY, glovesX, glovesY, infoSize, infoSize)) {
+            if (this.taczViewportActive) {
+                TaczInspectViewport.exit(this.openItem);
+                this.taczViewportActive = false;
+            } else if (TaczInspectViewport.isAvailable(this.openItem)
+                    && this.minecraft != null && this.minecraft.player != null
+                    && TaczInspectViewport.enter(this.openItem, this.minecraft.player)) {
+                this.taczViewportActive = true;
+            }
+            return true;
+        }
         int infoX = toolbarButtonX(3);
         int infoY = toolbarButtonY();
         if (button == 0 && isInside(mouseX, mouseY, infoX, infoY, infoSize, infoSize)) {
@@ -367,6 +396,15 @@ public class CsLookItemScreen extends Screen {
             this.minecraft.options.hideGui = false;
         }
         super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        if (this.taczViewportActive) {
+            TaczInspectViewport.exit(this.openItem);
+            this.taczViewportActive = false;
+        }
+        super.removed();
     }
 
     @Override
