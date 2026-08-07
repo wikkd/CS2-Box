@@ -43,6 +43,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.client.event.ConfigureMainRenderTargetEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
@@ -118,6 +119,7 @@ public class CsgoBox {
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
         modEventBus.addListener(this::registerDynamicBoxItems);
+        modEventBus.addListener((ConfigureMainRenderTargetEvent event) -> event.enableStencil());
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
                 LOGGER.info("CS2 Box config reloaded");

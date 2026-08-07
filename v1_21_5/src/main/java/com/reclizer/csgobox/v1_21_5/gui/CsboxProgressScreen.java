@@ -7,7 +7,6 @@ import com.reclizer.csgobox.v1_21_5.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v1_21_5.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.v1_21_5.utils.IconListTools;
-import com.reclizer.csgobox.utils.OverlayColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,6 +17,10 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.client.stencil.StencilFunction;
+import net.neoforged.neoforge.client.stencil.StencilOperation;
+import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
+import net.neoforged.neoforge.client.stencil.StencilTest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,16 +88,12 @@ public class CsboxProgressScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
-        renderProgressBackground(guiGraphics);
+        // NOTE: intentionally NOT calling super.render(). The base Screen.render
+        // paints the menu background texture / panorama behind every screen
+        // (renderBackground), which the decoupled 26.2 pipeline never draws -
+        // a stale "background image" that must not appear here. This screen has
+        // no widgets or tooltips, and renderBg paints its own blurred backdrop.
         renderBg(guiGraphics, partialTicks);
-    }
-
-    private void renderProgressBackground(GuiGraphics guiGraphics) {
-        if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
-        }
     }
 
     private void renderBg(GuiGraphics guiGraphics, float partialTicks) {
@@ -102,6 +101,11 @@ public class CsboxProgressScreen extends Screen {
         this.minecraft.options.hideGui = true;
 
         RenderSystem.setShaderColor(1, 1, 1, 1);
+
+        // CS2-style backdrop: blur the live world and dim it, instead of an
+        // opaque panel - mirrors the original case-opening depth-of-field look.
+        this.renderBlurredBackground();
+        guiGraphics.fill(0, 0, this.width, this.height, 0x8C000000);
 
         if (openTime < 5) return;
 
@@ -112,30 +116,175 @@ public class CsboxProgressScreen extends Screen {
 
         float progress = Mth.clamp(partialTicks, 0.0F, 1.0F);
         int count = Math.min(itemInput.size(), gradeInput.size());
-        for (int i = 0; i < count; i++) {
+        // CS2-style spotlight centred on the golden line: a soft lamp glow
+        // behind the strip plus per-card brightness falloff (fully lit at the
+        // line, smoothly dimmed outside the spotlight radius).
+        float spacing = this.width * 20F / 100F;
+        float lineX = this.width / 2F;
+        float stripStartX = this.width * randomWidth / 100F;
+        float lensTop = this.height * 37F / 100F;
+        float cellWidth = this.width * 18F / 100F;
+        float cellHeight = this.height * 25F / 100F;
+        float scrollNow = Mth.lerp(progress, lastRenderWidth, widthNewAdd);
+        float spotRadius = this.width * 30F / 100F;
+        float spotCX = lineX;
+        float spotCY = lensTop + cellHeight / 2F;
+
+        // Soft lamp glow behind the strip - a clean radial gradient with a
+        // transparent rim (the old lens_vignette.png baked in a black ring).
+        int glowR = (int) (this.height * 45F / 100F);
+        guiGraphics.blit(RenderType.GUI_TEXTURED,
+                ResourceLocation.parse("csgobox:textures/screens/spot_glow.png"),
+                (int) spotCX - glowR, (int) spotCY - glowR, 0F, 0F, glowR * 2, glowR * 2, glowR * 2, glowR * 2, 0xFFFFFFFF);
+
+        // Strip pass: cards keep their raw size; brightness falls off with
+        // distance from the golden line (smoothstep), like the original.
+        for (int i = count - 1; i >= 0; i--) {
             ItemStack itemStack = itemInput.get(i);
             if (itemStack.isEmpty()) continue;
-
-            float itemX = this.width * randomWidth / 100F
-                    + i * this.width * 20F / 100F
-                    - Mth.lerp(progress, lastRenderWidth, widthNewAdd);
-
+            float itemX = stripStartX + i * spacing - scrollNow;
+            if (itemX > this.width + cellWidth || itemX + cellWidth < -cellWidth) continue;
             IconListTools.renderItemProgress(player, guiGraphics, itemStack,
-                    itemX, this.height * 37F / 100F,
-                    this.width, this.height, gradeInput.get(i));
+                    itemX, lensTop, this.width, this.height, gradeInput.get(i));
+            float nx = (itemX + cellWidth / 2F - spotCX) / spotRadius;
+            float t = Math.min(nx * nx, 1.0F);
+            float smooth = t * t * (3F - 2F * t);
+            int dim = (int) (0x99 * smooth);
+            if (dim > 0) {
+                guiGraphics.fill((int) itemX, (int) lensTop, (int) (itemX + cellWidth),
+                        (int) (lensTop + cellHeight) + 2, dim << 24);
+            }
         }
 
         lastRenderWidth = widthNewAdd;
 
-        int goldLineTop = this.height * 37 / 100;
-        int goldLineBottom = goldLineTop + this.height * 25 / 100;
-        guiGraphics.fill(this.width / 2, goldLineTop,
-                this.width / 2 + 2, goldLineBottom,
-                ColorTools.argbColor(128, 255, 215, 0));
+        // CS2Deck-style magnifier lens: a fixed circular viewport that the
+        // passing strip zooms through (whole strip rendered again scaled about
+        // the lens centre, so the same card stays aligned). The magnified
+        // strip is clipped to the disc itself - a true magnifier bounded by
+        // the circular filter edge.
+        //
+        // The circular clip is a stencil mask instead of scissor slicing. The
+        // main render target carries a stencil attachment (switched on through
+        // ConfigureMainRenderTargetEvent in CsgoBox), the lens disc is stamped
+        // into it once, then every magnified card is drawn a single time with
+        // "test equal 1" - no per-band re-draws, no per-band scissor, no
+        // per-band buffer flush. neoforge's RenderSystem.enableStencil applies
+        // the StencilTest to whatever Renderpass draws while it is active.
+        float lensCX = this.width / 2F;
+        float lensCY = this.height / 2F;
+        float lensScale = IconListTools.FOCUS_PEAK_SCALE;
+        float lensR = this.width * 20F / 100F;
+        int lensMinX = (int) (lensCX - lensR);
+        int lensMinY = (int) (lensCY - lensR);
+        int lensW = (int) (lensR * 2F);
+        float magnifiedTop = lensCY + (lensTop - lensCY) * lensScale;
+        float magnifiedBottom = magnifiedTop + cellHeight * lensScale;
+        float cardScale = cellWidth * lensScale;
+        // Only cards whose magnified rect can reach the lens bbox are worth
+        // rendering - resolve that index window once for the stencil pass.
+        int iMin = count;
+        int iMax = -1;
+        for (int i = 0; i < count; i++) {
+            float itemX = stripStartX + i * spacing - scrollNow;
+            float pX = lensCX + (itemX - lensCX) * lensScale;
+            if (pX + cardScale <= lensMinX) continue;
+            if (pX >= lensMinX + lensW) break;
+            if (iMin == count) iMin = i;
+            iMax = i;
+        }
 
-        ResourceLocation bgTex = ResourceLocation.parse("csgobox:textures/screens/csgo_background.png");
+        // Flush everything accumulated before the stencil region first
+        // (done strip + spotlight + backdrop). The stencil passes below must
+        // not re-enqueue, clip or film these already-whole-screen draws.
+        guiGraphics.flush();
+
+        // Stencil pass 1: reset the lens bbox to 0 so stale values from a
+        // previous frame (moved lens centre) never leak through. The stencil
+        // test for this pass always passes and stamps ref 0 over the whole
+        // bounding box; colour is not written (alpha 0).
+        StencilTest maskWipe = new StencilTest(
+                new StencilPerFaceTest(
+                        StencilOperation.REPLACE, StencilOperation.REPLACE,
+                        StencilOperation.REPLACE, StencilFunction.ALWAYS),
+                StencilTest.DEFAULT_READ_MASK, StencilTest.DEFAULT_WRITE_MASK, 0);
+        RenderSystem.enableStencil(maskWipe);
+        guiGraphics.fill(lensMinX, lensMinY, lensMinX + lensW, lensMinY + lensW, 0x00000000);
+        guiGraphics.flush();
+
+        // Stencil pass 2: stamp the disc - only the pixels inside the lens
+        // circle get a 1. Colour stays transparent so nothing is drawn.
+        StencilTest maskStamp = new StencilTest(
+                new StencilPerFaceTest(
+                        StencilOperation.REPLACE, StencilOperation.REPLACE,
+                        StencilOperation.REPLACE, StencilFunction.ALWAYS),
+                StencilTest.DEFAULT_READ_MASK, StencilTest.DEFAULT_WRITE_MASK, 1);
+        RenderSystem.enableStencil(maskStamp);
+        this.drawLensDisc(guiGraphics, lensCX, lensCY, lensR);
+        guiGraphics.flush();
+
+        // Stencil pass 3: only where the stencil holds 1 the magnified strip
+        // is drawn on top of an opaque disc backing (vignette centre is
+        // transparent, so the raw 1x strip underneath would otherwise bleed
+        // through). Each card is rendered exactly once.
+        StencilTest maskRead = new StencilTest(
+                new StencilPerFaceTest(
+                        StencilOperation.KEEP, StencilOperation.KEEP,
+                        StencilOperation.KEEP, StencilFunction.EQUAL),
+                StencilTest.DEFAULT_READ_MASK, 0, 1);
+        RenderSystem.enableStencil(maskRead);
+        guiGraphics.fill(lensMinX, lensMinY, lensMinX + lensW, lensMinY + lensW, 0xFF545454);
+        guiGraphics.flush();
+        for (int i = iMax; i >= iMin; i--) {
+            ItemStack itemStack = itemInput.get(i);
+            if (itemStack.isEmpty()) continue;
+            float itemX = stripStartX + i * spacing - scrollNow;
+            float pX = lensCX + (itemX - lensCX) * lensScale;
+            if (pX > lensMinX + lensW + cardScale || pX + cardScale < lensMinX) continue;
+            IconListTools.renderItemProgressFocus(player, guiGraphics, itemStack,
+                    pX, magnifiedTop, this.width, this.height, gradeInput.get(i), lensScale);
+        }
+        guiGraphics.flush();
+        RenderSystem.disableStencil();
+
+        // Circular backing mask: transparent center (magnified strip shows
+        // through) and transparent outside the disc too (the four corners of
+        // the blit square stay see-through), only a soft rim shade around the
+        // glass edge marks the lens silhouette.
         guiGraphics.blit(RenderType.GUI_TEXTURED,
-                bgTex, 0, 0, 0F, 0F, this.width, this.height, this.width, this.height, 0xFFFFFFFF);
+                ResourceLocation.parse("csgobox:textures/screens/lens_vignette.png"),
+                lensMinX, lensMinY, 0F, 0F, lensW, lensW, lensW, lensW, 0xFFFFFFFF);
+
+        // Bright golden marker line, like the original.
+        guiGraphics.fill((int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
+                ColorTools.argbColor(230, 255, 215, 0));
+
+    }
+
+    /**
+     * Draws a solid disc as a fan of triangles for the stencil stamping pass.
+     * 21.5 has no legacy immediate-mode circle, so the fan is built through
+     * the same QUADS GUI pipeline as degenerate quads (centre + two rim
+     * points, centre repeated). Colour is fully transparent - only the
+     * stencil value matters.
+     */
+    private void drawLensDisc(GuiGraphics guiGraphics, float cx, float cy, float r) {
+        final int segments = 96;
+        guiGraphics.drawSpecial(multiBufferSource -> {
+            var buffer = multiBufferSource.getBuffer(RenderType.gui());
+            for (int i = 0; i < segments; i++) {
+                double a0 = Math.PI * 2 * i / segments;
+                double a1 = Math.PI * 2 * (i + 1) / segments;
+                float x0 = cx + (float) (Math.cos(a0) * r);
+                float y0 = cy + (float) (Math.sin(a0) * r);
+                float x1 = cx + (float) (Math.cos(a1) * r);
+                float y1 = cy + (float) (Math.sin(a1) * r);
+                buffer.addVertex(cx, cy, 0.0F).setColor(0, 0, 0, 0);
+                buffer.addVertex(x0, y0, 0.0F).setColor(0, 0, 0, 0);
+                buffer.addVertex(x1, y1, 0.0F).setColor(0, 0, 0, 0);
+                buffer.addVertex(cx, cy, 0.0F).setColor(0, 0, 0, 0);
+            }
+        });
     }
 
     @Override

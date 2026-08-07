@@ -22,6 +22,17 @@ public final class IconListTools {
     private static final int GOLD_ITEM_TEX_WIDTH = 32;
     private static final int GOLD_ITEM_TEX_HEIGHT = 24;
 
+    /**
+     * Peak magnification of the card sitting at the golden line during the
+     * opening animation (1.0 = no magnification). The card whose left edge is
+     * closest to the line scales up toward this factor; neighbors ramp back
+     * down to 1.0.
+     */
+    public static final float FOCUS_PEAK_SCALE = 1.2F;
+
+    /** Focus reaches 1.0 (no magnification) at this many card spacings from the line. */
+    public static final float FOCUS_FALLOFF_SPACING = 1.0F;
+
     private IconListTools() {
     }
 
@@ -137,5 +148,49 @@ public final class IconListTools {
             renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
             guiGraphics.fill((int) pX, toY, toX, toY + 2, color);
         }
+    }
+
+    /**
+     * CS:GO-style focus glyph: the card whose left edge sits at the golden
+     * line is scaled up (left-edge anchored) with a gold border, soft glow and
+     * a brightened interior so the passing strip "pops" through the selection
+     * slot. {@code focusScale} is 1.0 at rest and grows toward
+     * {@link #FOCUS_PEAK_SCALE} as the card approaches the line.
+     */
+    public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtractor guiGraphics,
+                                               ItemStack itemStack, float pX, float pY, float width, float height,
+                                               int grade, float focusScale) {
+        int color = ColorTools.colorItems(grade);
+
+        float frameWidth = width * 18 / 100F * focusScale;
+        float frameHeight = height * 25 / 100F * focusScale;
+        float scale = frameWidth * 92F / 100F / 16F;
+        int toX = (int) (pX + frameWidth);
+        int toY = (int) (pY + frameHeight);
+        int bx0 = (int) pX;
+        int by0 = (int) pY;
+        float itemX = pX + (frameWidth - scale * 16F) / 2F;
+        float itemY = pY + (frameHeight - scale * 16F) / 2F;
+
+        if (grade == 5) {
+            guiGraphics.fillGradient(bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
+            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F));
+            guiGraphics.fill(bx0, toY, toX, toY + 2, color);
+        } else {
+            guiGraphics.fillGradient(bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            guiGraphics.fillGradient(bx0, (int) (pY + frameHeight * 2 / 3), toX, toY,
+                    ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
+            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
+            guiGraphics.fill(bx0, toY, toX, toY + 2, color);
+        }
+
+        // Focus tint: periwinkle/blue gradient lit up inside the focused card
+        // (mirrors the CS:GO inspect highlight), strengthening with focus.
+        float focus = (focusScale - 1.0F) / (FOCUS_PEAK_SCALE - 1.0F);
+        int tintA = (int) (70F * (0.4F + 0.6F * focus));
+        int tintTop = ColorTools.argbColor(tintA, 176, 140, 255);
+        int tintBottom = ColorTools.argbColor(tintA - 12, 48, 80, 255);
+        guiGraphics.fillGradient(bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
     }
 }

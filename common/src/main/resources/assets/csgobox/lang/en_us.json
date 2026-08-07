@@ -63,6 +63,13 @@
   "gui.csgobox.csgo_box.wear_ww": "Well-Worn",
   "gui.csgobox.csgo_box.wear_bs": "Battle-Scarred",
 
+  "gui.csgobox.csgo_box.toolbar.inspect": "Inspect",
+  "gui.csgobox.csgo_box.toolbar.gloves": "Gloves",
+  "gui.csgobox.csgo_box.toolbar.model": "Model",
+  "gui.csgobox.csgo_box.toolbar.info": "Info",
+  "gui.csgobox.csgo_box.toolbar.sticker": "Stickers",
+  "gui.csgobox.csgo_box.toolbar.more": "More",
+
   "commands.csgobox.prefix": "[CSBox] ",
   "commands.csgobox.help.title": "---- /csbox box management help ----",
   "commands.csgobox.help.line.list": "/csbox list",

@@ -63,6 +63,13 @@
   "gui.csgobox.csgo_box.wear_ww": "破损不堪",
   "gui.csgobox.csgo_box.wear_bs": "战痕累累",
 
+  "gui.csgobox.csgo_box.toolbar.inspect": "检视",
+  "gui.csgobox.csgo_box.toolbar.gloves": "手套",
+  "gui.csgobox.csgo_box.toolbar.model": "模型",
+  "gui.csgobox.csgo_box.toolbar.info": "信息",
+  "gui.csgobox.csgo_box.toolbar.sticker": "贴纸",
+  "gui.csgobox.csgo_box.toolbar.more": "更多",
+
   "commands.csgobox.prefix": "[CSBox] ",
   "commands.csgobox.help.title": "---- /csbox 箱子管理帮助 ----",
   "commands.csgobox.help.line.list": "/csbox list",
