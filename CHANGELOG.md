@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### 新增
+- **TACZ 检视视口（仅 1.21.1 平台，可选集成）**：开箱检视屏（CsLookItemScreen）点击底部工具栏"手套"按钮，中央展示区切换为 TACZ（永恒枪械工坊：零）3D 检视视口，播放枪械检视动画与官方检视音效；再点一次切回 2D 图标。通过 TACZ 公共渲染器/状态机 API 自驱渲染，不改变玩家手持物品。TACZ 为 compileOnly 软依赖：未安装 TACZ、或抽出物品不是 TACZ 枪械时点击无响应；构建前需运行 `scripts/download-tacz.sh` 下载 TACZ jar（~57MB，不入库，CI 自动下载）。
 - **审美测试脚本 `clean` 子命令**（`scripts/test_animation_aesthetics.py`）。一键清理测试产物：默认只删 `shots/*.png` 保留 `report.md`，`--report` 连同报告一起删；`--dry-run` 预览不删、`--yes` 免确认；目录不存在或无匹配文件幂等返回 0，单文件删除失败汇总返回 1。删除前打印清单 + 确认提示防误删。
 - **v1_21_0 平台模块（第 10 个平台，MC 1.21.0 / NeoForge 21.0.167 稳定版）。** NeoForge 稳定线矩阵补全：1.21.0 是 1.21.1 的直接前身（补丁级 API 差异），从 `v1_21_1/` 完整镜像并包名重命名（42 java 文件零适配），`settings.gradle` 的 `versionModules` 与 `gradle.properties` 新增 10 个 `*_21_0` 变量，CI 矩阵新增 1.21.0 (Java 21) 行。`compileJava -Pactive_versions=1.21.0` 验证 BUILD SUCCESSFUL。
 

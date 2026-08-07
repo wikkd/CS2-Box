@@ -12,6 +12,7 @@
 - **每次 Gradle 调用只能构建一个 MC 版本**（NeoGradle userdev IDEA 扩展冲突，历史限制）。用 `-Pactive_versions=<v>` 覆盖 `gradle.properties` 的默认值（当前默认 26.1.2）。
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
 - **10 个平台模块**：`v1_21_0` / `v1_21_1` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。
+- **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
 - **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），源码**未提交**（本地 WIP），**不在 CI 矩阵**，不参与 mirror/镜像纪律；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。勿误当正式平台发布。
 
 ## 架构约束（CONSTRAINT-001）
