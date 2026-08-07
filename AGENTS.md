@@ -11,7 +11,7 @@
 - **Java**: 21（legacy 平台）/ 25 + `--enable-preview`（v26_1_2/v26_2）。toolchain 由各模块 build.gradle 指定。
 - **每次 Gradle 调用只能构建一个 MC 版本**（NeoGradle userdev IDEA 扩展冲突，历史限制）。用 `-Pactive_versions=<v>` 覆盖 `gradle.properties` 的默认值（当前默认 26.1.2）。
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
-- **9 个平台模块**：`v1_21_1` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。
+- **10 个平台模块**：`v1_21_0` / `v1_21_1` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。
 - **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），源码**未提交**（本地 WIP），**不在 CI 矩阵**，不参与 mirror/镜像纪律；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。勿误当正式平台发布。
 
 ## 架构约束（CONSTRAINT-001）
@@ -22,7 +22,7 @@
 
 ## 平台模块镜像纪律（重要！）
 
-9 个平台模块**不是纯拷贝**：1.21.3+ 与 26.2 各自有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v1_21_1`/`v26_1_2` 整文件覆盖其他模块**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败）。
+10 个平台模块**不是纯拷贝**：1.21.3+ 与 26.2 各自有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v1_21_1`/`v26_1_2` 整文件覆盖其他模块**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败）。v1_21_0 与 v1_21_1 为补丁级同源（1.21.0 → 1.21.1 无 API 断点），两者可互相镜像。
 
 跨平台改动的正确姿势：
 

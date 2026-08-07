@@ -18,8 +18,8 @@
 NeoGradle userdev 无法在同一次 Gradle 调用中并行加载多个 MC 版本（IDEA 扩展冲突，历史限制），因此**每次 Gradle 调用只构建一个版本**：
 
 ```bash
-# 9 个平台逐个编译（Linux/macOS 环境变量改为 -Pactive_versions=）
-for v in 1.21.1 1.21.3 1.21.4 1.21.5 1.21.8 1.21.10 1.21.11 26.1.2 26.2; do
+# 10 个平台逐个编译（Linux/macOS 环境变量改为 -Pactive_versions=）
+for v in 1.21.0 1.21.1 1.21.3 1.21.4 1.21.5 1.21.8 1.21.10 1.21.11 26.1.2 26.2; do
   case $v in
     1.21.*) ./gradlew :v1_21_${v#1.21.}:jar -Pactive_versions=$v ;;
     26.1.2) ./gradlew :v26_1_2:jar -Pactive_versions=$v ;;
@@ -32,7 +32,7 @@ done
 
 ## 3. 质量门（发布前必须全绿）
 
-1. **9 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
+1. **10 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
 2. **common 单元测试**：`./gradlew :common:test`
 3. **运行时回归**（至少 26.1.2 + 1.21.1 两个代表平台）：
    - 开箱动画 + 3D 拖拽旋转（PIP）
@@ -45,7 +45,7 @@ done
 
 ## 4. 发布产物
 
-- CI：`.github/workflows/build.yml` 的 matrix 自动产出 9 个平台 jar（artifacts）
+- CI：`.github/workflows/build.yml` 的 matrix 自动产出 10 个平台 jar（artifacts）
 - 手动：见上文构建矩阵脚本
 - 可选项：`./gradlew :<module>:minifyJar -Pactive_versions=<v>` 产出 ProGuard 混淆版（`-minified.jar`），`proguard-rules.pro` 需与新增反射面同步
 

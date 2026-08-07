@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # CS2-Box
 
-> CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.1 和 MC 26.1.2。
+> CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.0+ 和 MC 26.x 共 10 个平台。
 
 CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开预览,放入钥匙点开启按钮,服务端授权 RNG 决定结果,客户端播放滚动动画,揭晓稀有度分级物品。当前版本 `1.0.6`,仓库 License MIT(`LICENSE`)。
 
@@ -22,6 +22,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 | 模块 | Minecraft | NeoForge | Java | 角色 |
 |---|---|---|---|---|
 | `common/` | — | — | 21 | 跨版本业务逻辑 + 共享资源（无 MC/NeoForge 依赖） |
+| `v1_21_0/` | 1.21.0 | 21.0.167 | 21 | 旧 API 平台实现 |
 | `v1_21_1/` | 1.21.1 | 21.1.115 | 21 | 旧 API 平台实现 |
 | `v1_21_3/` | 1.21.3 | 21.3.96 | 21 | 旧 API 平台实现 |
 | `v1_21_4/` | 1.21.4 | 21.4.157 | 21 | 旧 API 平台实现 |
@@ -82,6 +83,7 @@ cd CS2-Box
 ## 文档导航
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — 模块拓扑、核心抽象、数据流、双平台 GUI 渲染管线对比
+- [docs/PLATFORM-APIS.md](./docs/PLATFORM-APIS.md) — 10 平台 API 差异速查矩阵 + 主题展开开发指南
 - [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) — 完整安装与首次运行步骤
 - [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) — 本地开发配置、构建命令、数据生成
 - [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) — TOML / JSON 配置参考
