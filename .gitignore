@@ -146,3 +146,10 @@ net/
 
 # Independent testhelper repo (nested git)
 /testhelper/
+
+# Python
+__pycache__/
+*.pyc
+
+# Experimental Forge module (local WIP, not committed — see AGENTS.md)
+/forge_26_1_2/
