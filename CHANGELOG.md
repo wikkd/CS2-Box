@@ -1,7 +1,12 @@
 # 更新日志
 
-## [1.0.6] - 2026-08-06
+## [Unreleased]
 
+### 新增
+- **审美测试脚本 `clean` 子命令**（`scripts/test_animation_aesthetics.py`）。一键清理测试产物：默认只删 `shots/*.png` 保留 `report.md`，`--report` 连同报告一起删；`--dry-run` 预览不删、`--yes` 免确认；目录不存在或无匹配文件幂等返回 0，单文件删除失败汇总返回 1。删除前打印清单 + 确认提示防误删。
+- **v1_21_0 平台模块（第 10 个平台，MC 1.21.0 / NeoForge 21.0.167 稳定版）。** NeoForge 稳定线矩阵补全：1.21.0 是 1.21.1 的直接前身（补丁级 API 差异），从 `v1_21_1/` 完整镜像并包名重命名（42 java 文件零适配），`settings.gradle` 的 `versionModules` 与 `gradle.properties` 新增 10 个 `*_21_0` 变量，CI 矩阵新增 1.21.0 (Java 21) 行。`compileJava -Pactive_versions=1.21.0` 验证 BUILD SUCCESSFUL。
+
+## [1.0.6] - 2026-08-06
 ### 概述
 本版本完成 26.2 平台扩展、教程系统、批量开箱、动态 box item、开箱排行榜、9 平台矩阵、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久与 CI 矩阵等全部开发批次。下文按批次记录。
 
