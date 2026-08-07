@@ -32,6 +32,8 @@ public class CsLookItemScreen extends Screen {
     private boolean showInfoPanel = false;
     /** TACZ inspect viewport visibility, toggled by the gloves toolbar button. */
     private boolean taczViewportActive = false;
+    /** One-shot guard for the default TACZ 3D display attempt on first render. */
+    private boolean taczDisplayChecked = false;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -171,6 +173,16 @@ public class CsLookItemScreen extends Screen {
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
         guiGraphics.fill(this.width * 37 / 100, this.height * 16 / 100,
                 this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
+        // TACZ guns default to the 3D display viewport: TACZ's own GUI item
+        // rendering only draws the flat slot texture, so drive its renderer
+        // ourselves. One-shot attempt on the first frame; failure keeps 2D.
+        if (!this.taczDisplayChecked && this.minecraft != null && this.minecraft.player != null) {
+            this.taczDisplayChecked = true;
+            if (TaczInspectViewport.isAvailable(this.openItem)
+                    && TaczInspectViewport.enterDisplay(this.openItem, this.minecraft.player)) {
+                this.taczViewportActive = true;
+            }
+        }
         boolean viewportRendered = false;
         if (this.taczViewportActive && this.minecraft != null && this.minecraft.player != null) {
             viewportRendered = TaczInspectViewport.renderViewport(guiGraphics, openItem,
@@ -358,13 +370,14 @@ public class CsLookItemScreen extends Screen {
         int glovesX = toolbarButtonX(1);
         int glovesY = toolbarButtonY();
         if (button == 0 && isInside(mouseX, mouseY, glovesX, glovesY, infoSize, infoSize)) {
-            if (this.taczViewportActive) {
-                TaczInspectViewport.exit(this.openItem);
-                this.taczViewportActive = false;
-            } else if (TaczInspectViewport.isAvailable(this.openItem)
-                    && this.minecraft != null && this.minecraft.player != null
-                    && TaczInspectViewport.enter(this.openItem, this.minecraft.player)) {
-                this.taczViewportActive = true;
+            if (this.minecraft != null && this.minecraft.player != null
+                    && TaczInspectViewport.isAvailable(this.openItem)) {
+                if (this.taczViewportActive) {
+                    // Viewport already showing the 3D model: replay inspect.
+                    TaczInspectViewport.triggerInspect(this.openItem, this.minecraft.player);
+                } else if (TaczInspectViewport.enter(this.openItem, this.minecraft.player)) {
+                    this.taczViewportActive = true;
+                }
             }
             return true;
         }

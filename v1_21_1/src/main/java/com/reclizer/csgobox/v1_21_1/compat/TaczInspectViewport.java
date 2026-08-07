@@ -89,6 +89,44 @@ public final class TaczInspectViewport {
     }
 
     /**
+     * Enter display-only mode: initialize the animation state machine when
+     * needed WITHOUT triggering the inspect input, so the gun renders as a
+     * static 3D model (idle pose). Used as the default look for TACZ guns,
+     * since TACZ's own GUI item rendering only draws the flat slot texture.
+     * Returns false when the viewport cannot be started (caller keeps 2D).
+     */
+    public static boolean enterDisplay(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        try {
+            AnimateGeoItemRenderer<?, ?> renderer = taczRenderer(stack);
+            if (renderer == null) {
+                return false;
+            }
+            return initStateMachineIfNeeded(renderer, stack, player);
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ display viewport enter failed, falling back to 2D", t);
+            return false;
+        }
+    }
+
+    /**
+     * Replay the inspect animation + sound inside an already-active viewport.
+     * No-op when the viewport cannot be driven.
+     */
+    public static void triggerInspect(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return;
+        }
+        try {
+            enterInternal(stack, player);
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ inspect replay failed", t);
+        }
+    }
+
+    /**
      * Render one frame of the viewport into the look screen's display area.
      * Returns false when nothing was rendered (caller falls back to the 2D
      * item icon for this frame).
