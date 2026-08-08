@@ -23,6 +23,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -235,18 +236,34 @@ public class CsgoBox {
                 }
                 final Identifier boxId = itemId;
                 final ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, itemId);
-                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().setId(itemKey)) {
-                    @Override
-                    public ItemStack getDefaultInstance() {
-                        ItemStack stack = super.getDefaultInstance();
-                        ItemCsgoBox.setBoxId(boxId, stack);
-                        // Reuse the base csgo_box item model so dynamic boxes
-                        // (registered from config/csbox/*.json filenames) render
-                        // with a real icon instead of the missing-texture
-                        // checkerboard.
-                        stack.set(DataComponents.ITEM_MODEL, Identifier.parse(MODID + ":csgo_box"));
-                        return stack;
-                    }
+                // Reuse the base csgo_box item model so dynamic boxes
+                // (registered from config/csbox/*.json filenames) render
+                // with a real icon instead of the missing-texture
+                // checkerboard. ITEM_MODEL is resolved against
+                // assets/csgobox/items/<id>.json in 26.x.
+                //
+                // Item.Properties.finalizeInitializer() forcibly sets
+                // ITEM_MODEL = own registry id at Item construction (the
+                // model DependantName is final), so neither
+                // Properties.component() nor a getDefaultInstance() override
+                // can change it — every /give stack renders against
+                // items/<own-id>.json and falls into the missing model.
+                // DATA_COMPONENT_INITIALIZERS is an ordered list executed at
+                // world-load; appending our initializer AFTER the Item
+                // constructor runs (i.e. inside the registration supplier)
+                // makes it run after the forced one and win.
+                event.register(Registries.ITEM, itemId, () -> {
+                    ItemCsgoBox item = new ItemCsgoBox(new Item.Properties().setId(itemKey)) {
+                        @Override
+                        public ItemStack getDefaultInstance() {
+                            ItemStack stack = super.getDefaultInstance();
+                            ItemCsgoBox.setBoxId(boxId, stack);
+                            return stack;
+                        }
+                    };
+                    BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.add(itemKey, (components, context, key) ->
+                            components.set(DataComponents.ITEM_MODEL, Identifier.parse(MODID + ":csgo_box")));
+                    return item;
                 });
                 registered++;
             }

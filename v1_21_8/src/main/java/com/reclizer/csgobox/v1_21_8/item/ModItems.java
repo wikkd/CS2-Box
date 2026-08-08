@@ -44,7 +44,7 @@ public final class ModItems {
             .build());
 
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.createItems(CsgoBox.MODID);
-    public static final Supplier<Item> ITEM_CSGOBOX = ITEMS.register("csgo_box", ItemCsgoBox::new);
+    public static final Supplier<Item> ITEM_CSGOBOX = ITEMS.register("csgo_box", () -> new ItemCsgoBox());
     public static final Supplier<Item> ITEM_CSGO_KEY0 = ITEMS.register("csgo_key0", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY1 = ITEMS.register("csgo_key1", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", ItemCsgoKey::new);
