@@ -84,8 +84,6 @@ public class CsboxProgressScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("CSBOXDBG");
-        LOG.warn("CSBOXDBG render called");
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderBg(guiGraphics, partialTicks);
     }
@@ -99,8 +97,6 @@ public class CsboxProgressScreen extends Screen {
      */
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("CSBOXDBG");
-        LOG.warn("CSBOXDBG renderBackground called, blurriness={}", this.minecraft != null ? this.minecraft.options.getMenuBackgroundBlurriness() : "null-mc");
         this.renderBlurredBackground(partialTicks);
     }
 
@@ -143,6 +139,13 @@ public class CsboxProgressScreen extends Screen {
         // Soft lamp glow behind the strip - a clean radial gradient with a
         // transparent rim (a plain white spotlight).
         int glowR = (int) (this.height * 45F / 100F);
+        // 1.21.0/1.21.1: the 8-arg blit below is immediate-mode and only
+        // calls RenderSystem.enableBlend() - it inherits whatever blendFunc
+        // is current, so a leftover replace-style func renders the glow's
+        // translucent white as a hard opaque disc. Force SRC_ALPHA first.
+        guiGraphics.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
         guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/spot_glow.png"),
                 (int) spotCX - glowR, (int) spotCY - glowR, 0, 0, glowR * 2, glowR * 2, glowR * 2, glowR * 2);
 
@@ -224,6 +227,12 @@ public class CsboxProgressScreen extends Screen {
         // runs once per band instead of once per slice. The merged rect stays
         // inscribed in the disc (same rounding, same far edge), so visual
         // output is unchanged.
+        // Flush the strip pass BEFORE entering the lens scissor region: the
+        // strip's fills sit in the shared GUI bufferSource and would otherwise
+        // be flushed by the first lens band's item endBatch - inside that
+        // band's scissor rect - redrawing strip cards clipped to the disc and
+        // leaving ghost/残影 artifacts outside it.
+        guiGraphics.flush();
         int yMin = Math.max(lensMinY, (int) Math.ceil(magnifiedTop));
         int yMax = Math.min(lensMinY + lensW, (int) Math.floor(magnifiedBottom));
         int maxBands = yMax - yMin + 1;
@@ -271,7 +280,26 @@ public class CsboxProgressScreen extends Screen {
             // strip pass would bleed through the disc and double up with
             // the magnified view. Fill the whole band first - the raw
             // residue is sealed under a neutral glass-colour plate.
-            guiGraphics.fill(x0, by, x1, by + bh, 0xFF545454);
+            //
+            // The backing rect must be CIRCUMSCRIBED about the disc (width
+            // from the band edge NEAREST the lens centre), not the inscribed
+            // scissor rect: the strip pass draws full-size cards across the
+            // disc too, and the moon-shaped ring between the inscribed rect
+            // and the circle edge would otherwise leak the un-magnified card
+            // under the transparent glass centre, ghosting it over the
+            // magnified view. Circumscribed width overshoots the disc by
+            // <0.5px everywhere (the band merge bounds the error), invisible
+            // under the vignette rim.
+            float backingDy = Math.min(Math.abs(by - lensCY), Math.abs(by + bh - lensCY));
+            float backingHalfW2 = lensR * lensR - backingDy * backingDy;
+            int backingX0 = x0;
+            int backingX1 = x1;
+            if (backingHalfW2 > 0F) {
+                float backingHalfW = (float) Math.sqrt(backingHalfW2);
+                backingX0 = (int) (lensCX - backingHalfW);
+                backingX1 = (int) (lensCX + backingHalfW) + 1;
+            }
+            guiGraphics.fill(backingX0, by, backingX1, by + bh, 0xFF545454);
             guiGraphics.enableScissor(x0, by, x1, by + bh);
             for (int i = iMax; i >= iMin; i--) {
                 ItemStack itemStack = itemInput.get(i);
@@ -289,6 +317,17 @@ public class CsboxProgressScreen extends Screen {
         // through) and transparent outside the disc too (the four corners of
         // the blit square stay see-through), only a soft rim shade around the
         // glass edge marks the lens silhouette.
+        //
+        // The 1.21.x 8-arg blit below is an immediate-mode draw
+        // (RenderSystem.setShader + direct quad), so it inherits whatever
+        // blend state the 3D item band renders left in the global state
+        // machine. That residue can blow the vignette's translucent gray
+        // rim up into a hard white ring (1.21.0/1.21.1 only - newer
+        // platforms draw through RenderType.GUI_TEXTURED with its own
+        // state shard). Reset to the standard GUI blend first.
+        guiGraphics.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
         guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/lens_vignette.png"),
                 lensMinX, lensMinY, 0, 0, lensW, lensW, lensW, lensW);
 

@@ -87,6 +87,24 @@ public final class IconListTools {
         }
     }
 
+    public static void renderRewardCell(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
+        int color = ColorTools.colorItems(grade);
+        int pad = Math.max(3, Math.min(8, width / 10));
+        int iconW = Math.max(8, width - pad * 2);
+        int iconH = Math.max(8, height - pad * 2);
+        int itemX = pX + (width - iconW) / 2;
+        int itemY = pY + (height - iconH) / 2;
+        if (grade == 5) {
+            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
+            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2, width - 4, height - 4);
+        } else {
+            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
+            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
+            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, iconW / 16F);
+        }
+    }
+
     public static void renderGuiItem(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
         if (itemStack == null || itemStack.isEmpty() || entity == null) return;
         int seed = (int) (entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);

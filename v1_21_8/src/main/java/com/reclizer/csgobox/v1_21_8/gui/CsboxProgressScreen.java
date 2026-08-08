@@ -243,7 +243,16 @@ public class CsboxProgressScreen extends Screen {
             // strip pass would bleed through the disc and double up with
             // the magnified view. Fill the whole band first - the raw
             // residue is sealed under a neutral glass-colour plate.
-            guiGraphics.fill(x0, by, x1, by + bh, 0xFF545454);
+            float backingDy = Math.min(Math.abs(by - lensCY), Math.abs(by + bh - lensCY));
+            float backingHalfW2 = lensR * lensR - backingDy * backingDy;
+            int backingX0 = x0;
+            int backingX1 = x1;
+            if (backingHalfW2 > 0F) {
+                float backingHalfW = (float) Math.sqrt(backingHalfW2);
+                backingX0 = (int) (lensCX - backingHalfW);
+                backingX1 = (int) (lensCX + backingHalfW) + 1;
+            }
+            guiGraphics.fill(backingX0, by, backingX1, by + bh, 0xFF545454);
             guiGraphics.enableScissor(x0, by, x1, by + bh);
             for (int i = iMax; i >= iMin; i--) {
                 ItemStack itemStack = itemInput.get(i);

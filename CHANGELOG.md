@@ -9,7 +9,7 @@
 
 ## [1.0.6] - 2026-08-06
 ### 概述
-本版本完成 26.2 平台扩展、教程系统、批量开箱、动态 box item、开箱排行榜、9 平台矩阵、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久与 CI 矩阵等全部开发批次。下文按批次记录。
+本版本完成 26.2 平台扩展、教程系统、动态 box item、开箱排行榜、9 平台矩阵、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久与 CI 矩阵等全部开发批次。**批量开箱推迟至 1.0.7 发布**（代码已开发完成、本版本入口与服务端处理均屏蔽，详见下文 `[1.0.7]` 节）。下文按批次记录。
 
 ### 批次一：26.2 平台扩展 + 教程系统
 ### 新增
@@ -73,35 +73,18 @@
 - 阶段 1 完整 B 类迁移:common 业务代码(B 类文件保留平台层重复)、P1-1 容器化布局、P1-3 per-item 视觉基线、P2-2 三档设计 token(均显式延期)。
 - 教程系统可考虑增量:`/csbox tutorial refresh` 命令手动刷新;`.trash/` 自动清理(保留最近 N 份或 N 天内);启动时打印回收站内容提示。
 
-### 批次二：批量开箱 + 动态 box item
+### 批次二：动态 box item
 ### 新增
 - **动态 box item 注册**（方案 A 实施）。`FMLCommonSetupEvent.enqueueWork` 阶段扫描 `config/csbox/*.json`，对每个 `<filename>.json` 自动注册一个 item ID `csgobox:<filename>`（`ItemCsgoBox` 子类，`getDefaultInstance` 预置 `box_id` = 自身 id）。效果：原版 vanilla `/give @p csgobox:weapon_supply_box 5` 直接生效，**无需 components 语法**。3 平台镜像。
   - 已存在的 item id 跳过（避免与基础 `csgobox:csgo_box` 冲突）
   - `_tutorial*.json` / `_tutorial_sources.json` 等 `_` 前缀文件跳过（loader 惯例）
   - 文件名不是合法 ResourceLocation path 时 log warn 后跳过
   - 服务端日志：`[csgo-dynamic-items] registered N dynamic box item(s) from config/csbox/ (M skipped as already registered)`
-- **Known limitation：模型文件缺失**。动态 item 没有对应的 `assets/csgobox/models/item/<name>.json`，**功能完全正常**（开箱、RNG、`/give`、批量开箱全部走通），仅在背包栏的图标显示紫黑缺纹理。临时解法：玩家手动在 assets 里添加同名模型文件；根治解法留待后续支持 IClientItemExtensions 覆盖（已在 JavaDoc 中标注 TODO）。
+- **Known limitation：模型文件缺失**。动态 item 没有对应的 `assets/csgobox/models/item/<name>.json`，**功能完全正常**（开箱、RNG、`/give` 全部走通），仅在背包栏的图标显示紫黑缺纹理。临时解法：玩家手动在 assets 里添加同名模型文件；根治解法留待后续支持 IClientItemExtensions 覆盖（已在 JavaDoc 中标注 TODO）。
 - v26.x 适配：26.x 的 `EventBusSubscriber` 注解已移除 `bus` 参数（默认走 MOD 总线），`@EventBusSubscriber(modid = MODID, bus = ..., value = Dist.CLIENT)` 改为 `@EventBusSubscriber(modid = MODID, value = Dist.CLIENT)`。
 
-### 新增（批量开箱）
-- **批量开箱触发**：`ClickEvent.onRightClick` 检测 `mc.options.keyShift.isDown()`，shift 状态开 `CsboxBulkOverviewScreen` 总览屏，否则走原 `CsboxScreen` 单开流程（无 regression）。3 平台镜像。
-- **总览屏 `CsboxBulkOverviewScreen`**（新文件，3 平台各 1 份）：实时计算 `min(背包内同名箱数, 钥匙数)`，按稀有度配色（蓝/绿/红）显示「箱子数 / 钥匙数 / 本次可开」+ 「开启」+ 「返回」按钮。开启按钮在 K=0 时禁用。
-- **2D 底部上升流水式面板 `CsboxBulkResultScreen`**（新文件，3 平台各 1 份）：底部上升的 CS:GO 风格 ticker feed，每 4 tick 推入一条新中奖物品（图标 + 稀有度颜色 + 名称 + 数量 + 序号），淡入 10% / 稳定 70% / 淡出 20%；最多同时显示 8 条；全部出完且最后一条过 100 tick lifetime 后显示「收集」按钮。
-- **新增数据包**（3 平台各 1 份）：
-  - `PacketCsgoBulkProgress(requestId)`（C→S）：批量开箱请求。StreamCodec 仅 `long`。
-  - `PacketBoxBulkResult(requestId, items, grades)`（S→C）：boxes 2..K 的简洁结果（无动画数据）。max 1024 条/包。
-- **服务端异步预计算管线**：
-  - `CsgoBox.BULK_COMPUTE_POOL`：2 个 daemon 线程的 `ExecutorService`（`csgobox-bulk-compute-N`）。
-  - `BulkBoxContext`（record）快照 `weights` + `gradeMap` 供后台线程只读消费。
-  - `BulkOpenResult`（record）单次结果。Box 1 含完整 50 项动画 + serverSeed；其余仅 `(item, grade)`。
-  - `PacketCsgoBulkProgress.handleServer` 主线程：校验 / 快照 / 预消耗 K 箱 + K 钥匙（沿用 `tryConsumeKeys(player, box, count)` 新签名）/ `CompletableFuture.supplyAsync` 提交后台 → 完成后 `sp.level().getServer().execute(...)` 切回主线程收尾。
-  - 主线程收尾：发 `PacketBoxOpenResult`（box1 全量 50 项动画）+ 发 `PacketBoxBulkResult`（boxes 2..K）+ `inventory.add` 循环（vanilla 自动 merge 同类 stack，满则 `sp.drop` 兜底）+ `awardStat(OPENED_BOXES_STAT, K)` + `OpenedBoxTrigger.trigger() × K`。
-- **服务端辅助 API 抽取**（3 平台镜像）：
-  - `PacketCsgoProgress.tryConsumeKeys(player, box, count)`：原 `tryConsumeKeys(player, box)` 抽出为支持 `count` 参数（单开调用 `count=1`）。
-  - `PacketCsgoProgress.tryConsumeBoxes(player, box, count)`：新增，遍历玩家全背包消耗 N 个同名箱（含主手）。
-  - `PacketCsgoProgress.isOpenBlockedStatic / blockFurtherOpensStatic`：原 `private` 提升为 package-private 静态方法供 bulk handler 复用。
-- **客户端 `CsboxProgressScreen` 路由**：主动画播完分支检测 `PacketBoxBulkResult.consumeMatching(requestId)`；命中 → 开 `CsboxBulkResultScreen(全部 items + grades)`；未命中（单开路径）→ 沿用原 `CsLookItemScreen` 行为。完全向后兼容。
-- **新增 9 个 i18n key**（中英双版本）：`gui.csgobox.bulk.{title,box_name,box_count,key_count,key_count_no_key,openable_count,cannot_open,confirm,collect,waterfall_empty}`。
+### 更改
+- **批量开箱推迟至 1.0.7**：入口（shift+右键）与服务端 `PacketCsgoBulkProgress.handleServer` 整体屏蔽，shift+右键恢复原单开行为；功能代码完整保留（10 平台镜像），1.0.7 解除屏蔽即用。详见下文 `[1.0.7]` 节。
 
 ### 新增（开箱排行榜 / scoreboard）
 - **`/csbox scoreboard` 子命令（OP 权限）**。完全复用原版 `/scoreboard objectives` 系统，模仿死亡榜的玩法机制。3 平台镜像（`v1_21_1` / `v26_1_2` / `v26_2`）。
@@ -114,18 +97,12 @@
 - **新增 11 个 i18n key**（中英双版本）：`commands.csgobox.help.line.scoreboard` + `commands.csgobox.scoreboard.{objective_display_name,status_off,status_on,already_on,on_success,off_not_found,off_success,display_not_set,display_changed}`。
 
 ### 范围外（明确未做）
-- 无 ConfirmationScreen 二次确认（用户选择"无上限 + 静默截断"）。
-- 无 `bulkOpenCount` 等新配置字段（用户选择"无上限"）。
-- 无 `/csbox bulk` 命令（GUI 触发足够）。
 - 26.2 的 `Options.hideGui` 已知缺失（沿用 v1.0.6 现状，HUD 降级可接受）。
 - `OPEN_BLOCKED_UNTIL_TICK` map 清理（`.planning/codebase/CONCERNS.md:58` deferred 项，本 PR 不修）。
 - 通用 v1_21_1 / v26_1_2 / v26_2 的代码生成/模板抽取（保持镜像风格）。
 
 ### 备注
 - 3 平台独立编译通过（`./gradlew :v1_21_1:compileJava` / `:v26_1_2:compileJava` / `:v26_2:compileJava` 各自 BUILD SUCCESSFUL）。无法在同一次 Gradle 启动中多版本并行（NeoGradle userdev IDEA 扩展冲突，是项目历史限制）。
-- `BULK_COMPUTE_POOL` 硬编码 2 daemon 线程（hot path 上 99% 玩家 1 个 bulk 请求，2 线程足够 2 个并发操作员）。
-- 性能：576 个箱子（36 主背包 × 16 stack 上限）单次异步预计 ~300ms 后台（不卡主线程），主线程收尾发 2 个包 + `inventory.add` × K（vanilla `SimpleContainer.add` 自动合并同类 stack 至 `Math.min(maxStack, count+addCount)`，满后 `sp.drop` 走 vanilla `ItemEntity` 自然 merge）。
-- 风险：玩家在 async 计算中退出 / 死亡 → 主线程收尾时检查 `sp.isRemoved() || !sp.isAlive()` 直接丢弃结果；cooldown `OPEN_BLOCKED_UNTIL_TICK`（10 tick）防双发。
 
 ### 修复（动态 box item + 启动崩溃）
 - **`v1_21_1` / `v26_1_2` 启动崩溃（`Registry is already frozen`）**。原 `registerDynamicBoxItems(FMLCommonSetupEvent event)` 走 `enqueueWork`，而 1.21.1 / 26.1.2 的 enqueueWork 时机晚于 item registry freeze，导致 `new ItemCsgoBox()` 构造时 `MappedRegistry.createIntrusiveHolder` 抛 `IllegalStateException`，integrated server 进不去 world。**修复**：把 `registerDynamicBoxItems` 改签名接收 `RegisterEvent`，内部用 `event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(...))` deferred supplier —— Item 实例在 registry finalize 阶段构造，时机早于 freeze。`v26_2` 早先已采用此写法（`RegisterEvent` 路线），本次把 v1.21.1 / v26.1.2 镜像对齐。3 平台都加了 `if (!event.getRegistryKey().equals(Registries.ITEM))` 守卫（因为 listener 注册时未做 key 过滤）。
@@ -139,11 +116,9 @@
 - **`/csbox tutorial refresh`** 子命令：强制重下当前版本教程（覆盖已存在），`BoxDefaults.refreshTutorials` 与启动路径共用 TutorialSources/TutorialFetcher。
 - **教程系统收敛到 common**：9 平台 `BoxDefaults.java` 副本整体删除，`refreshTutorials` 上移 `common/box/BoxDefaults.java`（B 类迁移 #1/6 收尾）。
 - **旧版本教程直接删除**：取代 OS 回收站 + `.trash/` 两级回收机制（含 `canUseOsTrash` / `moveToOsTrash` / `moveToFallbackTrash` / `pruneFallbackTrash` / `tryMoveOrCopy` / `uniqueFallbackPath` 全部移除）。`deleteStaleTutorials` 按 `^_tutorial_v.*\.md$` 白名单直接 `Files.delete`，单文件失败仅 warn 不中断。
-- **`bulkOpenCount` 配置**（`[advanced]`，0=无上限，默认 0）：服务端权威截断，客户端总览屏镜像 clamp。
-- **ConfirmationScreen 二次确认**：总览屏「全部开启」先跳确认屏（展示消耗量），确认后才发 `PacketCsgoBulkProgress`。
 - **26.2 HUD 隐藏恢复**：`HudVisibility` 工具类（`Minecraft.gui.hud.toggle()/isHidden()` set 语义包装），开箱动画屏自动隐藏 hotbar/血条，消除 1.0.6 遗留降级。
 - **三档设计 token**（P2-2）：`common/utils/OverlayColor` 扩展 surface/panel/divider/panelHover/panelPressed/panelDisabled；`ButtonPalette.DISABLED`。
-- **容器化布局**（P1-1）：`common/utils/GuiRegion` 命名区域（title/preview/list/actions/actionPair），CsboxBulkOverviewScreen 与 CsboxScreen 落地。
+- **容器化布局**（P1-1）：`common/utils/GuiRegion` 命名区域（title/preview/list/actions/actionPair），CsboxScreen 落地（批量开箱屏随 1.0.7 一起落地）。
 - **per-item 视觉基线**（P1-3）：`IconListTools.renderGuiItem` 用 `ItemModelResolver` + `getModelBoundingBox()` 测量模型范围并居中（26.x + 1.21.8/10/11）。
 - **GitHub Actions matrix**（`.github/workflows/build.yml`）：9 版本顺序构建 + common 测试 + jar 产物上传。
 - **`docs/RELEASE.md`**：发布流程、质量门（含增量缓存假象警告）。
@@ -164,7 +139,38 @@
 ### 批次四：磨损扣耐久
 
 ### 新增
-- **按磨损值损耗耐久**（`damageItemByWear` 配置，`[advanced]`，默认开启）：抽出的物品若有耐久属性，按 CS:GO 磨损值百分比扣耐久（`round(磨损值 × 最大耐久)`，钳制 `[0, max-1]`，永不碎裂）。磨损值由服务端权威生成（开箱动画与批量开箱共用同一 RNG 流）；查看界面有耐久物品显示实际扣损率，无耐久物品维持随机磨损率展示。10 平台全部 clean compileJava 通过。
+- **按磨损值损耗耐久**（`damageItemByWear` 配置，`[advanced]`，默认开启）：抽出的物品若有耐久属性，按 CS:GO 磨损值百分比扣耐久（`round(磨损值 × 最大耐久)`，钳制 `[0, max-1]`，永不碎裂）。磨损值由服务端权威生成（开箱动画路径）；查看界面有耐久物品显示实际扣损率，无耐久物品维持随机磨损率展示。10 平台全部 clean compileJava 通过。
+
+## [1.0.7] - 计划中
+
+> 批量开箱原计划随 1.0.6 发布，现推迟至本版本。功能代码已在 1.0.6 开发完成并经 10 平台镜像，1.0.6 发布时入口（shift+右键）与服务端处理（`PacketCsgoBulkProgress.handleServer`）已整体屏蔽，shift+右键恢复原单开行为；本版本解除屏蔽后直接可用。
+
+### 新增（批量开箱）
+- **批量开箱触发**：`ClickEvent.onRightClick` 检测 `mc.options.keyShift.isDown()`，shift 状态开 `CsboxBulkOverviewScreen` 总览屏，否则走原 `CsboxScreen` 单开流程（无 regression）。10 平台镜像。
+- **总览屏 `CsboxBulkOverviewScreen`**：实时计算 `min(背包内同名箱数, 钥匙数)`，按稀有度配色（蓝/绿/红）显示「箱子数 / 钥匙数 / 本次可开」+ 「开启」+ 「返回」按钮。开启按钮在 K=0 时禁用。
+- **2D 底部上升流水式面板 `CsboxBulkResultScreen`**：底部上升的 CS:GO 风格 ticker feed，每 4 tick 推入一条新中奖物品（图标 + 稀有度颜色 + 名称 + 数量 + 序号），淡入 10% / 稳定 70% / 淡出 20%；最多同时显示 8 条；全部出完且最后一条过 100 tick lifetime 后显示「收集」按钮；「全部显示」视图按物品合并展示 2D 网格。
+- **新增数据包**（10 平台各 1 份）：
+  - `PacketCsgoBulkProgress(requestId)`（C→S）：批量开箱请求。StreamCodec 仅 `long`。
+  - `PacketBoxBulkResult(requestId, items, grades)`（S→C）：boxes 2..K 的简洁结果（无动画数据）。max 1024 条/包。
+- **服务端异步预计算管线**：
+  - `CsgoBox.BULK_COMPUTE_POOL`：2 个 daemon 线程的 `ExecutorService`（`csgobox-bulk-compute-N`）。
+  - `BulkBoxContext`（record）快照 `weights` + `gradeMap` 供后台线程只读消费。
+  - `BulkOpenResult`（record）单次结果。Box 1 含完整 50 项动画 + serverSeed；其余仅 `(item, grade)`。
+  - `PacketCsgoBulkProgress.handleServer` 主线程：校验 / 快照 / 预消耗 K 箱 + K 钥匙（沿用 `tryConsumeKeys(player, box, count)` 新签名）/ `CompletableFuture.supplyAsync` 提交后台 → 完成后 `sp.level().getServer().execute(...)` 切回主线程收尾。
+  - 主线程收尾：发 `PacketBoxOpenResult`（box1 全量 50 项动画）+ 发 `PacketBoxBulkResult`（boxes 2..K）+ `inventory.add` 循环（vanilla 自动 merge 同类 stack，满则 `sp.drop` 兜底）+ `awardStat(OPENED_BOXES_STAT, K)` + `OpenedBoxTrigger.trigger() × K`。
+- **服务端辅助 API 抽取**（10 平台镜像）：
+  - `PacketCsgoProgress.tryConsumeKeys(player, box, count)`：原 `tryConsumeKeys(player, box)` 抽出为支持 `count` 参数（单开调用 `count=1`）。
+  - `PacketCsgoProgress.tryConsumeBoxes(player, box, count)`：新增，遍历玩家全背包消耗 N 个同名箱（含主手）。
+  - `PacketCsgoProgress.isOpenBlockedStatic / blockFurtherOpensStatic`：原 `private` 提升为 package-private 静态方法供 bulk handler 复用。
+- **客户端 `CsboxProgressScreen` 路由**：主动画播完分支检测 `PacketBoxBulkResult.consumeMatching(requestId)`；命中 → 开 `CsboxBulkResultScreen(全部 items + grades)`；未命中（单开路径）→ 沿用原 `CsLookItemScreen` 行为。完全向后兼容。
+- **`bulkOpenCount` 配置**（`[advanced]`，0=无上限，默认 0）：服务端权威截断，客户端总览屏镜像 clamp。
+- **ConfirmationScreen 二次确认**：总览屏「全部开启」先跳确认屏（展示消耗量），确认后才发 `PacketCsgoBulkProgress`。
+- **新增 9 个 i18n key**（中英双版本）：`gui.csgobox.bulk.{title,box_name,box_count,key_count,key_count_no_key,openable_count,cannot_open,confirm,collect,waterfall_empty}`。
+
+### 备注
+- `BULK_COMPUTE_POOL` 硬编码 2 daemon 线程（hot path 上 99% 玩家 1 个 bulk 请求，2 线程足够 2 个并发操作员）。
+- 性能：576 个箱子（36 主背包 × 16 stack 上限）单次异步预计 ~300ms 后台（不卡主线程），主线程收尾发 2 个包 + `inventory.add` × K（vanilla `SimpleContainer.add` 自动合并同类 stack 至 `Math.min(maxStack, count+addCount)`，满后 `sp.drop` 走 vanilla `ItemEntity` 自然 merge）。
+- 风险：玩家在 async 计算中退出 / 死亡 → 主线程收尾时检查 `sp.isRemoved() || !sp.isAlive()` 直接丢弃结果；cooldown `OPEN_BLOCKED_UNTIL_TICK`（10 tick）防双发。
 
 ## [1.0.5] - 2026-06-29
 

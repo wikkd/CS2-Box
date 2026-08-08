@@ -36,8 +36,8 @@ done
 2. **common 单元测试**：`./gradlew :common:test`
 3. **运行时回归**（至少 26.1.2 + 1.21.1 两个代表平台）：
    - 开箱动画 + 3D 拖拽旋转（PIP）
-   - 批量开箱（Shift+右键 → 确认屏 → 流水结果屏）
-   - 磨损耐久：单开有耐久物品按磨损值扣耐久（查看界面 wear 显示=实际扣损率，无耐久物品仍为随机磨损率）；批量开箱同样扣损；`damageItemByWear=false` 时关闭
+   - 批量开箱（Shift+右键 → 确认屏 → 流水结果屏；**1.0.6 已屏蔽，1.0.7 恢复后回归**）
+   - 磨损耐久：单开有耐久物品按磨损值扣耐久（查看界面 wear 显示=实际扣损率，无耐久物品仍为随机磨损率）；`damageItemByWear=false` 时关闭
    - 成就触发（`csgobox:opened_boxes` 累计）
    - `/csbox reload`、`/csbox tutorial refresh`、`/csbox errors`
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）

@@ -142,6 +142,13 @@ public class CsboxProgressScreen extends Screen {
         // Soft lamp glow behind the strip - a clean radial gradient with a
         // transparent rim (a plain white spotlight).
         int glowR = (int) (this.height * 45F / 100F);
+        // 1.21.0/1.21.1: the 8-arg blit below is immediate-mode and only
+        // calls RenderSystem.enableBlend() - it inherits whatever blendFunc
+        // is current, so a leftover replace-style func renders the glow's
+        // translucent white as a hard opaque disc. Force SRC_ALPHA first.
+        guiGraphics.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
         guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/spot_glow.png"),
                 (int) spotCX - glowR, (int) spotCY - glowR, 0, 0, glowR * 2, glowR * 2, glowR * 2, glowR * 2);
 
@@ -258,6 +265,17 @@ public class CsboxProgressScreen extends Screen {
         // through) and transparent outside the disc too (the four corners of
         // the blit square stay see-through), only a soft rim shade around the
         // glass edge marks the lens silhouette.
+        //
+        // The 1.21.x 8-arg blit below is an immediate-mode draw
+        // (RenderSystem.setShader + direct quad), so it inherits whatever
+        // blend state the 3D item band renders left in the global state
+        // machine. That residue can blow the vignette's translucent gray
+        // rim up into a hard white ring (1.21.0/1.21.1 only - newer
+        // platforms draw through RenderType.GUI_TEXTURED with its own
+        // state shard). Reset to the standard GUI blend first.
+        guiGraphics.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
         guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/lens_vignette.png"),
                 lensMinX, lensMinY, 0, 0, lensW, lensW, lensW, lensW);
 

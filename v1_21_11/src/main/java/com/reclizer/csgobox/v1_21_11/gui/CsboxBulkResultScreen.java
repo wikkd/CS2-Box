@@ -163,8 +163,7 @@ public class CsboxBulkResultScreen extends Screen {
             if (e.stack.isEmpty()) {
                 guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.dividerDim());
             } else if (this.player != null) {
-                IconListTools.renderItemFrame(this.player, guiGraphics, e.stack,
-                        itemX + 2, itemY, colW, itemSize, e.grade);
+                IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
             }
             String label = e.stack.isEmpty()
                     ? "(" + e.index + ")"
@@ -270,8 +269,7 @@ public class CsboxBulkResultScreen extends Screen {
             guiGraphics.fill(x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
 
             if (this.player != null) {
-                IconListTools.renderItemFrame(this.player, guiGraphics, stack,
-                        x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
+                IconListTools.renderRewardCell(this.player, guiGraphics, stack, x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
             }
 
             if (count > 1) {

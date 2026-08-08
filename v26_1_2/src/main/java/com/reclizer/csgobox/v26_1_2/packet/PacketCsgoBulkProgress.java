@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_1_2.packet;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
+import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.box.BulkBoxContext;
 import com.reclizer.csgobox.v26_1_2.box.BulkOpenResult;
@@ -41,6 +42,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayload {
 
+    private static final boolean BULK_OPEN_ENABLED = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
+
     public static final Type<PacketCsgoBulkProgress> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(CsgoBox.MODID, "csgo_bulk_progress"));
 
@@ -55,6 +58,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
     }
 
     public static void handleServer(final PacketCsgoBulkProgress message, final IPayloadContext context) {
+        // 1.0.6 屏蔽批量开箱（1.0.7 恢复）：服务端忽略所有批量开箱请求
+        if (!BULK_OPEN_ENABLED) {
+            return;
+        }
         context.enqueueWork(() -> {
             Player player = context.player();
             if (player == null) {
@@ -80,8 +87,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
 
-            int availableBoxes = countMatchingBoxes(player, templateBox);
-            int availableKeys = countMatchingKeys(player, templateBox);
+            Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getKey(templateBox));
+            int availableBoxes = avail.boxes();
+            int availableKeys = avail.keys();
             int K = Math.min(availableBoxes, availableKeys);
             if (K <= 0) {
                 return;
@@ -101,7 +109,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             final int requestedK = K;
             final long requestId = message.requestId();
             final Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
-            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy));
+            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMapCache.get(boxId.toString(), () -> GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy)));
 
             final Player playerFinal = player;
             CompletableFuture
@@ -130,55 +138,39 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         });
     }
 
-    private static int countMatchingBoxes(Player player, ItemStack box) {
-        int total = 0;
-        for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
-            if (stack.getItem() instanceof ItemCsgoBox && ItemStack.isSameItemSameComponents(stack, box)) {
-                total += stack.getCount();
-            }
-        }
-        // Count armor + offhand as well so the consume step below doesn't
-        // pull more boxes than the player actually has (or vice versa).
-        for (EquipmentSlot slot : new EquipmentSlot[]{
-                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
-            ItemStack stack = player.getItemBySlot(slot);
-            if (stack.getItem() instanceof ItemCsgoBox && ItemStack.isSameItemSameComponents(stack, box)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
+
+    private record Availability(int boxes, int keys) {
     }
 
-    private static int countMatchingKeys(Player player, ItemStack box) {
-        Identifier keyId = ItemCsgoBox.getKey(box);
-        if (keyId == null || keyId.equals(Identifier.parse("minecraft:air"))) {
-            return Integer.MAX_VALUE;
-        }
-        if (player.getAbilities().instabuild) {
-            return Integer.MAX_VALUE;
-        }
-        int total = 0;
+    private static Availability countAvailability(Player player, ItemStack box, Identifier keyId) {
+        boolean noKey = keyId == null || keyId.equals(Identifier.parse("minecraft:air"));
+        boolean countKeys = !noKey && !player.getAbilities().instabuild;
+        int boxes = 0;
+        int keys = countKeys ? 0 : Integer.MAX_VALUE;
         for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
             if (stack.getItem() instanceof ItemCsgoBox) {
-                continue;
-            }
-            if (keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                total += stack.getCount();
+                if (ItemStack.isSameItemSameComponents(stack, box)) {
+                    boxes += stack.getCount();
+                }
+            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                keys += stack.getCount();
             }
         }
+        // Armor + offhand as well so the consume step below does not pull
+        // more than the player actually has (or vice versa).
         for (EquipmentSlot slot : new EquipmentSlot[]{
                 EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
                 EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
             ItemStack stack = player.getItemBySlot(slot);
             if (stack.getItem() instanceof ItemCsgoBox) {
-                continue;
-            }
-            if (keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                total += stack.getCount();
+                if (ItemStack.isSameItemSameComponents(stack, box)) {
+                    boxes += stack.getCount();
+                }
+            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                keys += stack.getCount();
             }
         }
-        return total;
+        return new Availability(boxes, keys);
     }
 
     /**
@@ -253,8 +245,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         }
 
         // Re-validate after async compute; inventory might have changed.
-        int recheckBoxes = countMatchingBoxes(sp, templateBox);
-        int recheckKeys = countMatchingKeys(sp, templateBox);
+        Identifier keyId = ItemCsgoBox.getKey(templateBox);
+        Availability avail = countAvailability(sp, templateBox, keyId);
+        int recheckBoxes = avail.boxes();
+        int recheckKeys = avail.keys();
         int actualK = Math.min(recheckBoxes, recheckKeys);
         if (actualK < K) {
             CsgoBox.LOGGER.warn("[csgo-bulk] player {} availability changed during compute: requested={} available={}",

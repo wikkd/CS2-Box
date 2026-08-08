@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_2.event;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.v26_2.gui.CsboxScreen;
+import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ModItems;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
@@ -33,7 +34,7 @@ public final class ClickEvent {
 
         ItemStack heldItem = player.getMainHandItem();
 
-        if (heldItem.getItem() == ModItems.ITEM_CSGOBOX.get()) {
+        if (heldItem.getItem() instanceof ItemCsgoBox) {
 
             float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
             if (vol > 0) {
@@ -42,7 +43,7 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                boolean shift = mc.options.keyShift.isDown();
+                boolean shift = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
                 mc.execute(() -> {
                     if (shift) {
                         mc.setScreenAndShow(new CsboxBulkOverviewScreen());

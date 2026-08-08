@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.box;
 
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
+import com.reclizer.csgobox.logic.GradeMapCache;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
@@ -17,6 +18,7 @@ public final class BoxRegistry {
 
     public static void register(BoxDefinition definition) {
         BOX_REGISTRY.put(definition.id(), definition);
+        GradeMapCache.invalidate(definition.id().toString());
         CsgoBox.LOGGER.debug("Registered box: {}", definition.id());
     }
 
@@ -38,9 +40,11 @@ public final class BoxRegistry {
 
     public static void clear() {
         BOX_REGISTRY.clear();
+        GradeMapCache.invalidateAll();
     }
 
     public static void remove(ResourceLocation id) {
         BOX_REGISTRY.remove(id);
+        GradeMapCache.invalidate(id.toString());
     }
 }
