@@ -30,7 +30,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 | `v1_21_8/` | 1.21.8 | 21.8.53 | 21 | 旧 API 平台实现 |
 | `v1_21_10/` | 1.21.10 | 21.10.64 | 21 | 旧 API 平台实现 |
 | `v1_21_11/` | 1.21.11 | 21.11.42 | 21 | decoupled GUI API（GuiGraphics 已迁移，Screen 保留 render 入口） |
-| `v26_1_2/` | 26.1.2 | 26.1.2.76 | 25 `--enable-preview` | decoupled rendering API + PIP 3D |
+| `v26_1_2/` | 26.1.2 | 26.1.2.94 | 25 `--enable-preview` | decoupled rendering API + PIP 3D |
 | `v26_2/` | 26.2 | 26.2.0.7-beta | 25 `--enable-preview` | 最新 beta；decoupled API + PIP 3D 重写 |
 
 `common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享(v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`)。
@@ -39,7 +39,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 
 - **Java 21**(v1_21_1)+ **Java 25**(v26_1_2,需 `--enable-preview`)
 - **Gradle** 通过 wrapper 自动管理(8.11 / 8.14)
-- **NeoForge** 21.1.115 或 26.1.2.76(根据 `active_versions` 决定)
+- **NeoForge** 21.1.115 或 26.1.2.94(根据 `active_versions` 决定)
 - 互联网连接(首次构建需下载 NeoForged userdev 与依赖)
 
 验证 Java:

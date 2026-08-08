@@ -51,11 +51,13 @@ public class CsLookItemScreen extends Screen {
     private static final Identifier ICON_MORE =
             Identifier.parse("csgobox:textures/gui/toolbar/more.png");
 
-    /** Per-icon content edge (px in the 32x32 texture): inspect 30x29, gloves 30x20, model 28x30,
-     *  info 26x26, sticker 30x23, more 7x27 (vertical, edge = height). Keeps visible content
-     *  visually uniform: iconSize = size * 12 / edge, so content edge renders at ~size*3/8. */
-    private static final int[] ICON_CONTENT_EDGE = {29, 20, 28, 26, 23, 27};
-    /** Tooltip lang keys per toolbar button, aligned with ICON_CONTENT_EDGE. */
+    /** Content bounding box (px in the 32x32 texture) per icon, kept in
+     *  sync with the artwork: inspect 30x29, gloves 30x20, model 28x30,
+     *  info 26x26, sticker 30x23, more 7x27. */
+    private static final int[] ICON_CONTENT_W = {30, 30, 28, 26, 30, 7};
+    private static final int[] ICON_CONTENT_H = {29, 20, 30, 26, 23, 27};
+
+    /** Tooltip lang keys per toolbar button. */
     private static final String[] TOOLTIP_KEYS = {
             "gui.csgobox.csgo_box.toolbar.inspect",
             "gui.csgobox.csgo_box.toolbar.gloves",
@@ -68,6 +70,7 @@ public class CsLookItemScreen extends Screen {
     /** Toolbar hover state: index of hovered button (-1 = none) and 0..1 glow. */
     private int hoveredButton = -1;
     private float toolbarGlow = 0F;
+    private int screenTicks = 0;
 
     /** Decorative finish styles, mirrored in lang (style.custom_paint etc). */
     private static final String[] SKIN_STYLES = {
@@ -111,7 +114,7 @@ public class CsLookItemScreen extends Screen {
     }
 
     private int toolbarButtonSize() {
-        return Math.max(24, this.height * 5 / 100);
+        return Math.max(17, this.height * 35 / 1000);
     }
 
     private int toolbarButtonX(int index) {
@@ -120,6 +123,15 @@ public class CsLookItemScreen extends Screen {
 
     private int toolbarButtonY() {
         return this.height - 8 - toolbarButtonSize();
+    }
+
+    private float toolbarEnterEase(int index) {
+        float enterT = Math.max(0F, Math.min(1F, (this.screenTicks - index * 0.8F) / 3F));
+        return 1F - (1F - enterT) * (1F - enterT);
+    }
+
+    private int toolbarEnterRise(int index) {
+        return (int) (8F * (1F - toolbarEnterEase(index)));
     }
 
     private String wearTierKey() {
@@ -209,8 +221,8 @@ public class CsLookItemScreen extends Screen {
         boolean hoverButton = ButtonPalette.isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
         ButtonPalette.drawButton(guiGraphics, ButtonPalette.DANGER, btnX, btnY, btnW, btnH, hoverButton);
 
-        renderToolbar(guiGraphics, mouseX, mouseY);
         renderInfoPanel(guiGraphics);
+        renderToolbar(guiGraphics, mouseX, mouseY);
     }
 
     private void renderToolbar(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
@@ -221,40 +233,68 @@ public class CsLookItemScreen extends Screen {
         this.hoveredButton = -1;
         for (int i = 0; i < icons.length; i++) {
             int x = toolbarButtonX(i);
+            int by = y + toolbarEnterRise(i);
+            int alpha = (int) (0xFF * toolbarEnterEase(i));
 
-            boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, y, size, size);
+            boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, by, size, size);
             if (hover) {
                 this.hoveredButton = i;
             }
             boolean active = i == 3 && this.showInfoPanel;
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
-            guiGraphics.fill(x, y, x + size, y + size, outer);
-            guiGraphics.fill(x + 1, y + 1, x + size - 1, y + size - 1, inner);
+            guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
+            guiGraphics.fill(x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
-                guiGraphics.fill(x + 2, y + size - 2, x + size - 2, y + size, 0xFFFFFFFF);
+                guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size, (alpha << 24) | 0xFFFFFF);
             }
-            int iconSize = Math.max(12, Math.min(64, size * 12 / ICON_CONTENT_EDGE[i]));
-            int iconX = x + (size - iconSize) / 2;
-            int iconY = y + (size - iconSize) / 2;
+            int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
+            int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
+            int screenW = iconSize * ICON_CONTENT_W[i] / maxEdge;
+            int screenH = iconSize * ICON_CONTENT_H[i] / maxEdge;
+            int iconX = x + (size - screenW) / 2;
+            int iconY = by + (size - screenH) / 2;
+            int u = (32 - ICON_CONTENT_W[i]) / 2;
+            int v = (32 - ICON_CONTENT_H[i]) / 2;
             int iconColor;
             if (active) {
-                iconColor = 0xFFF2C980;
+                iconColor = 0xFFFFFFFF;
             } else {
                 float b = i == this.hoveredButton ? 0.55F + 0.45F * this.toolbarGlow : 0.55F;
-                iconColor = 0xFF000000 | ((int) (0xF2 * b) << 16) | ((int) (0xC9 * b) << 8) | (int) (0x80 * b);
+                iconColor = 0xFF000000 | ((int) (0xFF * b) << 16) | ((int) (0xFF * b) << 8) | (int) (0xFF * b);
             }
-            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, icons[i],
-                    iconX, iconY, 0F, 0F, iconSize, iconSize, 32, 32, iconColor);        }
+            iconColor = (alpha << 24) | (iconColor & 0xFFFFFF);
+            if (i == 5) {
+                renderMoreDots(guiGraphics, x, by, size, iconColor);
+            } else {
+                guiGraphics.blit(RenderPipelines.GUI_TEXTURED, icons[i],
+                    iconX, iconY, u, v, screenW, screenH,
+                    ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
+            }        }
         renderToolbarTooltip(guiGraphics, mouseX, mouseY);
     }
+
+    private void renderMoreDots(GuiGraphicsExtractor guiGraphics, int btnX, int btnY, int size, int color) {
+        int r = Math.max(2, size / 5);
+        int cx = btnX + size / 2;
+        int cy = btnY + size / 2;
+        int spacing = Math.max(3, r * 2);
+        for (int k = -1; k <= 1; k++) {
+            int ccy = cy + k * spacing;
+            for (int dy = -r; dy <= r; dy++) {
+                int half = (int) Math.sqrt((double) (r * r - dy * dy));
+                guiGraphics.fill(cx - half, ccy + dy, cx + half + 1, ccy + dy + 1, color);
+            }
+        }
+    }
+
 
 
     private void renderToolbarTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         if (this.hoveredButton < 0 || this.toolbarGlow < 0.05F) return;
         int size = toolbarButtonSize();
         int x = toolbarButtonX(this.hoveredButton);
-        int y = toolbarButtonY();
+        int y = toolbarButtonY() + toolbarEnterRise(this.hoveredButton);
         int textW = this.font.width(Component.translatable(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText());
         int tooltipW = (int) (textW * 0.7F) + 8;
         int tooltipH = (int) (this.font.lineHeight * 0.7F) + 4;
@@ -262,9 +302,9 @@ public class CsLookItemScreen extends Screen {
         int tipY = y - tooltipH - 6;
         tipX = Math.max(2, Math.min(tipX, this.width - tooltipW - 2));
         tipY = Math.max(2, tipY);
-        int alpha = (int) (0xCC * this.toolbarGlow);
+        int alpha = (int) (0xCC * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
         guiGraphics.fill(tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
-        int textAlpha = (int) (0xFF * this.toolbarGlow);
+        int textAlpha = (int) (0xFF * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
         renderText(guiGraphics,
                 Component.translatable(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText(),
                 tipX + 4, tipY + 2, 0.7F, (textAlpha << 24) | 0xCCCCCC);
@@ -272,42 +312,68 @@ public class CsLookItemScreen extends Screen {
 
     private void renderInfoPanel(GuiGraphicsExtractor guiGraphics) {
         if (!this.showInfoPanel || openItem.isEmpty()) return;
-        int panelX = this.width * 8 / 100;
-        int panelY = this.height * 20 / 100;
-        int panelW = Math.max(200, this.width * 16 / 100);
-        int rowH = 13;
-        int lineCount = 5;
-        int panelH = 12 + lineCount * rowH;
-        int panelRight = panelX + panelW;
-        int panelBottom = panelY + panelH;
-        guiGraphics.fill(panelX, panelY, panelRight, panelBottom, 0xE0101014);
-
-        int textX = panelX + 8;
-        int y = panelY + 8;
         float scale = 0.7F;
-        int rowIndex = 0;
-        drawInfoRow(guiGraphics, textX, y + rowIndex++ * rowH, scale,
+        int rowH = 13;
+        String[] labelKeys = {
                 "gui.csgobox.csgo_box.info.skin_style",
-                Component.translatable("gui.csgobox.csgo_box.style." + SKIN_STYLES[this.skinStyleIndex]));
-        drawInfoRow(guiGraphics, textX, y + rowIndex++ * rowH, scale,
                 "gui.csgobox.csgo_box.info.skin_id",
-                Component.literal(String.valueOf(this.skinId)));
-        drawInfoRow(guiGraphics, textX, y + rowIndex++ * rowH, scale,
                 "gui.csgobox.csgo_box.info.pattern",
-                Component.literal(String.valueOf(this.patternSeed)));
-        drawInfoRow(guiGraphics, textX, y + rowIndex++ * rowH, scale,
                 "gui.csgobox.csgo_box.info.wear_rating",
-                Component.literal(formatWear()));
-        drawInfoRow(guiGraphics, textX, y + rowIndex * rowH, scale,
-                "gui.csgobox.csgo_box.info.exterior",
-                Component.translatable(wearTierKey()));
+                "gui.csgobox.csgo_box.info.exterior"
+        };
+        Component[] valueTexts = {
+                Component.translatable("gui.csgobox.csgo_box.style." + SKIN_STYLES[this.skinStyleIndex]),
+                Component.literal(String.valueOf(this.skinId)),
+                Component.literal(String.valueOf(this.patternSeed)),
+                Component.literal(formatWear()),
+                Component.translatable(wearTierKey())
+        };
+        int gap = 8;
+        int padX = 8;
+        int padY = 6;
+        int maxRowW = 0;
+        for (int i = 0; i < labelKeys.length; i++) {
+            maxRowW = Math.max(maxRowW,
+                    (int) (this.font.width(Component.translatable(labelKeys[i]).getVisualOrderText()) * scale)
+                            + gap + (int) (this.font.width(valueTexts[i].getVisualOrderText()) * scale));
+        }
+        int cardW = maxRowW + padX * 2;
+        int cardH = labelKeys.length * rowH + padY * 2;
+        int anchorX = toolbarButtonX(3) + toolbarButtonSize() / 2;
+        int cardX = anchorX - cardW / 2;
+        cardX = Math.max(2, Math.min(cardX, this.width - cardW - 2));
+        int cardBottom = toolbarButtonY() - 8;
+        int cardY = cardBottom - cardH;
+        renderRoundedRect(guiGraphics, cardX, cardY, cardW, cardH, 4, 0xE0101014);
+        int textY = cardY + padY;
+        for (int i = 0; i < labelKeys.length; i++) {
+            drawInfoRow(guiGraphics, cardX + padX, cardX + cardW - padX, textY + i * rowH, scale,
+                    labelKeys[i], valueTexts[i]);
+        }
     }
 
-    private void drawInfoRow(GuiGraphicsExtractor guiGraphics, int x, int y, float scale,
-                             String labelKey, Component value) {
-        renderText(guiGraphics, Component.translatable(labelKey, value).getVisualOrderText(),
-                x, y, scale, 0xFFCCCCCC);
+    private void renderRoundedRect(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, int r, int color) {
+        for (int dy = 0; dy < h; dy++) {
+            int cut = 0;
+            if (dy < r) {
+                cut = r - (int) Math.sqrt((double) (r * r - (r - 1 - dy) * (r - 1 - dy)));
+            } else if (dy > h - r - 1) {
+                int t = h - 1 - dy;
+                cut = r - (int) Math.sqrt((double) (r * r - (r - 1 - t) * (r - 1 - t)));
+            }
+            guiGraphics.fill(x + cut, y + dy, x + w - cut, y + dy + 1, color);
+        }
     }
+
+    private void drawInfoRow(GuiGraphicsExtractor guiGraphics, int labelX, int valueRight, int y, float scale,
+                             String labelKey, Component value) {
+        renderText(guiGraphics, Component.translatable(labelKey).getVisualOrderText(), labelX, y, scale,
+                0xFF9A9A9A);
+        float valueWidth = this.font.width(value.getVisualOrderText()) * scale;
+        RenderFontTool.drawString(guiGraphics, this.font, value.getVisualOrderText(),
+                valueRight - valueWidth, y, 0, 0, scale, 0xFFFFFFFF);
+    }
+
 
     private void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         if (openItem.isEmpty()) return;
@@ -392,7 +458,7 @@ public class CsLookItemScreen extends Screen {
         }
         int infoSize = toolbarButtonSize();
         int infoX = toolbarButtonX(3);
-        int infoY = toolbarButtonY();
+        int infoY = toolbarButtonY() + toolbarEnterRise(3);
         if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), infoX, infoY, infoSize, infoSize)) {
             this.showInfoPanel = !this.showInfoPanel;
             return true;
@@ -418,6 +484,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public final void tick() {
         super.tick();
+        this.screenTicks++;
         float glowTarget = this.hoveredButton >= 0 ? 1F : 0F;
         this.toolbarGlow += (glowTarget - this.toolbarGlow) * 0.5F;
         if (this.minecraft == null || this.minecraft.player == null) return;

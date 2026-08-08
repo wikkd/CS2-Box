@@ -7,7 +7,9 @@
     "D"
   ],
   "key": {
-    "D": "minecraft:diamond"
+    "D": [
+      "minecraft:diamond"
+    ]
   },
   "result": {
     "count": 1,
