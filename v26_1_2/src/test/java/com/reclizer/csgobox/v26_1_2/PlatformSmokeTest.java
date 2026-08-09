@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2;
 
+import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,5 +34,10 @@ class PlatformSmokeTest {
                 PlatformSmokeTest.class.getClassLoader()));
         assertNotNull(Class.forName("com.reclizer.csgobox.v26_1_2.gui.CsboxScreen", false,
                 PlatformSmokeTest.class.getClassLoader()));
+    }
+
+    @Test
+    void armoryPointItemIsDeclared() throws NoSuchFieldException {
+        assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
     }
 }
