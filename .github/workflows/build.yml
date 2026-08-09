@@ -96,6 +96,9 @@ jobs:
       - name: Check version sync (gradle.properties / CHANGELOG / README / mods.toml)
         run: scripts/check-version.sh
 
+      - name: Check AnimRenderOps drift (3 platforms)
+        run: scripts/check-animops-drift.sh
+
       - name: Architecture constraint check (CONSTRAINT-001)
         run: ./gradlew :common:checkCommonArchitecture --console=plain
 
