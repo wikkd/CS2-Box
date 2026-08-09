@@ -20,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
  * <p>Both directions tolerate the legacy "tag" NBT string format and the
  * modern "components" data-component patch format.</p>
  */
-final class BoxItemCodec {
+public final class BoxItemCodec {
 
     private static final Gson GSON = new Gson();
 
@@ -109,7 +109,7 @@ final class BoxItemCodec {
         }
     }
 
-    static JsonObject serializeItemStack(ItemStack stack) {
+    public static JsonObject serializeItemStack(ItemStack stack) {
         JsonObject obj = new JsonObject();
         Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         obj.addProperty("id", itemId.toString());
