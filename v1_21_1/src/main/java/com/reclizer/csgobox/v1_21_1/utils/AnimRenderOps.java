@@ -57,6 +57,15 @@ public final class AnimRenderOps {
         gg.blit(tex, x, y, 0, 0, w, h, w, h);
     }
 
+    /** Variant carrying the texture's real pixel size (non-square sprites
+     *  like gold_item.png are 32x24); the UV window stays (0,0,w,h). */
+    public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
+        gg.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
+        gg.blit(tex, x, y, 0, 0, w, h, texW, texH);
+    }
+
     /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH
      *  texture with an ARGB tint applied via shader color. Callers wanting a
      *  pure color pass must reset with setShaderColor(1,1,1,1) afterwards
