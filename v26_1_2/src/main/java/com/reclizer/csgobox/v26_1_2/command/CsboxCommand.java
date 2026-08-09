@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.v26_1_2.command;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -7,6 +9,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
@@ -23,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
+import com.reclizer.csgobox.v26_1_2.box.BoxItemCodec;
 import com.reclizer.csgobox.v26_1_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.box.GradeGroup;
@@ -54,6 +58,12 @@ public final class CsboxCommand {
     private static final DynamicCommandExceptionType ITEM_NOT_FOUND = new DynamicCommandExceptionType(
             args -> Component.translatable("commands.csgobox.set.item_not_found", args)
     );
+    private static final SimpleCommandExceptionType NBT_EMPTY = new SimpleCommandExceptionType(
+            Component.translatable("commands.csgobox.nbt.hand.empty")
+    );
+
+    private static final Gson GSON = new Gson();
+    private static final int MAX_NBT_CHARS = 20000;
 
     private static final SuggestionProvider<CommandSourceStack> BOX_SUGGESTIONS = (context, builder) -> {
         SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
@@ -65,19 +75,23 @@ public final class CsboxCommand {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(
             Commands.literal("csbox")
-                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                 .executes(CsboxCommand::showHelp)
-                .then(Commands.literal("help").executes(CsboxCommand::showHelp))
+                .then(Commands.literal("help")
+                        .requires(CsboxCommand::isGameMaster)
+                        .executes(CsboxCommand::showHelp))
                 .then(Commands.literal("list")
+                        .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::listAllBoxes)
                         .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .executes(ctx -> listBoxDetail(ctx, IdentifierArgument.getId(ctx, "box")))))
                 .then(Commands.literal("info")
+                        .requires(CsboxCommand::isGameMaster)
                         .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .executes(ctx -> showBoxInfo(IdentifierArgument.getId(ctx, "box"), ctx.getSource()))))
                 .then(Commands.literal("set")
+                        .requires(CsboxCommand::isGameMaster)
                         .then(Commands.argument("box", IdentifierArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
                                 .then(Commands.argument("grade", StringArgumentType.word())
@@ -109,20 +123,30 @@ public final class CsboxCommand {
                         )
                 )
                 .then(Commands.literal("reload")
+                        .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::reloadBoxes)
                 )
                 .then(Commands.literal("tutorial")
+                        .requires(CsboxCommand::isGameMaster)
                         .then(Commands.literal("refresh")
                                 .executes(CsboxCommand::refreshTutorials))
                 )
                 .then(Commands.literal("errors")
+                        .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::showLoadErrors)
+                )
+                .then(Commands.literal("nbt")
+                        .then(Commands.literal("hand")
+                                .executes(CsboxCommand::showHandNbt))
                 )
         );
     }
 
-    private static int showHelp(CommandContext<CommandSourceStack> ctx) {
+    private static int showHelp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
+        if (!isGameMaster(source)) {
+            throw new SimpleCommandExceptionType(Component.translatable("commands.csgobox.help.need_op")).create();
+        }
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.title"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.list"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.list_detail"), false);
@@ -130,9 +154,14 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_count"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.set_weight"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.nbt"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static boolean isGameMaster(CommandSourceStack source) {
+        return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
     private static int listAllBoxes(CommandContext<CommandSourceStack> ctx) {
@@ -291,6 +320,30 @@ public final class CsboxCommand {
             source.sendSuccess(err::toChatMessage, false);
         }
         return errors.size();
+    }
+
+    private static int showHandNbt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        ItemStack item = source.getPlayerOrException().getMainHandItem();
+        if (item.isEmpty()) {
+            throw NBT_EMPTY.create();
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.header",
+                item.getHoverName().getString()), false);
+        try {
+            String json = GSON.toJson(BoxItemCodec.serializeItemStack(item));
+            if (json.length() > MAX_NBT_CHARS) {
+                source.sendSuccess(() -> Component.literal(json.substring(0, MAX_NBT_CHARS)), false);
+                source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.truncated",
+                        String.valueOf(json.length())), false);
+            } else {
+                source.sendSuccess(() -> Component.literal(json), false);
+            }
+        } catch (Exception e) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.error",
+                    e.getMessage()), false);
+        }
+        return Command.SINGLE_SUCCESS;
     }
 
     private static Identifier resolveBoxId(String boxArg) {
