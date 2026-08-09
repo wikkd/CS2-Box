@@ -1,26 +1,16 @@
 package com.reclizer.csgobox.v1_21_1.utils;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.reclizer.csgobox.utils.ColorTools;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.joml.Matrix4fStack;
 
 public final class IconListTools {
 
     private static final ResourceLocation GOLD_ITEM_TEXTURE =
             ResourceLocation.parse("csgobox:textures/screens/gold_item.png");
-    private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
 
     /**
      * Peak magnification of the card sitting at the golden line during the
@@ -37,8 +27,8 @@ public final class IconListTools {
     }
 
     private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
-        guiGraphics.fillGradient(pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
-        guiGraphics.fill(pX0, pY0, pX0 + 2, toY, color);
+        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
+        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, color);
     }
 
     public static void renderItemFrame(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
@@ -52,10 +42,10 @@ public final class IconListTools {
         int itemX = pX + frameWidth * 20 / 100;
         int itemY = pY + frameHeight * 10 / 100;
         if (grade == 5) {
-            guiGraphics.fillGradient(pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            guiGraphics.fill(pX, pY, pX + 2, toY, color);
-            guiGraphics.blit(GOLD_ITEM_TEXTURE, pX + 2, pY + 2, 0, 0,
-                    frameWidth - 4, frameHeight - 4, frameWidth - 4, frameHeight - 4);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, color);
+            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, pX + 2, pY + 2,
+                    frameWidth - 4, frameHeight - 4);
         } else {
             renderRarity(guiGraphics, pX, pY, toX, toY, color);
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
@@ -70,51 +60,19 @@ public final class IconListTools {
         int itemX = pX + (width - iconW) / 2;
         int itemY = pY + (height - iconH) / 2;
         if (grade == 5) {
-            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
-            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
-            guiGraphics.blit(GOLD_ITEM_TEXTURE, pX + 2, pY + 2, 0, 0,
-                    width - 4, height - 4, width - 4, height - 4);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
+            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, pX + 2, pY + 2,
+                    width - 4, height - 4);
         } else {
-            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
-            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, iconW / 16F);
         }
     }
 
     public static void renderGuiItem(LivingEntity entity, Level world, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
-        renderGuiItem(guiGraphics.pose(), itemStack, pX, pY, Minecraft.getInstance().getItemRenderer().getModel(itemStack, world, entity, 0), scale);
-    }
-
-    private static void renderGuiItem(PoseStack poseStack, ItemStack itemStack, float pX, float pY, BakedModel bakedModel, float scale) {
-        poseStack.pushPose();
-        poseStack.translate(pX, pY, 2F);
-        poseStack.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        poseStack.scale(1.0F, -1.0F, 0F);
-        poseStack.scale(16.0F * scale, 16.0F * scale, 0);
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        boolean useFlatLighting = !bakedModel.usesBlockLight();
-        if (useFlatLighting) {
-            Lighting.setupForFlatItems();
-        }
-
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(poseStack.last().pose());
-        RenderSystem.applyModelViewMatrix();
-
-        PoseStack renderStack = REUSABLE_POSE_STACK;
-        renderStack.setIdentity();
-        Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GUI, false,
-                renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, bakedModel);
-        bufferSource.endBatch();
-        RenderSystem.enableDepthTest();
-        if (useFlatLighting) {
-            Lighting.setupFor3DItems();
-        }
-
-        poseStack.popPose();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
+        AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, pX, pY, scale);
     }
 
     public static void renderItemProgress(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
@@ -127,17 +85,16 @@ public final class IconListTools {
         float itemX = pX + frameWidth * 20 / 100;
         float itemY = pY + frameHeight * 10 / 100;
         if (grade == 5) {
-            guiGraphics.fillGradient((int) pX, (int) pY, (int) toX, (int) toY, 0xFF533c00, 0xFFb69008);
-            guiGraphics.blit(GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2), 0, 0,
-                    (int) (frameWidth - 4), (int) (frameHeight - 4),
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, (int) toX, (int) toY, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2),
                     (int) (frameWidth - 4), (int) (frameHeight - 4));
-            guiGraphics.fill((int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
+            AnimRenderOps.fill(guiGraphics, (int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
         } else {
-            guiGraphics.fillGradient((int) pX, (int) pY, (int) toX, (int) toY, 0xFF696969, 0xFFA9A9A9);
-            guiGraphics.fillGradient((int) pX, (int) (pY + frameHeight * 2 / 3), (int) toX, (int) toY,
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, (int) toX, (int) toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), (int) toX, (int) toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
-            guiGraphics.fill((int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
+            AnimRenderOps.fill(guiGraphics, (int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
         }
     }
 
@@ -163,17 +120,16 @@ public final class IconListTools {
         float itemY = pY + (frameHeight - scale * 16F) / 2F;
 
         if (grade == 5) {
-            guiGraphics.fillGradient(bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
-            guiGraphics.blit(GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2), 0, 0,
-                    (int) (frameWidth - 4), (int) (frameHeight - 4),
+            AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2),
                     (int) (frameWidth - 4), (int) (frameHeight - 4));
-            guiGraphics.fill(bx0, toY, toX, toY + 2, color);
+            AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
         } else {
-            guiGraphics.fillGradient(bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            guiGraphics.fillGradient(bx0, (int) (pY + frameHeight * 2 / 3), toX, toY,
+            AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, bx0, (int) (pY + frameHeight * 2 / 3), toX, toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
-            guiGraphics.fill(bx0, toY, toX, toY + 2, color);
+            AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
         }
 
         // Focus tint: periwinkle/blue gradient lit up inside the focused card
@@ -182,6 +138,6 @@ public final class IconListTools {
         int tintA = (int) (70F * (0.4F + 0.6F * focus));
         int tintTop = ColorTools.argbColor(tintA, 176, 140, 255);
         int tintBottom = ColorTools.argbColor(tintA - 12, 48, 80, 255);
-        guiGraphics.fillGradient(bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
+        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
     }
 }
