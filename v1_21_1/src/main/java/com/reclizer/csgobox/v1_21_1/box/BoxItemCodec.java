@@ -22,6 +22,10 @@ public final class BoxItemCodec {
 
     private static final Gson GSON = new Gson();
 
+    public static Gson gson() {
+        return GSON;
+    }
+
     private BoxItemCodec() {
     }
 

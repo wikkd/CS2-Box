@@ -24,6 +24,11 @@ public final class BoxItemCodec {
 
     private static final Gson GSON = new Gson();
 
+    /** Shared Gson instance, reused by {@code CsboxCommand} for item JSON output. */
+    public static Gson gson() {
+        return GSON;
+    }
+
     private BoxItemCodec() {
     }
 

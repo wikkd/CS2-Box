@@ -145,14 +145,6 @@ public record BoxDefinition(
         return Optional.empty();
     }
 
-    public BoxDefinition withUpdatedGrade(String gradeId, GradeGroup updatedGrade) {
-        List<GradeGroup> newGrades = new ArrayList<>(grades.size());
-        for (GradeGroup grade : grades) {
-            newGrades.add(grade.id().equals(gradeId) ? updatedGrade : grade);
-        }
-        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
-    }
-
     public static int gradeLevel(String id) {
         return switch (id) {
             case "consumer" -> 1;
