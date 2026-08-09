@@ -72,8 +72,8 @@ public final class ButtonPalette {
     ) {
         int outer = hover ? style.borderHover() : style.border();
         int inner = hover ? style.fillHover() : style.fill();
-        guiGraphics.fill(x, y, x + w, y + h, outer);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, inner);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, outer);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, inner);
         return hover ? style.textColorHover() : style.textColor();
     }
 
