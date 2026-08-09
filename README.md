@@ -13,7 +13,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 - **Minecraft 1.21+ components 支持**:用 `components` 字段(同时兼容旧版 `tag` 字符串)
 - **成就系统**:`全新的开始`(首次主动开箱)+ 隐藏紫色挑战 `导购`(累计主动开 200 个箱)
 - **4 把钥匙梯度**:铁 / 金 / 钻石 / 下界合金(下界合金**仅**通过锻造台升级 `csgo_key2` 获得)
-- **`/csbox` 命令**:`/csbox list`、`/csbox give`、`/csbox reload` 等子命令
+- **`/csbox` 命令**:`/csbox list`、`/csbox give`、`/csbox reload`、`/csbox nbt hand` 等子命令
 
 ## 双平台支持
 
