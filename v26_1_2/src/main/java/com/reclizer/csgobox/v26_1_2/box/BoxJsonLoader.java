@@ -14,12 +14,14 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +31,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +55,48 @@ public final class BoxJsonLoader {
     private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF5E98D9, 0xFFB0C3D9};
 
     private static final List<LoadError> LAST_LOAD_ERRORS = new ArrayList<>();
+
+    /**
+     * In-process parse cache keyed by file name: content-hash -> parsed
+     * result (or failure) plus the LoadErrors the parse produced. Reloads
+     * (file watcher, {@code /csbox reload}) skip any file whose SHA-256 hash
+     * is unchanged, so the expensive per-item parse (registry lookups,
+     * DataComponent codec decode) never reruns for untouched configs.
+     *
+     * <p>Do NOT persist this cache across JVM restarts: {@link BoxDefinition}
+     * and the {@link ItemStack}s it holds reference Minecraft registry
+     * holders/components that are rebuilt per launch; stale entries would
+     * reference defunct objects.</p>
+     */
+    private static final ConcurrentHashMap<String, CachedFile> PARSED_CACHE = new ConcurrentHashMap<>();
+
+    private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
+
+    private static final ThreadLocal<MessageDigest> SHA256 = ThreadLocal.withInitial(() -> {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    });
+
+    /**
+     * Background executor for the startup tutorial download. The fetch has
+     * network timeouts of several seconds; running it on the server thread
+     * would block world start. Downloads are idempotent and failure-safe
+     * inside {@link BoxDefaults}, so the file may simply appear a moment
+     * after startup. Daemon thread: a shutdown mid-download simply leaves
+     * the tutorial missing and the next launch re-attempts it.
+     */
+    private static final ExecutorService TUTORIAL_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "csgobox-tutorial");
+        t.setDaemon(true);
+        return t;
+    });
+
+    /** Content-hash -> parse-result entry; {@code definition} empty means the
+     *  parse failed and {@code errors} carries the diagnostics. */
+    private record CachedFile(String hash, Optional<BoxDefinition> definition, List<LoadError> errors) {}
 
     /** Matches an optional leading hex color in the box "name" field, e.g.
      *  {@code "#FF5555 高级补给箱"}. Group 1 = 6 hex digits, group 2 = display text. */
@@ -103,24 +151,23 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
+        // Tutorial download runs on a background thread: its network timeouts
+        // (seconds) must not block the server thread during world start.
+        TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};
         int[] skipped = {0};
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
-            for (Path file : stream) {
+        try {
+            forEachBoxJson(file -> {
                 String fileName = file.getFileName().toString();
-                if (fileName.startsWith("_")) {
-                    continue;
-                }
                 scannedFiles.add(file);
                 try {
                     Optional<BoxDefinition> result = loadFromFile(file);
                     if (result.isEmpty()) {
                         // loadFromFile already logged the per-grade or per-item reason.
                         skipped[0]++;
-                        continue;
+                        return;
                     }
                     BoxRegistry.register(result.get());
                     loaded[0]++;
@@ -130,7 +177,7 @@ public final class BoxJsonLoader {
                     skipped[0]++;
                     recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage());
                 }
-            }
+            });
         } catch (IOException e) {
             CsgoBox.LOGGER.error("Failed to list box JSON files in {}", BOXES_DIR, e);
         }
@@ -172,12 +219,9 @@ public final class BoxJsonLoader {
         int[] loaded = {0};
         int[] skipped = {0};
 
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
-            for (Path file : stream) {
+        try {
+            forEachBoxJson(file -> {
                 String fileName = file.getFileName().toString();
-                if (fileName.startsWith("_")) {
-                    continue;
-                }
                 String boxIdStr = fileName.substring(0, fileName.length() - 5);
                 Identifier boxId;
                 try {
@@ -186,7 +230,7 @@ public final class BoxJsonLoader {
                     CsgoBox.LOGGER.error("Invalid box id from filename {}: {}", file, e.getMessage());
                     recordLoadError(file, fileName, "Invalid identifier: " + e.getMessage());
                     skipped[0]++;
-                    continue;
+                    return;
                 }
                 seenIds.add(boxId);
                 try {
@@ -204,7 +248,7 @@ public final class BoxJsonLoader {
                     skipped[0]++;
                     recordLoadError(file, fileName, "Failed to load box JSON: " + e.getMessage());
                 }
-            }
+            });
         } catch (IOException e) {
             CsgoBox.LOGGER.error("Failed to list box JSON files in {}", BOXES_DIR, e);
             return;
@@ -261,13 +305,63 @@ public final class BoxJsonLoader {
         return new int[]{-1, -1};
     }
 
+    /**
+     * Iterates every non-underscore {@code .json} file in {@link #BOXES_DIR}
+     * and feeds it to {@code action}. Underscore-prefixed files
+     * ({@code _tutorial_sources.json}, versioned tutorial markdown is not
+     * {@code .json} anyway) are skipped: they are mod metadata, never boxes.
+     * Shared by {@link #loadAll()} and {@link #reloadPreserving()}.
+     */
+    private static void forEachBoxJson(Consumer<Path> action) throws IOException {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
+            for (Path file : stream) {
+                if (file.getFileName().toString().startsWith("_")) {
+                    continue;
+                }
+                action.accept(file);
+            }
+        }
+    }
+
     private static Optional<BoxDefinition> loadFromFile(Path file) throws IOException {
+        String fileName = file.getFileName().toString();
+
+        byte[] bytes = Files.readAllBytes(file);
+        String hash = sha256Hex(bytes);
+
+        CachedFile cached = PARSED_CACHE.get(fileName);
+        if (cached != null && cached.hash().equals(hash)) {
+            // Unchanged content: reuse the previous parse verbatim, including
+            // its diagnostics, so the announce/report surface stays identical.
+            LAST_LOAD_ERRORS.addAll(cached.errors());
+            return cached.definition();
+        }
+
+        int errorsBefore = LAST_LOAD_ERRORS.size();
+        Optional<BoxDefinition> result = parseFromBytes(bytes, file);
+        List<LoadError> produced = new ArrayList<>(
+                LAST_LOAD_ERRORS.subList(errorsBefore, LAST_LOAD_ERRORS.size()));
+        PARSED_CACHE.put(fileName, new CachedFile(hash, result, produced));
+        return result;
+    }
+
+    private static String sha256Hex(byte[] bytes) {
+        MessageDigest digest = SHA256.get();
+        byte[] out = digest.digest(bytes);
+        StringBuilder sb = new StringBuilder(out.length * 2);
+        for (byte b : out) {
+            sb.append(HEX_DIGITS[(b >> 4) & 0xF]).append(HEX_DIGITS[b & 0xF]);
+        }
+        return sb.toString();
+    }
+
+    private static Optional<BoxDefinition> parseFromBytes(byte[] bytes, Path file) {
         String fileName = file.getFileName().toString();
         String boxIdStr = fileName.substring(0, fileName.length() - 5);
 
         JsonObject json;
-        try (Reader reader = Files.newBufferedReader(file)) {
-            json = GSON.fromJson(reader, JsonObject.class);
+        try {
+            json = GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonObject.class);
         } catch (JsonSyntaxException e) {
             String msg = e.getMessage() != null ? e.getMessage() : "unknown syntax error";
             int[] lc = parseLocationFromMessage(msg);
@@ -433,70 +527,6 @@ public final class BoxJsonLoader {
         }
     }
 
-    public static void saveToFile(BoxDefinition def) {
-        try {
-            Files.createDirectories(BOXES_DIR);
-        } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to create boxes directory for save", e);
-            return;
-        }
-
-        Path file = BOXES_DIR.resolve(def.id().getPath() + ".json");
-        Path tempFile = BOXES_DIR.resolve(def.id().getPath() + ".json.tmp");
-
-        JsonObject json = new JsonObject();
-        json.addProperty("name", serializeColoredName(def.name()));
-        json.addProperty("key", def.keyItem().toString());
-        json.addProperty("drop", def.dropRate());
-
-        JsonArray random = new JsonArray();
-        for (int i = 4; i >= 0; i--) {
-            GradeGroup g = def.findGrade(GRADE_IDS[i]).orElse(null);
-            random.add(g != null ? g.weight() : 0);
-        }
-        json.add("random", random);
-
-        JsonArray entity = new JsonArray();
-        if (!def.entityDropRates().isEmpty()) {
-            for (Map.Entry<Identifier, Float> entry : def.entityDropRates().entrySet()) {
-                entity.add(entry.getKey().toString());
-                entity.add(entry.getValue());
-            }
-        } else {
-            for (Identifier e : def.dropEntities()) {
-                entity.add(e.toString());
-                entity.add(1);
-            }
-        }
-        json.add("entity", entity);
-
-        for (int i = 0; i < 5; i++) {
-            String gradeKey = "grade" + (5 - i);
-            GradeGroup g = def.findGrade(GRADE_IDS[i]).orElse(null);
-            JsonArray itemsArr = new JsonArray();
-            if (g != null) {
-                for (ItemStack item : g.items()) {
-                    itemsArr.add(BoxItemCodec.serializeItemStack(item));
-                }
-            }
-            json.add(gradeKey, itemsArr);
-        }
-
-        try (Writer writer = Files.newBufferedWriter(tempFile)) {
-            GSON.toJson(json, writer);
-        } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to save box JSON: {}", file, e);
-            return;
-        }
-
-        try {
-            Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            CsgoBox.LOGGER.info("Saved box to JSON: {} -> {}", def.id(), file);
-        } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to finalize box JSON: {}", file, e);
-        }
-    }
-
     public static void deleteFile(Identifier boxId) {
         Path file = BOXES_DIR.resolve(boxId.getPath() + ".json").normalize();
         if (!file.startsWith(BOXES_DIR.normalize())) {
@@ -506,6 +536,7 @@ public final class BoxJsonLoader {
         try {
             if (Files.exists(file)) {
                 Files.delete(file);
+                PARSED_CACHE.remove(file.getFileName().toString());
                 CsgoBox.LOGGER.info("Deleted box JSON: {}", file);
             }
         } catch (IOException e) {
