@@ -10,6 +10,7 @@ import com.reclizer.csgobox.v26_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_2.utils.GuiItemMove;
+import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -263,7 +264,7 @@ public class CsboxScreen extends Screen {
         }
 
         if (itemKey != null) {
-            IconListTools.renderGuiItem(this.entity, guiGraphics, itemKey,
+            AnimRenderOps.renderItem2D(this.entity, guiGraphics, itemKey,
                     this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 
