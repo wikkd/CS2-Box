@@ -8,7 +8,8 @@ import json
 import time
 from pathlib import Path
 
-from .common import CLOSE_BTN, OPEN_BTN, Tally, RUNS_DIR
+from .common import (CLOSE_BTN, OPEN_BTN, Tally, RUNS_DIR, click_open_retry,
+                   write_box_config, remove_box_config)
 
 WEAR_BOX = "fct_wear.json"
 WEAR_BOX_ID = "csgobox:fct_wear"
@@ -24,9 +25,21 @@ WEAR_BOX_JSON = {
 
 def _open_once(env, tally: Tally, name: str, want_id: str,
                expect_damage: bool, max_tries: int = 1) -> bool:
-    """开箱并断言 want_id 的 damage 表现。开出目标条目返回 True。"""
+    """开箱并断言 want_id 的 damage 表现。开出目标条目返回 True。
+
+    每轮结束都关闭屏幕（遗留结果屏会污染下一轮开箱）。
+    """
+    c = env.client
+
+    def close_screen():
+        try:
+            c.call("mc_click", {"x": CLOSE_BTN[0], "y": CLOSE_BTN[1]})
+        except Exception:
+            pass
+        time.sleep(0.8)
+
+    close_screen()  # 清理任何遗留屏幕
     for _ in range(max_tries):
-        c = env.client
         c.call("mc_exec", {"command": "/clear @s csgobox:csgo_box"})
         c.call("mc_exec", {"command": "/clear @s csgobox:csgo_key0"})
         time.sleep(0.4)
@@ -44,14 +57,29 @@ def _open_once(env, tally: Tally, name: str, want_id: str,
         c.call("mc_key", {"key": f"key.keyboard.{box['slot'] + 1}"})
         time.sleep(0.3)
         c.call("mc_key", {"key": "key.mouse.right"})
-        time.sleep(1.0)
-        c.call("mc_click", {"x": OPEN_BTN[0], "y": OPEN_BTN[1]})
-        time.sleep(6.0)  # 动画 ~2.5s + 缓冲
+        end = time.time() + 8
+        while time.time() < end:
+            if env.screen_class() == "CsboxScreen":
+                break
+            time.sleep(0.3)
+        if env.screen_class() != "CsboxScreen":
+            continue
+        if not click_open_retry(env, timeout=5, settle=1.5):
+            close_screen()
+            continue  # 点击开启失败（同步未解锁），重试
+        # 等结果屏（动画 ~7s）
+        end = time.time() + 20
+        while time.time() < end:
+            if env.screen_class() == "CsLookItemScreen":
+                break
+            time.sleep(0.3)
 
+        time.sleep(2.0)  # 等服务器 add 后的背包同步（ContainerSetContent）落地
         data = c.call_full("mc_inventory", {}) or {}
         items = data.get("items", []) if isinstance(data, dict) else data
         got = next((i for i in items if i.get("id") == want_id), None)
         if got is None:
+            close_screen()
             continue  # 本次开出其他条目，重试
         if expect_damage:
             dmg, max_dmg = got.get("damage"), got.get("max_damage")
@@ -65,21 +93,18 @@ def _open_once(env, tally: Tally, name: str, want_id: str,
                 tally.ok(name, f"{want_id} 无 damage 字段（不扣耐久）")
             else:
                 tally.bad(name, f"{want_id} 出现 damage={got.get('damage')}（不应扣损）")
-        try:
-            c.call("mc_click", {"x": CLOSE_BTN[0], "y": CLOSE_BTN[1]})
-        except Exception:
-            pass
+        close_screen()
         return True
+    close_screen()
     tally.warn_(name, f"{want_id} 在 {max_tries} 次开箱内未开出")
     return False
 
 
 def run(env, tally: Tally, version: str, out_dir: Path) -> None:
     c = env.client
-    csbox_dir = RUNS_DIR(version) / "config" / "csbox"
 
-    (csbox_dir / WEAR_BOX).write_text(
-        json.dumps(WEAR_BOX_JSON, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_box_config(version, WEAR_BOX,
+                     json.dumps(WEAR_BOX_JSON, ensure_ascii=False, indent=2))
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})
     time.sleep(1.0)
@@ -95,6 +120,6 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
             break
 
     # 清理现场
-    (csbox_dir / WEAR_BOX).unlink(missing_ok=True)
+    remove_box_config(version, WEAR_BOX)
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})

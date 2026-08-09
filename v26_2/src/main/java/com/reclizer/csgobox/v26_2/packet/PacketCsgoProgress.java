@@ -144,7 +144,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
 
             float wear = 0F;
-            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.isDamageableItem()) {
+            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
                 wear = rng.nextFloat();
                 applyWearDamage(giveItem, wear);
             }

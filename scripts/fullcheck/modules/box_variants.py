@@ -12,7 +12,8 @@ import json
 import time
 from pathlib import Path
 
-from .common import CLOSE_BTN, OPEN_BTN, Tally, RUNS_DIR
+from .common import (CLOSE_BTN, OPEN_BTN, Tally, RUNS_DIR,
+                   write_box_config, remove_box_config)
 
 VARIANTS = [
     ("fct_key1.json", {"name": "钥匙1箱", "key": "csgobox:csgo_key1", "drop": 1.0,
@@ -70,7 +71,7 @@ BAD_VARIANTS = [
       "grade1": [{"id": "minecraft:not_a_real_item", "count": 1}]},
      "errors 记录 all-items-failed 且箱不加载"),
     ("fct_nofield.json",
-     {"drop": 1.0, "random": [100],
+     {"drop": 1.0, "random": [1, 1, 1, 1, 1],
       "grade1": [{"id": "minecraft:stick", "count": 1}]},
      "缺 name/key 时 fallback 生效且可开（errors 无记录）"),
 ]
@@ -129,13 +130,12 @@ def _open_flow(env, box_id: str, key_id: str, timeout: float = 25) -> bool:
 
 def run(env, tally: Tally, version: str, out_dir: Path) -> None:
     c = env.client
-    csbox_dir = RUNS_DIR(version) / "config" / "csbox"
     try:
-        _run_inner(env, tally, version, out_dir, c, csbox_dir)
+        _run_inner(env, tally, version, out_dir, c)
     finally:
         # 无论异常与否都清理现场
         for fname, *_ in VARIANTS + [(*b,) for b in BAD_VARIANTS]:
-            (csbox_dir / fname).unlink(missing_ok=True)
+            remove_box_config(version, fname)
         time.sleep(0.5)
         try:
             c.call("mc_exec", {"command": "/csbox reload"})
@@ -144,12 +144,12 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
 
 
 def _run_inner(env, tally: Tally, version: str, out_dir: Path,
-               c, csbox_dir) -> None:
+               c) -> None:
 
     # ---- 合法变体 ----
     for fname, box_json, key_id in VARIANTS:
-        (csbox_dir / fname).write_text(
-            json.dumps(box_json, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_box_config(version, fname,
+                         json.dumps(box_json, ensure_ascii=False, indent=2))
         time.sleep(0.4)
         c.call("mc_exec", {"command": "/csbox reload"})
         time.sleep(1.0)
@@ -162,16 +162,16 @@ def _run_inner(env, tally: Tally, version: str, out_dir: Path,
     # ---- 错误自检 ----
     for fname, payload, expect in BAD_VARIANTS:
         if isinstance(payload, str):
-            (csbox_dir / fname).write_text(payload, encoding="utf-8")
+            write_box_config(version, fname, payload)
         else:
-            (csbox_dir / fname).write_text(
-                json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            write_box_config(version, fname,
+                             json.dumps(payload, ensure_ascii=False, indent=2))
         time.sleep(0.4)
         c.call("mc_exec", {"command": "/csbox reload"})
         time.sleep(1.0)
         c.call("mc_exec", {"command": "/csbox errors"})
         time.sleep(0.5)
-        listed = _chat_has(c, fname, 6)
+        listed = _chat_has(c, fname[:-5], 6)
         if "errors 列出" in expect:
             if listed:
                 tally.ok(f"错误自检 {fname}", expect)
@@ -207,7 +207,7 @@ def _run_inner(env, tally: Tally, version: str, out_dir: Path,
 
     # ---- 现场恢复 ----
     for fname, *_ in VARIANTS + [(*b,) for b in BAD_VARIANTS]:
-        (csbox_dir / fname).unlink(missing_ok=True)
+        remove_box_config(version, fname)
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})
     time.sleep(1.0)

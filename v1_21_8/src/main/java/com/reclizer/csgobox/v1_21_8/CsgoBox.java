@@ -255,7 +255,7 @@ public class CsgoBox {
                 // override can change it. ItemStack is built from
                 // Item.components(), which is polymorphic — override it to
                 // swap ITEM_MODEL for the shared csgo_box model.
-                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties()) {
+                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, itemId))) {
                     private DataComponentMap boxModelComponents;
 
                     @Override

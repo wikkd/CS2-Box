@@ -48,7 +48,11 @@ public class ItemCsgoBox extends Item {
     }
 
     public ItemCsgoBox() {
-        super(new Properties().stacksTo(16).rarity(Rarity.EPIC));
+        this(new Properties());
+    }
+
+    public ItemCsgoBox(Properties properties) {
+        super(properties.stacksTo(16).rarity(Rarity.EPIC));
     }
 
     @Override

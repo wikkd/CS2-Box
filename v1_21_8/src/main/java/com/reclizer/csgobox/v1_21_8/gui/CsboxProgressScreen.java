@@ -83,6 +83,14 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+        // 1.21.8+ 的 renderWithTooltip 会无条件调用 renderBackground（默认实现带
+        // 菜单模糊 blur）。本屏幕自绘模糊背景（renderBg 内的 renderBlurredBackground），
+        // 若这里再走默认实现会在同一帧 blur 两次导致
+        // "Can only blur once per frame" 崩溃，因此屏蔽之。
+    }
+
+    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         // NOTE: intentionally NOT calling super.render(). The base Screen.render
         // paints the menu background texture / panorama behind every screen

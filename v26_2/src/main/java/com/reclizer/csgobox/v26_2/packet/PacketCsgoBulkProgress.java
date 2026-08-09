@@ -267,13 +267,13 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         // consistent reveal.
         if (CsgoBox.CONFIG.damageItemByWear()) {
             for (BulkOpenResult r : truncated) {
-                if (r.wear() > 0F && r.resultItem().isDamageableItem()) {
+                if (r.wear() > 0F && r.resultItem().getMaxDamage() > 0) {
                     PacketCsgoProgress.applyWearDamage(r.resultItem(), r.wear());
                     if (!r.animationItems().isEmpty()
                             && r.winningIndex() >= 0
                             && r.winningIndex() < r.animationItems().size()) {
                         ItemStack animWinner = r.animationItems().get(r.winningIndex());
-                        if (!animWinner.isEmpty() && animWinner.isDamageableItem()) {
+                        if (!animWinner.isEmpty() && animWinner.getMaxDamage() > 0) {
                             PacketCsgoProgress.applyWearDamage(animWinner, r.wear());
                         }
                     }

@@ -144,7 +144,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
 
             float wear = 0F;
-            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.isDamageableItem()) {
+            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
                 wear = rng.nextFloat();
                 applyWearDamage(giveItem, wear);
             }
@@ -167,7 +167,12 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
 
             ItemStack toGive = giveItem.copy();
-            boolean added = player.getInventory().add(toGive);
+            boolean added = false;
+            try {
+                added = player.getInventory().add(toGive);
+            } catch (Throwable t) {
+                CsgoBox.LOGGER.warn("[wear-diag] add EXCEPTION: {}", t.toString());
+            }
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
             }
@@ -237,6 +242,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             return;
         }
         int damage = Math.max(0, Math.min(Math.round(wear * maxDamage), maxDamage - 1));
+        stack.set(DataComponents.MAX_DAMAGE, maxDamage); // 1.21.x 过渡期原版剑无此组件，补写以保证 isDamageableItem 可检测
         stack.set(DataComponents.DAMAGE, damage);
     }
 

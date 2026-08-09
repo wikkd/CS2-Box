@@ -7,7 +7,7 @@ import json
 import time
 from pathlib import Path
 
-from .common import CLOSE_BTN, OPEN_BTN, Tally
+from .common import CLOSE_BTN, OPEN_BTN, Tally, click_open_retry
 
 
 def run(env, tally: Tally, version: str, out_dir: Path) -> None:
@@ -60,26 +60,6 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
         c.call("mc_key", {"key": "key.mouse.right"})
         return wait_screen("CsboxScreen", 8)
 
-    def click_open_retry(timeout=5, settle=1.5, tag=""):
-        """点击开启按钮并重试。
-
-        settle：26.2 的 CsboxScreen 需先等 PacketSyncBoxItems 同步完成
-        （containerTick 里 openClicked 才解锁为 false），同步前点击会被
-        `!openClicked` 静默吞掉——这是 T8 类时序失败的根因。
-        """
-        time.sleep(settle)
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                c.call("mc_click", {"x": OPEN_BTN[0], "y": OPEN_BTN[1]})
-            except Exception:
-                pass
-            time.sleep(0.6)
-            sc = env.screen_class()
-            if sc in ("CsboxProgressScreen", "CsLookItemScreen"):
-                return True
-        return env.screen_class() in ("CsboxProgressScreen", "CsLookItemScreen")
-
     # ---- 准备 ----
     clear_and_give()
     slot = box_slot()
@@ -100,7 +80,7 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
                 for i in (inv_items().get("items") or [])}
 
     # ---- T2 点击开启 → 动画屏 ----
-    if click_open_retry(tag="T2"):
+    if click_open_retry(env):
         tally.ok("T2 开启 → 动画屏", "")
     else:
         tally.bad("T2 未进入动画屏", "")
@@ -117,7 +97,14 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
     shot = shot_dir / "t4_result.png"
     try:
         c.call("mc_shot", {"path": str(shot)})
-        if shot.is_file() and shot.stat().st_size > 0:
+        # mc_shot 异步截图（Screenshot.grab 回调写盘），轮询等待产物落盘
+        ok = False
+        for _ in range(50):
+            if shot.is_file() and shot.stat().st_size > 0:
+                ok = True
+                break
+            time.sleep(0.2)
+        if ok:
             tally.ok("T4 截图存证", shot.name)
         else:
             tally.bad("T4 截图失败", "文件不存在或为空")
@@ -155,7 +142,7 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
         return
     key8_before = count_key()
     if open_from_slot(slot):
-        if click_open_retry(tag="T8"):
+        if click_open_retry(env):
             time.sleep(1.5)
             c.call("mc_key", {"key": "key.keyboard.escape"})
             time.sleep(1)
@@ -183,7 +170,7 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
         tally.bad("T9 前置", "箱子未出现")
         return
     if open_from_slot(slot):
-        if click_open_retry(timeout=25, tag="T9"):
+        if click_open_retry(env, timeout=25):
             tally.ok("T9 取消后立即重开成功", "无冷却阻塞")
         else:
             tally.bad("T9 重开未到结果屏", "可能被冷却阻塞")

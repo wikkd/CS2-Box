@@ -14,6 +14,7 @@
 """
 import argparse
 import importlib
+import os
 import sys
 import time
 from pathlib import Path
@@ -45,20 +46,31 @@ KEY_ID = "csgobox:csgo_key0"
 
 def run_platform(version: str, only: list, keep_client: bool) -> tuple:
     pf = common.PLATFORMS[version]
-    print(f"\n========== [{version}] 启动客户端 ({pf['module']}) ==========")
+    print(f"\n========== [{version}] 启动服务器+客户端 ({pf['module']}) ==========")
+    try:
+        srv = common.launch_server(version, common.OUT_ROOT / version / "server.log")
+    except RuntimeError as e:
+        print(f"[{version}] 服务器启动失败: {e}")
+        return version, None
+    if srv.poll() is not None:
+        print(f"[{version}] 服务器启动失败（进程退出）")
+        return version, None
     log_path = common.OUT_ROOT / version / "client.log"
     try:
         proc = common.launch_client(version, log_path)
     except RuntimeError as e:
+        common.stop_server(srv)
         print(f"[{version}] 启动失败: {e}")
         return version, None
     if proc.poll() is not None:
         tail = "\n".join(log_path.read_text(errors="ignore").splitlines()[-20:])
         print(f"[{version}] 客户端启动失败:\n{tail}")
+        common.stop_server(srv)
         return version, None
     if not common.wait_port(common.PORT, 30):
         print(f"[{version}] MCP 端口 {common.PORT} 未就绪")
         common.stop_client(proc, None, timeout=10)
+        common.stop_server(srv)
         return version, None
 
     token = common.read_token(version)
@@ -75,8 +87,12 @@ def run_platform(version: str, only: list, keep_client: bool) -> tuple:
     cases = []
 
     try:
-        if not common.enter_world(version, tally):
+        print(f"[{version}] DBG connect_server...", flush=True)
+        os.environ["MCP_TOKEN"] = token or ""
+        if not common.connect_server(env, tally):
+            print(f"[{version}] DBG connect FAILED", flush=True)
             return version, tally
+        print(f"[{version}] DBG connect OK", flush=True)
         common.safe_setup(env, version)
         # 兜底清理：上轮模块异常可能残留 fct_* 测试箱（会污染 /csbox errors）
         csbox_dir = common.RUNS_DIR(version) / "config" / "csbox"
@@ -102,12 +118,14 @@ def run_platform(version: str, only: list, keep_client: bool) -> tuple:
             if sub_tally.fail and not keep_client:
                 break  # 平台级短路：有 FAIL 直接收场，省时间
     finally:
+        print(f"[{version}] DBG finally stop...", flush=True)
         if not keep_client:
             common.stop_client(proc, env)
+            common.stop_server(srv)
         else:
             print(f"[{version}] --keep-client：保留客户端运行")
-    common.write_report(version, tally, cases)
-    print(f"[{version}] 结果: {tally.pass_} PASS / {tally.fail} FAIL / {tally.warn} WARN")
+        common.write_report(version, tally, cases)
+        print(f"[{version}] 结果: {tally.pass_} PASS / {tally.fail} FAIL / {tally.warn} WARN")
     return version, tally
 
 

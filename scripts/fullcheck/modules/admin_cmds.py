@@ -6,14 +6,14 @@ import json
 import time
 from pathlib import Path
 
-from .common import Tally, RUNS_DIR
+from .common import (Tally, RUNS_DIR,
+                   write_box_config, remove_box_config)
 
 RELOAD_BOX = "fct_reload.json"
 
 
 def run(env, tally: Tally, version: str, out_dir: Path) -> None:
     c = env.client
-    csbox_dir = RUNS_DIR(version) / "config" / "csbox"
 
     def chat_has(keyword, timeout=6):
         end = time.time() + timeout
@@ -42,8 +42,8 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
         "random": [1, 1, 1, 1, 1],
         "grade1": [{"id": "minecraft:stick", "count": 1}],
     }
-    (csbox_dir / RELOAD_BOX).write_text(
-        json.dumps(box_json, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_box_config(version, RELOAD_BOX,
+                     json.dumps(box_json, ensure_ascii=False, indent=2))
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})
     time.sleep(1.0)
@@ -54,8 +54,8 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
         tally.bad("/csbox reload 生效", "info 未显示新 name")
 
     box_json["name"] = "重载后"
-    (csbox_dir / RELOAD_BOX).write_text(
-        json.dumps(box_json, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_box_config(version, RELOAD_BOX,
+                     json.dumps(box_json, ensure_ascii=False, indent=2))
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})
     time.sleep(1.0)
@@ -74,7 +74,7 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
 
     # ---- /csbox errors（有错误箱子时）----
     bad_file = "fct_bad.json"
-    (csbox_dir / bad_file).write_text("{not valid json", encoding="utf-8")
+    write_box_config(version, bad_file, "{not valid json")
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})
     time.sleep(1.0)
@@ -86,6 +86,6 @@ def run(env, tally: Tally, version: str, out_dir: Path) -> None:
 
     # 清理现场
     for f in (RELOAD_BOX, bad_file):
-        (csbox_dir / f).unlink(missing_ok=True)
+        remove_box_config(version, f)
     time.sleep(0.5)
     c.call("mc_exec", {"command": "/csbox reload"})

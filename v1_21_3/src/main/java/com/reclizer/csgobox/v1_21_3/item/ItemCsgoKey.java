@@ -5,6 +5,10 @@ import net.minecraft.world.item.Rarity;
 
 public class ItemCsgoKey extends Item {
     public ItemCsgoKey() {
-        super(new Properties().rarity(Rarity.COMMON));
+        this(new Properties());
+    }
+
+    public ItemCsgoKey(Properties properties) {
+        super(properties.rarity(Rarity.COMMON));
     }
 }

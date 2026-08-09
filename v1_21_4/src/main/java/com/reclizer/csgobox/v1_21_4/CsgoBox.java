@@ -235,7 +235,7 @@ public class CsgoBox {
                     continue;
                 }
                 final ResourceLocation boxId = itemId;
-                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox() {
+                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, itemId))) {
                     @Override
                     public ItemStack getDefaultInstance() {
                         ItemStack stack = super.getDefaultInstance();
