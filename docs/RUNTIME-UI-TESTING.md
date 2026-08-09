@@ -135,3 +135,36 @@ screenY = 253 + fbY/2        # 253 = 225(窗口顶) + 28(标题栏)
 ## 8. 验收清单挂钩
 
 本工作流服务 `docs/RELEASE.md` §3 质量门"运行时回归"条目，及 `docs/TESTING.md` 手动清单（v26_1_2 GUI 验收、v1.0.5 TC-1~TC-4）。执行完成后将截图路径与断言结果追加到 `docs/MANUAL-TESTING-v1.0.5.md` 对应 TC 的备注。
+
+## 9. AnimRenderOps 重构回归（v1.21.1 基线）
+
+> 背景：`utils/AnimRenderOps.java` 成为各平台唯一的渲染原语适配点后，五个 Screen + 两个
+> 助手（IconListTools/GuiItemMove）的渲染调用全部委托给它。**视觉行为必须与重构前逐像素
+> 一致**（`era: legacy` 变体按原代码逐字搬移，轴映射/数值/顺序未动）。以下清单在
+> **1.21.1 客户端**执行；其它平台只做编译级 + 漂移脚本验证（见 `scripts/check-animops-drift.sh`）。
+
+自动化入口（前置：`./gradlew runClient -Pactive_versions=1.21.1` + helper mod + MCP 端口 41501）：
+
+```bash
+python3 scripts/record_open_animation.py            # 录制开箱动画连拍帧
+python3 scripts/test_animation_aesthetics.py        # 聚光灯/透镜审美断言（exit 0=全 PASS）
+```
+
+手动勾选清单（对照 §3 标准流程执行，截图像素断言用 §4 表）：
+
+- [ ] 开箱动画：滚动缓动节奏与重构前一致（进度屏区域持续 diff，无跳帧/停帧）
+- [ ] 聚光灯径向渐变：半透明边缘正确（spot_glow 五连收口后无硬边白盘——防回归点 1）
+- [ ] 放大镜切带：物品放大比例、透镜背板灰 `0xFF545454`、滚动条裁剪边界正确（scissor 收口后无越界绘制）
+- [ ] 透镜 vignette：圆环边缘半透明灰（vignette 五连收口后无白环——防回归点 2）
+- [ ] 金色线：`(230,255,215,0)` 颜色与 2px 宽度正确
+- [ ] 出货页（CsLookItemScreen）：2D 图标渲染、稀有度描边、聚焦缩放（IconListTools 委托后无差异）
+- [ ] 3D 物品拖拽（CsboxBulkOverviewScreen）：鼠标拖拽旋转手感不变（GuiItemMove 委托后 angleX/angleY 方向正确）
+- [ ] 背景模糊：进度屏背景 `renderBlurredBackground` 反射桥接后仍有模糊效果（防回归点 3）
+- [ ] ESC 退出、hideGui 恢复、音效节奏（每卡片"嗒"声、8Hz 节流）不变
+- [ ] TACZ 环境：TACZ 枪默认 3D 展示 + 手套按钮检视动画（TaczInspectViewport 独立路径未被误伤）
+
+执行记录：
+
+- 2026-08-09（本次重构）：**未执行**——自动化会话无 GUI 权限（System Events 权限违例），
+  清单已固化，待人工在 1.21.1 客户端勾选；编译级验证（BUILD SUCCESSFUL）与残余直调
+  grep（零残留）已通过。
