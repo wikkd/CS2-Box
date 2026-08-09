@@ -27,7 +27,15 @@ public final class AnimRenderOps {
      *  own blend state - no flush/state juggling needed (GuiGraphicsExtractor
      *  has no flush() at all in 26.1.2). */
     public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h) {
-        gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, w, h);
+        blitTextured(gg, tex, x, y, w, h, w, h);
+    }
+
+    /** Variant carrying the texture's real pixel size. 26.1.2's blit treats
+     *  the trailing args as texW/texH (not UVs), so callers like
+     *  IconListTools.blitGoldItemAspect (gold_item.png is 32x24) must pass
+     *  them explicitly or the UV window is wrong. */
+    public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h, int texW, int texH) {
+        gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, texW, texH);
     }
 
     public static void fill(GuiGraphicsExtractor gg, int x0, int y0, int x1, int y1, int color) {

@@ -5,12 +5,12 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
@@ -96,7 +96,7 @@ public class CsboxProgressScreen extends Screen {
      */
     @Override
     protected void extractBlurredBackground(GuiGraphicsExtractor guiGraphics) {
-        guiGraphics.blurBeforeThisStratum();
+        AnimRenderOps.renderBlurredBackground(guiGraphics);
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
@@ -105,7 +105,7 @@ public class CsboxProgressScreen extends Screen {
 
         // CS2-style backdrop: the blur is applied by extractBlurredBackground;
         // here we only dim the blurred world.
-        guiGraphics.fill(0, 0, this.width, this.height, 0x8C000000);
+        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
 
         if (openTime < 5) return;
 
@@ -137,14 +137,10 @@ public class CsboxProgressScreen extends Screen {
         // Soft lamp glow behind the strip - a clean radial gradient with a
         // transparent rim (the old lens_vignette.png baked in a black ring).
         int glowR = (int) (this.height * 45F / 100F);
-        guiGraphics.blit(
-                RenderPipelines.GUI_TEXTURED,
+        AnimRenderOps.blitTextured(guiGraphics,
                 Identifier.parse("csgobox:textures/screens/spot_glow.png"),
                 (int) spotCX - glowR, (int) spotCY - glowR,
-                0F, 0F,
-                glowR * 2, glowR * 2,
-                glowR * 2, glowR * 2
-        );
+                glowR * 2, glowR * 2);
 
         // Strip pass: cards keep their raw size; brightness falls off with
         // distance from the golden line (smoothstep), like the original.
@@ -160,7 +156,7 @@ public class CsboxProgressScreen extends Screen {
             float smooth = t * t * (3F - 2F * t);
             int dim = (int) (0x99 * smooth);
             if (dim > 0) {
-                guiGraphics.fill((int) itemX, (int) lensTop, (int) (itemX + cellWidth),
+                AnimRenderOps.fill(guiGraphics, (int) itemX, (int) lensTop, (int) (itemX + cellWidth),
                         (int) (lensTop + cellHeight) + 2, dim << 24);
             }
         }
@@ -267,8 +263,8 @@ public class CsboxProgressScreen extends Screen {
                 backingX0 = (int) (lensCX - backingHalfW);
                 backingX1 = (int) (lensCX + backingHalfW) + 1;
             }
-            guiGraphics.fill(backingX0, by, backingX1, by + bh, 0xFF545454);
-            guiGraphics.enableScissor(x0, by, x1, by + bh);
+            AnimRenderOps.fill(guiGraphics, backingX0, by, backingX1, by + bh, 0xFF545454);
+            AnimRenderOps.scissor(guiGraphics, x0, by, x1 - x0, bh);
             for (int i = iMax; i >= iMin; i--) {
                 ItemStack itemStack = itemInput.get(i);
                 if (itemStack.isEmpty()) continue;
@@ -278,25 +274,21 @@ public class CsboxProgressScreen extends Screen {
                 IconListTools.renderItemProgressFocus(player, guiGraphics, itemStack,
                         pX, magnifiedTop, this.width, this.height, gradeInput.get(i), lensScale);
             }
-            guiGraphics.disableScissor();
+            AnimRenderOps.scissorDisable(guiGraphics);
         }
 
         // Circular backing mask: transparent center (magnified strip shows
         // through) and transparent outside the disc too (the four corners of
         // the blit square stay see-through), only a soft rim shade around the
         // glass edge marks the lens silhouette.
-        guiGraphics.blit(
-                RenderPipelines.GUI_TEXTURED,
+        AnimRenderOps.blitTextured(guiGraphics,
                 Identifier.parse("csgobox:textures/screens/lens_vignette.png"),
                 lensMinX, lensMinY,
-                0F, 0F,
-                lensW, lensW,
-                lensW, lensW
-        );
+                lensW, lensW);
 
 
         // Bright golden marker line, like the original.
-        guiGraphics.fill((int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
+        AnimRenderOps.fill(guiGraphics, (int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
                 ColorTools.argbColor(230, 255, 215, 0));
 
     }
