@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
@@ -164,15 +165,12 @@ public class CsLookItemScreen extends Screen {
 
     private void renderLookBackground(GuiGraphics guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
     }
 
     private void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
         if (this.minecraft != null) {
             this.minecraft.options.hideGui = true;
         }
@@ -181,9 +179,9 @@ public class CsLookItemScreen extends Screen {
         int frameWidth = width * 26 / 100;
         float scale = frameWidth / 16F;
         int dividerY = this.height - 18 - toolbarButtonSize();
-        guiGraphics.fill(this.width * 25 / 100, dividerY,
+        AnimRenderOps.fill(guiGraphics, this.width * 25 / 100, dividerY,
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
-        guiGraphics.fill(this.width * 37 / 100, this.height * 16 / 100,
+        AnimRenderOps.fill(guiGraphics, this.width * 37 / 100, this.height * 16 / 100,
                 this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
         // TACZ guns default to the 3D display viewport: TACZ's own GUI item
         // rendering only draws the flat slot texture, so drive its renderer
@@ -207,8 +205,8 @@ public class CsLookItemScreen extends Screen {
             }
         }
         if (!viewportRendered) {
-            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 30 / 100,
-                    this.rotX, this.rotY, openItem, this.player, scale);
+            AnimRenderOps.renderItem3D(guiGraphics, openItem, this.player,
+                    this.width * 37 / 100, this.height * 30 / 100, this.rotX, this.rotY, scale);
         }
 
         int btnX = backButtonX();
@@ -218,8 +216,8 @@ public class CsLookItemScreen extends Screen {
         boolean hoverButton = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
         int outerColor = hoverButton ? 0xFFFF4444 : 0xFFFF0000;
         int innerColor = hoverButton ? 0xFFCC4444 : 0xFFAA0000;
-        guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, outerColor);
-        guiGraphics.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, innerColor);
+        AnimRenderOps.fill(guiGraphics, btnX, btnY, btnX + btnW, btnY + btnH, outerColor);
+        AnimRenderOps.fill(guiGraphics, btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, innerColor);
 
         renderInfoPanel(guiGraphics);
         renderToolbar(guiGraphics, mouseX, mouseY);
@@ -243,10 +241,10 @@ public class CsLookItemScreen extends Screen {
             boolean active = (i == 3 && this.showInfoPanel) || (i == 1 && this.taczViewportActive);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
-            guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
-            guiGraphics.fill(x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
+            AnimRenderOps.fill(guiGraphics, x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
+            AnimRenderOps.fill(guiGraphics, x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
-                guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size, (alpha << 24) | 0xFFFFFF);
+                AnimRenderOps.fill(guiGraphics, x + 2, by + size - 2, x + size - 2, by + size, (alpha << 24) | 0xFFFFFF);
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
             int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
@@ -270,8 +268,8 @@ public class CsLookItemScreen extends Screen {
             if (i == 5) {
                 renderMoreDots(guiGraphics, x, by, size, iconColor);
             } else {
-                guiGraphics.blit(icons[i], iconX, iconY, screenW, screenH, u, v,
-                        ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32);
+                AnimRenderOps.blitTextured(guiGraphics, icons[i], iconX, iconY, screenW, screenH, u, v,
+                        ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
             }
             RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
         }
@@ -287,7 +285,7 @@ public class CsLookItemScreen extends Screen {
             int ccy = cy + k * spacing;
             for (int dy = -r; dy <= r; dy++) {
                 int half = (int) Math.sqrt((double) (r * r - dy * dy));
-                guiGraphics.fill(cx - half, ccy + dy, cx + half + 1, ccy + dy + 1, color);
+                AnimRenderOps.fill(guiGraphics, cx - half, ccy + dy, cx + half + 1, ccy + dy + 1, color);
             }
         }
     }
@@ -306,7 +304,7 @@ public class CsLookItemScreen extends Screen {
         tipX = Math.max(2, Math.min(tipX, this.width - tooltipW - 2));
         tipY = Math.max(2, tipY);
         int alpha = (int) (0xCC * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
-        guiGraphics.fill(tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
+        AnimRenderOps.fill(guiGraphics, tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
         int textAlpha = (int) (0xFF * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
         renderText(guiGraphics,
                 Component.translatable(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText(),
@@ -364,7 +362,7 @@ public class CsLookItemScreen extends Screen {
                 int t = h - 1 - dy;
                 cut = r - (int) Math.sqrt((double) (r * r - (r - 1 - t) * (r - 1 - t)));
             }
-            guiGraphics.fill(x + cut, y + dy, x + w - cut, y + dy + 1, color);
+            AnimRenderOps.fill(guiGraphics, x + cut, y + dy, x + w - cut, y + dy + 1, color);
         }
     }
 

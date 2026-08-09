@@ -57,6 +57,20 @@ public final class AnimRenderOps {
         gg.blit(tex, x, y, 0, 0, w, h, w, h);
     }
 
+    /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH
+     *  texture with an ARGB tint applied via shader color. Callers wanting a
+     *  pure color pass must reset with setShaderColor(1,1,1,1) afterwards
+     *  (screens already do). */
+    public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h,
+                                    int u, int v, int uw, int vh, int texW, int texH, int tint) {
+        gg.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
+        RenderSystem.setShaderColor(((tint >> 16) & 0xFF) / 255F,
+                ((tint >> 8) & 0xFF) / 255F, (tint & 0xFF) / 255F, ((tint >> 24) & 0xFF) / 255F);
+        gg.blit(tex, x, y, w, h, u, v, uw, vh, texW, texH);
+    }
+
     public static void fill(GuiGraphics gg, int x0, int y0, int x1, int y1, int color) {
         gg.fill(x0, y0, x1, y1, color);
     }

@@ -38,6 +38,14 @@ public final class AnimRenderOps {
         gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, texW, texH);
     }
 
+    /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH
+     *  texture with an ARGB tint (26.x blit takes the tint as its last arg;
+     *  the decoupled pipeline carries the blend state itself). */
+    public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h,
+                                    int u, int v, int uw, int vh, int texW, int texH, int tint) {
+        gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, u, v, w, h, uw, vh, texW, texH, tint);
+    }
+
     public static void fill(GuiGraphicsExtractor gg, int x0, int y0, int x1, int y1, int color) {
         gg.fill(x0, y0, x1, y1, color);
     }
