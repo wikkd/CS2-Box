@@ -1,5 +1,9 @@
 # 更新日志
 
+## [归档] - 2026-08-09
+### 平台归档（EOL）
+- **v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 移出仓库**：仅玩家基数大的 1.21.1 / 26.1.2 / 26.2 三平台继续维护。7 个 EOL 模块的代码整体删除（最后状态保留在 tag `eol-legacy-21x-1.0.6`，需要时从该 tag 检出复活）；`settings.gradle` 的 `versionModules`、`gradle.properties` 的版本变量组、CI `build.yml` 矩阵（10 → 3 行）同步裁剪，`scripts/mirror.sh` 移除 legacy variant，legacy 专用迁移脚本（`merge-*.py` / `port-12111.py` / `port-focus.py` / `migrate-randomitem.py`）一并删除。
+
 ## [1.0.6] - 2026-08-08
 ### 概述
 本版本完成 26.2 平台扩展、教程系统、动态 box item、开箱排行榜、10 平台矩阵（新增 v1_21_0）、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久、TACZ 检视视口与 CI 矩阵等全部开发批次。**批量开箱推迟至 1.0.7 发布**（代码已开发完成、本版本入口与服务端处理均屏蔽，详见下文 `[1.0.7]` 节）。下文按批次记录。

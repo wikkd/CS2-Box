@@ -11,7 +11,7 @@
 - **Java**: 21（legacy 平台）/ 25 + `--enable-preview`（v26_1_2/v26_2）。toolchain 由各模块 build.gradle 指定。
 - **每次 Gradle 调用只能构建一个 MC 版本**（NeoGradle userdev IDEA 扩展冲突，历史限制）。用 `-Pactive_versions=<v>` 覆盖 `gradle.properties` 的默认值（当前默认 26.1.2）。
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
-- **10 个平台模块**：`v1_21_0` / `v1_21_1` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。
+- **3 个平台模块**：`v1_21_1`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。**已归档（EOL）平台** `v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11` 于 2026-08-09 从仓库删除，最后状态在 tag `eol-legacy-21x-1.0.6`，复活需从该 tag 检出。
 - **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
 - **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），源码**未提交**（本地 WIP），**不在 CI 矩阵**，不参与 mirror/镜像纪律；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。勿误当正式平台发布。
 
@@ -23,13 +23,13 @@
 
 ## 平台模块镜像纪律（重要！）
 
-10 个平台模块**不是纯拷贝**：1.21.3+ 与 26.2 各自有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v1_21_1`/`v26_1_2` 整文件覆盖其他模块**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败）。v1_21_0 与 v1_21_1 为补丁级同源（1.21.0 → 1.21.1 无 API 断点），两者可互相镜像。
+3 个平台模块**不是纯拷贝**：26.2 有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v26_1_2` 整文件覆盖 `v26_2`**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败；该平台现已与其余 legacy 一并归档）。
 
 跨平台改动的正确姿势：
 
-1. 先改基准模块：legacy 用 `v1_21_1`，new 用 `v26_1_2`
-2. `scripts/mirror.sh legacy|new|all <rel-path>` — 仅用于**无适配差异**的纯新增文件（目标已存在会警告跳过，`--force` 覆盖，`--dry-run` 预演不写盘）
-3. 有适配差异的文件用**定点合入**（`scripts/merge-cooldown-fix.py` 是幂等合入脚本的范例），或用 `scripts/port-12111.py` 做规则化转换
+1. 先改基准模块：new 用 `v26_1_2`（legacy 唯一模块 `v1_21_1` 直接改）
+2. `scripts/mirror.sh new <rel-path>` — 仅用于**无适配差异**的纯新增文件（目标已存在会警告跳过，`--force` 覆盖，`--dry-run` 预演不写盘）
+3. 有适配差异的文件用**定点合入**（`v26_1_2` → `v26_2` 手工适配；幂等合入脚本范例与 `scripts/port-12111.py` 已随 EOL 平台删除）
 4. 每平台 `compileJava` 验证（增量缓存可能造假象——**改动涉及平台时用 `clean` 编译确认**）
 
 ## 版本号管理（升级时四处同步）

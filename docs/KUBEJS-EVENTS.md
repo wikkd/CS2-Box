@@ -38,14 +38,10 @@ CS2-Box 通过 **NeoForge 原生事件总线** 暴露开箱事件，无需任何
 | MC 版本 | 事件类 |
 |---------|--------|
 | 1.21.1 | `com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent` |
-| 1.21.3 | `com.reclizer.csgobox.v1_21_3.event.BoxOpenedEvent` |
-| 1.21.4 | `com.reclizer.csgobox.v1_21_4.event.BoxOpenedEvent` |
-| 1.21.5 | `com.reclizer.csgobox.v1_21_5.event.BoxOpenedEvent` |
-| 1.21.8 | `com.reclizer.csgobox.v1_21_8.event.BoxOpenedEvent` |
-| 1.21.10 | `com.reclizer.csgobox.v1_21_10.event.BoxOpenedEvent` |
-| 1.21.11 | `com.reclizer.csgobox.v1_21_11.event.BoxOpenedEvent` |
 | 26.1.2 | `com.reclizer.csgobox.v26_1_2.event.BoxOpenedEvent` |
 | 26.2 | `com.reclizer.csgobox.v26_2.event.BoxOpenedEvent` |
+
+> 已归档（EOL）平台（1.21.0 / 1.21.3 / 1.21.4 / 1.21.5 / 1.21.8 / 1.21.10 / 1.21.11，最后状态见 tag `eol-legacy-21x-1.0.6`）的事件类名规则相同：`com.reclizer.csgobox.v1_21_X.event.BoxOpenedEvent`。
 
 ---
 

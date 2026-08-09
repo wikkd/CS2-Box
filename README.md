@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # CS2-Box
 
-> CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.0+ 和 MC 26.x 共 10 个平台。
+> CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.1 和 MC 26.x 共 3 个平台。
 
 CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开预览,放入钥匙点开启按钮,服务端授权 RNG 决定结果,客户端播放滚动动画,揭晓稀有度分级物品。当前版本 `1.0.6`,仓库 License MIT(`LICENSE`)。
 
@@ -22,16 +22,11 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 | 模块 | Minecraft | NeoForge | Java | 角色 |
 |---|---|---|---|---|
 | `common/` | — | — | 21 | 跨版本业务逻辑 + 共享资源（无 MC/NeoForge 依赖） |
-| `v1_21_0/` | 1.21.0 | 21.0.167 | 21 | 旧 API 平台实现 |
 | `v1_21_1/` | 1.21.1 | 21.1.115 | 21 | 旧 API 平台实现 |
-| `v1_21_3/` | 1.21.3 | 21.3.96 | 21 | 旧 API 平台实现 |
-| `v1_21_4/` | 1.21.4 | 21.4.157 | 21 | 旧 API 平台实现 |
-| `v1_21_5/` | 1.21.5 | 21.5.97 | 21 | 旧 API 平台实现 |
-| `v1_21_8/` | 1.21.8 | 21.8.53 | 21 | 旧 API 平台实现 |
-| `v1_21_10/` | 1.21.10 | 21.10.64 | 21 | 旧 API 平台实现 |
-| `v1_21_11/` | 1.21.11 | 21.11.42 | 21 | decoupled GUI API（GuiGraphics 已迁移，Screen 保留 render 入口） |
 | `v26_1_2/` | 26.1.2 | 26.1.2.94 | 25 `--enable-preview` | decoupled rendering API + PIP 3D |
 | `v26_2/` | 26.2 | 26.2.0.7-beta | 25 `--enable-preview` | 最新 beta；decoupled API + PIP 3D 重写 |
+
+> **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库，最后状态保留在 tag `eol-legacy-21x-1.0.6`；旧版本玩家仍可下载既有发布产物。
 
 `common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享(v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`)。
 

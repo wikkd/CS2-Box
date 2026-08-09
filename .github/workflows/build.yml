@@ -14,37 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - mc: 1.21.0
-            version_key: 1.21.0
-            module: v1_21_0
-            java: 21
           - mc: 1.21.1
             version_key: 1.21.1
             module: v1_21_1
-            java: 21
-          - mc: 1.21.3
-            version_key: 1.21.3
-            module: v1_21_3
-            java: 21
-          - mc: 1.21.4
-            version_key: 1.21.4
-            module: v1_21_4
-            java: 21
-          - mc: 1.21.5
-            version_key: 1.21.5
-            module: v1_21_5
-            java: 21
-          - mc: 1.21.8
-            version_key: 1.21.8
-            module: v1_21_8
-            java: 21
-          - mc: 1.21.10
-            version_key: 1.21.10
-            module: v1_21_10
-            java: 21
-          - mc: 1.21.11
-            version_key: 1.21.11
-            module: v1_21_11
             java: 21
           - mc: 26.1.2
             version_key: 26.1.2
