@@ -35,6 +35,7 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
+                entries.accept(ModItems.ITEM_TERMINAL.get());
 
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
@@ -52,6 +53,7 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
+    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.register("terminal", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
