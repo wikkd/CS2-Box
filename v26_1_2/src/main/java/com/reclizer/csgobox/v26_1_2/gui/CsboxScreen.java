@@ -9,6 +9,7 @@ import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
+import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -184,7 +185,7 @@ public class CsboxScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            AnimRenderOps.fillGradient(pGuiGraphics, 0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         } else {
             super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
         }
@@ -219,9 +220,9 @@ public class CsboxScreen extends Screen {
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
-        guiGraphics.fill(listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
-        guiGraphics.fill(footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
 
         float scale = previewTextureSize() / 16F;
         // Skip the 3D crate when the box has no configured items — the empty
@@ -414,7 +415,7 @@ public class CsboxScreen extends Screen {
             // guarantees the warning banner stays above future additions to
             // renderBg (e.g. additional textured overlays) without re-ordering.
             guiGraphics.nextStratum();
-            guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, OverlayColor.panel());
+            AnimRenderOps.fill(guiGraphics, bgX0, bgY0, bgX1, bgY1, OverlayColor.panel());
             RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
                     (this.width - warnWidth) / 2.0F, bgY0 + 5, 0, 0, 1.2F, 0xFFFF4444);
             guiGraphics.nextStratum();

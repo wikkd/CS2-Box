@@ -9,6 +9,7 @@ import com.reclizer.csgobox.v1_21_1.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.IconListTools;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -156,7 +157,7 @@ public class CsboxScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            AnimRenderOps.fillGradient(pGuiGraphics, 0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         } else {
             super.renderBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
         }
@@ -182,9 +183,9 @@ public class CsboxScreen extends Screen {
 
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int gx, int gy) {
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
-        guiGraphics.fill(listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
-        guiGraphics.fill(footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
 
         int FrameWidth = width * 26 / 100;
         float scale = FrameWidth / 16F;
@@ -234,8 +235,8 @@ public class CsboxScreen extends Screen {
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     @Override
@@ -342,7 +343,7 @@ public class CsboxScreen extends Screen {
             int bgY0 = this.height * 23 / 100 - 6;
             int bgY1 = bgY0 + (int) (this.font.lineHeight * 1.2F) + 10;
             RenderSystem.disableDepthTest();
-            guiGraphics.fill(bgX0, bgY0, bgX1, bgY1, 0xAA101010);
+            AnimRenderOps.fill(guiGraphics, bgX0, bgY0, bgX1, bgY1, 0xAA101010);
             RenderFontTool.drawString(guiGraphics, this.font, warnSeq,
                     (this.width - warnWidth) / 2.0F, bgY0 + 5, 0, 0, 1.2F, 0xFFFF4444);
             RenderSystem.enableDepthTest();
