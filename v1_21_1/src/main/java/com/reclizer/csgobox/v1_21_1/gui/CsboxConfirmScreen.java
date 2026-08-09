@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import com.reclizer.csgobox.utils.OverlayColor;
 import net.minecraft.client.Minecraft;
@@ -55,7 +56,7 @@ public class CsboxConfirmScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         renderLabels(guiGraphics);
@@ -125,8 +126,8 @@ public class CsboxConfirmScreen extends Screen {
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     private void drawCenteredText(GuiGraphics guiGraphics, Component text,

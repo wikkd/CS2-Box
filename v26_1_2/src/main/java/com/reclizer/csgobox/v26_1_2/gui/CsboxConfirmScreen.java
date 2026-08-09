@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v26_1_2.gui;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -65,7 +66,7 @@ public class CsboxConfirmScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         renderLabels(guiGraphics);
@@ -136,8 +137,8 @@ public class CsboxConfirmScreen extends Screen {
     }
 
     private void drawButton(GuiGraphicsExtractor guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     private void drawCenteredText(GuiGraphicsExtractor guiGraphics, Component text,
