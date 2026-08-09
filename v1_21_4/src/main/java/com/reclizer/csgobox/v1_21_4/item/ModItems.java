@@ -10,6 +10,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -34,6 +35,7 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY1.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
+                entries.accept(ModItems.ITEM_ARMORY_POINT.get());
 
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
@@ -50,6 +52,7 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY1 = ITEMS.register("csgo_key1", id -> new ItemCsgoKey(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id))));
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", id -> new ItemCsgoKey(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id))));
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", id -> new ItemCsgoKey(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id))));
+    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
