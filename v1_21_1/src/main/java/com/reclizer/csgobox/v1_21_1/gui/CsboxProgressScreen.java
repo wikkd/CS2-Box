@@ -1,11 +1,11 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.IconListTools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -97,21 +97,19 @@ public class CsboxProgressScreen extends Screen {
      */
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBlurredBackground(partialTicks);
+        AnimRenderOps.renderBlurredBackground(this, guiGraphics, partialTicks);
     }
 
     private void renderBg(GuiGraphics guiGraphics, float partialTicks) {
         if (this.minecraft == null) return;
         this.minecraft.options.hideGui = true;
 
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        AnimRenderOps.setBlendNormal(guiGraphics);
 
         // CS2-style backdrop: blur the live world and dim it, instead of an
         // opaque panel - mirrors the original case-opening depth-of-field look.
         // (The blur itself runs in renderBackground above, once per frame.)
-        guiGraphics.fill(0, 0, this.width, this.height, 0x8C000000);
+        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
 
         if (openTime < 5) return;
 
@@ -143,11 +141,9 @@ public class CsboxProgressScreen extends Screen {
         // calls RenderSystem.enableBlend() - it inherits whatever blendFunc
         // is current, so a leftover replace-style func renders the glow's
         // translucent white as a hard opaque disc. Force SRC_ALPHA first.
-        guiGraphics.flush();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
-        guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/spot_glow.png"),
-                (int) spotCX - glowR, (int) spotCY - glowR, 0, 0, glowR * 2, glowR * 2, glowR * 2, glowR * 2);
+        AnimRenderOps.blitTextured(guiGraphics,
+                ResourceLocation.parse("csgobox:textures/screens/spot_glow.png"),
+                (int) spotCX - glowR, (int) spotCY - glowR, glowR * 2, glowR * 2);
 
         // Strip pass: cards keep their raw size; brightness falls off with
         // distance from the golden line (smoothstep), like the original.
@@ -163,7 +159,7 @@ public class CsboxProgressScreen extends Screen {
             float smooth = t * t * (3F - 2F * t);
             int dim = (int) (0x99 * smooth);
             if (dim > 0) {
-                guiGraphics.fill((int) itemX, (int) lensTop, (int) (itemX + cellWidth),
+                AnimRenderOps.fill(guiGraphics, (int) itemX, (int) lensTop, (int) (itemX + cellWidth),
                         (int) (lensTop + cellHeight) + 2, dim << 24);
             }
         }
@@ -232,7 +228,7 @@ public class CsboxProgressScreen extends Screen {
         // be flushed by the first lens band's item endBatch - inside that
         // band's scissor rect - redrawing strip cards clipped to the disc and
         // leaving ghost/残影 artifacts outside it.
-        guiGraphics.flush();
+        AnimRenderOps.flush(guiGraphics);
         int yMin = Math.max(lensMinY, (int) Math.ceil(magnifiedTop));
         int yMax = Math.min(lensMinY + lensW, (int) Math.floor(magnifiedBottom));
         int maxBands = yMax - yMin + 1;
@@ -299,8 +295,8 @@ public class CsboxProgressScreen extends Screen {
                 backingX0 = (int) (lensCX - backingHalfW);
                 backingX1 = (int) (lensCX + backingHalfW) + 1;
             }
-            guiGraphics.fill(backingX0, by, backingX1, by + bh, 0xFF545454);
-            guiGraphics.enableScissor(x0, by, x1, by + bh);
+            AnimRenderOps.fill(guiGraphics, backingX0, by, backingX1, by + bh, 0xFF545454);
+            AnimRenderOps.scissor(guiGraphics, x0, by, x1 - x0, bh);
             for (int i = iMax; i >= iMin; i--) {
                 ItemStack itemStack = itemInput.get(i);
                 if (itemStack.isEmpty()) continue;
@@ -310,7 +306,7 @@ public class CsboxProgressScreen extends Screen {
                 IconListTools.renderItemProgressFocus(player, guiGraphics, itemStack,
                         pX, magnifiedTop, this.width, this.height, gradeInput.get(i), lensScale);
             }
-            guiGraphics.disableScissor();
+            AnimRenderOps.scissorDisable(guiGraphics);
         }
 
         // Circular backing mask: transparent center (magnified strip shows
@@ -325,16 +321,14 @@ public class CsboxProgressScreen extends Screen {
         // rim up into a hard white ring (1.21.0/1.21.1 only - newer
         // platforms draw through RenderType.GUI_TEXTURED with its own
         // state shard). Reset to the standard GUI blend first.
-        guiGraphics.flush();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
-        guiGraphics.blit(ResourceLocation.parse("csgobox:textures/screens/lens_vignette.png"),
-                lensMinX, lensMinY, 0, 0, lensW, lensW, lensW, lensW);
+        AnimRenderOps.blitTextured(guiGraphics,
+                ResourceLocation.parse("csgobox:textures/screens/lens_vignette.png"),
+                lensMinX, lensMinY, lensW, lensW);
 
         lastRenderWidth = widthNewAdd;
 
         // Bright golden marker line, drawn above the lens, like the original.
-        guiGraphics.fill((int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
+        AnimRenderOps.fill(guiGraphics, (int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
                 ColorTools.argbColor(230, 255, 215, 0));
 
     }
