@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v1_21_1.gui;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -130,7 +131,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         render3DBox(guiGraphics, mouseX, mouseY);
@@ -146,12 +147,12 @@ public class CsboxBulkOverviewScreen extends Screen {
         float frameWidth = this.width * 22 / 100F;
         float scale = frameWidth / 16F;
 
-        guiGraphics.fillGradient(centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
+        AnimRenderOps.fillGradient(guiGraphics, centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
                 centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, centerX, centerY,
-                this.rotX, this.rotY, this.templateBox, this.player, scale);
+        AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
+                centerX, centerY, this.rotX, this.rotY, scale);
     }
 
     @Override
@@ -245,8 +246,8 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     private void drawCenteredText(GuiGraphics guiGraphics, Component text,
