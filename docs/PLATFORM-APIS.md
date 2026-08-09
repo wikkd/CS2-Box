@@ -385,3 +385,29 @@ TagParser.parseTag(tagStr) → TagParser.parseCompoundFully(tagStr);
 - 新增平台断点时：先在 `全量速查矩阵` 更新一行，再在对应主题章节补充代码对照
 - 各平台源码永远以基准模块（v1_21_1 / v26_1_2）为 diff 基线，用 `diff -rq` + 剥离 package 行对比
 - 改动涉及平台时用 `clean` 编译确认（增量缓存可能造假象）
+
+## 11. AnimRenderOps 渲染门面（2026-08-09 重构）
+
+> 每个平台的 `utils/AnimRenderOps.java` 是**唯一的渲染原语适配点**：屏（CsboxScreen /
+> CsboxProgressScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen / CsboxLookItemScreen /
+> CsboxConfirmScreen）与逻辑助手（IconListTools / GuiItemMove / ButtonPalette）只经它调用渲染 API。
+
+| 平台 | era | 说明 |
+|---|---|---|
+| v1_21_1 | `legacy` | `GuiGraphics` + 立即模式；`blitTextured` 内部强制 SRC_ALPHA blend；`renderBlurredBackground` 反射桥接 |
+| v26_1_2 | `decoupled` | `GuiGraphicsExtractor` + RenderPipelines（自带 blend 状态）；`setBlendNormal`/`flush` 空操作 |
+| v26_2 | `decoupled` | 与 26.1.2 同代，整文件镜像；HUD 差异由 `HudVisibility` 承载，不入本门面 |
+
+**公开 op（13 个，跨平台签名一致）**：`blitTextured`×3（6 参 / 7 参 texW,texH / 13 参 UV+tint）、
+`fill`、`fillGradient`、`scissor`、`scissorDisable`、`setBlendNormal`、`flush`、
+`renderBlurredBackground`、`renderItem2D`、`renderItem3D`、`supports3D()`。
+
+- UV+tint 变体（工具栏雪碧图）：legacy 内部经 `RenderSystem.setShaderColor` 应用 tint，
+  decoupled 传 26.x blit 末参 tint —— 签名统一，实现随时代
+- `renderItem2D`（26.x）：per-item bounding box 居中；`renderItem3D`（26.x）：PIP 路径
+  （`Icon3DRenderState` + `submitPictureInPictureRenderState`），radians→degrees 转换在门面内部
+- 屏内 `RenderFontTool` 文本调用不入门面（drawString 各平台签名一致）；1.21.1 TACZ 视口
+  （`TaczInspectViewport`）是独立路径，不并入 `renderItem3D`
+- **新增原语必须三平台同步补**，签名漂移由 `scripts/check-animops-drift.sh` 守护（CI 已接线）
+- 1.21.1 残留 RenderSystem 状态操作（CsboxScreen 深度测试开关、CsLookItemScreen 工具栏 tint
+  循环）属有意保留，非 draw 原语
