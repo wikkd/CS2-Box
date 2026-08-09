@@ -144,6 +144,11 @@
 
 > 批量开箱原计划随 1.0.6 发布，现推迟至本版本。功能代码已在 1.0.6 开发完成并经 10 平台镜像，1.0.6 发布时入口（shift+右键）与服务端处理（`PacketCsgoBulkProgress.handleServer`）已整体屏蔽，shift+右键恢复原单开行为；本版本解除屏蔽后直接可用。
 
+### 新增（武库点数）
+- **武库点数物品 `csgobox:armory_point`**：绿色十字徽章图标（16×16，无色区域透明）；作为可配置物品出现在动态箱子 JSON 掉落体系中（管理员在 `config/csbox/*.json` 的 grades 权重表添加即掉落）；creative tab 展示。
+- **兑换配方**：3×3 全填 64 武库点数 → 1 铁钥匙（`csgo_key0`，`armory_point_exchange.json`），武库点数成为钥匙经济的中转货币。
+- **x10 平台注册**：`v1_21_0..v26_2` 全部注册（legacy `ITEMS.register` / 1.21.3+ `setId` / new `registerItem` 三形态定点合入，`scripts/port-armory-point.py` 幂等脚本）；`v26_1_2 PlatformSmokeTest` 新增 `ITEM_ARMORY_POINT` 反射断言。
+
 ### 新增（批量开箱）
 - **批量开箱触发**：`ClickEvent.onRightClick` 检测 `mc.options.keyShift.isDown()`，shift 状态开 `CsboxBulkOverviewScreen` 总览屏，否则走原 `CsboxScreen` 单开流程（无 regression）。10 平台镜像。
 - **总览屏 `CsboxBulkOverviewScreen`**：实时计算 `min(背包内同名箱数, 钥匙数)`，按稀有度配色（蓝/绿/红）显示「箱子数 / 钥匙数 / 本次可开」+ 「开启」+ 「返回」按钮。开启按钮在 K=0 时禁用。
