@@ -4,6 +4,7 @@ import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
+import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -108,7 +109,7 @@ public class CsboxBulkResultScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
                     OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         renderHeader(guiGraphics);
@@ -158,10 +159,10 @@ public class CsboxBulkResultScreen extends Screen {
             int itemSize = Math.min(rowH - 4, 32);
             int itemX = x;
             int itemY = y - itemSize / 2;
-            guiGraphics.fill(x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
-            guiGraphics.fill(itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
+            AnimRenderOps.fill(guiGraphics, x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
+            AnimRenderOps.fill(guiGraphics, itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
             if (e.stack.isEmpty()) {
-                guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.panel());
+                AnimRenderOps.fill(guiGraphics, itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.panel());
             } else if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
             }
@@ -199,8 +200,8 @@ public class CsboxBulkResultScreen extends Screen {
         boolean showAllHover = isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH);
         int showAllFill = showAllHover ? 0xFF00AACC : 0xFF0088AA;
         int showAllBorder = showAllHover ? 0xFF00DDFF : 0xFF00AACC;
-        guiGraphics.fill(showAllX, btnY, showAllX + btnW, btnY + btnH, showAllBorder);
-        guiGraphics.fill(showAllX + 1, btnY + 1, showAllX + btnW - 1, btnY + btnH - 1, showAllFill);
+        AnimRenderOps.fill(guiGraphics, showAllX, btnY, showAllX + btnW, btnY + btnH, showAllBorder);
+        AnimRenderOps.fill(guiGraphics, showAllX + 1, btnY + 1, showAllX + btnW - 1, btnY + btnH - 1, showAllFill);
         Style style = Style.EMPTY.withBold(true);
         Component showAllText = Component.translatable("gui.csgobox.bulk.show_all").withStyle(style);
         FormattedCharSequence showAllSeq = showAllText.getVisualOrderText();
@@ -213,8 +214,8 @@ public class CsboxBulkResultScreen extends Screen {
         boolean collectHover = isInside(mouseX, mouseY, collectX, btnY, btnW, btnH);
         int collectFill = collectHover ? 0xFF00CC00 : 0xFF008800;
         int collectBorder = collectHover ? 0xFF00FF00 : 0xFF00AA00;
-        guiGraphics.fill(collectX, btnY, collectX + btnW, btnY + btnH, collectBorder);
-        guiGraphics.fill(collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
+        AnimRenderOps.fill(guiGraphics, collectX, btnY, collectX + btnW, btnY + btnH, collectBorder);
+        AnimRenderOps.fill(guiGraphics, collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
         Component collectText = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence collectSeq = collectText.getVisualOrderText();
         float collectTextW = this.font.width(collectSeq) * 0.95F;
@@ -265,8 +266,8 @@ public class CsboxBulkResultScreen extends Screen {
             int grade = gradeMap.getOrDefault(stack, 1);
 
             int bgColor = (0xCC << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
-            guiGraphics.fillGradient(x, y, x + itemSize + 4, y + itemSize + 4, bgColor, bgColor);
-            guiGraphics.fill(x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
+            AnimRenderOps.fillGradient(guiGraphics, x, y, x + itemSize + 4, y + itemSize + 4, bgColor, bgColor);
+            AnimRenderOps.fill(guiGraphics, x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
 
             if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, stack, x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
@@ -288,8 +289,8 @@ public class CsboxBulkResultScreen extends Screen {
         boolean hover = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
         int fill = hover ? 0xFF00CC00 : 0xFF008800;
         int border = hover ? 0xFF00FF00 : 0xFF00AA00;
-        guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, border);
-        guiGraphics.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
+        AnimRenderOps.fill(guiGraphics, btnX, btnY, btnX + btnW, btnY + btnH, border);
+        AnimRenderOps.fill(guiGraphics, btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
         Style style = Style.EMPTY.withBold(true);
         Component text = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence seq = text.getVisualOrderText();
