@@ -2,6 +2,7 @@
 
 ## [未发布]
 ### 新增
+- **恢复批量开箱**（1.0.6 屏蔽 → 1.0.7 恢复）：移除 1.0.6 的两处屏蔽——客户端入口 `ClickEvent` 的 shift 硬编码 `false`（恢复 `mc.options.keyShift.isDown()`，Shift+右键进总览屏）与 `PacketCsgoBulkProgress` 的 `BULK_OPEN_ENABLED` 服务端开关；恢复服务端权威计数（箱/钥匙/`bulkOpenCount` 上限）→ 异步线程池计算 → 主线程扣减的完整链路；另修复恢复后暴露的边界缺陷：`finalizeBulkOpen` 复核时 `actualK` 未 clamp 到已计算结果数（异步窗口内库存增长会致 `results.subList` 越界、整批中止且重试必失败），现按 `Math.min(actualK, results.size())` 截断，剩余箱子下轮再开；1.21.1 / 26.1.2 / 26.2 三平台同步恢复（forge_26_1_2 实验模块一并同步）。
 - **`/csbox nbt hand` 命令**：打印主手物品的序列化 JSON（新增 `BoxItemCodec` 统一物品序列化，`tag` 字符串与 `components` 元数据均解析为扁平 key-value），超过 20000 字符截断提示；`/csbox` 裸命令与 `help` 子命令现执行 2 级权限检查
 - **forge_26_1_2 只读实验模块**：`port-forge-2612.py` 已同步携带新文件与命令改动（编译验证失败系该模块 ForgeGradle 插件解析的既有环境问题，见 AGENTS.md）
 

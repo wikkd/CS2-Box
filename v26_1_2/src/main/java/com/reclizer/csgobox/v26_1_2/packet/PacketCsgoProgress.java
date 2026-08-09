@@ -5,9 +5,12 @@ import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v26_1_2.capability.ModCapability;
 import com.reclizer.csgobox.v26_1_2.event.BoxOpenedEvent;
-import com.reclizer.csgobox.logic.AnimationStrip;
+import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
+import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
+import com.reclizer.csgobox.v26_1_2.box.BoxStripGenerator;
+import com.reclizer.csgobox.v26_1_2.box.GradeGroup;
 import com.reclizer.csgobox.logic.GradeMap;
-import com.reclizer.csgobox.logic.OddsCalculator;
+import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -57,90 +60,78 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
     public static void handleServer(final PacketCsgoProgress message, final IPayloadContext context) {
         context.enqueueWork(() -> {
-            var player = context.player();
-            var box = player.getMainHandItem();
+            if (!(context.player() instanceof ServerPlayer sp)) {
+                return;
+            }
+            var box = sp.getMainHandItem();
+            long requestId = message.requestId();
             if (!(box.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
 
-            if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
-                sendRejected(context, message.requestId());
+            if (sp.isRemoved() || !sp.isAlive()) {
+                sendRejected(context, requestId);
                 return;
             }
 
-            if (isOpenBlockedStatic(player)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
+            if (isOpenBlockedStatic(sp)) {
+                sendRejected(context, requestId);
                 return;
             }
 
-            var itemList = ItemCsgoBox.getItemGroup(box);
-            if (itemList.isEmpty()) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
+            var boxId = ItemCsgoBox.getBoxId(box);
+            if (boxId == null) {
+                sendRejected(context, requestId);
                 return;
             }
 
             int[] weights = ItemCsgoBox.getRandom(box);
             if (weights.length == 0) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
+                sendRejected(context, requestId);
                 return;
             }
 
-            if (!tryConsumeKeys(player, box, 1)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
+            if (!tryConsumeKeys(sp, box, 1)) {
+                sendRejected(context, requestId);
                 return;
             }
 
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
-            var gradeMap = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy);
 
-            List<ItemStack> animationItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-            List<Integer> animationGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-            for (int i = 0; i < AnimationStrip.ITEM_COUNT; i++) {
-                int grade = OddsCalculator.pickGrade(rng, weights);
-                ItemStack itemStack = gradeMap.pickRandom(rng, grade);
-                if (itemStack == null) {
-                    itemStack = gradeMap.findFallback(grade);
-                }
-                if (itemStack == null) {
-                    itemStack = ItemStack.EMPTY;
-                }
-                animationGrades.add(Mth.clamp(grade, 1, 5));
-                animationItems.add(itemStack);
-            }
-
-            int winningIndex = AnimationStrip.randomWinningIndex(SECURE_RANDOM, animationItems.size());
-            winningIndex = AnimationStrip.findNearestValid(animationItems, winningIndex, stack -> !stack.isEmpty());
-            if (winningIndex < 0) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
+            // The grade pool is definition-derived and immutable, so it is
+            // built once per box id (same cache the bulk path uses) instead
+            // of re-copied on every single open. GradeMapCache is invalidated
+            // by BoxRegistry on reload, so a config change can never serve a
+            // stale pool. pickRandom always returns ItemStack::copy results,
+            // so callers may mutate the returned stack freely.
+            var gradeMap = GradeMapCache.get(boxId.toString(),
+                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
+            if (gradeMap.isEmpty()) {
+                sendRejected(context, requestId);
                 return;
             }
 
-            ItemStack giveItem = animationItems.get(winningIndex);
-            int finalGrade = animationGrades.get(winningIndex);
+            var strip = BoxStripGenerator.generate(gradeMap, weights, rng);
+            int winningIndex = strip.winningIndex();
+            if (winningIndex < 0) {
+                sendRejected(context, requestId);
+                return;
+            }
+
+            ItemStack giveItem = strip.items().get(winningIndex);
+            int finalGrade = strip.grades().get(winningIndex);
 
             if (giveItem.isEmpty()) {
-                giveItem = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy).findFallback(1);
+                giveItem = gradeMap.findFallback(1);
                 if (giveItem == null) giveItem = ItemStack.EMPTY;
                 if (giveItem.isEmpty()) {
-                    if (player instanceof ServerPlayer sp) {
-                        sendRejected(context, message.requestId());
-                    }
+                    sendRejected(context, requestId);
                     return;
                 }
-                finalGrade = resolveGrade(giveItem, itemList, 1);
-                animationItems.set(winningIndex, giveItem.copy());
-                animationGrades.set(winningIndex, finalGrade);
+                finalGrade = resolveGrade(giveItem, boxId, 1);
+                strip.items().set(winningIndex, giveItem.copy());
+                strip.grades().set(winningIndex, finalGrade);
             }
 
             float wear = 0F;
@@ -149,47 +140,43 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 applyWearDamage(giveItem, wear);
             }
 
-            blockFurtherOpensStatic(player);
+            blockFurtherOpensStatic(sp);
 
-            player.setData(ModCapability.PLAYER_DATA,
+            sp.setData(ModCapability.PLAYER_DATA,
                     new CsboxPlayerData(serverSeed, 0, giveItem.copy(), finalGrade));
 
             context.reply(new PacketBoxOpenResult(
-                    giveItem.copy(),
                     finalGrade,
                     winningIndex,
-                    serverSeed,
-                    message.requestId(),
-                    animationItems,
-                    animationGrades
+                    requestId,
+                    strip.items(),
+                    strip.grades()
             ));
 
             ItemStack toGive = giveItem.copy();
-            boolean added = player.getInventory().add(toGive);
+            boolean added = sp.getInventory().add(toGive);
             if (!added && !toGive.isEmpty()) {
-                player.drop(toGive, false);
+                sp.drop(toGive, false);
             }
             box.shrink(1);
 
-            if (player instanceof ServerPlayer sp) {
-                sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
-                if (CsgoBox.CONFIG.enableAchievements()) {
-                    OpenedBoxTrigger.INSTANCE.trigger(sp);
-                }
+            sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                OpenedBoxTrigger.INSTANCE.trigger(sp);
             }
 
-            Identifier boxId = ItemCsgoBox.getBoxId(box);
-            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));
+            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, boxId, giveItem.copy(), finalGrade, false));
         });
     }
 
-
+    /**
+     * Replies an empty animation result, which the client treats as a
+     * rejected open (the screen closes without granting anything).
+     */
     private static void sendRejected(IPayloadContext context, long requestId) {
         context.reply(new PacketBoxOpenResult(
-                ItemStack.EMPTY,
                 1,
                 0,
-                0L,
                 requestId,
                 List.of(),
                 List.of()
@@ -237,10 +224,22 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    private static int resolveGrade(ItemStack item, Map<ItemStack, Integer> itemList, int fallback) {
-        for (Map.Entry<ItemStack, Integer> entry : itemList.entrySet()) {
-            if (ItemStack.isSameItemSameComponents(item, entry.getKey())) {
-                return Mth.clamp(entry.getValue(), 1, 5);
+    /**
+     * Resolves the grade (1..5) of an item produced by the fallback path. The
+     * box definition is the source of truth; the per-open item list no longer
+     * exists now that the grade pool is cached.
+     */
+    private static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
+        BoxDefinition def = BoxRegistry.get(boxId);
+        if (def != null) {
+            for (GradeGroup grade : def.grades()) {
+                int gradeLevel = BoxDefinition.gradeLevel(grade.id());
+                if (gradeLevel == 0) continue;
+                for (ItemStack candidate : grade.items()) {
+                    if (ItemStack.isSameItemSameComponents(item, candidate)) {
+                        return Mth.clamp(gradeLevel, 1, 5);
+                    }
+                }
             }
         }
         return Mth.clamp(fallback, 1, 5);

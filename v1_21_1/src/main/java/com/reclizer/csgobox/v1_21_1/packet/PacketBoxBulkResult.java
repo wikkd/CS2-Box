@@ -15,9 +15,17 @@ import java.util.List;
 import java.util.Queue;
 
 /**
- * Server-to-client consolidated bulk result. Carries the per-box reward for
- * boxes 2..K of a bulk open (box 1's result travels in {@link PacketBoxOpenResult}
- * because it carries the full animation strip).
+ * Server-to-client chunk of the bulk-open result list.
+ *
+ * <p>The first entry of a bulk open travels in {@link PacketBoxOpenResult}
+ * (with its animation strip); every further entry arrives here. The client
+ * drains chunks with its screen's request id until the server-side burst is
+ * exhausted (a couple of quiet ticks), then shows one consolidated popup.</p>
+ *
+ * <p>Large batches are sent as several packets (chunks) of up to
+ * {@value #RESULTS_PER_PACKET} entries so a single payload cannot grow
+ * unbounded with heavy-NBT items; the client aggregates chunks sharing the
+ * same request id.</p>
  */
 public record PacketBoxBulkResult(
         long requestId,
@@ -25,8 +33,9 @@ public record PacketBoxBulkResult(
         List<Integer> grades
 ) implements CustomPacketPayload {
 
-    private static final int MAX_BULK_RESULTS = 1024;
-    private static final int MAX_PENDING_BULK = 4;
+    private static final int MAX_PENDING_BULK = 64;
+    /** Number of entries the server puts into one bulk payload. */
+    public static final int BULK_PER_PACKET = 32;
 
     public static final Type<PacketBoxBulkResult> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "box_bulk_result"));
@@ -44,7 +53,7 @@ public record PacketBoxBulkResult(
             grades = List.of();
         }
         PacketValidation.requireSameSize("items", items, "grades", grades);
-        PacketValidation.requireMaxSize("items", items, MAX_BULK_RESULTS);
+        PacketValidation.requireMaxSize("items", items, BULK_PER_PACKET);
         items = PacketValidation.copyStacks(items);
         grades = PacketValidation.copyClampedInts(grades, 1, 5, 1);
     }
@@ -61,7 +70,7 @@ public record PacketBoxBulkResult(
     private static PacketBoxBulkResult read(RegistryFriendlyByteBuf buf) {
         long requestId = buf.readLong();
         int size = buf.readVarInt();
-        if (size < 0 || size > MAX_BULK_RESULTS) {
+        if (size < 0 || size > BULK_PER_PACKET) {
             throw new IllegalArgumentException("Invalid bulk result size: " + size);
         }
         List<ItemStack> items = new ArrayList<>(size);

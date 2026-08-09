@@ -43,7 +43,8 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                boolean shift = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
+                boolean shift = mc.options.keyShift.isDown()
+                        || net.minecraft.client.gui.screens.Screen.hasShiftDown();
                 mc.execute(() -> {
                     if (shift) {
                         mc.setScreen(new CsboxBulkOverviewScreen());

@@ -29,6 +29,13 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class CsboxProgressScreen extends Screen {
     private static final int MAX_WAIT_TICKS = 200;
+    /**
+     * After the strip finishes scrolling we drain bulk result chunks for a few
+     * extra ticks (networked chunks may not all arrive in the same frame),
+     * then show the consolidated result. Falls back to the single-item popup
+     * (or closes) when no bulk chunks arrived.
+     */
+    private static final int MAX_BULK_WAIT_TICKS = 40;
 
     private final Player player;
     private final long expectedRequestId;
@@ -62,6 +69,14 @@ public class CsboxProgressScreen extends Screen {
     private ItemStack resultItem = ItemStack.EMPTY;
     private int resultGrade = 0;
     private int waitingTicks = 0;
+
+    // Bulk-result aggregation state. waitingBulkTicks < 0 means we are not in
+    // the drain phase yet; while draining, every chunk with our request id is
+    // consumed and the finish fires after two quiet ticks or the hard cap.
+    private int waitingBulkTicks = -1;
+    private int quietBulkTicks = 0;
+    private List<ItemStack> bulkItems = List.of();
+    private List<Integer> bulkGrades = List.of();
 
     public CsboxProgressScreen(Player player, long requestId) {
         super(Component.literal("cs_progress"));
@@ -348,13 +363,13 @@ public class CsboxProgressScreen extends Screen {
             if (result == null) {
                 return;
             }
-            if (result.item().isEmpty()) {
+            if (result.animationItems().isEmpty()) {
                 this.onClose();
                 return;
             }
 
             this.serverWinningIndex = result.winningIndex();
-            this.resultItem = result.item().copy();
+            this.resultItem = result.animationItems().get(result.winningIndex()).copy();
             this.resultGrade = result.grade();
             this.itemInput.clear();
             this.itemInput.addAll(result.animationItems());
@@ -388,29 +403,17 @@ public class CsboxProgressScreen extends Screen {
             startTime++;
         }
 
-        if (startTime == totalTicks) {
-            PacketBoxBulkResult bulk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId);
-            // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
-            // Screen.removed() (not onClose()), so the onClose hideGui=false
-            // reset below would never run otherwise, leaving the HUD hidden
-            // after bulk open completes.
-            if (this.minecraft != null) {
-                this.minecraft.options.hideGui = false;
+        if (startTime >= totalTicks) {
+            if (waitingBulkTicks < 0) {
+                waitingBulkTicks = 0;
+                quietBulkTicks = 0;
+                bulkItems = new ArrayList<>();
+                bulkGrades = new ArrayList<>();
             }
-            if (bulk != null && !bulk.items().isEmpty()) {
-                List<ItemStack> allItems = new ArrayList<>();
-                List<Integer> allGrades = new ArrayList<>();
-                if (!this.resultItem.isEmpty()) {
-                    allItems.add(this.resultItem.copy());
-                    allGrades.add(this.resultGrade);
-                }
-                allItems.addAll(bulk.items());
-                allGrades.addAll(bulk.grades());
-                Minecraft.getInstance().setScreen(new CsboxBulkResultScreen(this.player, allItems, allGrades));
-            } else if (!this.resultItem.isEmpty()) {
-                Minecraft.getInstance().setScreen(new CsLookItemScreen(this.resultItem, this.resultGrade));
-            } else {
-                this.onClose();
+            waitingBulkTicks++;
+            drainBulkChunks();
+            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS || quietBulkTicks >= 2) {
+                finishAndShowResult();
             }
             return;
         }
@@ -450,6 +453,51 @@ public class CsboxProgressScreen extends Screen {
             return true;
         }
         return super.keyPressed(key, b, c);
+    }
+
+    /**
+     * Consumes every pending bulk chunk that matches this screen's request id.
+     * Bulk open results travel in several small packets; this keeps draining
+     * until the server-side burst is exhausted.
+     */
+    private void drainBulkChunks() {
+        boolean got = false;
+        PacketBoxBulkResult chunk;
+        while ((chunk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId)) != null) {
+            this.bulkItems.addAll(chunk.items());
+            this.bulkGrades.addAll(chunk.grades());
+            got = true;
+        }
+        this.quietBulkTicks = got ? 0 : this.quietBulkTicks + 1;
+    }
+
+    /**
+     * Shows the consolidated bulk result (or the single-item popup when no
+     * bulk chunks arrived while draining).
+     */
+    private void finishAndShowResult() {
+        // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
+        // Screen.removed() (not onClose()), so the onClose hideGui=false
+        // reset below would never run otherwise, leaving the HUD hidden
+        // after bulk open completes.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        if (!this.bulkItems.isEmpty()) {
+            List<ItemStack> allItems = new ArrayList<>();
+            List<Integer> allGrades = new ArrayList<>();
+            if (!this.resultItem.isEmpty()) {
+                allItems.add(this.resultItem.copy());
+                allGrades.add(this.resultGrade);
+            }
+            allItems.addAll(this.bulkItems);
+            allGrades.addAll(this.bulkGrades);
+            Minecraft.getInstance().setScreen(new CsboxBulkResultScreen(this.player, allItems, allGrades));
+        } else if (!this.resultItem.isEmpty()) {
+            Minecraft.getInstance().setScreen(new CsLookItemScreen(this.resultItem, this.resultGrade));
+        } else {
+            this.onClose();
+        }
     }
 
     @Override

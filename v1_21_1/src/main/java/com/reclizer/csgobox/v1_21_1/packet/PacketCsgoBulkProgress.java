@@ -5,8 +5,8 @@ import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.box.BulkBoxContext;
 import com.reclizer.csgobox.v1_21_1.box.BulkOpenResult;
+import com.reclizer.csgobox.v1_21_1.box.BoxStripGenerator;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
-import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
@@ -41,8 +41,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayload {
 
-    private static final boolean BULK_OPEN_ENABLED = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
-
     public static final Type<PacketCsgoBulkProgress> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_bulk_progress"));
 
@@ -57,10 +55,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
     }
 
     public static void handleServer(final PacketCsgoBulkProgress message, final IPayloadContext context) {
-        // 1.0.6 屏蔽批量开箱（1.0.7 恢复）：服务端忽略所有批量开箱请求
-        if (!BULK_OPEN_ENABLED) {
-            return;
-        }
         context.enqueueWork(() -> {
             Player player = context.player();
             if (player == null) {
@@ -186,38 +180,21 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
             if (i == 0) {
-                List<ItemStack> animItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-                List<Integer> animGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-                for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
-                    int g = OddsCalculator.pickGrade(rng, snapshot.weights());
-                    ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
-                    if (s == null) {
-                        s = snapshot.gradeMap().findFallback(g);
-                    }
-                    if (s == null) {
-                        s = ItemStack.EMPTY;
-                    }
-                    animItems.add(s);
-                    animGrades.add(Mth.clamp(g, 1, 5));
-                }
-                int winningIndex = AnimationStrip.randomWinningIndex(rng, animItems.size());
-                winningIndex = AnimationStrip.findNearestValid(animItems, winningIndex, stack -> !stack.isEmpty());
-                if (winningIndex < 0) {
-                    winningIndex = 0;
-                }
-                ItemStack giveItem = animItems.get(winningIndex);
-                int finalGrade = animGrades.get(winningIndex);
+                var strip = BoxStripGenerator.generate(snapshot.gradeMap(), snapshot.weights(), rng);
+                int winningIndex = Math.max(0, strip.winningIndex());
+                ItemStack giveItem = strip.items().get(winningIndex);
+                int finalGrade = strip.grades().get(winningIndex);
                 if (giveItem.isEmpty()) {
                     ItemStack fb = snapshot.gradeMap().findFallback(1);
                     if (fb != null && !fb.isEmpty()) {
                         giveItem = fb;
                         finalGrade = 1;
-                        animItems.set(winningIndex, giveItem.copy());
-                        animGrades.set(winningIndex, finalGrade);
+                        strip.items().set(winningIndex, giveItem.copy());
+                        strip.grades().set(winningIndex, finalGrade);
                     }
                 }
                 float wear = rng.nextFloat();
-                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, animItems, animGrades, wear));
+                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), wear));
             } else {
                 int g = OddsCalculator.pickGrade(rng, snapshot.weights());
                 ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
@@ -258,6 +235,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         int recheckBoxes = avail.boxes();
         int recheckKeys = avail.keys();
         int actualK = Math.min(recheckBoxes, recheckKeys);
+        // Clamp to the results actually computed: if inventory grew during the
+        // async compute we can only open the K boxes already rolled (the rest
+        // are reopened on the player's next request).
+        actualK = Math.min(actualK, results.size());
         if (actualK < K) {
             CsgoBox.LOGGER.warn("[csgo-bulk] player {} availability changed during compute: requested={} available={}",
                     sp.getName().getString(), K, actualK);
@@ -302,10 +283,8 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
 
         BulkOpenResult box1 = truncated.get(0);
         PacketDistributor.sendToPlayer(sp, new PacketBoxOpenResult(
-                box1.resultItem().copy(),
                 box1.resultGrade(),
                 box1.winningIndex(),
-                box1.serverSeed(),
                 requestId,
                 box1.animationItems(),
                 box1.animationGrades()
@@ -322,8 +301,16 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 restItems.add(r.resultItem().copy());
                 restGrades.add(r.resultGrade());
             }
-            if (!restItems.isEmpty()) {
-                PacketDistributor.sendToPlayer(sp, new PacketBoxBulkResult(requestId, restItems, restGrades));
+            // Chunked: a single payload must stay small even when every
+            // item carries heavy NBT. The client aggregates chunks.
+            int chunkSize = PacketBoxBulkResult.BULK_PER_PACKET;
+            for (int from = 0; from < restItems.size(); from += chunkSize) {
+                int to = Math.min(from + chunkSize, restItems.size());
+                PacketDistributor.sendToPlayer(sp, new PacketBoxBulkResult(
+                        requestId,
+                        restItems.subList(from, to),
+                        restGrades.subList(from, to)
+                ));
             }
         }
 
