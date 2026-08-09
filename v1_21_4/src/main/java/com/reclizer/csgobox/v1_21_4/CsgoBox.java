@@ -23,7 +23,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -203,6 +206,11 @@ public class CsgoBox {
      * which fires AFTER the item registry has frozen and therefore crashed
      * with {@code IllegalStateException: Registry is already frozen}.</p>
      */
+    @SuppressWarnings("unchecked")
+    private static <T> void copyComponent(DataComponentMap.Builder builder, TypedDataComponent<?> component) {
+        builder.set((DataComponentType<T>) component.type(), (T) component.value());
+    }
+
     private void registerDynamicBoxItems(final RegisterEvent event) {
         if (!event.getRegistryKey().equals(Registries.ITEM)) {
             return;
@@ -235,16 +243,39 @@ public class CsgoBox {
                     continue;
                 }
                 final ResourceLocation boxId = itemId;
+                // Reuse the base csgo_box item model so dynamic boxes
+                // (registered from config/csbox/*.json filenames) render
+                // with a real icon instead of the missing-texture
+                // checkerboard. 1.21.4's ItemModelResolver resolves the model
+                // from DataComponents.ITEM_MODEL.
+                //
+                // Item.Properties.buildAndValidateComponents() forcibly sets
+                // ITEM_MODEL = own registry id at Item construction, so
+                // neither Properties.component() nor a getDefaultInstance()
+                // override can change it. ItemStack is built from
+                // Item.components(), which is polymorphic — override it to
+                // swap ITEM_MODEL for the shared csgo_box model.
                 event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, itemId))) {
+                    private DataComponentMap boxModelComponents;
+
+                    @Override
+                    public DataComponentMap components() {
+                        if (this.boxModelComponents == null) {
+                            DataComponentMap base = super.components();
+                            DataComponentMap.Builder builder = DataComponentMap.builder();
+                            for (TypedDataComponent<?> component : base) {
+                                copyComponent(builder, component);
+                            }
+                            builder.set(DataComponents.ITEM_MODEL, ResourceLocation.parse(MODID + ":csgo_box"));
+                            this.boxModelComponents = builder.build();
+                        }
+                        return this.boxModelComponents;
+                    }
+
                     @Override
                     public ItemStack getDefaultInstance() {
                         ItemStack stack = super.getDefaultInstance();
                         ItemCsgoBox.setBoxId(boxId, stack);
-                        // Reuse the base csgo_box item model so dynamic boxes
-                        // (registered from config/csbox/*.json filenames) render
-                        // with a real icon instead of the missing-texture
-                        // checkerboard.
-                        stack.set(DataComponents.ITEM_MODEL, ResourceLocation.parse(MODID + ":csgo_box"));
                         return stack;
                     }
                 });
