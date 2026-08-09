@@ -5,6 +5,14 @@
 - **恢复批量开箱**（1.0.6 屏蔽 → 1.0.7 恢复）：移除 1.0.6 的两处屏蔽——客户端入口 `ClickEvent` 的 shift 硬编码 `false`（恢复 `mc.options.keyShift.isDown()`，Shift+右键进总览屏）与 `PacketCsgoBulkProgress` 的 `BULK_OPEN_ENABLED` 服务端开关；恢复服务端权威计数（箱/钥匙/`bulkOpenCount` 上限）→ 异步线程池计算 → 主线程扣减的完整链路；另修复恢复后暴露的边界缺陷：`finalizeBulkOpen` 复核时 `actualK` 未 clamp 到已计算结果数（异步窗口内库存增长会致 `results.subList` 越界、整批中止且重试必失败），现按 `Math.min(actualK, results.size())` 截断，剩余箱子下轮再开；1.21.1 / 26.1.2 / 26.2 三平台同步恢复（forge_26_1_2 实验模块一并同步）。
 - **`/csbox nbt hand` 命令**：打印主手物品的序列化 JSON（新增 `BoxItemCodec` 统一物品序列化，`tag` 字符串与 `components` 元数据均解析为扁平 key-value），超过 20000 字符截断提示；`/csbox` 裸命令与 `help` 子命令现执行 2 级权限检查
 - **forge_26_1_2 只读实验模块**：`port-forge-2612.py` 已同步携带新文件与命令改动（编译验证失败系该模块 ForgeGradle 插件解析的既有环境问题，见 AGENTS.md）
+- **AnimRenderOps 渲染门面（三平台渲染收口重构）**：每平台一份 `utils/AnimRenderOps.java` 作为**唯一渲染原语适配点**（文件头 `// era: legacy|decoupled` 标注时代，26.x 同代整文件镜像），6 屏（CsboxScreen / CsboxProgressScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen / CsboxLookItemScreen / CsboxConfirmScreen）+ 3 助手（IconListTools / GuiItemMove / ButtonPalette）的全部原始 draw 调用（`blitTextured` / `fill` / `fillGradient` / `scissor` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D`，共 13 个公开 op）收口到门面，全仓零原始 draw 调用残留（grep 审计）。关键点：legacy 门面内部强制 SRC_ALPHA blend、decoupled 走 RenderPipelines（自带 blend 状态，`setBlendNormal`/`flush` 空操作）；26.x `renderItem2D` per-item bounding box 居中、`renderItem3D` PIP 路径的 radians→degrees 转换内聚于门面；新增 UV+tint 雪碧图变体（CsLookItemScreen 工具栏，legacy 经 `RenderSystem.setShaderColor`、decoupled 传 blit 末参 tint）。同步清除 3 屏的帧首三连（`setShaderColor(1,1,1,1)`+`enableBlend`+`defaultBlendFunc`），1.21.1 残留 RenderSystem 仅深度开关与工具栏 tint 循环（有意保留）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（3 平台全 OK，CI `common-test` job 已接线），三平台 clean 编译验证通过。
+- **终端机物品 `terminal`**：GLB 造型 3D 体素模型（2.5D 等距观感）+ 原创 4 面 PBR 贴图 + 创造标签注册
+- **`BoxJsonLoader` 解析缓存**：JSON 按 SHA-256 内容指纹缓存解析结果，未变更文件跳过重复解析（`reload` / 首次启动多平台共享加载场景收益）；教程下载改后台线程执行，不再阻塞启动主线程
+- **`/csbox` 命令收口**：`set` 调试子命令退役，`errors` / `tutorial` 并入 `info` / `reload`，帮助文本重写
+
+### 更改
+- **armory_point 贴图替换为原创金色硬币造型**（原素材存在版权风险，随 1.0.6 发布后玩家端自动生效）
+- **开箱音效重编码**（`cs_open` / `cs_dita` / `cs_finish` 体积大幅缩减，文件更小、加载更快；音质待人工听感回归验证，验证记录见 docs/RUNTIME-UI-TESTING.md）
 
 ## [归档] - 2026-08-09
 ### 平台归档（EOL）
