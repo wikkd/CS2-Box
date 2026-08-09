@@ -156,3 +156,10 @@ __pycache__/
 
 # TACZ compileOnly jar (~57MB), downloaded on demand by scripts/download-tacz.sh
 /local-repo/com/tacz/
+
+# Local tool state (never commit)
+.reasonix/
+.scratch/
+.workbuddy/
+shots/
+okr-radar.html
