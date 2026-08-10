@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -61,6 +62,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Mod(CsgoBox.MODID)
 public class CsgoBox {
+
+    /** Items statically registered in {@code ModItems}; never re-added from config JSON. */
+    private static final Set<String> STATIC_ITEM_IDS = Set.of(
+            "csgo_box", "csgo_key0", "csgo_key1", "csgo_key2", "csgo_key3",
+            "armory_point", "terminal", "premium_supply_box");
 
     public static final String MODID = "csgobox";
     /**
@@ -227,6 +233,14 @@ public class CsgoBox {
                 }
                 String idStr = filename.substring(0, filename.length() - 5);
                 if (idStr.isEmpty()) {
+                    continue;
+                }
+                // Statically-registered items (ModItems) must not be re-added
+                // from config/csbox/*.json — the terminal's default JSON
+                // (writeDefaultTerminalIfMissing) would otherwise collide with
+                // ItemTerminal and crash bootstrap with a duplicate key.
+                if (STATIC_ITEM_IDS.contains(idStr)) {
+                    skipped++;
                     continue;
                 }
                 Identifier itemId;
