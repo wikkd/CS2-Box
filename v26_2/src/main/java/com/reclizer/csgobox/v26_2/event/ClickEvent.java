@@ -41,7 +41,7 @@ public final class ClickEvent {
         if (heldItem.getItem() instanceof ItemTerminal) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.execute(() -> mc.setScreenAndShow(new TerminalScreen()));
+                mc.execute(() -> mc.setScreenAndShow(new TerminalScreen(heldItem.copy())));
             }
             return;
         }
