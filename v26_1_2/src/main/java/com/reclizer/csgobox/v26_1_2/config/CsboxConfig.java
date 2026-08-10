@@ -19,6 +19,7 @@ public class CsboxConfig {
     private final ModConfigSpec.IntValue globalDropRatePercentValue;
     private final ModConfigSpec.EnumValue<ErrorChatAudience> jsonErrorAudienceValue;
     private final ModConfigSpec.BooleanValue damageItemByWearValue;
+    private final ModConfigSpec.EnumValue<BackgroundStyle> backgroundStyleValue;
 
     public CsboxConfig(ModConfigSpec.Builder builder) {
         builder.comment("General settings").push("general");
@@ -76,6 +77,12 @@ public class CsboxConfig {
         this.showItemNamesValue = builder
                 .comment("Show item names in box preview screen")
                 .define("showItemNames", true);
+        builder.pop();
+
+        builder.comment("UI settings").push("ui");
+        this.backgroundStyleValue = builder
+                .comment("Screen background style: TRANSLUCENT = blurred world shows through (default), OPAQUE = solid dark panels")
+                .defineEnum("backgroundStyle", BackgroundStyle.TRANSLUCENT);
         builder.pop();
     }
 
@@ -139,6 +146,10 @@ public class CsboxConfig {
         return damageItemByWearValue.get();
     }
 
+    public BackgroundStyle backgroundStyle() {
+        return backgroundStyleValue.get();
+    }
+
     public enum AnimationSpeed {
         SLOW,
         NORMAL,
@@ -148,5 +159,10 @@ public class CsboxConfig {
     public enum ErrorChatAudience {
         OP_ONLY,
         EVERYONE
+    }
+
+    public enum BackgroundStyle {
+        OPAQUE,
+        TRANSLUCENT
     }
 }

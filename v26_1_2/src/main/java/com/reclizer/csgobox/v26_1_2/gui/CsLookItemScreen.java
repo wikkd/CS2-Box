@@ -6,7 +6,6 @@ import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
-import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -193,8 +192,8 @@ public class CsLookItemScreen extends Screen {
 
     private void renderLookBackground(GuiGraphicsExtractor guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
         }
     }
 

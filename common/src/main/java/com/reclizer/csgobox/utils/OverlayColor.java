@@ -29,6 +29,12 @@ public final class OverlayColor {
         return 0xFF2a2a33;
     }
 
+    /** Translucent screen backdrop (theme gray @ alpha 140/255) — lets the
+     *  blurred world behind the screen show through (Blur-mod compatible). */
+    public static int getBackgroundTranslucent() {
+        return ColorTools.withAlpha(getBackgroundColor(), 0x8C);
+    }
+
     /** Container panel (preview area, item grid, button well). */
     public static int panel() {
         return 0xFF33333d;

@@ -131,8 +131,8 @@ public class CsboxBulkOverviewScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
         }
         render3DBox(guiGraphics, mouseX, mouseY);
         renderLabels(guiGraphics);

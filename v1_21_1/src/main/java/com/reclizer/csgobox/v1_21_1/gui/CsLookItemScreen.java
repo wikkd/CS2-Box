@@ -7,7 +7,6 @@ import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
-import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -165,8 +164,8 @@ public class CsLookItemScreen extends Screen {
 
     private void renderLookBackground(GuiGraphics guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
         }
     }
 

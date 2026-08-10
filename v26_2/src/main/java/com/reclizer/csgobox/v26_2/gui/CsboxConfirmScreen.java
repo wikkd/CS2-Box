@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.v26_2.gui;
 
 import com.reclizer.csgobox.v26_2.CsgoBox;
-import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -66,8 +65,8 @@ public class CsboxConfirmScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
         }
         renderLabels(guiGraphics);
         renderButtons(guiGraphics, mouseX, mouseY);
