@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -35,7 +36,21 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
-                entries.accept(ModItems.ITEM_TERMINAL.get());
+
+                // Terminal creative entry is bound to its own decoupled box
+                // definition (csgobox:terminal) so the terminal UI shows its
+                // own loot list; if that config is missing it falls back to
+                // the first registered box, and on a pure client with an
+                // empty local BoxRegistry it degrades to an unbound terminal.
+                ItemStack terminalStack = new ItemStack(ModItems.ITEM_TERMINAL.get());
+                BoxDefinition terminalDef = BoxRegistry.get(Identifier.parse("csgobox:terminal"));
+                if (terminalDef == null) {
+                    terminalDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
+                }
+                if (terminalDef != null) {
+                    terminalStack.set(ItemCsgoBox.BOX_ID.get(), terminalDef.id());
+                }
+                entries.accept(terminalStack);
 
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
@@ -53,7 +68,7 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.registerItem("csgo_key2", ItemCsgoKey::new, p -> p);
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.registerItem("csgo_key3", ItemCsgoKey::new, p -> p);
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.registerItem("armory_point", p -> new Item(p.rarity(Rarity.COMMON)), p -> p);
-    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.registerItem("terminal", p -> new Item(p.rarity(Rarity.COMMON)), p -> p);
+    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.registerItem("terminal", ItemTerminal::new, p -> p);
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

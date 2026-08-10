@@ -49,6 +49,69 @@ public final class BoxDefaults {
      */
     private static final Pattern STALE_TUTORIAL = Pattern.compile("^_tutorial_v.*\\.md$");
 
+    /**
+     * Default loot pool written for the terminal machine on first run. The
+     * terminal item resolves to the {@code csgobox:terminal} box definition;
+     * giving that definition its own config (instead of borrowing the first
+     * registered box) decouples the terminal's loot from every other crate.
+     * Uses only vanilla items so the pool always resolves, weighted toward
+     * higher tiers so the terminal feels like a premium dispenser.
+     */
+    private static final String TERMINAL_DEFAULT_JSON = """
+            {
+              "name": "#00E5FF CS2 终端机",
+              "key": "csgobox:csgo_key0",
+              "type": "terminal",
+              "drop": 1.0,
+              "random": [20, 40, 80, 160, 300],
+              "grade5": [
+                {"id": "minecraft:netherite_sword"},
+                {"id": "minecraft:netherite_axe"},
+                {"id": "minecraft:netherite_pickaxe"},
+                {"id": "minecraft:netherite_helmet"},
+                {"id": "minecraft:netherite_chestplate"},
+                {"id": "minecraft:netherite_leggings"},
+                {"id": "minecraft:netherite_boots"}
+              ],
+              "grade4": [
+                {"id": "minecraft:diamond_sword"},
+                {"id": "minecraft:diamond_axe"},
+                {"id": "minecraft:diamond_pickaxe"},
+                {"id": "minecraft:diamond_helmet"},
+                {"id": "minecraft:diamond_chestplate"},
+                {"id": "minecraft:diamond_leggings"},
+                {"id": "minecraft:diamond_boots"}
+              ],
+              "grade3": [
+                {"id": "minecraft:golden_sword"},
+                {"id": "minecraft:golden_axe"},
+                {"id": "minecraft:golden_pickaxe"},
+                {"id": "minecraft:golden_helmet"},
+                {"id": "minecraft:golden_chestplate"},
+                {"id": "minecraft:golden_leggings"},
+                {"id": "minecraft:golden_boots"},
+                {"id": "minecraft:totem_of_undying"}
+              ],
+              "grade2": [
+                {"id": "minecraft:iron_sword"},
+                {"id": "minecraft:iron_axe"},
+                {"id": "minecraft:iron_pickaxe"},
+                {"id": "minecraft:iron_helmet"},
+                {"id": "minecraft:iron_chestplate"},
+                {"id": "minecraft:iron_leggings"},
+                {"id": "minecraft:iron_boots"},
+                {"id": "minecraft:crossbow"}
+              ],
+              "grade1": [
+                {"id": "minecraft:leather_helmet"},
+                {"id": "minecraft:leather_chestplate"},
+                {"id": "minecraft:leather_leggings"},
+                {"id": "minecraft:leather_boots"},
+                {"id": "minecraft:bow"}
+              ]
+            }
+            """;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(BoxDefaults.class);
 
     private BoxDefaults() {
@@ -115,6 +178,25 @@ public final class BoxDefaults {
             }
         } catch (Exception e) {
             LOGGER.warn("Tutorial setup skipped due to unexpected error: {}",
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * Writes a default {@code terminal.json} into the boxes directory when
+     * none exists yet, so the terminal machine has its own decoupled loot
+     * out of the box. A user-authored terminal config is never overwritten.
+     */
+    public static void writeDefaultTerminalIfMissing(Path boxesDir) {
+        try {
+            Path file = boxesDir.resolve("terminal.json");
+            if (Files.exists(file)) {
+                return;
+            }
+            Files.writeString(file, TERMINAL_DEFAULT_JSON);
+            LOGGER.info("Wrote default terminal box config: {}", file);
+        } catch (Exception e) {
+            LOGGER.warn("Default terminal config skipped due to error: {}",
                     e.getMessage());
         }
     }

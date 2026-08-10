@@ -39,6 +39,7 @@ public final class BoxJsonSchemaValidator {
         validateGrades(json, issues);
         validateEntity(json, issues);
         validateNameColorPrefix(json, issues);
+        validateType(json, issues);
         return issues;
     }
 
@@ -116,6 +117,21 @@ public final class BoxJsonSchemaValidator {
         if (raw.length() == 7 || raw.charAt(7) != ' ') {
             issues.add(new SchemaIssue("name",
                     "Color prefix '#" + tail + "' must be followed by a single ASCII space"));
+        }
+    }
+
+    private static void validateType(JsonObject json, List<SchemaIssue> issues) {
+        if (!json.has("type")) return;
+        JsonElement elem = json.get("type");
+        if (!elem.isJsonPrimitive() || !elem.getAsJsonPrimitive().isString()) {
+            issues.add(new SchemaIssue("type",
+                    "Expected string 'csbox' or 'terminal', got " + typeOf(elem)));
+            return;
+        }
+        String type = elem.getAsString();
+        if (!type.equals("csbox") && !type.equals("terminal")) {
+            issues.add(new SchemaIssue("type",
+                    "Unknown box type '" + type + "'; expected 'csbox' or 'terminal'"));
         }
     }
 

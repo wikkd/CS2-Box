@@ -3,7 +3,9 @@ package com.reclizer.csgobox.v1_21_1.event;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxScreen;
+import com.reclizer.csgobox.v1_21_1.gui.TerminalScreen;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
@@ -33,6 +35,16 @@ public final class ClickEvent {
         }
 
         ItemStack heldItem = player.getMainHandItem();
+
+        // Terminal branch first: ItemTerminal extends ItemCsgoBox, so it must
+        // be matched before the generic box branch. No sound yet by design.
+        if (heldItem.getItem() instanceof ItemTerminal) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                mc.execute(() -> mc.setScreen(new TerminalScreen()));
+            }
+            return;
+        }
 
         if (heldItem.getItem() instanceof ItemCsgoBox) {
 
