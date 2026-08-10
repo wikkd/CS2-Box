@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 public final class TerminalBottomRow {
 
     public static final ResourceLocation TEX_CIRCLE_GLOW = ResourceLocation.fromNamespaceAndPath("csgobox", "gui/terminal/terminal_circle_glow");
+    public static final ResourceLocation TEX_BADGE = ResourceLocation.fromNamespaceAndPath("csgobox", "gui/terminal/terminal_badge");
 
     /** 10 random items cycled by region 10 (HTML MC_ITEMS). */
     private static final ItemStack[] MC_ITEMS = {
@@ -52,7 +53,6 @@ public final class TerminalBottomRow {
         int midY = (y0 + y1) >> 1;
 
         // ---- region 9: countdown ----
-        int cw = Math.round((x1 - x0) * 0.20F);
         int cx0 = x0 + (int) ((x1 - x0) * 0.035F);
         RenderFontTool.drawSpacedText(gg, font,
                 Component.translatable("csgobox.terminal.validity").getString(),
@@ -66,9 +66,17 @@ public final class TerminalBottomRow {
         float flip = TerminalAnims.counterFlip(nowMs, countdownFlipAtMs);
         float slide = (1F - flip) * 8F;
         int color = expired ? TerminalPalette.COUNT_EXPIRED : TerminalPalette.WHITE;
-        int digitsW = Math.round(font.width(text) * 2.625F) + 1 * (text.length() - 1);
-        RenderFontTool.drawSpacedText(gg, font, text,
-                cx0 + 2 + (cw - digitsW) / 2F, midY - 8 + slide, 0.5F, 2.625F, color);
+        String[] toks = {text.substring(0, 2), text.substring(3, 5), text.substring(6, 8), text.substring(9, 11)};
+        float tx = cx0 + 2;
+        for (int i = 0; i < 4; i++) {
+            RenderFontTool.drawString(gg, font, fcs(toks[i]), tx, midY - 8 + slide, 0, 0, 1.8F, color);
+            tx += font.width(toks[i]) * 1.8F;
+            if (i < 3) {
+                RenderFontTool.drawString(gg, font, fcs(":"), tx + 1, midY - 8 + slide, 0, 0, 1.8F,
+                        TerminalPalette.COUNT_COLON);
+                tx += font.width(":") * 1.8F + 2;
+            }
+        }
 
         // ---- region 10: random item slot (2.5s cycle) ----
         int slotX = x0 + (int) ((x1 - x0) * 0.30F);
@@ -77,17 +85,9 @@ public final class TerminalBottomRow {
         long slotStart = nowMs - (nowMs % TerminalAnims.SLOT_SWAP_MS);
         int idx = TerminalAnims.slotIndex(nowMs, MC_ITEMS.length);
         float pop = TerminalAnims.swapPop(nowMs, slotStart);
-        // badge glow + ring
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, slotX - slotW / 2, slotCy - slotW / 2,
-                slotW, slotW, 128, 128);
-        AnimRenderOps.fill(gg, slotX - slotW / 2, slotCy - slotW / 2,
-                slotX - slotW / 2 + slotW, slotCy - slotW / 2 + 1, 0xFF39444C);
-        AnimRenderOps.fill(gg, slotX - slotW / 2, slotCy + slotW / 2 - 1,
-                slotX + slotW / 2, slotCy + slotW / 2, 0xFF39444C);
-        AnimRenderOps.fill(gg, slotX - slotW / 2, slotCy - slotW / 2,
-                slotX - slotW / 2 + 1, slotCy + slotW / 2, 0xFF39444C);
-        AnimRenderOps.fill(gg, slotX + slotW / 2 - 1, slotCy - slotW / 2,
-                slotX + slotW / 2, slotCy + slotW / 2, 0xFF39444C);
+        // circular badge
+        AnimRenderOps.blitTextured(gg, TEX_BADGE, slotX - slotW / 2, slotCy - slotW / 2,
+                slotW, slotW, 72, 72);
         float scale = slotW / 2.2F * (0.55F + 0.45F * pop);
         AnimRenderOps.renderItem2D(player, gg, MC_ITEMS[idx],
                 slotX, slotCy, Math.max(1F, scale / 16F));
@@ -97,8 +97,10 @@ public final class TerminalBottomRow {
         RenderFontTool.drawSpacedText(gg, font,
                 Component.translatable("csgobox.terminal.collection").getString(),
                 xpX, y0 + 4, 2F, 1.5F, TerminalPalette.TITLE);
+        String xpName = Component.translatable("csgobox.terminal.name").getString();
+        RenderFontTool.drawString(gg, font, fcs(xpName), xpX, midY - 4, 0, 0, 1.2F, TerminalPalette.TEXT);
         int dotY = midY - 4;
-        int dotX = xpX;
+        int dotX = xpX + Math.round(font.width(xpName) * 1.2F) + 16;
         for (NegotiationModel.DotGroup g : NegotiationModel.DOT_GROUPS) {
             for (int v : g.pattern) {
                 drawDot(gg, dotX, dotY, v == 1, g.color);

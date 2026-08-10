@@ -246,6 +246,20 @@ def make_dot_tile():
     write_png(os.path.join(OUT, "terminal_dot_tile.png"), 512, 512, pixel)
 
 
+def make_badge():
+    # 72x72 米色径向徽章（HTML .slot-badge）：#f0ece1 → #cfc8b8 70% → #b3ac9b + 2px 内暗环
+    def pixel(x, y):
+        d = math.sqrt((x - 35.5) ** 2 + (y - 35.5) ** 2)
+        if d > 36:
+            return (0, 0, 0, 0)
+        t = d / 36.0
+        r, g, b = color_lerp(0xF0ECE1, 0xB3AC9B, t ** 0.9)
+        if 34 <= d <= 36:  # inset ring #0004
+            r, g, b = (round(r * 0.75), round(g * 0.75), round(b * 0.75))
+        return (r, g, b, 255)
+    write_png(os.path.join(OUT, "terminal_badge.png"), 72, 72, pixel)
+
+
 def make_scan_band():
     # 8x24 vertical light band: horizontal transparent->white->transparent.
     # Approximate cosine falloff; low-alpha so the exact curve is visually
@@ -323,6 +337,7 @@ def main():
     make_dot_tile()
     make_scan_band()
     make_circle_glow()
+    make_badge()
     make_avatar()
     for name, path_d, c1, c2 in WEAPON_DEFS:
         make_weapon(name, path_d, c1, c2)
