@@ -48,6 +48,14 @@
 | `animationSpeedMultiplier` | 整数 | `1` | 1-10 | 动画速度倍数(值越大越快) |
 | `showItemNames` | 布尔 | `true` | — | 在宝箱预览界面显示物品名称 |
 
+### 2.5 `[ui]` UI 设置
+
+| 配置项 | 类型 | 默认值 | 范围 | 说明 |
+|---|---|---|---|---|
+| `backgroundStyle` | 枚举 | `TRANSLUCENT` | `OPAQUE` / `TRANSLUCENT` | 屏幕背景样式：`TRANSLUCENT`（默认）= 半透明主题灰（alpha 140），模糊的世界透过背景显示（原生模糊或 Blur 模组的动画模糊）；`OPAQUE` = 实心深色面板（旧观感） |
+
+> 说明：该选项为软适配——未安装 Blur 模组（`blur`）时半透明背景遵循原版 `menuBackgroundBlurriness` 模糊选项（设为 0 则无模糊）；安装 Blur 后自动获得其淡入动画与可配置模糊半径/渐变。进度屏（开箱动画）始终为半透明背景，不受此开关影响。
+
 ## 3. 宝箱数据配置(JSON schema)
 
 可通过 `config/csbox/` 目录下的 JSON 文件定义自定义宝箱。**文件名(不含 `.json`)即为箱子 ID**。
@@ -57,6 +65,7 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `name` | 字符串 | 是 | 宝箱在界面显示的名称 |
+| `type` | 字符串 | 否 | 箱子类型:`csbox`(默认,普通宝箱)/ `terminal`(终端机,独立 loot 池) |
 | `key` | 字符串 | 是 | 所需钥匙物品 ID;`minecraft:air` 表示不需要钥匙 |
 | `drop` | 浮点数 | 否 | 默认实体掉落概率(0.0 到 1.0) |
 | `random` | 浮点数组[5] | 否 | 5 个等级权重(grade1 到 grade5 顺序) |
@@ -82,7 +91,12 @@
 
 ### 3.3 默认文件生成
 
-首次启动时若 `config/csbox/` 为空,`BoxJsonLoader.loadAll()` 会自动写入 `weapon_supply_box.json`,含 `_tutorial` 字段(loadder 忽略,纯文档)。
+首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
+
+- 写入 `terminal.json`（类型 `terminal`，独立 loot 池）—— 终端机开箱即有专属掉落，不再借用其他箱子；已有用户配置则跳过。
+- 异步下载 `_tutorial_v<版本>.md` 教程文档（联网时）。
+
+**普通箱子没有内置默认配置**：`weapon_supply_box.json` 等文件需要由玩家/服主自行创建，或从教程文档中复制示例。
 
 ### 3.4 五个等级命名
 

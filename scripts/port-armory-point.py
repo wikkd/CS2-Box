@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
-"""定点合入 armory_point 注册到 8 个非基准平台（幂等，精确匹配，匹配失败即报错退出）。"""
+"""定点合入 armory_point 注册到非基准平台（幂等，精确匹配，匹配失败即报错退出）。
+
+EOL 平台（v1_21_0/3/4/5/8/10/11）已于 2026-08-09 归档，仅剩 v26_2。
+"""
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
 REGISTER_LINES = {
-    # legacy classic Supplier 模式（同 v1_21_1）
-    "v1_21_0": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));',
-    # 1.21.3+ setId 模式
-    "v1_21_3": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));',
-    "v1_21_4": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));',
-    "v1_21_5": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));',
-    "v1_21_8": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));',
-    "v1_21_10": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", id -> new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id)).rarity(Rarity.COMMON)));',
     # registerItem 模式（同 v26_1_2）
-    "v1_21_11": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.registerItem("armory_point", p -> new Item(p.rarity(Rarity.COMMON)), p -> p);',
     "v26_2": '    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.registerItem("armory_point", p -> new Item(p.rarity(Rarity.COMMON)), p -> p);',
 }
 

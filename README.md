@@ -1,23 +1,22 @@
-<!-- generated-by: gsd-doc-writer -->
 # CS2-Box
 
 > CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.1 和 MC 26.x 共 3 个平台。
 
-CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开预览,放入钥匙点开启按钮,服务端授权 RNG 决定结果,客户端播放滚动动画,揭晓稀有度分级物品。当前版本 `1.0.6`,仓库 License MIT(`LICENSE`)。
+CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打开预览，放入钥匙点开启按钮，服务端授权 RNG 决定结果，客户端播放滚动动画，揭晓稀有度分级物品。当前版本 `1.0.6`，仓库 License MIT（`LICENSE`）。
 
 ## 核心特性
 
-- **5 档稀有度分级**:consumer / industrial / mil_spec / restricted / classified,每档独立权重
-- **服务端授权 RNG**:服务端在 `PacketCsgoProgress` 内计算中奖索引与物品,客户端只渲染动画
-- **JSON 配置箱数据**:`config/csbox/*.json` 文件即可新增箱子类型,无需重新编译
-- **Minecraft 1.21+ components 支持**:用 `components` 字段(同时兼容旧版 `tag` 字符串)
-- **成就系统**:`全新的开始`(首次主动开箱)+ 隐藏紫色挑战 `导购`(累计主动开 200 个箱)
-- **4 把钥匙梯度**:铁 / 金 / 钻石 / 下界合金(下界合金**仅**通过锻造台升级 `csgo_key2` 获得)
-- **`/csbox` 命令**:`/csbox list`、`/csbox give`、`/csbox reload`、`/csbox nbt hand` 等子命令
+- **5 档稀有度分级**：consumer / industrial / mil_spec / restricted / classified，每档独立权重
+- **服务端授权 RNG**：服务端在 `PacketCsgoProgress` 内计算中奖索引与物品，客户端只渲染动画
+- **JSON 配置箱数据**：`config/csbox/*.json` 文件即可新增箱子类型，无需重新编译
+- **Minecraft 1.21+ components 支持**：用 `components` 字段（同时兼容旧版 `tag` 字符串）
+- **成就系统**：`全新的开始`（首次主动开箱）+ 隐藏紫色挑战 `导购`（累计主动开 200 个箱）
+- **4 把钥匙梯度**：铁 / 金 / 钻石 / 下界合金（下界合金**仅**通过锻造台升级 `csgo_key2` 获得）
+- **`/csbox` 命令**：`/csbox info`、`/csbox reload`、`/csbox nbt hand` 等子命令
 
 ## 双平台支持
 
-仓库是 multiloader 结构,通过 `gradle.properties` 中的 `active_versions` 切换当前构建版本:
+仓库是 multiloader 结构，通过 `gradle.properties` 中的 `active_versions` 切换当前构建版本：
 
 | 模块 | Minecraft | NeoForge | Java | 角色 |
 |---|---|---|---|---|
@@ -28,52 +27,139 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft:玩家手持箱子右键打开
 
 > **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库，最后状态保留在 tag `eol-legacy-21x-1.0.6`；旧版本玩家仍可下载既有发布产物。
 
-`common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享(v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`)。
+`common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享（v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`）。
 
-## 构建要求
+## 安装
 
-- **Java 21**(v1_21_1)+ **Java 25**(v26_1_2,需 `--enable-preview`)
-- **Gradle** 通过 wrapper 自动管理(8.11 / 8.14)
-- **NeoForge** 21.1.115 或 26.1.2.94(根据 `active_versions` 决定)
-- 互联网连接(首次构建需下载 NeoForged userdev 与依赖)
+### 玩家安装（使用发布版）
 
-验证 Java:
+1. 确认已安装对应 Minecraft 版本的 **NeoForge** 加载器：
+   - MC 1.21.1 → NeoForge **21.1.115+**
+   - MC 26.1.2 → NeoForge **26.1.2.94**（loader 11+）
+   - MC 26.2 → NeoForge **26.2.0.7-beta**
+2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：`csgobox-<mc>-1.0.6.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
+3. 将 jar 放入 Minecraft 客户端的 `mods/` 文件夹。
+4. 启动游戏，世界内用 `/give @p csgobox:csgo_box` 获取箱子即可开箱。
+
+> 三个平台共享同一 `mod_version`，jar 命名规则为 `csgobox-<mc>-<mod_version>.jar`。已归档（EOL）的 1.21.0/3/4/5/8/10/11 旧版玩家可继续使用既有发布产物。
+
+### 开发者构建（从源码）
+
+**前置要求**
+
+| 要求 | v1_21_1 | v26_1_2 / v26_2 |
+|---|---|---|
+| Java JDK | 21 | 25（`--enable-preview`） |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 |
+| NeoForge | 21.1.115+ | 26.1.2.94 / 26.2.0.7-beta（loader 11+） |
+| Gradle | 9.5.1（wrapper 自动下载，无需手动安装） | 同左 |
+| NeoGradle | 7.1.38 | 同左 |
+
+> 互联网连接：首次构建需下载 NeoForged userdev 与依赖。
+
+**构建步骤**
 
 ```bash
-java -version  # v1_21_1 需 ≥ 21,v26_1_2 需 ≥ 25
-```
-
-## 快速开始
-
-```bash
-# 1. 克隆并配置活动版本(默认 26.1.2)
+# 1. 克隆仓库
 git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 
-# 2. 完整构建
-./gradlew build
+# 2. 选择活动版本（默认 26.1.2）：编辑 gradle.properties
+#    active_versions=26.1.2   # 可选值：1.21.1 / 26.1.2 / 26.2
 
-# 3. 启动开发客户端
-./gradlew :v26_1_2:runClient   # 或 :v1_21_1:runClient / :v26_2:runClient
+# 3. 构建当前平台的 jar
+./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-1.0.6.jar
+
+# 4. 启动开发客户端（自动下载并注入 NeoForge 到 run/ 目录）
+./gradlew :v26_1_2:runClient
 ```
 
-启动后:
+验证 Java 版本：
 
 ```bash
-/csbox give @p csgobox:csgo_box 1
-/csbox give @p csgobox:csgo_key0 3
+java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 ```
 
-手持 `csgo_box` 右键打开预览界面,放入对应钥匙,点开启按钮开始动画。
+> 由于 NeoGradle userdev 限制，**每次 Gradle 调用只能构建一个 MC 版本**（历史限制，见 `settings.gradle`）。需要三平台产物时逐个切换 `active_versions`（或用 `-Pactive_versions=<v>` 覆盖）串行构建，详见 [docs/RELEASE.md](./docs/RELEASE.md)。
 
-完整步骤见 [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md)。
+**v1_21_1 的 TACZ 依赖**（永恒枪械工坊检视视口集成）：jar 不入库（仓库惯例 `*.jar` 全局忽略），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/`（CI 自动执行），并从 jarjar 提取编译所需的 `simplebedrockmodel`。无 TACZ 环境时相关功能**自动降级**，不影响编译与运行。
+
+## 使用示例
+
+### 获取物品
+
+本模组使用**原版 `/give`** 发放物品（没有 `/csbox give` 子命令）：
+
+```bash
+/give @p csgobox:csgo_box          # 武器供应箱
+/give @p csgobox:csgo_key0 3       # 铁钥匙 ×3
+/give @p csgobox:csgo_key1         # 金钥匙
+/give @p csgobox:csgo_key2         # 钻石钥匙
+# 下界合金钥匙 csgo_key3 只能通过锻造台升级 csgo_key2 获得（smithing_transform）
+```
+
+钥匙梯度：铁（key0）→ 金（key1）→ 钻石（key2）→ 下界合金（key3，锻造台 `smithing_transform`）。
+
+### 开箱流程
+
+1. 手持箱子 **右键** 打开预览界面（2 行 × 10 列物品网格）。
+2. 将对应钥匙放入钥匙槽，点击 **开启** 按钮。
+3. 服务端权威 RNG 决定结果 → 客户端播放滚动动画 → 揭晓稀有度分级物品。
+4. **批量开箱**：手持箱子 **Shift+右键** 进入批量开箱确认屏，设定数量后流水揭晓（1.0.6 已临时屏蔽，计划 1.0.7 恢复）。
+
+### `/csbox` 命令参考
+
+| 命令 | 权限 | 说明 |
+|---|---|---|
+| `/csbox` | OP（权限等级 2） | 显示帮助 |
+| `/csbox info [<箱子ID>]` | OP | 列出所有箱子与加载错误；加 `<箱子ID>` 查看该箱权重、掉落实体、各档物品等详情 |
+| `/csbox reload` | OP | 重新加载 `config/csbox/*.json` 箱子定义 |
+| `/csbox reload tutorial` | OP | 重载箱子定义，并强制刷新教程文档 |
+| `/csbox nbt hand` | 任意玩家 | 打印主手物品序列化后的 JSON（可直接粘贴进箱子 `items`） |
+
+示例：
+
+```bash
+/csbox info csgobox:weapon_supply_box
+/csbox reload
+/csbox nbt hand
+```
+
+### 配置一个自定义箱子
+
+箱子数据放在 `config/csbox/<箱子ID>.json`，**文件名即箱子 ID**。下面是最简示例（完整字段与 `_tutorial` 注释见 `common/src/main/resources/data/csgobox/` 下的示例，以及 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)）：
+
+```json
+{
+  "name": "我的箱子",
+  "type": "csbox",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [625, 125, 25, 5, 2],
+  "entity": ["minecraft:zombie", 1, "minecraft:skeleton", 1],
+  "grade1": [
+    { "id": "minecraft:iron_ingot", "count": 1 }
+  ],
+  "grade5": [
+    { "id": "minecraft:netherite_ingot", "count": 1,
+      "components": { "minecraft:custom_name": "{\"text\":\"欧皇专属\",\"italic\":false}" } }
+  ]
+}
+```
+
+- `type` 为箱子类型：`csbox`（普通宝箱，默认）/ `terminal`（终端机，拥有独立 loot 池）。
+- `random` 为 5 档权重（grade1→grade5，越高越稀有）；`grade1`~`grade5` 各为一个物品数组，每档按 `random` 对应权重抽取。
+- `components` 使用 MC 1.21+ DataComponent 语法（同时兼容旧版 `tag` 字符串）。
+- `entity` 为「实体 ID + 掉落率」成对列表，全局 `drop` 为默认掉落率。
+
+> 修改 JSON 后**重启游戏/服务端**生效（`BoxJsonLoader` 仅在 `ServerStartingEvent` 加载一次）；可用 `/csbox nbt hand` 把手中物品导成 JSON 片段直接复用。
 
 ## 配置
 
-- `config/csgobox.toml`:TOML 配置(动画速度、稀有度权重、音量、调试开关等)—— 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
-- `config/csbox/*.json`:箱子数据文件,文件名即箱子 ID —— schema 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
-- **不使用 Cloth Config**(v1.0.5 已完全移除),通过 NeoForge 原生 `ModConfigSpec` 持久化
-- **资源路径必须单数** `data/csgobox/recipe/`(Minecraft `RecipeManager` 的 `Registries.elementsDirPath(Registries.RECIPE)` 要求)
+- `config/csgobox.toml`：TOML 配置（动画速度、稀有度权重、音量、调试开关等）—— 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
+- `config/csbox/*.json`：箱子数据文件，文件名即箱子 ID —— schema 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
+- **不使用 Cloth Config**（v1.0.5 已完全移除），通过 NeoForge 原生 `ModConfigSpec` 持久化
+- **资源路径必须单数** `data/csgobox/recipe/`（Minecraft `RecipeManager` 的 `Registries.elementsDirPath(Registries.RECIPE)` 要求）
 
 ## 文档导航
 
@@ -85,9 +171,43 @@ cd CS2-Box
 - [docs/TESTING.md](./docs/TESTING.md) — NeoForge GameTest 测试指南
 - [CHANGELOG.md](./CHANGELOG.md) — 各版本发布记录
 
-## 贡献
+## 贡献指南
 
-Bug 报告与功能请求通过 GitHub Issues。代码贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+欢迎通过 Issue 与 PR 参与贡献，完整流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
+### 开发环境
+
+- JDK 21（v1_21_1）/ JDK 25（v26_1_2、v26_2，需 `--enable-preview`）
+- Gradle（wrapper 自带 9.5.1，无需手动安装）
+- 编辑 `gradle.properties` 的 `active_versions` 切换构建目标
+
+### 分支与提交约定
+
+- 长期分支：`main`（稳定）、`multiloader-refactor`（多加载器迁移，当前活跃）
+- 功能分支命名：`feat/描述`、`fix/描述`、`docs/描述`、`refactor/描述`
+- 提交信息推荐 [Conventional Commits](https://www.conventionalcommits.org/)：`feat:` / `fix:` / `docs:` / `refactor:`
+
+### PR 流程
+
+1. 从目标分支（通常是 `main`）切出功能分支。
+2. 改动涉及的模块运行 `./gradlew :<module>:build` 确保编译通过。
+3. 用 `./gradlew :<module>:runClient` 在游戏内手动验证。
+4. 若改动 `common/`，**必须三平台都验证**（默认 `active_versions` 只构建一个，增量缓存可能造假象，必要时 `clean` 编译确认）。
+5. 同步更新文档（`docs/*.md`、`README.md`）与 `CHANGELOG.md`。
+6. 提交 PR，附改动说明、测试方式、影响的 MC 版本。
+
+### 关键约束（务必遵守）
+
+- **`common/` 不得 `import net.minecraft.*` 或 `import net.neoforged.*`** —— 版本敏感代码留在平台模块。该约束由 `:common:checkCommonArchitecture` Gradle task 自动挂载在编译上。
+- 跨平台改动先落 `v1_21_1`（旧 API），再手工适配到 `v26_1_2` / `v26_2`（decoupled 渲染 API + PIP 3D），**禁止用 `v26_1_2` 整文件覆盖 `v26_2`**（会破坏 26.2 适配）。
+- 新增 `AnimRenderOps` 渲染原语须**三平台同步补**，否则 `scripts/check-animops-drift.sh` 漂移检查失败（CI 已接线）。
+- `CONFIG` 是 `public static final`，不要写 `null` 守卫。
+- **不使用 Cloth Config**，仅用 `ModConfigSpec`。
+- 升级版本号时四处同步：`gradle.properties` 的 `mod_version` + 各平台 `neoforge.mods.toml`（模板变量自动注入）+ `CHANGELOG.md` + `README.md`；一致性由 `scripts/check-version.sh` 守护。
+
+### 报告问题
+
+在 [GitHub Issues](https://github.com/wikkd/CS2-Box/issues) 提交。报告 bug 请包含：MC 版本、NeoForge 版本、模组版本、重现步骤、预期/实际行为、相关日志（`runs/client/logs/latest.log` 或 `.minecraft/logs/latest.log`）。功能请求请描述使用场景与收益。
 
 ## 许可证
 
@@ -95,19 +215,15 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 
 ## 项目状态
 
-**当前发布版本**: `1.0.6`（维护中 3 平台：v1_21_1 / v26_1_2 / v26_2，共享同一 `mod_version`，jar 名 `csgobox-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
+**当前发布版本**： `1.0.6`（维护中 3 平台：v1_21_1 / v26_1_2 / v26_2，共享同一 `mod_version`，jar 名 `csgobox-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
 
-**Multiloader 重构进度**(详见 `.planning/ROADMAP.md`):
+**Multiloader 重构进度**（详见 `.planning/ROADMAP.md`）：
 
-- ✅ Phase 0-6 done:基线冻结、构建系统、common 边界、v1_21_1 稳定、26.1.2 迁移、26.1.2 日志与 GUI 修复批、26.1.2 审计
-- ✅ 阶段 A done:common/utils/ 首批 2 个真正 A 类(ColorTools / OverlayColor)迁移,v1_21_1 + v26_1_2 + v26_2 三模块共存骨架已搭建
-- ⏳ Phase 7+ 未开始:common 完整业务代码迁移(目前 B 类文件保留平台层重复,见 `.planning/PROJECT.md`)
-- ✅ 1.0.6 落地:容器化布局(P1-1)、per-item 视觉基线(P1-3)、三档设计 token(P2-2)、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展(详见 CHANGELOG.md)
-- ✅ AnimRenderOps 渲染门面:6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`(13 个公开 op,`// era:` 头标注),零原始 draw 调用残留,签名一致性由 `scripts/check-animops-drift.sh` 守护(CI 已接线);三平台 clean 编译 + common 测试通过,运行时回归清单见 docs/RUNTIME-UI-TESTING.md
-- ✅ v26_2 已落地:`neo_version=26.2.0.7-beta`, `neogradle=7.1.38`, `neoform=26.2-1`, `pack_format=81`。`./gradlew :v26_2:compileJava` + `:jar` BUILD SUCCESSFUL(`csgobox-26.2-1.0.6.jar` 428 KB);PIP 3D 旋转已重写适配;运行时回归(开箱/进度/查看动画 + 成就触发)用户在 26.2 客户端验证通过。**HUD 提示**:MC 26.2 移除了 `Options.hideGui` 字段,已修复:通过 `Minecraft.gui.hud.toggle()/isHidden()` 包装为 `HudVisibility` 工具类,开箱动画屏自动隐藏 HUD。
+- ✅ Phase 0-6 done：基线冻结、构建系统、common 边界、v1_21_1 稳定、26.1.2 迁移、26.1.2 日志与 GUI 修复批、26.1.2 审计
+- ✅ 阶段 A done：common/utils/ 首批 2 个真正 A 类（ColorTools / OverlayColor）迁移，v1_21_1 + v26_1_2 + v26_2 三模块共存骨架已搭建
+- ⏳ Phase 7+ 未开始：common 完整业务代码迁移（目前 B 类文件保留平台层重复，见 `.planning/PROJECT.md`）
+- ✅ 1.0.6 落地：容器化布局（P1-1）、per-item 视觉基线（P1-3）、三档设计 token（P2-2）、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展（详见 CHANGELOG.md）
+- ✅ AnimRenderOps 渲染门面：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op，`// era:` 头标注），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护（CI 已接线）；三平台 clean 编译 + common 测试通过，运行时回归清单见 docs/RUNTIME-UI-TESTING.md
+- ✅ v26_2 已落地：`neo_version=26.2.0.7-beta`，`neogradle=7.1.38`，`neoform=26.2-1`，`pack_format=81`。`./gradlew :v26_2:compileJava` + `:jar` BUILD SUCCESSFUL（`csgobox-26.2-1.0.6.jar` 428 KB）；PIP 3D 旋转已重写适配；运行时回归（开箱/进度/查看动画 + 成就触发）用户在 26.2 客户端验证通过。**HUD 提示**：MC 26.2 移除了 `Options.hideGui` 字段，已修复：通过 `Minecraft.gui.hud.toggle()/isHidden()` 包装为 `HudVisibility` 工具类，开箱动画屏自动隐藏 HUD。
 
-**已禁用范围**(显式延期):Cloth Config 回归、Forge 1.20.1 backport、玩家间交易(loot bind-on-open)。
-
----
-
-<!-- VERIFY: Gradle 8.14 for v26_1_2 — value not directly read in repo, sourced from gradle/wrapper/gradle-wrapper.properties -->
+**已禁用范围**（显式延期）：Cloth Config 回归、Forge 1.20.1 backport、玩家间交易（loot bind-on-open）。

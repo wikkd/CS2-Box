@@ -7,8 +7,9 @@
 
 | 平台 | Java | Minecraft | NeoForge | Gradle | NeoGradle |
 |---|---|---|---|---|---|
-| `v1_21_1/` | 21 | 1.21.1 | 21.1.115 | 8.11 | 7.0.171 |
-| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.76 | 8.14 | 7.1.38 |
+| `v1_21_1/` | 21 | 1.21.1 | 21.1.115 | 9.5.1 | 7.1.38 |
+| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.94 | 9.5.1 | 7.1.38 |
+| `v26_2/` | 25 `--enable-preview` | 26.2 | 26.2.0.7-beta | 9.5.1 | 7.1.38 |
 
 Gradle Wrapper 自带,无需系统安装。
 
@@ -39,8 +40,9 @@ active_versions=26.1.2  # 或 1.21.1
 
 构建产物:
 
-- `v1_21_1/build/libs/csbox-1.21.1-1.0.5.jar`
-- `v26_1_2/build/libs/csbox-26.1.2-1.0.5.jar`
+- `v1_21_1/build/libs/csgobox-1.21.1-1.0.6.jar`
+- `v26_1_2/build/libs/csgobox-26.1.2-1.0.6.jar`
+- `v26_2/build/libs/csgobox-26.2-1.0.6.jar`
 
 ### 4. 运行开发客户端
 

@@ -1,0 +1,74 @@
+name: GameTest Integration
+
+# 集成测试门禁：在实际 MC 服务端内跑 GameTest 用例。
+# 注意：项目当前没有 @GameTest 用例源码（只有测试文档），job 内含守卫步骤——
+# 扫描不到用例时跳过运行，避免空跑挂起；后续在 common/ 或平台模块写下
+# @GameTestHolder("csgobox") + @GameTest 用例后，本 job 自动开始执行。
+# 覆盖两个代表平台（legacy 1.21.1 / decoupled 26.1.2），与 docs/RELEASE.md
+# 运行时回归口径一致；需要覆盖 26.2 时在 matrix 增补一行即可。
+
+on:
+  push:
+    branches: [main, multiloader-refactor]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gametest:
+    name: GameTest ${{ matrix.mc }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mc: 1.21.1
+            version_key: 1.21.1
+            module: v1_21_1
+            java: 21
+          - mc: 26.1.2
+            version_key: 26.1.2
+            module: v26_1_2
+            java: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-gametest-${{ matrix.mc }}-${{ hashFiles('**/*.gradle', 'gradle.properties') }}
+          restore-keys: |
+            gradle-gametest-${{ matrix.mc }}-
+            gradle-${{ runner.os }}-${{ matrix.mc }}-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Download TACZ compileOnly jar (v1_21_1 inspect viewport)
+        if: matrix.module == 'v1_21_1'
+        run: scripts/download-tacz.sh
+
+      - name: Check for GameTest sources
+        id: has-gametest
+        run: |
+          if grep -rqE '@GameTest(\(|\b)|@GameTestHolder' --include='*.java' common "${{ matrix.module }}"; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            echo "No @GameTest sources found — skipping (add cases under"
+            echo "common/src/test/java/ or ${{ matrix.module }}/src/test/java/ to enable)."
+          fi
+
+      - name: Run GameTest server (${{ matrix.mc }})
+        if: steps.has-gametest.outputs.has == 'true'
+        run: ./gradlew :${{ matrix.module }}:gameTestServer -Pactive_versions=${{ matrix.version_key }} --console=plain

@@ -24,14 +24,7 @@ OPEN_BTN = (1244, 924)
 CLOSE_BTN = (1516, 924)
 
 PLATFORMS = {
-    "1.21.0": dict(module="v1_21_0", jdk=21),
     "1.21.1": dict(module="v1_21_1", jdk=21),
-    "1.21.3": dict(module="v1_21_3", jdk=21),
-    "1.21.4": dict(module="v1_21_4", jdk=21),
-    "1.21.5": dict(module="v1_21_5", jdk=21),
-    "1.21.8": dict(module="v1_21_8", jdk=21),
-    "1.21.10": dict(module="v1_21_10", jdk=21),
-    "1.21.11": dict(module="v1_21_11", jdk=21),
     "26.1.2": dict(module="v26_1_2", jdk=25),
     "26.2": dict(module="v26_2", jdk=25),
 }

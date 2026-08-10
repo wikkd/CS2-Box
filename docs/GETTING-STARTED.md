@@ -5,13 +5,13 @@
 
 ## 前置要求
 
-| 要求 | v1_21_1 | v26_1_2 |
+| 要求 | v1_21_1 | v26_1_2 / v26_2 |
 |---|---|---|
 | Java JDK | 21 | 25(`--enable-preview`) |
-| Minecraft | 1.21.1 | 26.1.2 |
-| NeoForge | 21.1.115+ | 26.1.2.76(loader 11+) |
-| Gradle | 8.11 | 8.14 |
-| NeoGradle | 7.0.171 | 7.1.38 |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 |
+| NeoForge | 21.1.115+ | 26.1.2.94 / 26.2.0.7-beta(loader 11+) |
+| Gradle | 9.5.1(wrapper 自动下载) | 9.5.1(wrapper 自动下载) |
+| NeoGradle | 7.1.38 | 7.1.38 |
 
 Java 版本必须与平台对应。Gradle Wrapper 自动下载对应 Gradle 版本。
 
@@ -50,7 +50,7 @@ active_versions=26.1.2  # 或 1.21.1
 ./gradlew build
 ```
 
-成功构建后,JAR 位于 `v1_21_1/build/libs/csbox-1.21.1-1.0.5.jar` 或 `v26_1_2/build/libs/csbox-26.1.2-1.0.5.jar`。
+成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-1.0.6.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-1.0.6.jar`。
 
 ## 首次运行
 

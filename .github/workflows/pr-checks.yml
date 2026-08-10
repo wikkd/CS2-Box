@@ -1,0 +1,23 @@
+name: PR Checks
+
+# PR 描述格式校验（温和门禁）：确保提交者使用了
+# .github/PULL_REQUEST_TEMPLATE.md 并勾选「影响平台」与「作者自查」。
+# 规则见 scripts/check-pr-description.sh（对照 docs/CODE-REVIEW.md §6.1）。
+# 仅依赖 pull_request 事件自带的 body 字段，无需 token，fork PR 同样生效。
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  description:
+    name: PR description check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PR description
+        env:
+          PR_BODY: ${{ toJSON(github.event.pull_request.body) }}
+        run: |
+          printf '%s' "$PR_BODY" | jq -r '.' | scripts/check-pr-description.sh

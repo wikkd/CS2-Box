@@ -164,3 +164,7 @@ __pycache__/
 shots/
 okr-radar.html
 reasonix.toml
+
+# csbox-lsp
+lsp/node_modules/
+lsp/dist/
