@@ -26,12 +26,16 @@ public final class IconListTools {
     private IconListTools() {
     }
 
-    private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
-        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
-        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, color);
+    private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color, int alpha) {
+        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY,
+                ColorTools.withAlpha(0xFF696969, alpha), ColorTools.withAlpha(0xFFD3D3D3, alpha));
+        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, ColorTools.withAlpha(color, alpha));
     }
 
-    public static void renderItemFrame(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
+    /** {@code alpha} (0..255) fades the whole frame (gradient, rarity bar,
+     *  gold texture); the item icon itself has no alpha channel in the
+     *  render pipeline and slides with the frame instead. */
+    public static void renderItemFrame(LivingEntity entity, GuiGraphics guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade, int alpha) {
         int color = ColorTools.colorItems(grade);
 
         int frameWidth = width * 8 / 100;
@@ -42,12 +46,15 @@ public final class IconListTools {
         int itemX = pX + frameWidth * 20 / 100;
         int itemY = pY + frameHeight * 10 / 100;
         if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, color);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY,
+                    ColorTools.withAlpha(0xFF533c00, alpha), ColorTools.withAlpha(0xFFb69008, alpha));
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, ColorTools.withAlpha(color, alpha));
+            // Tint variant (full UV window) so the gold gem fades with the frame.
             AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, pX + 2, pY + 2,
-                    frameWidth - 4, frameHeight - 4);
+                    frameWidth - 4, frameHeight - 4, 0, 0, 32, 24, 32, 24,
+                    ColorTools.withAlpha(0xFFFFFFFF, alpha));
         } else {
-            renderRarity(guiGraphics, pX, pY, toX, toY, color);
+            renderRarity(guiGraphics, pX, pY, toX, toY, color, alpha);
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
         }
     }

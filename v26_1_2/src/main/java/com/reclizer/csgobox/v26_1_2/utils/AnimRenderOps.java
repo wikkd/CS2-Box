@@ -30,12 +30,16 @@ public final class AnimRenderOps {
         blitTextured(gg, tex, x, y, w, h, w, h);
     }
 
-    /** Variant carrying the texture's real pixel size. 26.1.2's blit treats
-     *  the trailing args as texW/texH (not UVs), so callers like
-     *  IconListTools.blitGoldItemAspect (gold_item.png is 32x24) must pass
-     *  them explicitly or the UV window is wrong. */
+    /** Variant carrying the texture's real pixel size. 26.1.2's convenience
+     *  blit(RenderPipeline, tex, x, y, u, v, w, h, texW, texH) treats the
+     *  SOURCE UV window as width=w/height=h (srcWidth=width internally), so
+     *  passing a target size larger than the texture (gold_item.png is 32x24,
+     *  drawn at ~169x127 in the opening strip) would push the UV window past
+     *  1.0 and wrap/stretch the icon. The 12-arg overload takes the source
+     *  window explicitly: srcWidth=texW/srcHeight=texH keeps UV = [0,1] while
+     *  width/height stay the free-form target size. */
     public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h, int texW, int texH) {
-        gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, texW, texH);
+        gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, texW, texH, texW, texH);
     }
 
     /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH

@@ -8,6 +8,14 @@ public final class ColorTools {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
+    /** Replaces the alpha channel of an ARGB color, scaling it by the given
+     *  0..255 factor (255 = unchanged). Used by the page-turn transition to
+     *  fade frames/labels in and out while keeping their RGB intact. */
+    public static int withAlpha(int argb, int alpha) {
+        int a = ((argb >>> 24) & 0xFF) * alpha / 255;
+        return (a << 24) | (argb & 0xFFFFFF);
+    }
+
     public static int deepColor(int color) {
         int alpha = (color >> 24) & 0xFF;
         int red = (color >> 16) & 0xFF;

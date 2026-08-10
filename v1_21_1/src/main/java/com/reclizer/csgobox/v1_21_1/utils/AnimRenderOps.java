@@ -57,19 +57,25 @@ public final class AnimRenderOps {
         gg.blit(tex, x, y, 0, 0, w, h, w, h);
     }
 
-    /** Variant carrying the texture's real pixel size (non-square sprites
-     *  like gold_item.png are 32x24); the UV window stays (0,0,w,h). */
+    /** Variant carrying the texture's real pixel size. 1.21.1's convenience
+     *  blit(tex, x, y, u, v, w, h, texW, texH) treats the SOURCE UV window as
+     *  width=w/height=h (uWidth=width internally), so passing a target size
+     *  larger than the texture (gold_item.png is 32x24, drawn at ~169x127 in
+     *  the opening strip) would push the UV window past 1.0 and wrap/stretch
+     *  the icon. The 11-arg overload takes the source window explicitly:
+     *  uWidth=texW/vHeight=texH keeps UV = [0,1] while width/height stay the
+     *  free-form target size. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
         gg.flush();
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(770, 771, 1, 771);
-        gg.blit(tex, x, y, 0, 0, w, h, texW, texH);
+        gg.blit(tex, x, y, w, h, 0F, 0F, texW, texH, texW, texH);
     }
 
     /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH
-     *  texture with an ARGB tint applied via shader color. Callers wanting a
-     *  pure color pass must reset with setShaderColor(1,1,1,1) afterwards
-     *  (screens already do). */
+     *  texture with an ARGB tint applied via shader color. Legacy immediate
+     *  mode does NOT auto-reset the shader color, so this facade restores
+     *  (1,1,1,1) itself before returning — callers never leak the tint. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h,
                                     int u, int v, int uw, int vh, int texW, int texH, int tint) {
         gg.flush();
@@ -78,6 +84,7 @@ public final class AnimRenderOps {
         RenderSystem.setShaderColor(((tint >> 16) & 0xFF) / 255F,
                 ((tint >> 8) & 0xFF) / 255F, (tint & 0xFF) / 255F, ((tint >> 24) & 0xFF) / 255F);
         gg.blit(tex, x, y, w, h, u, v, uw, vh, texW, texH);
+        RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
     }
 
     public static void fill(GuiGraphics gg, int x0, int y0, int x1, int y1, int color) {

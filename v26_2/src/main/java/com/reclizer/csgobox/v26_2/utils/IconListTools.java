@@ -39,7 +39,7 @@ public final class IconListTools {
     // background gradient (drawn by the caller) rather than retinted, so
     // the gold bar at the slot edges stays visible.
     private static void blitGoldItemAspect(GuiGraphicsExtractor guiGraphics,
-                                           int x, int y, int availW, int availH) {
+                                           int x, int y, int availW, int availH, int alpha) {
         int drawW;
         int drawH;
         if ((long) availW * GOLD_ITEM_TEX_HEIGHT < (long) availH * GOLD_ITEM_TEX_WIDTH) {
@@ -51,17 +51,26 @@ public final class IconListTools {
         }
         int drawX = x + (availW - drawW) / 2;
         int drawY = y + (availH - drawH) / 2;
+        // Tint variant (full UV window) so the gold gem fades with the frame.
         AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE,
-                drawX, drawY, drawW, drawH,
-                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT);
+                drawX, drawY,
+                drawW, drawH,
+                0, 0,
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
+                ColorTools.withAlpha(0xFFFFFFFF, alpha));
     }
 
-    private static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
-        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
-        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, color);
+    private static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color, int alpha) {
+        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY,
+                ColorTools.withAlpha(0xFF696969, alpha), ColorTools.withAlpha(0xFFD3D3D3, alpha));
+        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, ColorTools.withAlpha(color, alpha));
     }
 
-    public static void renderItemFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
+    /** {@code alpha} (0..255) fades the whole frame (gradient, rarity bar,
+     *  gold texture); the item icon itself has no alpha channel in the
+     *  render pipeline and slides with the frame instead. */
+    public static void renderItemFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade, int alpha) {
         int color = ColorTools.colorItems(grade);
 
         int frameWidth = width * 8 / 100;
@@ -72,18 +81,18 @@ public final class IconListTools {
         int itemX = pX + frameWidth * 20 / 100;
         int itemY = pY + frameHeight * 10 / 100;
         if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, color);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY,
+                    ColorTools.withAlpha(0xFF533c00, alpha), ColorTools.withAlpha(0xFFb69008, alpha));
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, ColorTools.withAlpha(color, alpha));
             // 26.1.2 changed blit: must pass RenderPipeline explicitly and
             // last two ints are textureWidth/textureHeight (pixels), not UVs.
             blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
-                    frameWidth - 4, frameHeight - 4);
+                    frameWidth - 4, frameHeight - 4, alpha);
         } else {
-            renderRarity(guiGraphics, pX, pY, toX, toY, color);
+            renderRarity(guiGraphics, pX, pY, toX, toY, color, alpha);
             AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
         }
     }
-
     public static void renderRewardCell(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
         int color = ColorTools.colorItems(grade);
         int pad = Math.max(3, Math.min(8, width / 10));
@@ -94,7 +103,7 @@ public final class IconListTools {
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
-            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2, width - 4, height - 4);
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2, width - 4, height - 4, 255);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
@@ -114,7 +123,7 @@ public final class IconListTools {
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
             blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F));
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
             AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
@@ -150,7 +159,7 @@ public final class IconListTools {
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
             blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F));
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
             AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);
