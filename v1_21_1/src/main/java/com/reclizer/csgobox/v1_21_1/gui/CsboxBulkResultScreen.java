@@ -47,6 +47,8 @@ public class CsboxBulkResultScreen extends Screen {
     /** Stagger counter since show-all opened; -1 = not animating. */
     private int showAllTick = -1;
     private static final int SHOW_ALL_ENTER = 6;
+    /** Counter ceiling: covers up to 8 grid rows (row r finishes at 2r+6 ticks). */
+    private static final int SHOW_ALL_ANIM_MAX = SHOW_ALL_ENTER + 14;
 
     public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
         super(Component.literal("csgo_bulk_result"));
@@ -107,7 +109,7 @@ public class CsboxBulkResultScreen extends Screen {
                 visible.pollLast();
             }
         }
-        if (this.showAllTick >= 0 && this.showAllTick < SHOW_ALL_ENTER) {
+        if (this.showAllTick >= 0 && this.showAllTick < SHOW_ALL_ANIM_MAX) {
             this.showAllTick++;
         }
         lastTickTime = now;
