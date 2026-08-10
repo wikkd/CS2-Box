@@ -166,8 +166,12 @@ public class CsLookItemScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         renderLookBackground(guiGraphics);
-        renderLabels(guiGraphics);
         renderBg(guiGraphics, mouseX, mouseY, partialTicks);
+        renderLabels(guiGraphics);
+        // Keep the pre-swap end-of-frame state: blend must stay enabled while
+        // renderLabels draws (RenderFontTool.drawString does not manage blend),
+        // so the disable that used to end renderBg now ends render() instead.
+        RenderSystem.disableBlend();
     }
 
     private void renderLookBackground(GuiGraphics guiGraphics) {
@@ -236,7 +240,6 @@ public class CsLookItemScreen extends Screen {
 
         renderInfoPanel(guiGraphics);
         renderToolbar(guiGraphics, mouseX, mouseY);
-        RenderSystem.disableBlend();
     }
 
     private void renderToolbar(GuiGraphics guiGraphics, int mouseX, int mouseY) {

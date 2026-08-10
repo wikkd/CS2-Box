@@ -48,8 +48,6 @@ public class CsboxBulkResultScreen extends Screen {
     /** Stagger counter since show-all opened; -1 = not animating. */
     private int showAllTick = -1;
     private static final int SHOW_ALL_ENTER = 6;
-    /** Counter ceiling: covers up to 8 grid rows (row r finishes at 2r+6 ticks). */
-    private static final int SHOW_ALL_ANIM_MAX = SHOW_ALL_ENTER + 14;
 
     public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("csgo_bulk_result"));
@@ -110,7 +108,11 @@ public class CsboxBulkResultScreen extends Screen {
                 visible.pollLast();
             }
         }
-        if (this.showAllTick >= 0 && this.showAllTick < SHOW_ALL_ANIM_MAX) {
+        // Row-aware ceiling: covers the widest reachable grid (row r finishes at 2r+6 ticks).
+        int cols = Math.max(1, Math.min(8, this.width / 80));
+        int rows = (int) Math.ceil(64.0 / cols);
+        int animMax = SHOW_ALL_ENTER + 2 * rows;
+        if (this.showAllTick >= 0 && this.showAllTick < animMax) {
             this.showAllTick++;
         }
         lastTickTime = now;

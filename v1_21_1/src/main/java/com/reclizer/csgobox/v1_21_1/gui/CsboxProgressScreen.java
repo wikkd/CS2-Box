@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v1_21_1.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.IconListTools;
 import net.minecraft.client.Minecraft;
@@ -16,6 +17,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 
 
 import java.util.ArrayList;
@@ -35,7 +37,7 @@ public class CsboxProgressScreen extends Screen {
      * then show the consolidated result. Falls back to the single-item popup
      * (or closes) when no bulk chunks arrived.
      */
-    private static final int MAX_BULK_WAIT_TICKS = 40;
+    private static final int MAX_BULK_WAIT_TICKS = 100;
 
     private final Player player;
     private final long expectedRequestId;
@@ -69,6 +71,12 @@ public class CsboxProgressScreen extends Screen {
     private ItemStack resultItem = ItemStack.EMPTY;
     private int resultGrade = 0;
     private int waitingTicks = 0;
+
+    // Rejected opens (cooldown, missing key, dead player) arrive as an empty
+    // result; show a brief message instead of silently closing the screen.
+    private static final int REJECT_CLOSE_TICKS = 40;
+    private boolean rejected = false;
+    private int rejectedTicks = 0;
 
     // Bulk-result aggregation state. waitingBulkTicks < 0 means we are not in
     // the drain phase yet; while draining, every chunk with our request id is
@@ -106,8 +114,7 @@ public class CsboxProgressScreen extends Screen {
             float b = 3F * sr - dr;
             return (a * u * u * u + b * u * u) * totalDistance;
         }
-        float v = 1F - t;
-        return totalDistance * (1F - v * v * v);
+        return totalDistance * Easing.easeOutCubic(t);
     }
 
     @Override
@@ -138,6 +145,14 @@ public class CsboxProgressScreen extends Screen {
         // opaque panel - mirrors the original case-opening depth-of-field look.
         // (The blur itself runs in renderBackground above, once per frame.)
         AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
+
+        if (rejected) {
+            Component msg = Component.translatable("gui.csgobox.progress.rejected");
+            float scale = 1.0F;
+            float w = this.font.width(msg) * scale;
+            RenderFontTool.drawString(guiGraphics, this.font, msg.getVisualOrderText(),
+                    (this.width - w) / 2.0F, this.height * 40 / 100, 0, 0, scale, 0xFFFF5555);
+        }
 
         if (openTime < 5) return;
 
@@ -324,6 +339,15 @@ public class CsboxProgressScreen extends Screen {
                 backingX1 = (int) (lensCX + backingHalfW) + 1;
             }
             AnimRenderOps.fill(guiGraphics, backingX0, by, backingX1, by + bh, 0xFF545454);
+            // 1.21.x legacy: the scissor is global RenderSystem state applied
+            // at buffer flush time. The backing fill above sits in the shared
+            // GUI bufferSource and would be flushed by the first item endBatch
+            // INSIDE the band scissor below - clipped to the inscribed rect,
+            // so the crescent between rect and disc would leak the raw 1x
+            // strip card drawn in the strip pass, ghosting it over the
+            // magnified view. Submit the circumscribed plate before enabling
+            // the scissor so the seal is complete.
+            AnimRenderOps.flush(guiGraphics);
             AnimRenderOps.scissor(guiGraphics, x0, by, x1 - x0, bh);
             for (int i = iMax; i >= iMin; i--) {
                 ItemStack itemStack = itemInput.get(i);
@@ -356,7 +380,10 @@ public class CsboxProgressScreen extends Screen {
         lastRenderWidth = widthNewAdd;
 
         // Bright golden marker line, drawn above the lens, like the original.
-        AnimRenderOps.fill(guiGraphics, (int) lineX, (int) lensTop, (int) lineX + 2, (int) (lensTop + cellHeight),
+        // Height matches the card as shown at the line: the lens centre is the
+        // golden line itself, so the stopped card is the magnified strip card
+        // (magnifiedTop..magnifiedBottom), not the raw 1x strip cell.
+        AnimRenderOps.fill(guiGraphics, (int) lineX, (int) magnifiedTop, (int) lineX + 2, (int) magnifiedBottom,
                 ColorTools.argbColor(230, 255, 215, 0));
 
     }
@@ -364,6 +391,14 @@ public class CsboxProgressScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+
+        if (rejected) {
+            rejectedTicks++;
+            if (rejectedTicks >= REJECT_CLOSE_TICKS) {
+                this.onClose();
+            }
+            return;
+        }
 
         if (serverWinningIndex == null) {
             waitingTicks++;
@@ -377,7 +412,7 @@ public class CsboxProgressScreen extends Screen {
                 return;
             }
             if (result.animationItems().isEmpty()) {
-                this.onClose();
+                this.rejected = true;
                 return;
             }
 
@@ -407,7 +442,8 @@ public class CsboxProgressScreen extends Screen {
             float itemSpacing = startWidth * 20.0F / 100.0F;
             float startX = startWidth * randomWidth / 100.0F;
             float goldenLine = startWidth / 2.0F;
-            this.targetScroll = startX + winningIndex * itemSpacing - goldenLine;
+            float cellWidth = startWidth * 18.0F / 100.0F;
+            this.targetScroll = startX + winningIndex * itemSpacing - goldenLine + cellWidth / 2.0F;
         }
 
         if (openTime < 5) return;
@@ -425,7 +461,8 @@ public class CsboxProgressScreen extends Screen {
             }
             waitingBulkTicks++;
             drainBulkChunks();
-            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS || quietBulkTicks >= 2) {
+            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS
+                    || (waitingBulkTicks >= 10 && quietBulkTicks >= 2)) {
                 finishAndShowResult();
             }
             return;
@@ -535,6 +572,6 @@ public class CsboxProgressScreen extends Screen {
             case FAST -> base / 2;
             default -> base;
         };
-        return Math.clamp(ticks / Math.max(1, multiplier), 20, 500);
+        return ticks / Math.max(1, multiplier);
     }
 }

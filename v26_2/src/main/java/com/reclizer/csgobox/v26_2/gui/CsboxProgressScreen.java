@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v26_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.IconListTools;
 import net.minecraft.client.Minecraft;
@@ -18,6 +19,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.fml.ModList;
+import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +39,7 @@ public class CsboxProgressScreen extends Screen {
      * then show the consolidated result. Falls back to the single-item popup
      * (or closes) when no bulk chunks arrived.
      */
-    private static final int MAX_BULK_WAIT_TICKS = 40;
+    private static final int MAX_BULK_WAIT_TICKS = 100;
 
     private final Player player;
     private final long expectedRequestId;
@@ -70,6 +73,12 @@ public class CsboxProgressScreen extends Screen {
     private ItemStack resultItem = ItemStack.EMPTY;
     private int resultGrade = 0;
     private int waitingTicks = 0;
+
+    // Rejected opens (cooldown, missing key, dead player) arrive as an empty
+    // result; show a brief message instead of silently closing the screen.
+    private static final int REJECT_CLOSE_TICKS = 40;
+    private boolean rejected = false;
+    private int rejectedTicks = 0;
 
     // Bulk-result aggregation state. waitingBulkTicks < 0 means we are not in
     // the drain phase yet; while draining, every chunk with our request id is
@@ -107,8 +116,7 @@ public class CsboxProgressScreen extends Screen {
             float b = 3F * sr - dr;
             return (a * u * u * u + b * u * u) * totalDistance;
         }
-        float v = 1F - t;
-        return totalDistance * (1F - v * v * v);
+        return totalDistance * Easing.easeOutCubic(t);
     }
 
     @Override
@@ -122,10 +130,18 @@ public class CsboxProgressScreen extends Screen {
      * of the menu-background-blurriness option. This framework hook runs exactly
      * once per frame; blurring again in renderBg would throw
      * "Can only blur once per frame" (GuiRenderState) and freeze the screen.
+     *
+     * <p>When the Blur mod is loaded, defer to the vanilla implementation so
+     * its fade-in animation and user blurriness setting drive the radius
+     * (the vanilla path is what the mod's mixins hook into).
      */
     @Override
     protected void extractBlurredBackground(GuiGraphicsExtractor guiGraphics) {
-        AnimRenderOps.renderBlurredBackground(guiGraphics);
+        if (ModList.get().isLoaded("blur")) {
+            super.extractBlurredBackground(guiGraphics);
+        } else {
+            AnimRenderOps.renderBlurredBackground(guiGraphics);
+        }
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
@@ -135,6 +151,14 @@ public class CsboxProgressScreen extends Screen {
         // CS2-style backdrop: the blur is applied by extractBlurredBackground;
         // here we only dim the blurred world.
         AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
+
+        if (rejected) {
+            Component msg = Component.translatable("gui.csgobox.progress.rejected");
+            float scale = 1.0F;
+            float w = this.font.width(msg) * scale;
+            RenderFontTool.drawString(guiGraphics, this.font, msg.getVisualOrderText(),
+                    (this.width - w) / 2.0F, this.height * 40 / 100, 0, 0, scale, 0xFFFF5555);
+        }
 
         if (openTime < 5) return;
 
@@ -325,6 +349,14 @@ public class CsboxProgressScreen extends Screen {
     public void tick() {
         super.tick();
 
+        if (rejected) {
+            rejectedTicks++;
+            if (rejectedTicks >= REJECT_CLOSE_TICKS) {
+                this.onClose();
+            }
+            return;
+        }
+
         if (serverWinningIndex == null) {
             waitingTicks++;
             if (waitingTicks > MAX_WAIT_TICKS) {
@@ -337,7 +369,7 @@ public class CsboxProgressScreen extends Screen {
                 return;
             }
             if (result.animationItems().isEmpty()) {
-                this.onClose();
+                this.rejected = true;
                 return;
             }
 
@@ -385,7 +417,8 @@ public class CsboxProgressScreen extends Screen {
             }
             waitingBulkTicks++;
             drainBulkChunks();
-            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS || quietBulkTicks >= 2) {
+            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS
+                    || (waitingBulkTicks >= 10 && quietBulkTicks >= 2)) {
                 finishAndShowResult();
             }
             return;
@@ -491,6 +524,6 @@ public class CsboxProgressScreen extends Screen {
             case FAST -> base / 2;
             default -> base;
         };
-        return Math.clamp(ticks / Math.max(1, multiplier), 20, 500);
+        return ticks / Math.max(1, multiplier);
     }
 }
