@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UP-Link Terminal — Region 4+5+6+7+8+9+10+11 Prototype</title>
+<style>
+  :root {
+    --frame-olive: #4e481e;
+    --panel-body: #3a424d;
+    --panel-title: #5c707e;
+    --bubble-bg: #2b3138;
+    --bubble-text: #e6eaed;
+    --sys-text: #8f98a1;
+    --card-bg: #23282e;
+    --card-final-bg: #f2f4f5;
+    --yellow: #e5c558;
+    --green: #25a04d;
+    --accept: #398a46;
+    --reject-red: #b03434;
+    --rarity-blue: #4b69ff;
+    --rarity-purple: #8847ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: #17191c;
+    font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; overflow: hidden;
+  }
+
+  /* ============ left column (regions 4+5+6), proportions from annotated map ============ */
+  .panel {
+    width: min(470px, 94vw);
+    height: min(700px, 86vh);
+    border: 3px solid var(--frame-olive);
+    display: flex; flex-direction: column;
+    background: var(--panel-body);
+    box-shadow: 0 12px 40px #000a;
+  }
+
+  /* region 4 — title strip */
+  .title-strip {
+    flex: 0 0 28px;
+    background: linear-gradient(#66798a, var(--panel-title));
+    color: #cfd6db;
+    font-size: 12px; letter-spacing: 2px;
+    display: flex; align-items: center;
+    padding: 0 12px;
+    border-bottom: 2px solid var(--frame-olive);
+    user-select: none;
+  }
+
+  /* region 5 — chat body */
+  .chat {
+    flex: 1; position: relative; overflow: hidden;
+    background:
+      radial-gradient(rgba(255,255,255,.055) 1px, transparent 1.4px) 0 0 / 24px 24px,
+      linear-gradient(#3d4650, #363e48 60%, #333b45);
+  }
+  .watermark {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 330px; line-height: 1;
+    color: rgba(255,255,255,.045);
+    pointer-events: none; user-select: none;
+  }
+  .scroll {
+    position: absolute; inset: 0;
+    overflow-y: auto; padding: 14px 14px 18px 10px;
+    scrollbar-width: thin; scrollbar-color: #b9c2c9 transparent;
+  }
+  .scroll::-webkit-scrollbar { width: 6px; }
+  .scroll::-webkit-scrollbar-thumb { background: #b9c2c9; border-radius: 3px; }
+  .scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---- dealer text bubble ---- */
+  .msg { display: flex; gap: 9px; margin: 0 0 13px; align-items: flex-start; }
+  .avatar {
+    flex: 0 0 34px; width: 34px; height: 34px;
+    image-rendering: pixelated;
+    border: 1px solid #0009; border-radius: 2px;
+    background: #20242a;
+  }
+  .bubble {
+    background: var(--bubble-bg);
+    color: var(--bubble-text);
+    font-size: 13px; line-height: 1.55;
+    padding: 8px 12px;
+    border-radius: 4px;
+    max-width: 82%;
+    box-shadow: 0 1px 0 #0006;
+  }
+
+  /* ---- typing indicator: dealer is slow to respond ("……") ---- */
+  .bubble.typing { display: flex; gap: 5px; align-items: center; padding: 12px 14px; }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #9aa4ad;
+    animation: typingPulse 1.05s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .18s; }
+  .typing-dot:nth-child(3) { animation-delay: .36s; }
+  @keyframes typingPulse {
+    0%, 100% { opacity: .25; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* ---- system line: "<player> 已拒绝报价。" ---- */
+  .sys-reject {
+    text-align: center;
+    color: var(--sys-text);
+    font-size: 11px;
+    margin: 2px 0 13px;
+    letter-spacing: .5px;
+  }
+  .sys-reject.failed { color: #c96a5f; }
+
+  /* ---- offer card ---- */
+  .offer-card {
+    display: flex; flex: 0 1 auto;
+    width: 262px; max-width: 92%;
+    background: var(--card-bg);
+    border-radius: 2px; overflow: hidden;
+    box-shadow: 0 1px 3px #0007;
+  }
+  .offer-card .stripe { flex: 0 0 4px; }
+  .offer-card .thumb {
+    flex: 0 0 96px; align-self: stretch;
+    background: linear-gradient(#1a1e23, #14171b);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .offer-card .thumb svg {
+    width: 88px; height: auto;
+    transform: rotate(14deg);
+    filter: drop-shadow(0 2px 3px #000b);
+  }
+  .offer-card .offer-info { padding: 6px 10px 7px; font-size: 12px; line-height: 1.55; flex: 1; min-width: 0; }
+  .offer-head { color: var(--yellow); }
+  .offer-name { color: #f2f5f7; }
+  .offer-wear { color: #9aa4ad; }
+  .offer-price { color: #dfe5e9; }
+
+  /* fresh reveal: card lines flip in like a departure board */
+  .offer-card .offer-info { perspective: 300px; }
+  .offer-card.reveal .offer-info > div {
+    transform-origin: center top;
+    animation: flipIn .45s cubic-bezier(.2,.7,.3,1.1) both;
+  }
+  .offer-card.reveal .offer-info > div:nth-child(2) { animation-delay: .09s; }
+  .offer-card.reveal .offer-info > div:nth-child(3) { animation-delay: .18s; }
+  .offer-card.reveal .offer-info > div:nth-child(4) { animation-delay: .27s; }
+  @keyframes flipIn {
+    from { transform: rotateX(-92deg); opacity: 0; }
+    to   { transform: rotateX(0);      opacity: 1; }
+  }
+  .counter-flip {
+    display: inline-block; transform-origin: center top;
+    animation: flipIn .4s ease both;
+  }
+
+  /* final offer — white card, green price */
+  .offer-card.final { background: var(--card-final-bg); }
+  .offer-card.final .thumb { background: linear-gradient(#dfe3e6, #c9ced2); }
+  .offer-card.final .offer-head { color: #17191c; font-weight: 700; }
+  .offer-card.final .offer-name { color: #17191c; font-weight: 600; }
+  .offer-card.final .offer-wear { color: #4a5157; }
+  .offer-card.final .offer-price { color: var(--green); font-weight: 700; }
+
+  /* ============ region 6 — action bar ============ */
+  .action-bar {
+    flex: 0 0 auto;
+    border-top: 2px solid var(--frame-olive);
+    background: #262c33;
+    padding: 8px 12px 11px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .action-top {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: #cfd6db; letter-spacing: 1px;
+    user-select: none;
+  }
+  .counter { display: flex; align-items: center; gap: 7px; }
+  .info {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #cfd6db; color: #20242a;
+    font-size: 10px; font-weight: 700; font-style: normal;
+    display: flex; align-items: center; justify-content: center;
+    cursor: help; position: relative; flex: 0 0 auto;
+  }
+  .info:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: -6px; top: calc(100% + 6px);
+    background: #0b0d0f; color: #cfd6db;
+    border: 1px solid #2c3238; border-radius: 6px;
+    padding: 6px 9px; width: 200px;
+    font-size: 11px; font-weight: 400; letter-spacing: 0; line-height: 1.5;
+    z-index: 60;
+  }
+  /* cap selector (right) */
+  .cap { position: relative; }
+  .cap-label {
+    cursor: pointer; padding: 3px 9px; border-radius: 6px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .cap-label:hover { background: #31383f; }
+  .cap-label .chev {
+    width: 0; height: 0;
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid #9aa4ad;
+  }
+  .cap-menu {
+    position: absolute; right: 0; bottom: calc(100% + 4px);
+    background: #0b0d0f; border: 1px solid #2c3238; border-radius: 10px;
+    min-width: 122px; padding: 4px;
+    display: none; z-index: 50;
+    box-shadow: 0 8px 24px #000c;
+  }
+  .cap-menu.open { display: block; }
+  .cap-menu .opt {
+    padding: 5px 10px; border-radius: 7px;
+    color: #cfd6db; font-size: 12px; cursor: pointer;
+    text-align: right; letter-spacing: .5px;
+  }
+  .cap-menu .opt:hover { background: #22282e; color: #fff; }
+  .cap-menu .opt.sel { color: #4fc362; }
+
+  /* accept / reject pills */
+  .action-bottom { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pill {
+    position: relative; overflow: hidden; isolation: isolate;
+    border-radius: 999px;
+    padding: 7px 20px;
+    font-size: 13px; letter-spacing: 2px;
+    cursor: pointer; background: transparent; font-family: inherit;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    transition: color .35s, border-color .25s, opacity .3s;
+  }
+  .pill > span.txt { position: relative; z-index: 1; }
+  .pill .fill {
+    position: absolute; inset: 0; z-index: 0;
+    transform: scaleX(0); transform-origin: left center;
+  }
+  .pill.filling .fill { transform: scaleX(1); transition: transform .7s cubic-bezier(.25,.6,.3,1); }
+  .pill.filled { color: #f2f5f7; }
+  .pill.accept { border: 2px solid var(--accept); color: var(--accept); }
+  .pill.accept .fill { background: var(--accept); }
+  .pill.reject { border: 2px solid #7d858d; color: #dfe5e9; }
+  .pill.reject .fill { background: var(--reject-red); }
+  .pill.reject.armed { border-color: var(--reject-red); }
+  .pill.locked { pointer-events: none; }
+  .pill.disabled { opacity: .4; pointer-events: none; }
+
+  /* ============ stage: left column + right column (7/8 on top, 9/10/11 below) ============ */
+  .stage { display: flex; align-items: flex-start; gap: 14px; }
+  .right-col { display: flex; flex-direction: column; gap: 14px; }
+  .bottom-row { display: flex; align-items: flex-end; gap: 14px; }
+
+  /* ============ regions 7+8 — right panel (current offer) ============ */
+  /* numbered map: right column x 0.370–0.998 (0.628w) vs left col 0.338w
+     => ≈872px wide; y 0.090–0.855 (0.765h) vs left 0.908h => ≈590px tall.
+     Region 8 body is still an empty placeholder. */
+  .right-panel {
+    width: 872px; height: 590px;
+    border: 3px solid var(--frame-olive);
+    background: var(--panel-body);
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px #000a;
+  }
+  .right-body {
+    flex: 1; min-height: 0;
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(rgba(255,255,255,.055) 1px, transparent 1.4px) 0 0 / 24px 24px,
+      linear-gradient(#3d4650, #363e48 60%, #333b45);
+  }
+
+  /* ---- region 8 / A: offered item name, black monospace box ---- */
+  .r8-name {
+    position: absolute; left: 0; top: 2.2%;
+    background: #0c0e10e8; color: #f2f5f7;
+    font-family: "Consolas", "Menlo", "SF Mono", "Courier New", monospace;
+    font-size: 15px; font-weight: 700; letter-spacing: 4px;
+    padding: 9px 16px 9px 12px;
+    text-shadow: 0 1px 0 #000;
+    user-select: none; white-space: nowrap;
+  }
+  /* ---- region 8 / B: rarity = color + tier text ---- */
+  .r8-rarity {
+    position: absolute; left: 0; top: 9.6%;
+    color: #f2f5f7; font-size: 13px; font-weight: 700; letter-spacing: 3px;
+    padding: 7px 14px;
+    box-shadow: 0 1px 4px #0007;
+    user-select: none;
+  }
+  /* ---- region 8 / C: inspect pill (top-right) ---- */
+  .r8-inspect {
+    position: absolute; right: 1.6%; top: 2.4%;
+    background: #b9c2c9d9; color: #262c33;
+    border: none; border-radius: 999px;
+    font-family: inherit; font-size: 12px; letter-spacing: 2px;
+    padding: 6px 14px; cursor: pointer;
+    transition: background .2s, color .2s, box-shadow .2s;
+  }
+  .r8-inspect:hover { background: #dfe5e9; }
+  .r8-inspect.on { background: var(--yellow); color: #20242a; box-shadow: 0 0 10px #e5c55866; }
+
+  /* ---- region 8 / D: physical display (drag-rotate stand-in for 3D) ---- */
+  .wm-circle {
+    position: absolute; left: 50%; top: 47%;
+    width: min(74%, 470px); aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff14 0 58%, #ffffff08 66%, transparent 72%);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .wm-circle img { width: 62%; opacity: .05; filter: grayscale(1) contrast(1.1); }
+  .offer-stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 900px; cursor: grab; touch-action: none;
+  }
+  .offer-stage:active { cursor: grabbing; }
+  .offer-obj { transform-style: preserve-3d; }
+  .offer-obj svg {
+    width: min(560px, 62%); height: auto;
+    fill: #99a1a8;
+    filter: drop-shadow(0 16px 26px #0009);
+  }
+
+  /* ---- region 8 / E: wear tier name + corner tab ---- */
+  .r8-wear {
+    position: absolute; left: 0; bottom: 11.3%;
+    background: #8f98a1d9; color: #f2f5f7;
+    font-size: 13px; letter-spacing: 2px;
+    padding: 8px 14px;
+    user-select: none;
+  }
+  .r8-wear-tab {
+    position: absolute; right: -13px; top: -9px;
+    background: #cfd6db; color: #20242a;
+    font-size: 9px; font-weight: 700; letter-spacing: .5px;
+    padding: 2px 4px;
+    font-family: "Consolas", "Menlo", monospace;
+  }
+
+  /* ---- region 8 / F: wear bar (5 tier bands) + coded indicator arrow ---- */
+  .r8-bar {
+    position: absolute; left: 0; bottom: 7.3%;
+    width: 41.2%; height: 12px;
+    background: linear-gradient(90deg,
+      #e8ecef 0 7%, #c3ccd3 7% 15%, #9fb2bf 15% 38%, #7e97a6 38% 45%, #64798a 45% 100%);
+    border: 1px solid #14181c;
+    box-shadow: 0 1px 3px #0008;
+  }
+  .r8-arrow {
+    position: absolute; top: -8px;
+    width: 0; height: 0;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid #f2f5f7;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 1px 1px #0009);
+  }
+  /* loading sweep: a highlight slides across the bar while the arrow travels */
+  .r8-scan {
+    position: absolute; top: 0; bottom: 0; width: 34%; left: -34%;
+    background: linear-gradient(90deg, transparent, #ffffff73, transparent);
+    animation: barScan .95s ease-out both;
+    pointer-events: none;
+  }
+  @keyframes barScan {
+    from { left: -34%; opacity: 1; }
+    to   { left: 100%; opacity: 0; }
+  }
+
+  /* ---- region 8 / G: exact wear value ---- */
+  .r8-wearval {
+    position: absolute; left: 42.6%; bottom: 6.4%;
+    background: #0c0e10e8; color: #f2f5f7;
+    font-family: "Consolas", "Menlo", "SF Mono", "Courier New", monospace;
+    font-size: 15px; font-weight: 700; letter-spacing: 3px;
+    padding: 9px 16px;
+    user-select: none;
+  }
+
+  /* ---- region 8 / H: skin meta line (random per offer) ---- */
+  .r8-meta {
+    position: absolute; left: 0; bottom: 0; width: 100%;
+    display: flex; gap: 34px;
+    padding: 7px 12px;
+    font-size: 12px; color: #9aa4ad; letter-spacing: 1px;
+    user-select: none;
+  }
+  .r8-meta b { color: #e6eaed; font-weight: 600; }
+  .r8-name, .r8-rarity, .r8-wear, .r8-wearval, .r8-meta { pointer-events: none; }
+
+  /* ============ region 9 — validity countdown ============ */
+  .count-panel {
+    /* numbered map: region 9 width = 0.111w vs left col 0.338w
+       => 470*0.111/0.338 ≈ 154px; total height synced to the left action
+       bar (region 6, same y band 0.875–0.998) via syncCountHeight() */
+    width: 154px;
+    border: 3px solid var(--frame-olive);
+    background: var(--panel-body);
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px #000a;
+  }
+  .title-strip.center { justify-content: center; padding: 0; text-align: center; }
+  .count-body {
+    flex: 1; min-height: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='44'%3E%3Cpath d='M28 16v12M22 22h12' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='2'/%3E%3C/svg%3E"),
+      linear-gradient(#3d4650, #363e48 60%, #333b45);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .digits {
+    font-family: "Consolas", "Menlo", "SF Mono", "Courier New", monospace;
+    font-size: 21px; letter-spacing: .5px;
+    color: #cfd6db;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 0 #0007;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .digits i { font-style: normal; opacity: .55; }
+  .digits.expired { color: #c96a5f; }
+
+  /* ============ region 10 — random MC item slot ============ */
+  /* numbered map: region 10 width = 0.073w vs left col 0.338w => ≈102px;
+     top edge sits lower than 9/11 (y 0.895 vs 0.875) — height set by layout() */
+  .slot-panel {
+    width: 102px;
+    border: 3px solid var(--frame-olive);
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='44'%3E%3Cpath d='M28 16v12M22 22h12' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='2'/%3E%3C/svg%3E"),
+      linear-gradient(#3d4650, #363e48 60%, #333b45);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 12px 40px #000a;
+  }
+  .slot-badge {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f0ece1, #cfc8b8 70%, #b3ac9b);
+    box-shadow: inset 0 0 0 2px #0004, 0 2px 8px #0009;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .slot-badge canvas {
+    width: 44px; height: 44px;
+    image-rendering: pixelated;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .slot-badge canvas.swap { opacity: 0; transform: scale(.55) rotate(-10deg); }
+
+  /* ============ region 11 — collection catalog xp (decorative) ============ */
+  /* numbered map: region 11 width = 0.428w vs left col 0.338w => ≈595px */
+  .xp-panel {
+    width: 595px;
+    border: 3px solid var(--frame-olive);
+    background: var(--panel-body);
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px #000a;
+  }
+  .xp-body {
+    flex: 1; min-height: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='44'%3E%3Cpath d='M28 16v12M22 22h12' stroke='%23ffffff' stroke-opacity='0.07' stroke-width='2'/%3E%3C/svg%3E"),
+      linear-gradient(#3d4650, #363e48 60%, #333b45);
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 18px;
+  }
+  .xp-name {
+    color: #dfe5e9; font-size: 15px; letter-spacing: 3px;
+    text-shadow: 0 1px 0 #0007;
+    white-space: nowrap; user-select: none;
+  }
+  .xp-dots {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 13px;
+    background: #262c33d9; border: 1px solid #171b1f;
+    border-radius: 999px; padding: 6px 14px;
+  }
+  .dot-group { display: flex; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.f { background: currentColor; box-shadow: 0 0 5px currentColor; }
+  .dot.h { border: 2px solid currentColor; }
+
+  /* ============ demo toolbar ============ */
+  .demo-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: #101214d9; border: 1px solid #33383d;
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .demo-bar button {
+    background: #22272c; color: #cfd6db;
+    border: 1px solid #3c434a; border-radius: 5px;
+    font-size: 12px; padding: 5px 10px; cursor: pointer;
+    font-family: inherit;
+  }
+  .demo-bar button:hover { background: #2d343a; color: #fff; }
+  .demo-bar .hint { color: #79828b; font-size: 11px; margin-left: 6px; user-select: none; }
+  .demo-bar .sep { width: 1px; height: 18px; background: #33383d; }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+  <aside class="panel">
+    <header class="title-strip"><span id="titleText"></span></header>
+    <div class="chat">
+      <div class="watermark">&#9822;</div>
+      <div class="scroll" id="chatScroll"></div>
+    </div>
+    <footer class="action-bar">
+      <div class="action-top">
+        <span class="counter"><span id="counterText"></span><i class="info" id="infoIcon">i</i></span>
+        <span class="cap">
+          <span class="cap-label" id="capLabel"><span id="capText"></span><span class="chev"></span></span>
+          <div class="cap-menu" id="capMenu"></div>
+        </span>
+      </div>
+      <div class="action-bottom">
+        <button class="pill accept" id="btnAccept"><span class="fill"></span><span class="txt" id="acceptText"></span></button>
+        <button class="pill reject" id="btnRejectAct"><span class="fill"></span><span class="txt" id="rejectText"></span></button>
+      </div>
+    </footer>
+  </aside>
+
+  <div class="right-col">
+    <aside class="right-panel">
+      <header class="title-strip"><span id="offerTitleText"></span></header>
+      <div class="right-body" id="offerBody"></div>
+    </aside>
+
+    <div class="bottom-row">
+      <aside class="count-panel">
+        <header class="title-strip center"><span id="validityText"></span></header>
+        <div class="count-body"><span class="digits" id="digits"></span></div>
+      </aside>
+
+      <aside class="slot-panel">
+        <div class="slot-badge"><canvas id="slotIcon" width="8" height="8"></canvas></div>
+      </aside>
+
+      <aside class="xp-panel">
+        <header class="title-strip"><span id="catalogText"></span></header>
+        <div class="xp-body">
+          <span class="xp-name" id="xpName"></span>
+          <div class="xp-dots" id="xpDots"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  </div>
+
+  <div class="demo-bar">
+    <button id="btnNew"></button>
+    <button id="btnLine"></button>
+    <span class="sep"></span>
+    <span class="hint" id="langHint"></span>
+  </div>
+
+<script>
+"use strict";
+
+/* ================= i18n ================= */
+const PLAYER_NAME = "Steve";
+let lang = "zh";
+
+const I18N = {
+  zh: {
+    title: "聊天 · 军火商",
+    offerTitle: "当前报价",
+    validity: "有效期",
+    catalog: "收藏品目录经验值",
+    terminalName: "毁灭之手终端机",
+    hint: "⌘E 切换语言 · 长按按钮确认 / hold to confirm",
+    rejected: () => `${PLAYER_NAME}已拒绝报价。`,
+    accepted: () => `${PLAYER_NAME}已接受报价。`,
+    failed: () => "谈判破裂，军火商离开了终端。",
+    offerHead: n => `第${n}次报价`,
+    finalHead: () => "最后报价",
+    rejectedTag: " - 已拒绝",
+    acceptedTag: " - 已接受",
+    price: p => `报价 - ¥${p}`,
+    counter: n => (n === 5 ? "最后报价" : `第${n}次 - 报价`),
+    counterClosed: "交易达成",
+    counterFailed: "谈判结束",
+    tip: "军火商最多报价 5 次，第 5 次为最后报价。",
+    capLabel: x => (x === "unlimited" ? "报价上限 无上限" : `报价上限 ${x}`),
+    capUnlimited: "无上限",
+    accept: p => `接受报价 ¥${p}`,
+    reject: "拒绝报价",
+    btnNew: "新谈判", btnLine: "+ 商台词",
+    wears: { mw: "略有磨损", ww: "破损不堪", ft: "久经沙场", fn: "崭新出厂" },
+    inspect: "检视",
+    rarities: { blue: "军规级", purple: "受限级" },
+    styles: ["枪匠", "渐晕", "蚀刻", "迷彩"],
+    styleLabel: "皮肤风格", noLabel: "皮肤编号", patternLabel: "图案模板",
+  },
+  en: {
+    title: "Chat · Arms Dealer",
+    offerTitle: "Current Offer",
+    validity: "Validity",
+    catalog: "Collection Catalog Experience",
+    terminalName: "Hand of Ruin Terminal",
+    hint: "⌘E Switch Language · hold buttons to confirm / 长按确认",
+    rejected: () => `${PLAYER_NAME} rejected the offer.`,
+    accepted: () => `${PLAYER_NAME} accepted the offer.`,
+    failed: () => "Negotiation broke down. The arms dealer left the terminal.",
+    offerHead: n => `Offer #${n}`,
+    finalHead: () => "Final Offer",
+    rejectedTag: " - Rejected",
+    acceptedTag: " - Accepted",
+    price: p => `Offer - ¥${p}`,
+    counter: n => (n === 5 ? "Final Offer" : `Offer #${n}`),
+    counterClosed: "Deal closed",
+    counterFailed: "Negotiation ended",
+    tip: "The dealer makes at most 5 offers — the 5th is final.",
+    capLabel: x => (x === "unlimited" ? "Offer cap: Unlimited" : `Offer cap: ${x}`),
+    capUnlimited: "Unlimited",
+    accept: p => `Accept offer ¥${p}`,
+    reject: "Reject offer",
+    btnNew: "New negotiation", btnLine: "+ Dealer line",
+    wears: { mw: "Minimal Wear", ww: "Well-Worn", ft: "Field-Tested", fn: "Factory New" },
+    inspect: "Inspect",
+    rarities: { blue: "Mil-Spec", purple: "Restricted" },
+    styles: ["Gunsmith", "Vignette", "Etched", "Camo"],
+    styleLabel: "Skin finish", noLabel: "Skin no.", patternLabel: "Pattern",
+  },
+};
+const T = () => I18N[lang];
+
+/* ================= weapon silhouettes (path data; filled per-skin gradient) ================= */
+const WEAPON_PATHS = {
+  pistol: "M8 10h46v7H34l-4 13H18l4-13H8z",
+  rifle:  "M2 14h58v6h-9v4h-6l-2 9h-8l2-9H25l-2 5h-7l2-5H6l-2 4H0v-4h2z",
+  smg:    "M4 12h50v4h8v6h-10v4h-6l-2 10h-9l2-10H22l-2 6h-8l2-6H4z",
+};
+/* skin-patterned weapon thumb: diagonal two-tone gradient like a painted finish */
+function weaponSvg(s, id) {
+  return `<svg viewBox="0 0 64 40"><defs>
+    <linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${s.c1}"/><stop offset=".55" stop-color="${s.c2}"/><stop offset="1" stop-color="${s.c1}"/>
+    </linearGradient></defs>
+    <path d="${WEAPON_PATHS[s.wp]}" fill="url(#${id})"/></svg>`;
+}
+
+/* ================= negotiation model ================= */
+/* chat entry types: line | reject | accept | failed | offer(status: pending/rejected/accepted) */
+const model = [];
+
+const LINES = [
+  { zh: "略有磨损，刚过磨合期，没啥可担心的。", en: "Minimal wear, just past the break-in period. Nothing to worry about." },
+  { zh: "不喜欢？那我自用了。这件如何？", en: "Don't like it? I'll keep it myself then. How about this one?" },
+  { zh: "这款刻着你的八字！当然不是字面意思，它干净不染。", en: "This one's got your fate engraved on it! Not literally, of course — it's clean." },
+  { zh: "自带StatTrak™。你扣扳机，它算数据。", en: "Comes with StatTrak™. You pull the trigger, it counts the numbers." },
+  { zh: "各退一步。这是我的底线了。", en: "Let's both take a step back. This is my bottom line." },
+];
+const SKINS = [
+  { zh: "沙漠之鹰 | 霜寒之焰", en: "Desert Eagle | Frostfire",  wear: "mw", wearVal: 0.1139, price: "17.76", rarity: "var(--rarity-purple)", rarityKey: "purple", wp: "pistol", c1: "#cfe8f5", c2: "#5a8fc0" },
+  { zh: "M249（StatTrak™）| 博客积木", en: "M249 (StatTrak™) | Blog Blocks", wear: "ww", wearVal: 0.4021, price: "0.28", rarity: "var(--rarity-blue)", rarityKey: "blue", wp: "rifle", c1: "#e878bc", c2: "#7d4a86" },
+  { zh: "UMP-45 | 击杀时刻", en: "UMP-45 | Kill Moment", wear: "ft", wearVal: 0.3074, price: "0.28", rarity: "var(--rarity-blue)", rarityKey: "blue", wp: "smg", c1: "#d05050", c2: "#5a2626" },
+];
+/* 5 rounds: dealer line + skin offered */
+const ROUNDS = [
+  { line: 0, skin: 0 },
+  { line: 1, skin: 2 },
+  { line: 2, skin: 1 },
+  { line: 3, skin: 2 },
+  { line: 4, skin: 0 },
+];
+
+/* negotiation state: round 1..5, status pending|busy|closed|failed */
+const neg = { round: 0, status: "idle" };
+let cap = "unlimited";
+const CAP_OPTIONS = [30, 64, 200, 400, 800, "unlimited"];
+
+const currentPrice = () => SKINS[ROUNDS[Math.max(1, neg.round) - 1].skin].price;
+const lastOffer = () => { for (let i = model.length - 1; i >= 0; i--) if (model[i].type === "offer") return model[i]; return null; };
+
+function presentRound(n) {
+  neg.round = n; neg.status = "typing"; // pills locked while the dealer types
+  const gen = ++presentGen;
+  const r = ROUNDS[n - 1];
+  /* dealer is slow: type "……" first, then the line, then the offer card */
+  const line = { type: "line", text: LINES[r.line], typing: true };
+  model.push(line);
+  renderAll();
+  setTimeout(() => {
+    if (gen !== presentGen) return; // a new negotiation superseded this round
+    line.typing = false;
+    neg.status = "pending";
+    const offer = { type: "offer", n, skin: SKINS[r.skin], status: "pending", fresh: true, detail: makeDetail(SKINS[r.skin]) };
+    model.push(offer);
+    renderAll();
+    setTimeout(() => { offer.fresh = false; }, 1300); // flip-in done; no replay on later renders
+  }, 1100);
+}
+let presentGen = 0;
+
+/* ================= render ================= */
+const AVATAR = "assets/arms-dealer.webp";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function renderChat() {
+  const t = T();
+  const el = document.getElementById("chatScroll");
+  el.innerHTML = model.map((m, mi) => {
+    if (m.type === "line") {
+      const bubble = m.typing
+        ? `<div class="bubble typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`
+        : `<div class="bubble">${esc(m.text[lang])}</div>`;
+      return `<div class="msg"><img class="avatar" src="${AVATAR}" alt="">${bubble}</div>`;
+    }
+    if (m.type === "reject") return `<div class="sys-reject">${esc(t.rejected())}</div>`;
+    if (m.type === "accept") return `<div class="sys-reject">${esc(t.accepted())}</div>`;
+    if (m.type === "failed") return `<div class="sys-reject failed">${esc(t.failed())}</div>`;
+    const s = m.skin;
+    let head = m.n === 5 ? t.finalHead() : t.offerHead(m.n);
+    if (m.status === "rejected") head += t.rejectedTag;
+    if (m.status === "accepted") head += t.acceptedTag;
+    return `<div class="msg"><img class="avatar" src="${AVATAR}" alt="">
+      <div class="offer-card${m.n === 5 ? " final" : ""}${m.fresh ? " reveal" : ""}">
+        <div class="stripe" style="background:${s.rarity}"></div>
+        <div class="thumb">${weaponSvg(s, "rg" + mi)}</div>
+        <div class="offer-info">
+          <div class="offer-head">${esc(head)}</div>
+          <div class="offer-name">${esc(s[lang])}</div>
+          <div class="offer-wear">${esc(t.wears[s.wear])}</div>
+          <div class="offer-price">${esc(t.price(s.price))}</div>
+        </div>
+      </div></div>`;
+  }).join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderRegion6() {
+  const t = T();
+  const counter = document.getElementById("counterText");
+  const counterTxt = neg.status === "closed" ? t.counterClosed
+    : neg.status === "failed" ? t.counterFailed
+    : t.counter(Math.max(1, neg.round));
+  if (counter.dataset.txt !== counterTxt) { // flip the label when it changes (new offer / closed)
+    counter.dataset.txt = counterTxt;
+    counter.innerHTML = `<span class="counter-flip">${esc(counterTxt)}</span>`;
+  }
+  document.getElementById("infoIcon").dataset.tip = t.tip;
+  document.getElementById("capText").textContent = t.capLabel(cap);
+  document.getElementById("capMenu").innerHTML = CAP_OPTIONS.map(o => {
+    const label = o === "unlimited" ? t.capUnlimited : String(o);
+    return `<div class="opt${o === cap ? " sel" : ""}" data-cap="${o}">${esc(label)}</div>`;
+  }).join("");
+  document.getElementById("acceptText").textContent = t.accept(neg.round ? currentPrice() : "0.00");
+  document.getElementById("rejectText").textContent = t.reject;
+}
+
+function renderStatic() {
+  const t = T();
+  document.getElementById("titleText").textContent = t.title;
+  document.getElementById("offerTitleText").textContent = t.offerTitle;
+  document.getElementById("validityText").textContent = t.validity;
+  document.getElementById("catalogText").textContent = t.catalog;
+  document.getElementById("xpName").textContent = t.terminalName;
+  document.getElementById("langHint").textContent = t.hint;
+  document.getElementById("btnNew").textContent = t.btnNew;
+  document.getElementById("btnLine").textContent = t.btnLine;
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  if (slotIdx >= 0) slotCanvas.title = MC_ITEMS[slotIdx].name[lang];
+  renderRegion6();
+}
+
+function renderAll() { renderStatic(); renderChat(); renderOffer(); layout(); }
+
+/* bottom row (9/10/11) heights mirror region 6 (same y band 0.875–0.998 on the
+   map); region 10 starts lower (0.895). Then auto-scale the stage to fit. */
+function layout() {
+  const stage = document.querySelector(".stage");
+  stage.style.transform = "";
+  const bar = document.querySelector(".action-bar");
+  const panel = document.querySelector(".panel");
+  const band = panel.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
+  document.querySelector(".count-panel").style.height = band + "px";
+  document.querySelector(".xp-panel").style.height = band + "px";
+  document.querySelector(".slot-panel").style.height = Math.round(band * (1 - 0.020 / 0.123)) + "px";
+  const s = Math.min(1, (window.innerWidth - 24) / stage.scrollWidth);
+  stage.style.transform = s < 1 ? `scale(${s})` : "";
+}
+window.addEventListener("resize", layout);
+
+/* ================= region 6 interactions ================= */
+const btnAccept = document.getElementById("btnAccept");
+const btnRejectAct = document.getElementById("btnRejectAct");
+
+function resetPills() {
+  for (const b of [btnAccept, btnRejectAct]) {
+    b.classList.remove("filling", "filled", "armed", "locked", "disabled");
+  }
+}
+
+/* long-press to fill: hold until the capsule fills; early release cancels */
+let hold = null; // { kind, btn, done }
+
+function cancelHold() {
+  if (!hold || hold.done) return;
+  hold.btn.classList.remove("filling", "armed");
+  hold = null;
+}
+
+function finishDecision(kind) {
+  neg.status = "busy";
+  btnAccept.classList.add("locked");
+  btnRejectAct.classList.add("locked");
+  const offer = lastOffer();
+  if (kind === "accept") {
+    if (offer) offer.status = "accepted";
+    model.push({ type: "accept" });
+    neg.status = "closed";
+    btnRejectAct.classList.add("disabled");
+    renderAll();
+    return;
+  }
+  if (offer) offer.status = "rejected";
+  model.push({ type: "reject" });
+  if (neg.round < 5) {
+    neg.status = "idle";
+    resetPills();
+    renderAll();
+    setTimeout(() => presentRound(neg.round + 1), 450);
+  } else {
+    model.push({ type: "failed" });
+    neg.status = "failed";
+    btnAccept.classList.add("disabled");
+    btnRejectAct.classList.add("disabled");
+    renderAll();
+  }
+}
+
+function bindHold(btn, kind) {
+  const fillEl = btn.querySelector(".fill");
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (neg.status !== "pending" || hold) return;
+    hold = { kind, btn, done: false };
+    if (kind === "reject") btn.classList.add("armed");
+    btn.classList.add("filling");
+  });
+  btn.addEventListener("pointerup", () => {
+    if (hold && hold.btn === btn && !hold.done) cancelHold();
+    else hold = null;
+  });
+  btn.addEventListener("pointerleave", () => { if (hold && hold.btn === btn && !hold.done) cancelHold(); });
+  btn.addEventListener("pointercancel", () => { if (hold && hold.btn === btn && !hold.done) cancelHold(); });
+  fillEl.addEventListener("transitionend", e => {
+    if (e.propertyName !== "transform" || !hold || hold.btn !== btn || hold.done) return;
+    hold.done = true;
+    btn.classList.add("filled");
+    const k = hold.kind;
+    hold = null;
+    finishDecision(k);
+  });
+}
+bindHold(btnAccept, "accept");
+bindHold(btnRejectAct, "reject");
+
+/* cap dropdown */
+const capLabel = document.getElementById("capLabel");
+const capMenu = document.getElementById("capMenu");
+capLabel.onclick = e => { e.stopPropagation(); capMenu.classList.toggle("open"); };
+capMenu.onclick = e => {
+  const opt = e.target.closest(".opt");
+  if (!opt) return;
+  e.stopPropagation();
+  cap = opt.dataset.cap === "unlimited" ? "unlimited" : Number(opt.dataset.cap);
+  capMenu.classList.remove("open");
+  renderRegion6();
+};
+document.addEventListener("click", () => capMenu.classList.remove("open"));
+
+/* ================= region 8 — current offer (A–H; I dropped by design) ===== */
+const WEAR_ABBR = { fn: "FN", mw: "MW", ft: "FT", ww: "WW", bs: "BS" };
+
+/* per-offer random skin details (H line); wearVal comes from the skin tier */
+function makeDetail(skin) {
+  return {
+    wearVal: skin.wearVal,
+    style: Math.floor(Math.random() * 4),
+    no: 1000 + Math.floor(Math.random() * 900),
+    pattern: Math.floor(Math.random() * 1000),
+  };
+}
+
+let offerKey = "", rotX = -6, rotY = 14, spinning = false, drag = null;
+
+function applyRot(obj) { obj.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
+
+/* inspect = auto-spin toggle; drag on the stage rotates the piece manually */
+(function spinLoop() {
+  requestAnimationFrame(spinLoop);
+  if (!spinning) return;
+  rotY += 0.4;
+  const obj = document.getElementById("offerObj");
+  if (obj) applyRot(obj);
+})();
+
+function renderOffer() {
+  const off = lastOffer();
+  const key = lang + ":" + (off ? off.n + off.status : "-");
+  if (key === offerKey) return; // keep drag/spin state across unrelated renders
+  offerKey = key;
+  const body = document.getElementById("offerBody");
+  if (!off) { body.innerHTML = ""; return; }
+  const t = T(), s = off.skin, d = off.detail;
+  body.innerHTML = `
+    <div class="wm-circle"><img src="${AVATAR}" alt=""></div>
+    <div class="offer-stage" id="offerStage"><div class="offer-obj" id="offerObj">${weaponSvg(s, "r8g")}</div></div>
+    <div class="r8-name">${esc(s[lang])}</div>
+    <div class="r8-rarity" style="background:${s.rarity}">${esc(t.rarities[s.rarityKey])}</div>
+    <button class="r8-inspect${spinning ? " on" : ""}" id="btnInspect">${esc(t.inspect)}</button>
+    <div class="r8-wear">${esc(t.wears[s.wear])}<span class="r8-wear-tab">${WEAR_ABBR[s.wear]}</span></div>
+    <div class="r8-bar"><span class="r8-scan"></span><span class="r8-arrow" id="r8Arrow" style="left:0%"></span></div>
+    <div class="r8-wearval">${d.wearVal.toFixed(4)}</div>
+    <div class="r8-meta">
+      <span>${t.styleLabel}：<b>${esc(t.styles[d.style])}</b></span>
+      <span>${t.noLabel}：<b>${d.no}</b></span>
+      <span>${t.patternLabel}：<b>${d.pattern}</b></span>
+    </div>`;
+  const stage = document.getElementById("offerStage");
+  const obj = document.getElementById("offerObj");
+  applyRot(obj);
+  /* wear bar loading: arrow glides from 0 to the wear value while the scan sweeps */
+  const arrow = document.getElementById("r8Arrow");
+  const arrowTarget = (d.wearVal * 100).toFixed(2) + "%";
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    arrow.style.transition = "left .95s cubic-bezier(.25,.6,.3,1)";
+    arrow.style.left = arrowTarget;
+  }));
+  stage.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    drag = { x: e.clientX, y: e.clientY };
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", e => {
+    if (!drag) return;
+    rotY += (e.clientX - drag.x) * 0.4;
+    rotX = Math.max(-60, Math.min(60, rotX - (e.clientY - drag.y) * 0.3));
+    drag = { x: e.clientX, y: e.clientY };
+    applyRot(obj);
+  });
+  const endDrag = () => { drag = null; };
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  document.getElementById("btnInspect").onclick = () => {
+    spinning = !spinning;
+    document.getElementById("btnInspect").classList.toggle("on", spinning);
+  };
+}
+
+/* ================= region 9 — validity countdown ================= */
+/* DD:HH:MM:SS, ticks once per second; resets on a new negotiation */
+const COUNT_INITIAL = 2 * 86400 + 23 * 3600 + 57 * 60 + 45;
+let remain = COUNT_INITIAL;
+const pad2 = n => String(n).padStart(2, "0");
+function renderCount() {
+  const el = document.getElementById("digits");
+  const d = Math.floor(remain / 86400);
+  const h = Math.floor((remain % 86400) / 3600);
+  const m = Math.floor((remain % 3600) / 60);
+  const s = remain % 60;
+  el.innerHTML = [pad2(d), pad2(h), pad2(m), pad2(s)].join("<i>:</i>");
+  el.classList.toggle("expired", remain <= 0);
+}
+setInterval(() => { if (remain > 0) { remain--; renderCount(); } }, 1000);
+
+/* ================= region 10 — random MC item icon ================= */
+/* 8x8 pixel maps; cycles to a random different item every 2.5s */
+const MC_ITEMS = [
+  { name: { zh: "草方块", en: "Grass Block" },
+    pal: { G: "#6fae3f", g: "#578f31", D: "#7a5533", B: "#5f4126" },
+    rows: ["GGGGGGGG", "GgGGgGGg", "DDBDDBDD", "DBDDDBDD", "DDBDDDBD", "DDDBDDDD", "DDBDDDBD", "DDDDDBDD"] },
+  { name: { zh: "钻石", en: "Diamond" },
+    pal: { C: "#4aedd9", W: "#c9fbf4" },
+    rows: ["........", "..CCCC..", ".CWWCCC.", "CWWCCCCC", "CCWCCCCC", ".CCCCCC.", "..CCCC..", "........"] },
+  { name: { zh: "金锭", en: "Gold Ingot" },
+    pal: { Y: "#fcdc4f", W: "#fff7b0", E: "#d4a92c" },
+    rows: ["........", "........", "..YYYY..", ".YWWYYY.", ".YYYYYY.", "YYYYYYYY", "EYYYYYYE", "........"] },
+  { name: { zh: "苹果", en: "Apple" },
+    pal: { R: "#e53e3e", W: "#ff9090", B: "#7a5533", L: "#578f31" },
+    rows: ["...B....", "..BB.L..", ".RRRRRR.", "RWRRRRRR", "RWRRRRRR", ".RRRRRR.", "..RRRR..", "........"] },
+  { name: { zh: "火把", en: "Torch" },
+    pal: { Y: "#f8c630", W: "#fff2a8", S: "#7a5533" },
+    rows: ["...Y....", "..WWW...", "..YWY...", "..YYY...", "...S....", "...S....", "...S....", "...S...."] },
+  { name: { zh: "末影珍珠", en: "Ender Pearl" },
+    pal: { E: "#275b4b", D: "#173f34", W: "#7fd4b8" },
+    rows: ["..EEEE..", ".EDEEDE.", "EEWEEDEE", "EDEEEEEE", "EEEEDEEE", "DEEEEDEE", ".EDEEDE.", "..EEEE.."] },
+  { name: { zh: "苦力怕头", en: "Creeper Head" },
+    pal: { G: "#59b64a", g: "#479a3c", B: "#141a14" },
+    rows: ["GgGGgGGg", "gGGgGGgG", "GBBGGGBB", "GBBGGGBB", "GGGBBGGG", "GGBBBBGG", "GGBBBBGG", "GgGGgGGg"] },
+  { name: { zh: "面包", en: "Bread" },
+    pal: { T: "#c68f4a", t: "#e0b06b" },
+    rows: ["........", "........", ".TTTTTT.", "TtttttTT", "TtTTttTT", "TtttttTT", ".TTTTTT.", "........"] },
+  { name: { zh: "红石粉", en: "Redstone Dust" },
+    pal: { R: "#e02020", r: "#8f1010" },
+    rows: ["........", "...R....", "..RRR...", ".RRRRR..", "RRrRRrRR", ".RRRRR..", "..r.r...", "........"] },
+  { name: { zh: "铁剑", en: "Iron Sword" },
+    pal: { W: "#d8d8d8", H: "#3f332a", S: "#7a5533", P: "#d4a92c" },
+    rows: ["...W....", "...W....", "...W....", "...W....", ".HHHHH..", "...S....", "...S....", "...P...."] },
+];
+
+const slotCanvas = document.getElementById("slotIcon");
+const slotCtx = slotCanvas.getContext("2d");
+let slotIdx = -1;
+
+function drawItem(it) {
+  slotCtx.clearRect(0, 0, 8, 8);
+  it.rows.forEach((row, y) => {
+    [...row].forEach((ch, x) => {
+      const c = it.pal[ch];
+      if (c) { slotCtx.fillStyle = c; slotCtx.fillRect(x, y, 1, 1); }
+    });
+  });
+}
+
+function nextItem() {
+  let i;
+  do { i = Math.floor(Math.random() * MC_ITEMS.length); } while (i === slotIdx);
+  slotIdx = i;
+  slotCanvas.title = MC_ITEMS[i].name[lang];
+  slotCanvas.classList.add("swap");
+  setTimeout(() => { drawItem(MC_ITEMS[i]); slotCanvas.classList.remove("swap"); }, 180);
+}
+slotIdx = Math.floor(Math.random() * MC_ITEMS.length);
+drawItem(MC_ITEMS[slotIdx]);
+slotCanvas.title = MC_ITEMS[slotIdx].name[lang];
+setInterval(nextItem, 2500);
+
+/* ================= region 11 — rarity dot strip (decorative) ============ */
+/* mirrors the reference shot: blue x8 / purple x6 / magenta x3 / red x2 / yellow x1,
+   filled = owned, hollow = missing */
+const DOT_GROUPS = [
+  { c: "#4b69ff", pat: [1, 0, 1, 0, 1, 0, 0, 0] },
+  { c: "#8847ff", pat: [1, 0, 0, 0, 0, 0] },
+  { c: "#c93cd6", pat: [1, 1, 0] },
+  { c: "#de4b4b", pat: [0, 0] },
+  { c: "#e5c558", pat: [0] },
+];
+document.getElementById("xpDots").innerHTML = DOT_GROUPS.map(g =>
+  `<span class="dot-group" style="color:${g.c}">` +
+  g.pat.map(f => `<span class="dot ${f ? "f" : "h"}"></span>`).join("") +
+  "</span>").join("");
+
+/* ================= ⌘E language toggle ================= */
+window.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
+    e.preventDefault();
+    lang = lang === "zh" ? "en" : "zh";
+    renderAll();
+  }
+});
+
+/* ================= demo toolbar ================= */
+document.getElementById("btnNew").onclick = () => {
+  model.length = 0;
+  resetPills();
+  neg.round = 0; neg.status = "idle";
+  remain = COUNT_INITIAL; renderCount();
+  presentRound(1);
+};
+document.getElementById("btnLine").onclick = () => {
+  const line = { type: "line", text: LINES[Math.floor(Math.random() * LINES.length)], typing: true };
+  model.push(line);
+  renderChat();
+  setTimeout(() => { line.typing = false; renderChat(); }, 1000);
+};
+
+/* seed: round 1 already rejected (history), round 2 pending — mirrors reference shot */
+model.push({ type: "line", text: LINES[ROUNDS[0].line] });
+model.push({ type: "offer", n: 1, skin: SKINS[ROUNDS[0].skin], status: "rejected", detail: makeDetail(SKINS[ROUNDS[0].skin]) });
+model.push({ type: "reject" });
+presentRound(2);
+renderCount();
+</script>
+</body>
+</html>

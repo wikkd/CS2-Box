@@ -89,7 +89,7 @@ public final class TerminalOfferRegion {
 
         // ---- C: inspect capsule (top-right) ----
         String inspectText = Component.translatable("gui.csgobox.csgo_box.toolbar.inspect").getString();
-        int iw = Math.round(font.width(inspectText) * 1.1F) + 22;
+        int iw = Math.round(font.width(inspectText) * 1.5F) + 2 * (inspectText.length() - 1) + 22;
         inspectX = x1 - iw - 14;
         inspectY = y0 + 12;
         inspectW = iw;
@@ -102,8 +102,9 @@ public final class TerminalOfferRegion {
             AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, inspectX - 10, inspectY - 10,
                     iw + 20, 42, 128, 128);
         }
-        RenderFontTool.drawString(gg, font, fcs(inspectText),
-                inspectX + (iw - font.width(inspectText)) / 2F, inspectY + 5, 0, 0, 1.1F, fg);
+        int inspectTextW = Math.round(font.width(inspectText) * 1.5F) + 2 * (inspectText.length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, inspectText,
+                inspectX + (iw - inspectTextW) / 2F, inspectY + 5, 2F, 1.5F, fg);
 
         if (offer == null) {
             return;
@@ -111,36 +112,36 @@ public final class TerminalOfferRegion {
 
         // ---- A: name box (top-left) ----
         String name = Component.translatable(NegotiationModel.SKIN_NAME_KEYS[offer.skinIdx()]).getString();
-        int nameW = Math.round(font.width(name) * 1.35F) + 24;
+        int nameW = Math.round(font.width(name) * 1.875F) + 4 * (name.length() - 1) + 24;
         TerminalChatRegion.drawRounded(gg, x0 + 12, y0 + 12, nameW, 22, TerminalPalette.BLACK_BOX,
                 TerminalPalette.BLACK_BOX);
-        RenderFontTool.drawString(gg, font, fcs(name), x0 + 24, y0 + 16, 0, 0, 1.35F,
-                TerminalPalette.WHITE);
+        RenderFontTool.drawSpacedText(gg, font, name, x0 + 24, y0 + 16,
+                4F, 1.875F, TerminalPalette.WHITE);
 
         // ---- B: rarity block (below the name) ----
         int rarity = TerminalChatRegion.rarityColor(offer.skinIdx());
         String rarityName = Component.translatable(
                 "csgobox.terminal.rarity." + NegotiationModel.SKIN_RARITY[offer.skinIdx()]).getString();
-        int rw = Math.round(font.width(rarityName) * 1.1F) + 18;
+        int rw = Math.round(font.width(rarityName) * 1.625F) + 3 * (rarityName.length() - 1) + 18;
         AnimRenderOps.fill(gg, x0 + 12, y0 + 42, x0 + 12 + rw, y0 + 58, rarity);
-        RenderFontTool.drawString(gg, font, fcs(rarityName), x0 + 22, y0 + 45, 0, 0, 1.1F,
-                TerminalPalette.WHITE);
+        RenderFontTool.drawSpacedText(gg, font, rarityName, x0 + 22, y0 + 45,
+                3F, 1.625F, TerminalPalette.WHITE);
 
         // ---- E: wear tier (bottom-left) ----
         int tier = WearBands.tierIndex(offer.wearVal());
         String wearName = Component.translatable(WearBands.tierNameKey(tier)).getString();
         String wearAbbr = WearBands.tierAbbr(tier);
-        int wearW = Math.round(font.width(wearName) * 1.3F) + 26;
+        int wearW = Math.round(font.width(wearName) * 1.625F) + 2 * (wearName.length() - 1) + 26;
         int wearY = y1 - 108;
         TerminalChatRegion.drawRounded(gg, x0 + 12, wearY, wearW, 24, TerminalPalette.WEAR_BG,
                 TerminalPalette.WEAR_BG);
         // corner tab
-        int tabW = Math.round(font.width(wearAbbr) * 0.95F) + 12;
+        int tabW = Math.round(font.width(wearAbbr) * 1.125F) + 12;
         AnimRenderOps.fill(gg, x0 + 12, wearY + 8, x0 + 12 + tabW, wearY + 24, 0xFF20242A);
-        RenderFontTool.drawString(gg, font, fcs(wearAbbr), x0 + 16, wearY + 11, 0, 0, 0.95F,
-                TerminalPalette.WEAR_TAB_TEXT);
-        RenderFontTool.drawString(gg, font, fcs(wearName), x0 + 12 + tabW + 8, wearY + 5, 0, 0, 1.3F,
-                TerminalPalette.WHITE);
+        RenderFontTool.drawSpacedText(gg, font, wearAbbr, x0 + 16, wearY + 11,
+                0.5F, 1.125F, TerminalPalette.WEAR_TAB_TEXT);
+        RenderFontTool.drawSpacedText(gg, font, wearName, x0 + 12 + tabW + 8, wearY + 5,
+                2F, 1.625F, TerminalPalette.WHITE);
 
         // ---- F: five-band wear bar (below the tier) ----
         int barX = x0 + 12;
@@ -157,20 +158,20 @@ public final class TerminalOfferRegion {
 
         // ---- G: wear value (black box) ----
         String wearVal = String.format("%.4f", offer.wearVal());
-        int wvW = Math.round(font.width(wearVal) * 1.6F) + 20;
+        int wvW = Math.round(font.width(wearVal) * 1.875F) + 3 * (wearVal.length() - 1) + 20;
         TerminalChatRegion.drawRounded(gg, barX, barY + 16, wvW, 20, TerminalPalette.BLACK_BOX,
                 TerminalPalette.BLACK_BOX);
-        RenderFontTool.drawString(gg, font, fcs(wearVal), barX + 10, barY + 19, 0, 0, 1.6F,
-                TerminalPalette.WHITE);
+        RenderFontTool.drawSpacedText(gg, font, wearVal, barX + 10, barY + 19,
+                3F, 1.875F, TerminalPalette.WHITE);
 
         // ---- H: meta row (bottom-right, 3 columns) ----
         String style = Component.translatable(
                 "gui.csgobox.csgo_box.style." + styleKey(offer.style())).getString();
         String meta = Component.translatable("csgobox.terminal.meta", style,
                 offer.no(), offer.pattern()).getString();
-        int metaW = Math.round(font.width(meta) * 1.2F);
-        RenderFontTool.drawString(gg, font, fcs(meta), x1 - metaW - 12, y1 - 24, 0, 0, 1.2F,
-                TerminalPalette.META_BOLD);
+        int metaW = Math.round(font.width(meta) * 1.5F) + 1 * (meta.length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, meta, x1 - metaW - 12, y1 - 24,
+                1F, 1.5F, TerminalPalette.META_BOLD);
     }
 
     /** FormattedCharSequence wrapper for plain strings. */

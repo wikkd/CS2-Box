@@ -57,14 +57,14 @@ public final class TerminalActionBar {
         }
         float flip = TerminalAnims.counterFlip(nowMs, counterFlipAtMs);
         float slide = (1F - flip) * 10F;
-        RenderFontTool.drawString(gg, font, counter.getVisualOrderText(), x0 + 12, midY - 7 + slide, 0, 0, 1.2F,
-                TerminalPalette.TEXT);
+        RenderFontTool.drawSpacedText(gg, font, counterStr, x0 + 12, midY - 7 + slide,
+                1F, 1.5F, TerminalPalette.TEXT);
 
         // ---- info dot + tooltip ----
         infoX = x0 + 12;
         infoY = midY + 6;
         AnimRenderOps.fill(gg, infoX, infoY, infoX + 10, infoY + 10, 0xFF000000);
-        RenderFontTool.drawString(gg, font, fcs("i"), infoX + 2, infoY - 3, 0, 0, 1.0F,
+        RenderFontTool.drawString(gg, font, fcs("i"), infoX + 2, infoY - 3, 0, 0, 1.25F,
                 TerminalPalette.ICON_DIM);
         if (mx >= infoX - 2 && mx <= infoX + 12 && my >= infoY - 2 && my <= infoY + 12) {
             drawTooltip(gg, x0 + 24, midY + 16, font);
@@ -75,14 +75,14 @@ public final class TerminalActionBar {
                 ? Component.translatable("csgobox.terminal.cap.label",
                         Component.translatable("csgobox.terminal.cap.unlimited")).getString()
                 : Component.translatable("csgobox.terminal.cap.label", model.cap()).getString();
-        int capWText = Math.round(font.width(capText) * 1.2F);
+        int capWText = Math.round(font.width(capText) * 1.5F) + 1 * (capText.length() - 1);
         capX = x1 - capWText - 20;
         capY = midY - 8;
         capW = capWText + 14;
         capH = 16;
         boolean capHover = mx >= capX && mx <= capX + capW && my >= capY && my <= capY + capH;
-        RenderFontTool.drawString(gg, font, fcs(capText), capX, capY - 2, 0, 0, 1.2F,
-                capHover ? TerminalPalette.CAP_SELECTED : TerminalPalette.CAP_DIM);
+        RenderFontTool.drawSpacedText(gg, font, capText, capX, capY - 2,
+                1F, 1.5F, capHover ? TerminalPalette.CAP_SELECTED : TerminalPalette.CAP_DIM);
         // chevron
         RenderFontTool.drawString(gg, font, fcs(capOpen ? "▲" : "▼"), capX + capW - 6, capY + 1, 0, 0, 0.9F,
                 TerminalPalette.CHEVRON);
@@ -148,8 +148,9 @@ public final class TerminalActionBar {
             }
         }
         Font font = Minecraft.getInstance().font;
-        RenderFontTool.drawString(gg, font, fcs(label),
-                x + (w - font.width(label)) / 2F, y + (h - 8) / 2F - 2, 0, 0, 1.1F, textC);
+        int labelW = Math.round(font.width(label) * 1.625F) + 2 * (label.length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, label,
+                x + (w - labelW) / 2F, y + (h - 8) / 2F - 2, 2F, 1.625F, textC);
     }
 
     /** Dropdown anchored above the cap label, 6 options, selected green. */
@@ -176,17 +177,18 @@ public final class TerminalActionBar {
                     ? Component.translatable("csgobox.terminal.cap.unlimited").getString()
                     : String.valueOf(cap);
             int color = selected ? TerminalPalette.CAP_SELECTED : TerminalPalette.CAP_DIM;
-            RenderFontTool.drawString(gg, font, fcs(text), x + 8, rowY + 5, 0, 0, 1.1F, color);
+            RenderFontTool.drawSpacedText(gg, font, text, x + 8, rowY + 5,
+                    0.5F, 1.5F, color);
         }
     }
 
     private void drawTooltip(GuiGraphicsExtractor gg, int x, int y, Font font) {
         String tip = Component.translatable("csgobox.terminal.tip").getString();
-        int w = Math.round(font.width(tip) * 1.1F) + 16;
+        int w = Math.round(font.width(tip) * 1.375F) + 16;
         int h = 26;
         TerminalChatRegion.drawRounded(gg, x, y, w, h, TerminalPalette.TOOLTIP_BG,
                 TerminalPalette.TOOLTIP_BORDER);
-        RenderFontTool.drawString(gg, font, fcs(tip), x + 8, y + 7, 0, 0, 1.1F, TerminalPalette.TEXT);
+        RenderFontTool.drawString(gg, font, fcs(tip), x + 8, y + 7, 0, 0, 1.375F, TerminalPalette.TEXT);
     }
 
     /** FormattedCharSequence wrapper for plain strings. */

@@ -38,8 +38,15 @@ public final class TerminalChatRegion {
     private static final int CARD_W = 262;
     private static final int CARD_THUMB_W = 96;
     private static final int CARD_RADIUS = 6;
-    private static final int ROW_H = 15;
+    private static final int ROW_H = 19; // offer-info line-height 1.55 @12px (TERMINAL-LAYOUT-SPEC §3)
     private static final int MAX_ENTRIES = 64;
+    /** 13px font × line-height 1.55 (docs/TERMINAL-LAYOUT-SPEC.md §3). */
+    private static final int LINE_H = 20;
+    /** Bubble text padding (HTML .bubble padding: 8px 12px). */
+    private static final int BUBBLE_PAD_X = 12;
+    private static final int BUBBLE_PAD_Y = 8;
+    /** Bubble font scale: 13px / 8px glyph base (TERMINAL-LAYOUT-SPEC §1). */
+    private static final float BUBBLE_SCALE = 1.625F;
 
     public void render(GuiGraphics gg, int x0, int y0, int x1, int y1,
                        long nowMs, NegotiationModel model) {
@@ -49,8 +56,9 @@ public final class TerminalChatRegion {
         drawDotGrid(gg, x0 + 8, bodyTop + 4, x1 - x0 - 16, y1 - bodyTop - 8);
         // title strip
         Font font = Minecraft.getInstance().font;
-        RenderFontTool.drawString(gg, font, fcs("csgobox.terminal.chat.title"),
-                x0 + 12, y0 + 5, 0, 0, 1.2F, TerminalPalette.TITLE);
+        RenderFontTool.drawSpacedText(gg, font,
+                Component.translatable("csgobox.terminal.chat.title").getString(),
+                x0 + 12, y0 + 5, 2F, 1.5F, TerminalPalette.TITLE);
 
         // chat stream: newest at the bottom, only the visible window
         List<Object> entries = model.history();
@@ -77,7 +85,7 @@ public final class TerminalChatRegion {
         }
         if (e instanceof NegotiationModel.SystemEntry se) {
             String text = Component.translatable(se.textKey()).getString();
-            return Math.round(font.width(text) * 1.3F / (availW - 20)) * 14 + 10;
+            return Math.round(font.width(text) * 1.375F / (availW - 20)) * LINE_H + 14;
         }
         return 20;
     }
@@ -121,16 +129,19 @@ public final class TerminalChatRegion {
         } else {
             Font font = Minecraft.getInstance().font;
             String text = Component.translatable(le.textKey()).getString();
-            RenderFontTool.drawString(gg, font, fcs(text), bx + 10, y + 7, 0, 0, 1.45F,
-                    TerminalPalette.TEXT);
+            // Clamp to the bubble interior (max-width 82% + padding, P3).
+            RenderFontTool.drawStringClamped(gg, font, text,
+                    bx + BUBBLE_PAD_X, y + BUBBLE_PAD_Y, 0, 0, BUBBLE_SCALE,
+                    bw - 2 * BUBBLE_PAD_X, TerminalPalette.TEXT);
         }
     }
 
     private int hFor(NegotiationModel.LineEntry le, int bw) {
         Font font = Minecraft.getInstance().font;
         String text = Component.translatable(le.textKey()).getString();
-        int textW = Math.round(font.width(text) * 1.45F);
-        return Math.max(AVATAR_SIZE, (textW > bw - 20 ? 26 : 13) + 14);
+        int textW = Math.round(font.width(text) * BUBBLE_SCALE);
+        int lines = textW > bw - 2 * BUBBLE_PAD_X ? 2 : 1;
+        return Math.max(AVATAR_SIZE, lines * LINE_H + 2 * BUBBLE_PAD_Y);
     }
 
     /** Offer card: dark rounded card + rarity stripe + weapon thumb + 4 rows. */
@@ -166,9 +177,10 @@ public final class TerminalChatRegion {
                 ? Component.translatable("csgobox.terminal.offer.price.green", offerPrice(offer)).getString()
                 : Component.translatable("csgobox.terminal.offer.price", offerPrice(offer)).getString();
         Font font = Minecraft.getInstance().font;
-        row(gg, font, head, ix, iy, nowMs, oe.atMs(), 0, 0.95F, finalRound ? dimColor : TerminalPalette.RARITY_TEXT);        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 1.2F, textColor);
-        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 0.95F, dimColor);
-        row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 1.2F,
+        row(gg, font, head, ix, iy, nowMs, oe.atMs(), 0, 1.5F, finalRound ? dimColor : TerminalPalette.RARITY_TEXT);
+        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 1.5F, textColor);
+        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 1.5F, dimColor);
+        row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 1.5F,
                 finalRound ? TerminalPalette.GREEN : TerminalPalette.PILL_GREEN_TEXT);
     }
 
@@ -191,8 +203,9 @@ public final class TerminalChatRegion {
         Font font = Minecraft.getInstance().font;
         String text = Component.translatable(se.textKey()).getString();
         int color = se.failed() ? TerminalPalette.SYS_FAILED : TerminalPalette.SYS_MUTED;
-        RenderFontTool.drawString(gg, font, fcs(text),
-                x + (availW - font.width(text)) / 2F, y + 2, 0, 0, 1.3F, color);
+        int textW = Math.round(font.width(text) * 1.375F) + 1 * (text.length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, text,
+                x + (availW - textW) / 2F, y + 2, 0.5F, 1.375F, color);
     }
 
     /** FormattedCharSequence wrapper for plain strings. */

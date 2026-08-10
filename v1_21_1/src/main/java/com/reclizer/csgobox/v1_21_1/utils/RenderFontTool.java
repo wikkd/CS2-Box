@@ -32,6 +32,37 @@ public final class RenderFontTool {
     }
 
     /**
+     * Draw {@code text} character by character with a fixed pixel gap between
+     * glyphs — the Java equivalent of the HTML prototype's {@code letter-spacing}
+     * (see docs/TERMINAL-LAYOUT-SPEC.md §2). The gap {@code spacingPx} is in
+     * framebuffer pixels (after scale), matching the prototype's fixed px values.
+     *
+     * <p>The returned width is the total rendered width in scaled pixels
+     * ({@code round(font.width(text) * scale) + spacingPx * (len - 1)}) — use it
+     * for centring / container sizing instead of {@link Font#width(String)}.</p>
+     *
+     * @return rendered width in scaled (framebuffer) pixels.
+     */
+    public static int drawSpacedText(GuiGraphics guiGraphics, Font pFont, String text,
+                                     float pX, float pY, float spacingPx, float scale, int pColor) {
+        Font font = pFont != null ? pFont : Minecraft.getInstance().font;
+        if (font == null || text == null || text.isEmpty()) {
+            return 0;
+        }
+        float x = pX;
+        for (int i = 0; i < text.length(); i++) {
+            String c = String.valueOf(text.charAt(i));
+            drawString(guiGraphics, font, FormattedCharSequence.forward(c, Style.EMPTY),
+                    x, pY, 0, 0, scale, pColor);
+            x += Math.round(font.width(c) * scale);
+            if (i < text.length() - 1) {
+                x += spacingPx;
+            }
+        }
+        return Math.round(x - pX);
+    }
+
+    /**
      * Draw {@code text} at the given position, but never wider than
      * {@code maxPixelWidth} (already scaled). If the natural rendered width
      * would overflow, the text is binary-search-truncated and suffixed with

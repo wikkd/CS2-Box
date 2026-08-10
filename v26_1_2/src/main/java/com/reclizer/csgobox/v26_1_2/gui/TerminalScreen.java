@@ -81,9 +81,10 @@ public class TerminalScreen extends Screen {
                     tx0 + 32 + i * 4, iconY + 8, TerminalPalette.BATTERY);
         }
         // centre: title
-        RenderFontTool.drawString(gg, font,
-                Component.translatable("gui.csgobox.terminal.title").getVisualOrderText(),
-                (tx0 + tx1) / 2F, ty0 + 9, 1, 0, 1.5F, TerminalPalette.TITLE);
+        Component title = Component.translatable("gui.csgobox.terminal.title");
+        int titleW = Math.round(font.width(title.getString()) * 1.5F) + 2 * (title.getString().length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, title.getString(),
+                (tx0 + tx1) / 2F - titleW / 2F, ty0 + 9, 2F, 1.5F, TerminalPalette.TITLE);
         // right: close button
         closeX = tx1 - 26;
         closeY = ty0 + 7;
@@ -112,9 +113,11 @@ public class TerminalScreen extends Screen {
         // region 7 title strip
         int rty = ry0 + 22;
         AnimRenderOps.fill(gg, rx0, ry0, rx1, rty, TerminalPalette.TITLE);
-        RenderFontTool.drawString(gg, font,
-                Component.translatable("csgobox.terminal.offer.title").getVisualOrderText(),
-                (rx0 + rx1) / 2F, ry0 + 5, 1, 0, 1.4F, TerminalPalette.TEXT);
+        Component offerTitle = Component.translatable("csgobox.terminal.offer.title");
+        int offerTitleW = Math.round(font.width(offerTitle.getString()) * 1.5F)
+                + 2 * (offerTitle.getString().length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, offerTitle.getString(),
+                (rx0 + rx1) / 2F - offerTitleW / 2F, ry0 + 5, 2F, 1.5F, TerminalPalette.TEXT);
         offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY);
 
         // ---- bottom row (region 9+10+11) ----

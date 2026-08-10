@@ -54,9 +54,9 @@ public final class TerminalBottomRow {
         // ---- region 9: countdown ----
         int cw = Math.round((x1 - x0) * 0.20F);
         int cx0 = x0 + (int) ((x1 - x0) * 0.035F);
-        RenderFontTool.drawString(gg, font,
-                Component.translatable("csgobox.terminal.validity").getVisualOrderText(),
-                cx0, y0 + 4, 0, 0, 1.0F, TerminalPalette.TITLE);
+        RenderFontTool.drawSpacedText(gg, font,
+                Component.translatable("csgobox.terminal.validity").getString(),
+                cx0, y0 + 4, 2F, 1.5F, TerminalPalette.TITLE);
         String text = TerminalAnims.countdownText(model.countdownMs());
         boolean expired = model.countdownMs() <= 0;
         if (!text.equals(lastCountdown)) {
@@ -66,7 +66,9 @@ public final class TerminalBottomRow {
         float flip = TerminalAnims.counterFlip(nowMs, countdownFlipAtMs);
         float slide = (1F - flip) * 8F;
         int color = expired ? TerminalPalette.COUNT_EXPIRED : TerminalPalette.WHITE;
-        RenderFontTool.drawString(gg, font, fcs(text), cx0 + 2, midY - 8 + slide, 0, 0, 1.8F, color);
+        int digitsW = Math.round(font.width(text) * 2.625F) + 1 * (text.length() - 1);
+        RenderFontTool.drawSpacedText(gg, font, text,
+                cx0 + 2 + (cw - digitsW) / 2F, midY - 8 + slide, 0.5F, 2.625F, color);
 
         // ---- region 10: random item slot (2.5s cycle) ----
         int slotX = x0 + (int) ((x1 - x0) * 0.30F);
@@ -92,9 +94,9 @@ public final class TerminalBottomRow {
 
         // ---- region 11: collection strip (xp name + rarity dots) ----
         int xpX = x0 + (int) ((x1 - x0) * 0.50F);
-        RenderFontTool.drawString(gg, font,
-                Component.translatable("csgobox.terminal.collection").getVisualOrderText(),
-                xpX, y0 + 4, 0, 0, 1.0F, TerminalPalette.TITLE);
+        RenderFontTool.drawSpacedText(gg, font,
+                Component.translatable("csgobox.terminal.collection").getString(),
+                xpX, y0 + 4, 2F, 1.5F, TerminalPalette.TITLE);
         int dotY = midY - 4;
         int dotX = xpX;
         for (NegotiationModel.DotGroup g : NegotiationModel.DOT_GROUPS) {
