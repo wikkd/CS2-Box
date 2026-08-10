@@ -44,6 +44,10 @@ public class CsboxBulkResultScreen extends Screen {
     private long lastTickTime = 0;
     private boolean showAllItems = false;
 
+    /** Stagger counter since show-all opened; -1 = not animating. */
+    private int showAllTick = -1;
+    private static final int SHOW_ALL_ENTER = 6;
+
     public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
         super(Component.literal("csgo_bulk_result"));
         this.player = player;
@@ -102,6 +106,9 @@ public class CsboxBulkResultScreen extends Screen {
             if (now - oldest.appearTick > LIFE_TICKS) {
                 visible.pollLast();
             }
+        }
+        if (this.showAllTick >= 0 && this.showAllTick < SHOW_ALL_ENTER) {
+            this.showAllTick++;
         }
         lastTickTime = now;
     }
@@ -323,9 +330,15 @@ public class CsboxBulkResultScreen extends Screen {
             int count = entry.getValue();
             int grade = gradeMap.getOrDefault(stack, 1);
 
-            int bgColor = (0xCC << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
-            AnimRenderOps.fillGradient(guiGraphics, x, y, x + itemSize + 4, y + itemSize + 4, bgColor, bgColor);
-            AnimRenderOps.fill(guiGraphics, x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
+            float enterE = this.showAllTick < 0
+                    ? 1F
+                    : Easing.easeOutCubic(Math.max(0F, Math.min(1F,
+                            (this.showAllTick - row * 2F) / (float) SHOW_ALL_ENTER)));
+            int cellAlpha = (int) (0xCC * enterE) & 0xFF;
+            int rowOffset = Math.round(8F * (1F - enterE));
+            int bgColor = (cellAlpha << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
+            AnimRenderOps.fillGradient(guiGraphics, x, y + rowOffset, x + itemSize + 4, y + itemSize + 4 + rowOffset, bgColor, bgColor);
+            AnimRenderOps.fill(guiGraphics, x, y + rowOffset, x + 3, y + itemSize + 4 + rowOffset, ColorTools.colorItems(grade));
 
             if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, stack, x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
@@ -354,8 +367,12 @@ public class CsboxBulkResultScreen extends Screen {
         int btnX = (this.width - btnW) / 2;
         int btnY = this.height * 86 / 100;
         boolean hover = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
+        float btnE = this.showAllTick < 0 ? 1F : Easing.easeOutCubic(Math.min(1F, this.showAllTick / 4F));
+        int btnAlpha = (int) (0xFF * btnE) & 0xFF;
         int fill = hover ? 0xFF00CC00 : 0xFF008800;
         int border = hover ? 0xFF00FF00 : 0xFF00AA00;
+        fill = (btnAlpha << 24) | (fill & 0x00FFFFFF);
+        border = (btnAlpha << 24) | (border & 0x00FFFFFF);
         AnimRenderOps.fill(guiGraphics, btnX, btnY, btnX + btnW, btnY + btnH, border);
         AnimRenderOps.fill(guiGraphics, btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
         Style style = Style.EMPTY.withBold(true);
@@ -364,7 +381,8 @@ public class CsboxBulkResultScreen extends Screen {
         float textW = this.font.width(seq) * 0.95F;
         float textX = btnX + (btnW - textW) / 2.0F;
         float textY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
-        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, 0xFFFFFFFF);
+        int textColor = (btnAlpha << 24) | 0x00FFFFFF;
+        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, textColor);
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
@@ -403,6 +421,7 @@ public class CsboxBulkResultScreen extends Screen {
 
                 if (isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH)) {
                     showAllItems = true;
+                    this.showAllTick = 0;
                     return true;
                 }
                 if (isInside(mouseX, mouseY, collectX, btnY, btnW, btnH)) {
