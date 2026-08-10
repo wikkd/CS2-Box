@@ -184,7 +184,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
 
 
 
-    private static void sendRejected(ServerPlayer player, long requestId) {
+    static void sendRejected(ServerPlayer player, long requestId) {
         PacketDistributor.sendToPlayer(player, new PacketBoxOpenResult(
                 1,
                 0,
@@ -241,7 +241,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
      * box definition is the source of truth; the per-open item list no longer
      * exists now that the grade pool is cached.
      */
-    private static int resolveGrade(ItemStack item, ResourceLocation boxId, int fallback) {
+    static int resolveGrade(ItemStack item, ResourceLocation boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
             for (GradeGroup grade : def.grades()) {

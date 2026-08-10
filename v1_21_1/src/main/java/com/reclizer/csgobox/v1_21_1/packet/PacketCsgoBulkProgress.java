@@ -68,6 +68,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
             if (PacketCsgoProgress.isOpenBlockedStatic(player)) {
+                if (player instanceof ServerPlayer sp) {
+                    PacketCsgoProgress.sendRejected(sp, message.requestId());
+                }
                 return;
             }
 
@@ -184,7 +187,8 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 int winningIndex = Math.max(0, strip.winningIndex());
                 ItemStack giveItem = strip.items().get(winningIndex);
                 int finalGrade = strip.grades().get(winningIndex);
-                if (giveItem.isEmpty()) {
+                boolean fallback = giveItem.isEmpty();
+                if (fallback) {
                     ItemStack fb = snapshot.gradeMap().findFallback(1);
                     if (fb != null && !fb.isEmpty()) {
                         giveItem = fb;
@@ -194,10 +198,11 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     }
                 }
                 float wear = rng.nextFloat();
-                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), wear));
+                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), wear, fallback));
             } else {
                 int g = OddsCalculator.pickGrade(rng, snapshot.weights());
                 ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
+                boolean fallback = s == null;
                 if (s == null) {
                     s = snapshot.gradeMap().findFallback(g);
                 }
@@ -205,7 +210,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     s = ItemStack.EMPTY;
                 }
                 float wear = rng.nextFloat();
-                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), wear));
+                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), wear, fallback));
             }
         }
         return out;
@@ -250,6 +255,28 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
 
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
         List<BulkOpenResult> truncated = results.subList(0, actualK);
+
+        // Resolve the true grade for fallback items (parity with the single-open
+        // path, which resolves the fallback winner against BoxDefinition). A
+        // fallback item drawn from another grade pool must not keep the picked
+        // grade, or its UI colour is wrong. Box 1's animation strip shows the
+        // same winner, so patch that slot too.
+        for (int i = 0; i < truncated.size(); i++) {
+            BulkOpenResult r = truncated.get(i);
+            if (!r.fallback() || r.resultItem().isEmpty()) {
+                continue;
+            }
+            int realGrade = PacketCsgoProgress.resolveGrade(r.resultItem(), snapshot.boxId(), r.resultGrade());
+            if (realGrade == r.resultGrade()) {
+                continue;
+            }
+            BulkOpenResult fixed = new BulkOpenResult(r.resultItem(), realGrade, r.serverSeed(),
+                    r.winningIndex(), r.animationItems(), r.animationGrades(), r.wear(), true);
+            truncated.set(i, fixed);
+            if (i == 0 && fixed.winningIndex() >= 0 && fixed.winningIndex() < fixed.animationGrades().size()) {
+                fixed.animationGrades().set(fixed.winningIndex(), realGrade);
+            }
+        }
 
         // Wear-based durability damage, applied on the main thread. The first
         // box's animation strip shares the winner stack, so damage it too for a
@@ -331,6 +358,13 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 OpenedBoxTrigger.INSTANCE.trigger(sp);
             }
         }
+
+        // Renew the open cooldown: the block placed at request time (10 ticks)
+        // can expire while the async compute is still running, letting a
+        // concurrent bulk request slip in against the same inventory. This
+        // cannot double-consume (finalize re-checks availability), but it
+        // wastes a full batch of rolls.
+        PacketCsgoProgress.blockFurtherOpensStatic(sp);
 
         if (CsgoBox.debug()) {
             CsgoBox.LOGGER.info("[csgo-bulk] player={} K={} (re-validated from {}) -> {} items granted",

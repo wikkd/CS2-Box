@@ -49,10 +49,19 @@ public record PacketRequestBoxItems(long requestId) implements CustomPacketPaylo
             List<ItemStack> items = new ArrayList<>();
             List<Integer> grades = new ArrayList<>();
             for (var entry : itemList.entrySet()) {
-                if (!entry.getKey().isEmpty()) {
-                    items.add(entry.getKey().copy());
-                    grades.add(entry.getValue());
+                if (entry.getKey().isEmpty()) {
+                    continue;
                 }
+                // Bound the preview payload; past this the packet constructor
+                // would throw and the whole preview would fail. Truncate instead
+                // so oversized boxes still show a (partial) preview.
+                if (items.size() >= PacketSyncBoxItems.MAX_ITEMS) {
+                    CsgoBox.LOGGER.warn("[csbox-preview] box {} contents exceed {} items; preview truncated",
+                            ItemCsgoBox.getBoxId(box), PacketSyncBoxItems.MAX_ITEMS);
+                    break;
+                }
+                items.add(entry.getKey().copy());
+                grades.add(entry.getValue());
             }
 
             ItemStack keyStack = ItemStack.EMPTY;

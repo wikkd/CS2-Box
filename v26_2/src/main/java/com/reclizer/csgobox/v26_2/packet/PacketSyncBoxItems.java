@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_2.packet;
 
+import com.reclizer.csgobox.box.NetworkLimits;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -29,7 +30,7 @@ public record PacketSyncBoxItems(
         ItemStack keyItem
 ) implements CustomPacketPayload {
 
-    private static final int MAX_ITEMS = 256;
+    public static final int MAX_ITEMS = NetworkLimits.MAX_ITEMS;
     private static final int MAX_WEIGHTS = 5;
     private static final int MAX_PENDING_RESPONSES = 8;
 

@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.box;
 
+import com.reclizer.csgobox.box.NetworkLimits;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,7 +14,7 @@ import java.util.Objects;
 
 public record GradeGroup(String id, String displayName, int color, int weight, List<ItemStack> items) {
 
-    private static final int MAX_ITEMS = 256;
+    private static final int MAX_ITEMS = NetworkLimits.MAX_ITEMS;
 
     public static final Codec<GradeGroup> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("id").forGetter(GradeGroup::id),

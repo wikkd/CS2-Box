@@ -182,7 +182,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
     }
 
 
-    private static void sendRejected(IPayloadContext context, long requestId) {
+    static void sendRejected(IPayloadContext context, long requestId) {
         context.reply(new PacketBoxOpenResult(
                 1,
                 0,
@@ -238,7 +238,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
      * box definition is the source of truth; the per-open item list no longer
      * exists now that the grade pool is cached.
      */
-    private static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
+    static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
             for (GradeGroup grade : def.grades()) {

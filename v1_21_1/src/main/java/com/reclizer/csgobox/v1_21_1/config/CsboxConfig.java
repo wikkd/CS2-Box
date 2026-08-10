@@ -4,6 +4,9 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class CsboxConfig {
 
+    /** Sentinel upper bound meaning "no limit" for unbounded config ranges. */
+    public static final int NO_UPPER_BOUND = Integer.MAX_VALUE;
+
     private final ModConfigSpec.BooleanValue loadDefaultBoxesValue;
     private final ModConfigSpec.BooleanValue enableDebugLoggingValue;
     private final ModConfigSpec.BooleanValue enableAchievementsValue;
@@ -27,8 +30,8 @@ public class CsboxConfig {
                 .comment("Animation playback speed: SLOW = 2x base, NORMAL = 1x base, FAST = 0.5x base")
                 .defineEnum("animationSpeed", AnimationSpeed.NORMAL);
         this.globalDropRatePercentValue = builder
-                .comment("Global drop rate multiplier in percent (0-1000, default 100)")
-                .defineInRange("globalDropRatePercent", 100, 0, 1000);
+                .comment("Global drop rate multiplier in percent (default 100; 0 = off, no upper bound)")
+                .defineInRange("globalDropRatePercent", 100, 0, NO_UPPER_BOUND);
         builder.pop();
 
         builder.comment("Advanced settings").push("advanced");
@@ -46,7 +49,7 @@ public class CsboxConfig {
                 .define("enableHotReload", true);
         this.bulkOpenCountValue = builder
                 .comment("Max boxes per bulk open (0 = unlimited, default). Server-enforced; the overview screen clamps its estimate to this value.")
-                .defineInRange("bulkOpenCount", 0, 0, 576);
+                .defineInRange("bulkOpenCount", 0, 0, NO_UPPER_BOUND);
         this.jsonErrorAudienceValue = builder
                 .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
                 .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);

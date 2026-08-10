@@ -154,6 +154,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             ));
 
             ItemStack toGive = giveItem.copy();
+            toGive.set(ItemCsgoBox.GRADE.get(), finalGrade);
             boolean added = sp.getInventory().add(toGive);
             if (!added && !toGive.isEmpty()) {
                 sp.drop(toGive, false);
@@ -173,7 +174,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
      * Replies an empty animation result, which the client treats as a
      * rejected open (the screen closes without granting anything).
      */
-    private static void sendRejected(IPayloadContext context, long requestId) {
+    static void sendRejected(IPayloadContext context, long requestId) {
         context.reply(new PacketBoxOpenResult(
                 1,
                 0,
@@ -229,7 +230,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
      * box definition is the source of truth; the per-open item list no longer
      * exists now that the grade pool is cached.
      */
-    private static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
+    static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
             for (GradeGroup grade : def.grades()) {
