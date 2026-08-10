@@ -33,6 +33,8 @@ public class CsLookItemScreen extends Screen {
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
+    /** Info panel open/close animation: 0 = closed, 1 = open. */
+    private float infoPanelAnim = 0F;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -228,6 +230,7 @@ public class CsLookItemScreen extends Screen {
     private void renderToolbar(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int size = toolbarButtonSize();
         int y = toolbarButtonY();
+        float anim = this.infoPanelAnim;
         Identifier[] icons = {ICON_INSPECT, ICON_GLOVES, ICON_MODEL, ICON_INFO, ICON_STICKER, ICON_MORE};
 
         this.hoveredButton = -1;
@@ -246,7 +249,8 @@ public class CsLookItemScreen extends Screen {
             AnimRenderOps.fill(guiGraphics, x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
             AnimRenderOps.fill(guiGraphics, x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
-                AnimRenderOps.fill(guiGraphics, x + 2, by + size - 2, x + size - 2, by + size, (alpha << 24) | 0xFFFFFF);
+                AnimRenderOps.fill(guiGraphics, x + 2, by + size - 2, x + size - 2, by + size,
+                        ((int) (0xFF * anim) << 24) | 0xFFFFFF);
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
             int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
@@ -311,7 +315,10 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void renderInfoPanel(GuiGraphicsExtractor guiGraphics) {
-        if (!this.showInfoPanel || openItem.isEmpty()) return;
+        if (this.infoPanelAnim < 0.02F || openItem.isEmpty()) return;
+        float anim = this.infoPanelAnim;
+        int textAlpha = (int) (0xFF * anim) & 0xFF;
+        int cardAlpha = (int) (0xE0 * anim) & 0xFF;
         float scale = 0.7F;
         int rowH = 13;
         String[] labelKeys = {
@@ -343,12 +350,12 @@ public class CsLookItemScreen extends Screen {
         int cardX = anchorX - cardW / 2;
         cardX = Math.max(2, Math.min(cardX, this.width - cardW - 2));
         int cardBottom = toolbarButtonY() - 8;
-        int cardY = cardBottom - cardH;
-        renderRoundedRect(guiGraphics, cardX, cardY, cardW, cardH, 4, 0xE0101014);
+        int cardY = cardBottom - cardH + Math.round(8F * (1F - anim));
+        renderRoundedRect(guiGraphics, cardX, cardY, cardW, cardH, 4, (cardAlpha << 24) | 0x101014);
         int textY = cardY + padY;
         for (int i = 0; i < labelKeys.length; i++) {
             drawInfoRow(guiGraphics, cardX + padX, cardX + cardW - padX, textY + i * rowH, scale,
-                    labelKeys[i], valueTexts[i]);
+                    labelKeys[i], valueTexts[i], textAlpha);
         }
     }
 
@@ -366,12 +373,12 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void drawInfoRow(GuiGraphicsExtractor guiGraphics, int labelX, int valueRight, int y, float scale,
-                             String labelKey, Component value) {
+                             String labelKey, Component value, int textAlpha) {
         renderText(guiGraphics, Component.translatable(labelKey).getVisualOrderText(), labelX, y, scale,
-                0xFF9A9A9A);
+                (textAlpha << 24) | 0x9A9A9A);
         float valueWidth = this.font.width(value.getVisualOrderText()) * scale;
         RenderFontTool.drawString(guiGraphics, this.font, value.getVisualOrderText(),
-                valueRight - valueWidth, y, 0, 0, scale, 0xFFFFFFFF);
+                valueRight - valueWidth, y, 0, 0, scale, (textAlpha << 24) | 0xFFFFFF);
     }
 
 
@@ -487,6 +494,11 @@ public class CsLookItemScreen extends Screen {
         this.screenTicks++;
         float glowTarget = this.hoveredButton >= 0 ? 1F : 0F;
         this.toolbarGlow += (glowTarget - this.toolbarGlow) * 0.5F;
+        float panelTarget = this.showInfoPanel ? 1F : 0F;
+        this.infoPanelAnim += (panelTarget - this.infoPanelAnim) * 0.35F;
+        if (Math.abs(this.infoPanelAnim - panelTarget) < 0.005F) {
+            this.infoPanelAnim = panelTarget;
+        }
         if (this.minecraft == null || this.minecraft.player == null) return;
         if (!this.minecraft.player.isAlive() || this.minecraft.player.isRemoved()) {
             this.onClose();
