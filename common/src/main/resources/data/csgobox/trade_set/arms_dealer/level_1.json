@@ -1,0 +1,8 @@
+{
+  "amount": 2,
+  "random_sequence": "csgobox:trade_set/arms_dealer/level_1",
+  "trades": [
+    "csgobox:arms_dealer/1/iron_points",
+    "csgobox:arms_dealer/1/emerald_points"
+  ]
+}

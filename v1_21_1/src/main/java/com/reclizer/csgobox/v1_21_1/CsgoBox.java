@@ -10,6 +10,8 @@ import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.advancement.ModLoadedTrigger;
+import com.reclizer.csgobox.v1_21_1.block.ModBlocks;
+import com.reclizer.csgobox.v1_21_1.villager.ModVillagers;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketCsgoBulkProgress;
@@ -137,6 +139,8 @@ public class CsgoBox {
         ItemCsgoBox.registerDataComponents(modEventBus);
         ModItems.register(modEventBus);
         ModItems.registerTab(modEventBus);
+        ModBlocks.register(modEventBus);
+        ModVillagers.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
     }

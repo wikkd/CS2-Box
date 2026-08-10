@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "csgobox:block/armory_recycler_bottom",
+    "up": "csgobox:block/armory_recycler_top",
+    "north": "csgobox:block/armory_recycler_front",
+    "south": "csgobox:block/armory_recycler_front",
+    "east": "csgobox:block/armory_recycler_side",
+    "west": "csgobox:block/armory_recycler_side"
+  }
+}

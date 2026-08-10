@@ -1,0 +1,8 @@
+{
+  "amount": 2,
+  "random_sequence": "csgobox:trade_set/arms_dealer/level_4",
+  "trades": [
+    "csgobox:arms_dealer/4/points_key1",
+    "csgobox:arms_dealer/4/points_terminal"
+  ]
+}

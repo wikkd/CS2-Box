@@ -1,0 +1,12 @@
+{
+  "gives": {
+    "id": "csgobox:csgo_key0"
+  },
+  "max_uses": 16,
+  "reputation_discount": 0.05,
+  "wants": {
+    "count": 9,
+    "id": "csgobox:armory_point"
+  },
+  "xp": 10
+}

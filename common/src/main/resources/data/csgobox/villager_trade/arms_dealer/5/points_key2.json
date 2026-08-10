@@ -1,0 +1,15 @@
+{
+  "additional_wants": {
+    "id": "minecraft:diamond"
+  },
+  "gives": {
+    "id": "csgobox:csgo_key2"
+  },
+  "max_uses": 3,
+  "reputation_discount": 0.05,
+  "wants": {
+    "count": 45,
+    "id": "csgobox:armory_point"
+  },
+  "xp": 30
+}

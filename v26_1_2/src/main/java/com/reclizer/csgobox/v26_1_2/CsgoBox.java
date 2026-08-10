@@ -17,6 +17,8 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
+import com.reclizer.csgobox.v26_1_2.block.ModBlocks;
+import com.reclizer.csgobox.v26_1_2.villager.ModVillagers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponents;
@@ -140,6 +142,8 @@ public class CsgoBox {
         ItemCsgoBox.registerDataComponents(modEventBus);
         ModItems.register(modEventBus);
         ModItems.registerTab(modEventBus);
+        ModBlocks.register(modEventBus);
+        ModVillagers.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
     }
