@@ -43,6 +43,8 @@ public final class TerminalPalette {
     public static final int GREEN = 0xFF3ECF6E;
     /** Expired countdown. */
     public static final int COUNT_EXPIRED = 0xFFC96A5F;
+    /** Countdown colon separators (dimmed). */
+    public static final int COUNT_COLON = 0x8CCFD6DB;
 
     // ---- action bar (region 6) ----
     public static final int PILL_GREEN_BORDER = 0xFF4FA57D;
