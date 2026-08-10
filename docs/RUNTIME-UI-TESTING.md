@@ -162,6 +162,9 @@ python3 scripts/test_animation_aesthetics.py        # 聚光灯/透镜审美断�
 - [ ] 背景模糊：进度屏背景 `renderBlurredBackground` 反射桥接后仍有模糊效果（防回归点 3）
 - [ ] ESC 退出、hideGui 恢复、音效节奏（每卡片"嗒"声、8Hz 节流）不变
 - [ ] TACZ 环境：TACZ 枪默认 3D 展示 + 手套按钮检视动画（TaczInspectViewport 独立路径未被误伤）
+- [ ] Blur 适配·无 Blur 模组：5 屏（主屏/出货/批量总览/批量结果/确认）背景为半透明主题灰，模糊世界透出（`backgroundStyle=TRANSLUCENT` 默认；`OPAQUE` 恢复实心）
+- [ ] Blur 适配·装 Blur 模组：5 屏背景带淡入动画、半径遵循 Blur 配置；进度屏模糊同样淡入（26.x 走 super 分支）
+- [ ] Blur 适配·关闭模糊：`menuBackgroundBlurriness=0` 时 5 屏半透明背景无模糊（世界直接透出），进度屏仍强制模糊（无 Blur 时）
 
 执行记录：
 
