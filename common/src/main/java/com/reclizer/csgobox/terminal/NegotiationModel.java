@@ -11,8 +11,8 @@ import java.util.Random;
  *
  * <pre>
  *   IDLE --presentRound--> TYPING --(1100ms)--> PENDING
- *        PENDING --acceptNow--> ACCEPT_BUSY --(900ms)--> CLOSED
- *        PENDING --rejectNow--> REJECT_BUSY --(900ms)--> round<5 ? TYPING(round+1) : FAILED
+ *        PENDING --acceptNow--> ACCEPT_BUSY --(0ms)--> CLOSED (next tick)
+ *        PENDING --rejectNow--> REJECT_BUSY --(450ms)--> round<5 ? TYPING(round+1) : FAILED
  * </pre>
  *
  * Pure Java (no MC imports — CONSTRAINT-001). Drive with {@link #tick(long)}
@@ -37,8 +37,12 @@ public final class NegotiationModel {
     }
 
     /** Offer card appended when the round becomes PENDING. */
-    public record OfferEntry(Offer offer, long atMs) {
+    public record OfferEntry(Offer offer, long atMs, int status) {
     }
+
+    // ---- offer card status ----
+
+    public static final int OFFER_PENDING = 0, OFFER_REJECTED = 1, OFFER_ACCEPTED = 2;
 
     // ---- script (HTML LINES / SKINS / ROUNDS) ----
 
@@ -76,9 +80,8 @@ public final class NegotiationModel {
     // ---- timings ----
 
     public static final long TYPING_MS = 1100L;
-    public static final long ACCEPT_BUSY_MS = 900L;
-    public static final long REJECT_BUSY_MS = 900L;
-    public static final long NEXT_ROUND_MS = 450L;
+    public static final long ACCEPT_BUSY_MS = 0L;
+    public static final long REJECT_BUSY_MS = 450L;
     /** Countdown start: 2d 23:57:45. */
     public static final long COUNT_INITIAL_MS = (2L * 86400L + 23L * 3600L + 57L * 60L + 45L) * 1000L;
 
@@ -189,6 +192,7 @@ public final class NegotiationModel {
         }
         status = Status.ACCEPT_BUSY;
         statusSinceMs = nowMs;
+        markOfferStatus(OFFER_ACCEPTED);
         history.add(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
     }
 
@@ -199,6 +203,7 @@ public final class NegotiationModel {
         }
         status = Status.REJECT_BUSY;
         statusSinceMs = nowMs;
+        markOfferStatus(OFFER_REJECTED);
         history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
     }
 
@@ -271,6 +276,15 @@ public final class NegotiationModel {
 
     // ---- internals ----
 
+    private void markOfferStatus(int status) {
+        for (int i = history.size() - 1; i >= 0; i--) {
+            if (history.get(i) instanceof OfferEntry oe) {
+                history.set(i, new OfferEntry(oe.offer(), oe.atMs(), status));
+                return;
+            }
+        }
+    }
+
     private void presentRound(long nowMs) {
         round++;
         status = Status.TYPING;
@@ -292,6 +306,6 @@ public final class NegotiationModel {
                 rnd.nextInt(1000),                 // pattern
                 finalRound);
         pending = offer;
-        history.add(new OfferEntry(offer, nowMs));
+        history.add(new OfferEntry(offer, nowMs, OFFER_PENDING));
     }
 }
