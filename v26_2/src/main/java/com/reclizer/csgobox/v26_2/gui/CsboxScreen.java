@@ -7,6 +7,7 @@ import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_2.utils.ButtonPalette;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_2.utils.GuiItemMove;
@@ -40,6 +41,10 @@ public class CsboxScreen extends Screen {
 
     private boolean openClicked = false;
     private boolean boxEmpty = false;
+
+    // Transient feedback for rejected open clicks (e.g. no key found).
+    private Component hint = null;
+    private int hintTicks = 0;
 
 
 
@@ -151,6 +156,10 @@ public class CsboxScreen extends Screen {
 
     private int page;
 
+    private static final int ENTER_TICKS = 6;
+    /** Grid fade-in on first server sync; 6 = settled (no enter anim). */
+    private int enterTicks = ENTER_TICKS;
+
     private int renderableCount() {
         int count = 0;
         for (int i = 0; i < itemsList.size(); i++) {
@@ -183,15 +192,6 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(pGuiGraphics, 0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
-        } else {
-            super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-        }
-    }
-
-    @Override
     public boolean mouseDragged(MouseButtonEvent event, double pDragX, double pDragY) {
         double pMouseX = event.x();
         double pMouseY = event.y();
@@ -216,9 +216,23 @@ public class CsboxScreen extends Screen {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY);
+        if (this.hint != null) {
+            float scale = 0.9F;
+            float w = this.font.width(this.hint) * scale;
+            RenderFontTool.drawString(guiGraphics, this.font, this.hint.getVisualOrderText(),
+                    (this.width - w) / 2.0F, this.height * 30 / 100, 0, 0, scale, 0xFFFF5555);
+            this.hintTicks--;
+            if (this.hintTicks <= 0) {
+                this.hint = null;
+            }
+        }
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
+        if (this.minecraft != null && this.minecraft.level != null) {
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+        }
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
         AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
@@ -238,6 +252,9 @@ public class CsboxScreen extends Screen {
         int y = 0;
 
         if (this.entity != null) {
+            float enterE = Easing.easeOutCubic(Math.min(1F, this.enterTicks / (float) ENTER_TICKS));
+            int gridOffsetY = Math.round(8F * (1F - enterE));
+            int gridAlpha = (int) (255F * enterE);
             int startIdx = this.page * ITEMS_PER_PAGE;
             for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
                 int py = 55;
@@ -253,13 +270,13 @@ public class CsboxScreen extends Screen {
                 if (grade > 4) break;
                 IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
                         listArea.x() + px * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, py), this.width, this.height, grade);
+                        GuiRegion.pctH(this.height, py) + gridOffsetY, this.width, this.height, grade, gridAlpha);
             }
             if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
                     && this.page == pageCount() - 1) {
                 IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
                         listArea.x() + x * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, y), this.width, this.height, 5);
+                        GuiRegion.pctH(this.height, y) + gridOffsetY, this.width, this.height, 5, gridAlpha);
             }
         }
 
@@ -464,6 +481,9 @@ public class CsboxScreen extends Screen {
         if (this.minecraft.player == null) return;
         if (this.minecraft.player.isAlive() && !this.minecraft.player.isRemoved()) {
             this.containerTick();
+            if (this.enterTicks < ENTER_TICKS) {
+                this.enterTicks++;
+            }
         } else {
             this.minecraft.player.closeContainer();
         }
@@ -483,6 +503,7 @@ public class CsboxScreen extends Screen {
             this.boxEmpty = this.itemGroup.isEmpty();
             this.boxKeyCount = countKeys();
             this.page = 0;
+            this.enterTicks = 0;
         }
     }
 
@@ -535,6 +556,12 @@ public class CsboxScreen extends Screen {
                                 openConn.send(new ServerboundCustomPayloadPacket(new PacketCsgoProgress(openRequestId)));
                             }
                             openClicked = true;
+                        } else {
+                            // The client only checks the main inventory slots;
+                            // keys in armor/offhand are decided server-side, so
+                            // this is a hint, never a hard disable.
+                            this.hint = Component.translatable("gui.csgobox.box.no_key");
+                            this.hintTicks = 200;
                         }
                     }
                 }

@@ -6,6 +6,8 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
+import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
@@ -39,6 +41,10 @@ public class CsboxScreen extends Screen {
 
     private boolean openClicked = false;
     private boolean boxEmpty = false;
+
+    // Transient feedback for rejected open clicks (e.g. no key found).
+    private Component hint = null;
+    private int hintTicks = 0;
 
 
 
@@ -150,6 +156,36 @@ public class CsboxScreen extends Screen {
 
     private int page;
 
+    // Page-turn transition: outgoing page slides out and fades while the
+    // incoming page slides in (direction matches the wheel). Ease-out cubic
+    // (same curve as the opening strip's easedScroll), ~200ms, interruptible:
+    // a new scroll restarts the transition from the page currently on screen.
+    private static final int PAGE_ANIM_TICKS = 12;
+    private static final float PAGE_ANIM_DIST_RATIO = 8F; // percent of height
+    private int animFromPage = -1;
+    private int animToPage;
+    private int animTicks;
+    private int animDir;
+
+    private static final int ENTER_TICKS = 6;
+    /** Grid fade-in on first server sync; 6 = settled (no enter anim). */
+    private int enterTicks = ENTER_TICKS;
+
+    private float pageAnimEased(float partialTicks) {
+        if (animFromPage < 0) return 1.0F;
+        float t = Math.min(1.0F, (animTicks + partialTicks) / (float) PAGE_ANIM_TICKS);
+        float u = 1.0F - t;
+        return 1.0F - u * u * u;
+    }
+
+    private void changePage(int target) {
+        this.animFromPage = this.page;
+        this.animToPage = target;
+        this.animDir = target > this.page ? 1 : -1;
+        this.animTicks = 0;
+        this.page = target;
+    }
+
     private int renderableCount() {
         int count = 0;
         for (int i = 0; i < itemsList.size(); i++) {
@@ -183,15 +219,6 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        if (this.minecraft != null && this.minecraft.level != null) {
-            AnimRenderOps.fillGradient(pGuiGraphics, 0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
-        } else {
-            super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-        }
-    }
-
-    @Override
     public boolean mouseDragged(MouseButtonEvent event, double pDragX, double pDragY) {
         double pMouseX = event.x();
         double pMouseY = event.y();
@@ -215,10 +242,24 @@ public class CsboxScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
-        this.renderLabels(guiGraphics, mouseX, mouseY);
+        this.renderLabels(guiGraphics, mouseX, mouseY, partialTicks);
+        if (this.hint != null) {
+            float scale = 0.9F;
+            float w = this.font.width(this.hint) * scale;
+            RenderFontTool.drawString(guiGraphics, this.font, this.hint.getVisualOrderText(),
+                    (this.width - w) / 2.0F, this.height * 30 / 100, 0, 0, scale, 0xFFFF5555);
+            this.hintTicks--;
+            if (this.hintTicks <= 0) {
+                this.hint = null;
+            }
+        }
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
+        if (this.minecraft != null && this.minecraft.level != null) {
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+        }
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
         AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
@@ -234,34 +275,7 @@ public class CsboxScreen extends Screen {
                     this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
         }
 
-        int x = 0;
-        int y = 0;
-
-        if (this.entity != null) {
-            int startIdx = this.page * ITEMS_PER_PAGE;
-            for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
-                int py = 55;
-                int px = i - startIdx;
-                if (px > 9) {
-                    py = 73;
-                    px -= 10;
-                }
-                ItemStack itemStack1 = itemsList.get(i);
-                int grade = gradeList.get(i);
-                x = px;
-                y = py;
-                if (grade > 4) break;
-                IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
-                        listArea.x() + px * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, py), this.width, this.height, grade);
-            }
-            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
-                    && this.page == pageCount() - 1) {
-                IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
-                        listArea.x() + x * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, y), this.width, this.height, 5);
-            }
-        }
+        renderGridAnimated(guiGraphics, partialTicks);
 
         if (itemKey != null) {
             IconListTools.renderGuiItem(this.entity, guiGraphics, itemKey,
@@ -270,6 +284,54 @@ public class CsboxScreen extends Screen {
 
         drawOpenButton(guiGraphics, gx, gy);
         drawBackButton(guiGraphics, gx, gy);
+    }
+
+    /** Draws the current page (or both pages during the page-turn
+     *  transition). Outgoing page slides away and fades; the incoming page
+     *  slides in from the wheel's direction with the frame fading in. */
+    private void renderGridAnimated(GuiGraphicsExtractor guiGraphics, float partialTicks) {
+        float e = pageAnimEased(partialTicks);
+        if (animFromPage < 0) {
+            float enterE = Easing.easeOutCubic(Math.min(1F, this.enterTicks / (float) ENTER_TICKS));
+            renderPageGrid(guiGraphics, this.page, Math.round(8F * (1F - enterE)),
+                    (int) (255F * enterE));
+            return;
+        }
+        float dist = this.height * PAGE_ANIM_DIST_RATIO / 100F;
+        renderPageGrid(guiGraphics, animFromPage, Math.round(-e * dist * animDir),
+                (int) (255F * (1.0F - e)));
+        renderPageGrid(guiGraphics, animToPage, Math.round((1.0F - e) * dist * animDir),
+                (int) (255F * e));
+    }
+
+    private void renderPageGrid(GuiGraphicsExtractor guiGraphics, int page, int offsetY, int alpha) {
+        if (this.entity == null) return;
+        GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
+        int x = 0;
+        int y = 0;
+        int startIdx = page * ITEMS_PER_PAGE;
+        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
+            int py = 55;
+            int px = i - startIdx;
+            if (px > 9) {
+                py = 73;
+                px -= 10;
+            }
+            ItemStack itemStack1 = itemsList.get(i);
+            int grade = gradeList.get(i);
+            x = px;
+            y = py;
+            if (grade > 4) break;
+            IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
+                    listArea.x() + px * GuiRegion.pctW(this.width, 9),
+                    GuiRegion.pctH(this.height, py) + offsetY, this.width, this.height, grade, alpha);
+        }
+        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
+                && page == pageCount() - 1) {
+            IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
+                    listArea.x() + x * GuiRegion.pctW(this.width, 9),
+                    GuiRegion.pctH(this.height, y) + offsetY, this.width, this.height, 5, alpha);
+        }
     }
 
     private void drawOpenButton(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
@@ -305,53 +367,22 @@ public class CsboxScreen extends Screen {
         if (scrollY != 0 && pageCount() > 1) {
             int target = this.page + (scrollY > 0 ? -1 : 1);
             if (target >= 0 && target < pageCount()) {
-                this.page = target;
+                changePage(target);
             }
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    protected void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         Style style = Style.EMPTY.withBold(true);
-        int x = 0;
-        int y = 0;
         boolean showNames = CsgoBox.CONFIG.showItemNames();
 
-        int startIdx = this.page * ITEMS_PER_PAGE;
-        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
-            int py = 67;
-            int px = i - startIdx;
-            if (px > 9) {
-                py = 85;
-                px -= 10;
-            }
-            ItemStack itemStack1 = itemsList.get(i);
-            int grade = gradeList.get(i);
-            x = px;
-            y = py;
-            if (grade > 4) break;
-            if (showNames) {
-                Component component = itemStack1.getItem().getName(itemStack1);
-                // Clamp to one grid slot (9% of screen width). At scale 0.6,
-                // a natural Chinese name like "下界合金剑" is short enough
-                // to render untruncated, but longer localisation keys or
-                // modded item names would otherwise bleed into the next slot.
-                int slotVisualWidth = Math.round(this.width * 9F / 100F);
-                RenderFontTool.drawStringClamped(guiGraphics, this.font, component,
-                        this.width * 4F / 100 + px * this.width * 9F / 100,
-                        this.height * py / 100F, 0, 0, 0.6F,
-                        slotVisualWidth, 0xFFD3D3D3);
-            }
-        }
-        if (showNames) {
-            renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
-                    this.width * 4 / 100F + x * this.width * 9 / 100F,
-                    this.height * y / 100F, 0.6F);
-        }
+        renderLabelsAnimated(guiGraphics, showNames, partialTicks);
+
         if (pageCount() > 1) {
             renderText(guiGraphics, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
-                    this.width * 88 / 100F, this.height * 54 / 100F, 0.6F);
+                    this.width * 90 / 100F, this.height * 54 / 100F, 0.6F);
         }
 
         // Box item name rendered as a centered title-style heading. Max width
@@ -446,7 +477,63 @@ public class CsboxScreen extends Screen {
     }
 
     private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText, float px, float py, float scale) {
-        RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale, 0xFFD3D3D3);
+        renderText(guiGraphics, pText, px, py, scale, 255);
+    }
+
+    private void renderText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText, float px, float py, float scale, int alpha) {
+        RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale,
+                ColorTools.withAlpha(0xFFD3D3D3, alpha));
+    }
+
+    /** Page-turn labels: mirrors renderGridAnimated's slide/fade so the item
+     *  names and the gold slot label travel with their frames. */
+    private void renderLabelsAnimated(GuiGraphicsExtractor guiGraphics, boolean showNames, float partialTicks) {
+        float e = pageAnimEased(partialTicks);
+        if (animFromPage < 0) {
+            renderPageLabels(guiGraphics, this.page, 0, 255, showNames);
+            return;
+        }
+        float dist = this.height * PAGE_ANIM_DIST_RATIO / 100F;
+        renderPageLabels(guiGraphics, animFromPage, Math.round(-e * dist * animDir),
+                (int) (255F * (1.0F - e)), showNames);
+        renderPageLabels(guiGraphics, animToPage, Math.round((1.0F - e) * dist * animDir),
+                (int) (255F * e), showNames);
+    }
+
+    private void renderPageLabels(GuiGraphicsExtractor guiGraphics, int page, int offsetY, int alpha, boolean showNames) {
+        int x = 0;
+        int y = 0;
+        int startIdx = page * ITEMS_PER_PAGE;
+        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
+            int py = 67;
+            int px = i - startIdx;
+            if (px > 9) {
+                py = 85;
+                px -= 10;
+            }
+            ItemStack itemStack1 = itemsList.get(i);
+            int grade = gradeList.get(i);
+            x = px;
+            y = py;
+            if (grade > 4) break;
+            if (showNames) {
+                Component component = itemStack1.getItem().getName(itemStack1);
+                // Clamp to one grid slot (9% of screen width). At scale 0.6,
+                // a natural Chinese name like "下界合金剑" is short enough
+                // to render untruncated, but longer localisation keys or
+                // modded item names would otherwise bleed into the next slot.
+                int slotVisualWidth = Math.round(this.width * 9F / 100F);
+                RenderFontTool.drawStringClamped(guiGraphics, this.font, component,
+                        this.width * 4F / 100 + px * this.width * 9F / 100,
+                        this.height * py / 100F + offsetY, 0, 0, 0.6F,
+                        slotVisualWidth, ColorTools.withAlpha(0xFFD3D3D3, alpha));
+            }
+        }
+        if (showNames) {
+            renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
+                    this.width * 4 / 100F + x * this.width * 9 / 100F,
+                    this.height * y / 100F + offsetY, 0.6F, alpha);
+        }
     }
 
     private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
@@ -464,12 +551,18 @@ public class CsboxScreen extends Screen {
         if (this.minecraft.player == null) return;
         if (this.minecraft.player.isAlive() && !this.minecraft.player.isRemoved()) {
             this.containerTick();
+            if (this.enterTicks < ENTER_TICKS) {
+                this.enterTicks++;
+            }
         } else {
             this.minecraft.player.closeContainer();
         }
     }
 
     public void containerTick() {
+        if (animFromPage >= 0 && ++animTicks >= PAGE_ANIM_TICKS) {
+            animFromPage = -1;
+        }
         var data = PacketSyncBoxItems.consumeMatching(this.syncRequestId, this.expectedBoxId);
         if (data != null) {
             this.itemGroup = buildItemGroup(data);
@@ -483,6 +576,8 @@ public class CsboxScreen extends Screen {
             this.boxEmpty = this.itemGroup.isEmpty();
             this.boxKeyCount = countKeys();
             this.page = 0;
+            this.animFromPage = -1;
+            this.enterTicks = 0;
         }
     }
 
@@ -535,6 +630,12 @@ public class CsboxScreen extends Screen {
                                 openConn.send(new ServerboundCustomPayloadPacket(new PacketCsgoProgress(openRequestId)));
                             }
                             openClicked = true;
+                        } else {
+                            // The client only checks the main inventory slots;
+                            // keys in armor/offhand are decided server-side, so
+                            // this is a hint, never a hard disable.
+                            this.hint = Component.translatable("gui.csgobox.box.no_key");
+                            this.hintTicks = 200;
                         }
                     }
                 }
