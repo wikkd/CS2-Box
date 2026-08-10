@@ -2,10 +2,12 @@ package com.reclizer.csgobox.v26_2.gui;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
+import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalActionBar;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalOfferRegion;
+import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
@@ -19,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Terminal machine screen — the full HTML prototype (design/terminal-chat.html)
@@ -39,10 +42,24 @@ public class TerminalScreen extends Screen {
     private final TerminalBottomRow bottomRow = new TerminalBottomRow();
     private long nowMs;
 
-    public TerminalScreen() {
+    public TerminalScreen(ItemStack terminalStack) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font,
                 Component.translatable("gui.csgobox.terminal.title"));
         this.model.start(System.currentTimeMillis());
+        offerRegion.setGradePools(buildGradePools(terminalStack));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.List<ItemStack>[] buildGradePools(ItemStack terminalStack) {
+        java.util.List<ItemStack>[] pools = new java.util.List[6]; // index = gradeLevel 1..5
+        ItemCsgoBox.getDefinition(terminalStack).ifPresent(def ->
+                def.grades().forEach(g -> {
+                    int lvl = BoxDefinition.gradeLevel(g.id());
+                    if (lvl > 0 && lvl < pools.length) {
+                        pools[lvl] = g.items();
+                    }
+                }));
+        return pools;
     }
 
     // ---- layout fractions (HTML prototype) ----
