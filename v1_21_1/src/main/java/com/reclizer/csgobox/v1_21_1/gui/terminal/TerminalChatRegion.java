@@ -69,26 +69,33 @@ public final class TerminalChatRegion {
                 Component.translatable("csgobox.terminal.chat.title").getString(),
                 x0 + 12, y0 + 5, 2F, 1.5F, TerminalPalette.TITLE);
 
-        // chat stream: newest at the bottom, wheel-scrollable
+        // chat stream: newest at the bottom, only the visible window;
+        // scrollOffset = 从最新条目回退的像素数（>0 表示滚回看更早）
         List<Object> entries = model.history();
         int start = Math.max(0, entries.size() - MAX_ENTRIES);
         int viewportH = y1 - bodyTop - 4;
-        boolean pinned = scrollOffset >= maxScroll;
+        boolean pinned = scrollOffset <= 0;
         int totalH = 0;
         for (int i = entries.size() - 1; i >= start; i--) {
             totalH += entryHeight(gg, entries.get(i), x1 - x0 - 24) + GAP;
         }
         maxScroll = Math.max(0, totalH - viewportH);
         if (pinned) {
-            scrollOffset = maxScroll;
+            scrollOffset = 0;
         } else {
             scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         }
-        int bottom = y1 - 4 - scrollOffset;
+        int bottom = y1 - 4 + scrollOffset;
         for (int i = entries.size() - 1; i >= start; i--) {
             Object e = entries.get(i);
             int h = entryHeight(gg, e, x1 - x0 - 24);
-            if (bottom - h < bodyTop + 2) break;
+            if (bottom - h >= y1 - 4) { // 完全滚出面板底部：跳过但仍消耗高度
+                bottom -= h + GAP;
+                continue;
+            }
+            if (bottom - h < bodyTop + 2) {
+                break;
+            }
             drawEntry(gg, x0 + 8, bottom - h, x1 - x0 - 16, h, nowMs, model, e);
             bottom -= h + GAP;
         }
