@@ -93,9 +93,22 @@ public class CsboxProgressScreen extends Screen {
         this.startWidth = this.width;
     }
 
-    private float easedScroll(float progress, float totalDistance) {
-        float t = 1.0F - progress;
-        return totalDistance * (1.0F - t * t * t);
+    private float easedScroll(float progressTick, float totalTicks, float totalDistance) {
+        float rampFrac = 5F / Math.max(1F, totalTicks - 1F);
+        float t = progressTick / Math.max(1F, totalTicks - 1F);
+        if (t < rampFrac) {
+            // Ramp: cubic segment with zero start velocity, C1-continuous
+            // with easeOutCubic at t = rampFrac (solves the strip starting
+            // at full speed; the old curve has its max slope at t=0).
+            float u = t / rampFrac;
+            float sr = 1F - (1F - rampFrac) * (1F - rampFrac) * (1F - rampFrac);
+            float dr = 3F * (1F - rampFrac) * (1F - rampFrac) * rampFrac;
+            float a = dr - 2F * sr;
+            float b = 3F * sr - dr;
+            return (a * u * u * u + b * u * u) * totalDistance;
+        }
+        float v = 1F - t;
+        return totalDistance * (1F - v * v * v);
     }
 
     @Override
@@ -378,11 +391,12 @@ public class CsboxProgressScreen extends Screen {
             return;
         }
 
-        float progress = (float) startTime / Math.max(1, totalTicks - 1);
-        renderWidthAdd = easedScroll(progress, targetScroll);
+        float progress = (float) startTime;
+        renderWidthAdd = easedScroll(progress, totalTicks, targetScroll);
 
-        float prevProgress = (float) Math.max(0, startTime - 1) / Math.max(1, totalTicks - 1);
-        velocityLerp = (easedScroll(progress, targetScroll) - easedScroll(prevProgress, targetScroll)) / 35F;
+        float prevProgress = (float) Math.max(0, startTime - 1);
+        velocityLerp = (easedScroll(progress, totalTicks, targetScroll)
+                - easedScroll(prevProgress, totalTicks, targetScroll)) / 35F;
 
         float thresholdStart = startWidth * randomWidth / 100F - startWidth / 2;
         float thresholdEnd = thresholdStart + startWidth * 20F * 35 / 100F;
