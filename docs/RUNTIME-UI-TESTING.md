@@ -168,6 +168,10 @@ python3 scripts/test_animation_aesthetics.py        # 聚光灯/透镜审美断�
 
 执行记录：
 
+- 2026-08-10（Blur 适配）：Blur 模组已装入三平台 dev 环境 `run/mods/`（gitignored 不入库）：
+  26.1.2 → `blur-6.3.0+26.1` + `midnightlib-1.9.3+26.1`；26.2 → `blur-6.3.1+26.2` +
+  `midnightlib-1.9.3+26.2`；1.21.1 → `blur-6.3.1+1.21.1` + `midnightlib-1.9.3+1.21.1`。
+  运行时清单「Blur 适配」3 项待人工勾选（`runClient` 启动，对照 OPAQUE/TRANSLUCENT × 装/不装 × 7 屏）。
 - 2026-08-09（本次重构）：**未执行**——自动化会话无 GUI 权限（System Events 权限违例），
   清单已固化，待人工在 1.21.1 客户端勾选；编译级验证（BUILD SUCCESSFUL）与残余直调
   grep（零残留）已通过。
