@@ -80,8 +80,8 @@ public final class TerminalPalette {
     public static final int BUBBLE_BORDER = 0xFF39444C;
     public static final int SYS_REFUSED = 0xFFC96A5F;
     public static final int SYS_REFUSED_DIM = 0xFFB4B4B8;
-    public static final int HOLD_ACCEPT = 0xFF3ECF6E;
-    public static final int HOLD_REJECT = 0xFFC96A5F;
+    public static final int HOLD_ACCEPT = 0xFF398A46;
+    public static final int HOLD_REJECT = 0xFFB03434;
 
     // ---- tooltip / dropdown ----
     public static final int TOOLTIP_BG = 0xFF1B1F23;

@@ -109,14 +109,16 @@ public final class TerminalActionBar {
 
         drawCapsule(gg, acceptX, acceptY, acceptW, acceptH,
                 TerminalPalette.PILL_GREEN_BORDER, TerminalPalette.PILL_GREEN_TEXT,
-                TerminalPalette.PILL_GREEN_FILL,
+                TerminalPalette.HOLD_ACCEPT,
                 Component.translatable("csgobox.terminal.accept",
                         "¥" + model.offerPrice()).getString(),
                 pending, busy, nowMs, pressPill == Pill.ACCEPT, mx, my);
         boolean rejectDisabled = finalRound && !pending;
+        int rejectBorder = pressPill == Pill.REJECT
+                ? TerminalPalette.HOLD_REJECT : TerminalPalette.PILL_GRAY_BORDER;
         drawCapsule(gg, rejectX, rejectY, rejectW, rejectH,
-                TerminalPalette.PILL_GRAY_BORDER, TerminalPalette.PILL_GRAY_TEXT,
-                TerminalPalette.PILL_GRAY_FILL,
+                rejectBorder, TerminalPalette.PILL_GRAY_TEXT,
+                TerminalPalette.HOLD_REJECT,
                 Component.translatable("csgobox.terminal.reject").getString(),
                 pending, busy || rejectDisabled, nowMs, pressPill == Pill.REJECT, mx, my);
     }
