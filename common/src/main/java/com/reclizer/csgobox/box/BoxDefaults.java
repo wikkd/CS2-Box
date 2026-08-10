@@ -112,6 +112,85 @@ public final class BoxDefaults {
             }
             """;
 
+    /**
+     * Default loot pool for the village-exclusive premium case. Unlike the
+     * terminal (key0) the premium case opens with the mid-tier gold key
+     * (key1 = 3 gold = 12 points), so its total cost is the trade price
+     * plus 12 points. It has NO {@code entity} list and {@code drop} 0, so
+     * it never drops from mobs — the arms-dealer villager is the only
+     * source (GDD §三 premium sink). Weights favour the upper tiers
+     * ([40,80,140,200,300] ≈ 39% grade5) without matching the terminal's
+     * 50%, keeping the terminal the premium apex.
+     */
+    private static final String PREMIUM_DEFAULT_JSON = """
+            {
+              "name": "#FFD700 军火商高级箱",
+              "key": "csgobox:csgo_key1",
+              "type": "csbox",
+              "drop": 0.0,
+              "random": [40, 80, 140, 200, 300],
+              "grade5": [
+                {"id": "minecraft:netherite_sword"},
+                {"id": "minecraft:netherite_axe"},
+                {"id": "minecraft:netherite_pickaxe"},
+                {"id": "minecraft:netherite_shovel"},
+                {"id": "minecraft:netherite_helmet"},
+                {"id": "minecraft:netherite_chestplate"},
+                {"id": "minecraft:netherite_leggings"},
+                {"id": "minecraft:netherite_boots"},
+                {"id": "minecraft:elytra"},
+                {"id": "minecraft:totem_of_undying"}
+              ],
+              "grade4": [
+                {"id": "minecraft:diamond_sword"},
+                {"id": "minecraft:diamond_axe"},
+                {"id": "minecraft:diamond_pickaxe"},
+                {"id": "minecraft:diamond_shovel"},
+                {"id": "minecraft:diamond_helmet"},
+                {"id": "minecraft:diamond_chestplate"},
+                {"id": "minecraft:diamond_leggings"},
+                {"id": "minecraft:diamond_boots"},
+                {"id": "minecraft:trident"},
+                {"id": "minecraft:crossbow"}
+              ],
+              "grade3": [
+                {"id": "minecraft:golden_sword"},
+                {"id": "minecraft:golden_axe"},
+                {"id": "minecraft:golden_pickaxe"},
+                {"id": "minecraft:golden_helmet"},
+                {"id": "minecraft:golden_chestplate"},
+                {"id": "minecraft:golden_leggings"},
+                {"id": "minecraft:golden_boots"},
+                {"id": "minecraft:shield"},
+                {"id": "minecraft:bow"},
+                {"id": "minecraft:enchanted_golden_apple"}
+              ],
+              "grade2": [
+                {"id": "minecraft:iron_sword"},
+                {"id": "minecraft:iron_axe"},
+                {"id": "minecraft:iron_pickaxe"},
+                {"id": "minecraft:iron_helmet"},
+                {"id": "minecraft:iron_chestplate"},
+                {"id": "minecraft:iron_leggings"},
+                {"id": "minecraft:iron_boots"},
+                {"id": "minecraft:chainmail_helmet"},
+                {"id": "minecraft:chainmail_chestplate"},
+                {"id": "minecraft:chainmail_leggings"},
+                {"id": "minecraft:chainmail_boots"}
+              ],
+              "grade1": [
+                {"id": "minecraft:stone_sword"},
+                {"id": "minecraft:stone_axe"},
+                {"id": "minecraft:stone_pickaxe"},
+                {"id": "minecraft:leather_helmet"},
+                {"id": "minecraft:leather_chestplate"},
+                {"id": "minecraft:leather_leggings"},
+                {"id": "minecraft:leather_boots"},
+                {"id": "minecraft:fishing_rod"}
+              ]
+            }
+            """;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(BoxDefaults.class);
 
     private BoxDefaults() {
@@ -197,6 +276,26 @@ public final class BoxDefaults {
             LOGGER.info("Wrote default terminal box config: {}", file);
         } catch (Exception e) {
             LOGGER.warn("Default terminal config skipped due to error: {}",
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * Writes a default {@code premium_supply_box.json} into the boxes
+     * directory when none exists yet, so the village-exclusive premium case
+     * (sold by the arms-dealer villager at level 3) resolves its loot out of
+     * the box. A user-authored config is never overwritten.
+     */
+    public static void writeDefaultPremiumBoxIfMissing(Path boxesDir) {
+        try {
+            Path file = boxesDir.resolve("premium_supply_box.json");
+            if (Files.exists(file)) {
+                return;
+            }
+            Files.writeString(file, PREMIUM_DEFAULT_JSON);
+            LOGGER.info("Wrote default premium box config: {}", file);
+        } catch (Exception e) {
+            LOGGER.warn("Default premium box config skipped due to error: {}",
                     e.getMessage());
         }
     }

@@ -106,6 +106,7 @@ public final class BoxJsonLoader {
         // Generate the default terminal box config (decoupled terminal loot)
         // on first run, before scanning existing box JSON files.
         BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
+        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
 
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 

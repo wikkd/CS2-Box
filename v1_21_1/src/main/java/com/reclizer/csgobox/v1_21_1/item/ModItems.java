@@ -52,6 +52,19 @@ public final class ModItems {
                 }
                 entries.accept(terminalStack);
 
+                // Village-exclusive premium case: bound to its own decoupled
+                // box definition like the terminal; a missing config falls
+                // back to the item's registry id at open time.
+                ItemStack premiumStack = new ItemStack(ModItems.ITEM_PREMIUM_BOX.get());
+                BoxDefinition premiumDef = BoxRegistry.get(ResourceLocation.parse("csgobox:premium_supply_box"));
+                if (premiumDef == null) {
+                    premiumDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
+                }
+                if (premiumDef != null) {
+                    premiumStack.set(ItemCsgoBox.BOX_ID.get(), premiumDef.id());
+                }
+                entries.accept(premiumStack);
+
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
                     ItemCsgoBox.setBoxId(def.id(), stack);
@@ -69,6 +82,7 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
     public static final Supplier<Item> ITEM_TERMINAL = ITEMS.register("terminal", ItemTerminal::new);
+    public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", ItemPremiumBox::new);
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

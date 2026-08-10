@@ -3,6 +3,7 @@
   "random_sequence": "csgobox:trade_set/arms_dealer/level_3",
   "trades": [
     "csgobox:arms_dealer/3/diamond_points",
-    "csgobox:arms_dealer/3/points_key0"
+    "csgobox:arms_dealer/3/points_key0",
+    "csgobox:arms_dealer/3/points_premium_box"
   ]
 }

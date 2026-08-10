@@ -106,6 +106,7 @@
   "advancement.csgobox.shopper.title": "Shopkeeper",
   "advancement.csgobox.shopper.description": "Open 200 CS:GO Boxes",
   "item.csgobox.terminal": "Terminal",
+  "item.csgobox.premium_supply_box": "Arms Dealer Premium Case",
   "csgobox.terminal.chat.title": "Comm Log",
   "csgobox.terminal.offer.title": "Item Preview",
   "csgobox.terminal.validity": "Validity",
