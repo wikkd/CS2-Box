@@ -48,6 +48,15 @@ public final class TerminalChatRegion {
     /** Bubble font scale: 13px / 8px glyph base (TERMINAL-LAYOUT-SPEC §1). */
     private static final float BUBBLE_SCALE = 1.625F;
 
+    /** Wheel scroll state: offset in px, clamped to [0, maxScroll] by each render. */
+    private int scrollOffset;
+    private int maxScroll;
+
+    /** 滚轮：scrollY>0 = 上滚（看更早）。范围由下一次 render 钳制。 */
+    public void scrolled(double scrollY) {
+        scrollOffset += (int) Math.round(scrollY * 20);
+    }
+
     public void render(GuiGraphicsExtractor gg, int x0, int y0, int x1, int y1,
                        long nowMs, NegotiationModel model) {
         // panel background: dot grid tiles (24px period, 1 blit per dot —
@@ -60,12 +69,30 @@ public final class TerminalChatRegion {
                 Component.translatable("csgobox.terminal.chat.title").getString(),
                 x0 + 12, y0 + 5, 2F, 1.5F, TerminalPalette.TITLE);
 
-        // chat stream: newest at the bottom, only the visible window
+        // chat stream: newest at the bottom, only the visible window;
+        // scrollOffset = 从最新条目回退的像素数（>0 表示滚回看更早）
         List<Object> entries = model.history();
-        int bottom = y1 - 4;
-        for (int i = entries.size() - 1; i >= 0 && i >= entries.size() - MAX_ENTRIES; i--) {
+        int start = Math.max(0, entries.size() - MAX_ENTRIES);
+        int viewportH = y1 - bodyTop - 4;
+        boolean pinned = scrollOffset <= 0;
+        int totalH = 0;
+        for (int i = entries.size() - 1; i >= start; i--) {
+            totalH += entryHeight(gg, entries.get(i), x1 - x0 - 24) + GAP;
+        }
+        maxScroll = Math.max(0, totalH - viewportH);
+        if (pinned) {
+            scrollOffset = 0;
+        } else {
+            scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
+        }
+        int bottom = y1 - 4 + scrollOffset;
+        for (int i = entries.size() - 1; i >= start; i--) {
             Object e = entries.get(i);
             int h = entryHeight(gg, e, x1 - x0 - 24);
+            if (bottom - h >= y1 - 4) { // 完全滚出面板底部：跳过但仍消耗高度
+                bottom -= h + GAP;
+                continue;
+            }
             if (bottom - h < bodyTop + 2) {
                 break;
             }

@@ -99,6 +99,10 @@ public class TerminalScreen extends Screen {
 
         // ---- left column: chat (region 4+5) ----
         int lx0 = px(0.020), ly0 = py(0.122), lx1 = px(0.358), ly1 = py(0.873);
+        chatX0 = lx0;
+        chatY0 = ly0;
+        chatX1 = lx1;
+        chatY1 = ly1;
         drawPanel(gg, lx0, ly0, lx1, ly1);
         chatRegion.render(gg, lx0, ly0, lx1, ly1, nowMs, model);
 
@@ -140,6 +144,8 @@ public class TerminalScreen extends Screen {
     private int closeX, closeY, closeW, closeH;
     // last-known pointer position (Screen has no mouse fields in 26.x)
     private int mouseX, mouseY;
+    // chat panel rect (region 4+5, for wheel hit-testing)
+    private int chatX0, chatY0, chatX1, chatY1;
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
@@ -176,6 +182,15 @@ public class TerminalScreen extends Screen {
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (mouseX >= chatX0 && mouseX <= chatX1 && mouseY >= chatY0 && mouseY <= chatY1) {
+            chatRegion.scrolled(scrollY);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
