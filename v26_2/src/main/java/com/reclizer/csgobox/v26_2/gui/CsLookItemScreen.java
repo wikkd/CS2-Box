@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
@@ -136,6 +137,11 @@ public class CsLookItemScreen extends Screen {
         return (int) (8F * (1F - toolbarEnterEase(index)));
     }
 
+    /** Enter transition progress: 0 at screen open, 1 after 300ms (6 ticks). */
+    private float enterE() {
+        return Easing.easeOutCubic(Math.min(1F, this.screenTicks / 6F));
+    }
+
     private String wearTierKey() {
         float w = this.wearValue;
         if (w < 0.07F) return "gui.csgobox.csgo_box.wear_fn";
@@ -203,7 +209,15 @@ public class CsLookItemScreen extends Screen {
         HudVisibility.hide();
         if (openItem.isEmpty()) return;
 
-        float scale = previewTextureSize() / 16F;
+        // Enter transition: the strip screen's dark backdrop fades out while
+        // the item scales up from 0.9 to 1.0 over 300ms (6 ticks).
+        int fadeAlpha = (int) (0xFF * (1F - enterE())) & 0xFF;
+        if (fadeAlpha > 0) {
+            AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height,
+                    (fadeAlpha << 24) | 0x000000);
+        }
+
+        float scale = (previewTextureSize() / 16F) * (0.9F + 0.1F * enterE());
         int dividerY = this.height - 18 - toolbarButtonSize();
         AnimRenderOps.fill(guiGraphics, this.width * 25 / 100, dividerY,
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
@@ -386,17 +400,18 @@ public class CsLookItemScreen extends Screen {
         if (openItem.isEmpty()) return;
 
         Style style = Style.EMPTY.withBold(true);
+        int titleAlpha = (int) (0xFF * enterE()) & 0xFF;
         int titleMaxWidth = Math.round(this.width * 54F / 100F);
         float titleScale = 1.6F;
         float titleX = centeredTextX(openItem.getItem().getName(openItem).getString(), titleScale, titleMaxWidth);
         RenderFontTool.drawStringClamped(guiGraphics, this.font, openItem.getItem().getName(openItem),
                 titleX, this.height * 5F / 100F, 0, 0, titleScale,
-                titleMaxWidth, 0xFFFFFFFF);
+                titleMaxWidth, (titleAlpha << 24) | 0xFFFFFF);
         float gradeX = centeredTextX(Component.translatable("gui.csgobox.csgo_box.grade" + grade).getString(), 1.0F,
                 Math.round(this.width * 24F / 100F));
         renderText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.grade" + grade).getVisualOrderText(),
-                gradeX, this.height * 11.5F / 100F, 1F);
+                gradeX, this.height * 11.5F / 100F, 1F, (titleAlpha << 24) | 0xFFFFFFFF);
         // Button text colour tracks the panel painted in renderBg: hovered
         // button -> textColorHover, otherwise -> textColor. The previous
         // implementation used a constant white that clashed with the warm

@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
@@ -138,6 +139,11 @@ public class CsLookItemScreen extends Screen {
         return (int) (8F * (1F - toolbarEnterEase(index)));
     }
 
+    /** Enter transition progress: 0 at screen open, 1 after 300ms (6 ticks). */
+    private float enterE() {
+        return Easing.easeOutCubic(Math.min(1F, this.screenTicks / 6F));
+    }
+
     private String wearTierKey() {
         float w = this.wearValue;
         if (w < 0.07F) return "gui.csgobox.csgo_box.wear_fn";
@@ -177,8 +183,16 @@ public class CsLookItemScreen extends Screen {
         }
         if (openItem.isEmpty()) return;
 
+        // Enter transition: the strip screen's dark backdrop fades out while
+        // the item scales up from 0.9 to 1.0 over 300ms (6 ticks).
+        int fadeAlpha = (int) (0xFF * (1F - enterE())) & 0xFF;
+        if (fadeAlpha > 0) {
+            AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height,
+                    (fadeAlpha << 24) | 0x000000);
+        }
+
         int frameWidth = width * 26 / 100;
-        float scale = frameWidth / 16F;
+        float scale = (frameWidth / 16F) * (0.9F + 0.1F * enterE());
         int dividerY = this.height - 18 - toolbarButtonSize();
         AnimRenderOps.fill(guiGraphics, this.width * 25 / 100, dividerY,
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
@@ -387,11 +401,12 @@ public class CsLookItemScreen extends Screen {
         if (openItem.isEmpty()) return;
 
         Style style = Style.EMPTY.withBold(true);
+        int titleAlpha = (int) (0xFF * enterE()) & 0xFF;
         renderText(guiGraphics, openItem.getItem().getName(openItem).getVisualOrderText(),
-                this.width * 45F / 100F, this.height * 5F / 100F, 1.8F);
+                this.width * 45F / 100F, this.height * 5F / 100F, 1.8F, (titleAlpha << 24) | 0xFFFFFFFF);
         renderText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.grade" + grade).getVisualOrderText(),
-                this.width * 45F / 100F, this.height * 11F / 100F, 1F);
+                this.width * 45F / 100F, this.height * 11F / 100F, 1F, (titleAlpha << 24) | 0xFFFFFFFF);
         renderCenteredText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.close").withStyle(style).getVisualOrderText(),
                 backButtonX(), backButtonY(), backButtonWidth(), this.height * 5 / 100, 0.8F);
