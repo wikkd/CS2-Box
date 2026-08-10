@@ -135,7 +135,7 @@ public final class TerminalActionBar {
             borderC = 0x2EFFFFFF;
             textC = 0x66FFFFFF;
         }
-        if (hover && !busy && enabled) {
+        if (hover && !pressing && !busy && enabled) {
             borderC = 0xFFFFFFFF;
         }
         TerminalChatRegion.drawRounded(gg, x, y, w, h, 0x00000000, borderC);

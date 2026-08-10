@@ -130,7 +130,7 @@ public final class TerminalChatRegion {
         if (e instanceof NegotiationModel.LineEntry le) {
             drawLine(gg, x, y, availW, nowMs, model, le);
         } else if (e instanceof NegotiationModel.OfferEntry oe) {
-            drawOfferCard(gg, x, y, nowMs, oe);
+            drawOfferCard(gg, x, y, availW, nowMs, oe);
         } else if (e instanceof NegotiationModel.SystemEntry se) {
             drawSystem(gg, x, y, availW, se);
         }
@@ -180,8 +180,8 @@ public final class TerminalChatRegion {
     }
 
     /** Offer card: dark rounded card + rarity stripe + weapon thumb + 4 rows. */
-    private void drawOfferCard(GuiGraphics gg, int x, int y, long nowMs,
-                               NegotiationModel.OfferEntry oe) {
+    private void drawOfferCard(GuiGraphics gg, int x, int y, int availW,
+                               long nowMs, NegotiationModel.OfferEntry oe) {
         NegotiationModel.Offer offer = oe.offer();
         boolean finalRound = offer.finalRound();
         int cardBg = finalRound ? TerminalPalette.OFFER_WHITE_CARD : TerminalPalette.OFFER_CARD;
@@ -224,7 +224,7 @@ public final class TerminalChatRegion {
             int alphaColor = (headColor & 0x00FFFFFF)
                     | (Math.round(255 * Math.min(1F, headAlpha)) << 24);
             RenderFontTool.drawStringClamped(gg, font, head, ix, iy + headDy,
-                    0, 0, 1.5F, CARD_W - 124 - 8, alphaColor);
+                    0, 0, 1.5F, availW - 124 - 8, alphaColor);
         }
         row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 1.5F, textColor);
         row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 1.5F, dimColor);
