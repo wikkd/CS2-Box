@@ -84,7 +84,7 @@ public final class TerminalChatRegion {
             return CARD_RADIUS * 2 + 60 + 4 * ROW_H; // padding + thumb + 4 rows
         }
         if (e instanceof NegotiationModel.SystemEntry se) {
-            String text = Component.translatable(se.textKey()).getString();
+            String text = sysText(se);
             return Math.round(font.width(text) * 1.375F / (availW - 20)) * LINE_H + 14;
         }
         return 20;
@@ -171,13 +171,19 @@ public final class TerminalChatRegion {
         String head = finalRound
                 ? Component.translatable("csgobox.terminal.offer.final").getString()
                 : Component.translatable("csgobox.terminal.offer.head", offer.round()).getString();
+        if (oe.status() == NegotiationModel.OFFER_REJECTED) {
+            head += Component.translatable("csgobox.terminal.card.rejected").getString();
+        } else if (oe.status() == NegotiationModel.OFFER_ACCEPTED) {
+            head += Component.translatable("csgobox.terminal.card.accepted").getString();
+        }
         String name = Component.translatable(NegotiationModel.SKIN_NAME_KEYS[offer.skinIdx()]).getString();
         String wear = Component.translatable(NegotiationModel.SKIN_WEAR_KEYS[offer.skinIdx()]).getString();
         String price = finalRound
                 ? Component.translatable("csgobox.terminal.offer.price.green", offerPrice(offer)).getString()
                 : Component.translatable("csgobox.terminal.offer.price", offerPrice(offer)).getString();
         Font font = Minecraft.getInstance().font;
-        row(gg, font, head, ix, iy, nowMs, oe.atMs(), 0, 1.5F, finalRound ? dimColor : TerminalPalette.RARITY_TEXT);
+        RenderFontTool.drawStringClamped(gg, font, head, ix, iy, 0, 0, 1.5F,
+                CARD_W - 124 - 8, finalRound ? dimColor : TerminalPalette.RARITY_TEXT);
         row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 1.5F, textColor);
         row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 1.5F, dimColor);
         row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 1.5F,
@@ -201,11 +207,18 @@ public final class TerminalChatRegion {
     private void drawSystem(GuiGraphicsExtractor gg, int x, int y, int availW,
                             NegotiationModel.SystemEntry se) {
         Font font = Minecraft.getInstance().font;
-        String text = Component.translatable(se.textKey()).getString();
+        String text = sysText(se);
         int color = se.failed() ? TerminalPalette.SYS_FAILED : TerminalPalette.SYS_MUTED;
         int textW = Math.round(font.width(text) * 1.375F) + 1 * (text.length() - 1);
         RenderFontTool.drawSpacedText(gg, font, text,
                 x + (availW - textW) / 2F, y + 2, 0.5F, 1.375F, color);
+    }
+
+    /** System text with the local player name as %s (multi-arg safe). */
+    private static String sysText(NegotiationModel.SystemEntry se) {
+        net.minecraft.world.entity.player.Player p = Minecraft.getInstance().player;
+        return Component.translatable(se.textKey(),
+                p == null ? "?" : p.getName().getString()).getString();
     }
 
     /** FormattedCharSequence wrapper for plain strings. */
