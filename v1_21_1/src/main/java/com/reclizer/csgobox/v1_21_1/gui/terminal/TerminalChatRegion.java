@@ -182,8 +182,15 @@ public final class TerminalChatRegion {
                 ? Component.translatable("csgobox.terminal.offer.price.green", offerPrice(offer)).getString()
                 : Component.translatable("csgobox.terminal.offer.price", offerPrice(offer)).getString();
         Font font = Minecraft.getInstance().font;
-        RenderFontTool.drawStringClamped(gg, font, head, ix, iy, 0, 0, 1.5F,
-                CARD_W - 124 - 8, finalRound ? dimColor : TerminalPalette.RARITY_TEXT);
+        float headAlpha = TerminalAnims.flipAlpha(nowMs, oe.atMs(), 0);
+        if (headAlpha > 0F) {
+            float headDy = TerminalAnims.flipSlideY(nowMs, oe.atMs(), 0);
+            int headColor = finalRound ? dimColor : TerminalPalette.RARITY_TEXT;
+            int alphaColor = (headColor & 0x00FFFFFF)
+                    | (Math.round(255 * Math.min(1F, headAlpha)) << 24);
+            RenderFontTool.drawStringClamped(gg, font, head, ix, iy + headDy,
+                    0, 0, 1.5F, CARD_W - 124 - 8, alphaColor);
+        }
         row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 1.5F, textColor);
         row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 1.5F, dimColor);
         row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 1.5F,
