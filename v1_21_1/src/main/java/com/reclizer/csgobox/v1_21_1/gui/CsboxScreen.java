@@ -242,10 +242,21 @@ public class CsboxScreen extends Screen {
                     this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 
-        drawButton(guiGraphics, openButtonX(), this.height * 94 / 100,
-                actionButtonWidth(), this.height * 5 / 100, 0xFF00AA00, 0xFF00FF00);
-        drawButton(guiGraphics, backButtonX(), this.height * 94 / 100,
-                actionButtonWidth(), this.height * 5 / 100, 0xFFAA0000, 0xFFFF0000);
+        int openX = openButtonX();
+        int openY = this.height * 94 / 100;
+        int openW = actionButtonWidth();
+        int openH = this.height * 5 / 100;
+        boolean openHover = isInside(gx, gy, openX, openY, openW, openH);
+        drawButton(guiGraphics, openX, openY, openW, openH, 0xFF00AA00, 0xFF00FF00,
+                0xFF33DD55, 0xFF66FF88, openHover);
+
+        int backX = backButtonX();
+        int backY = this.height * 94 / 100;
+        int backW = actionButtonWidth();
+        int backH = this.height * 5 / 100;
+        boolean backHover = isInside(gx, gy, backX, backY, backW, backH);
+        drawButton(guiGraphics, backX, backY, backW, backH, 0xFFAA0000, 0xFFFF0000,
+                0xFFCC4444, 0xFFFF6666, backHover);
     }
 
     /** Draws the current page (or both pages during the page-turn
@@ -296,9 +307,17 @@ public class CsboxScreen extends Screen {
         }
     }
 
-    private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
-        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+    private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h,
+                            int fillColor, int borderColor,
+                            int fillHover, int borderHover, boolean hover) {
+        int fill = hover ? fillHover : fillColor;
+        int border = hover ? borderHover : borderColor;
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, border);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fill);
+    }
+
+    private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
+        return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
     }
 
     @Override
