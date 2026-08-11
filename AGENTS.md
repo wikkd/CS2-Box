@@ -13,7 +13,7 @@
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
 - **3 个平台模块**：`v1_21_1`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。**已归档（EOL）平台** `v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11` 于 2026-08-09 从仓库删除，最后状态在 tag `eol-legacy-21x-1.0.6`，复活需从该 tag 检出。
 - **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
-- **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），源码**未提交**（本地 WIP），**不在 CI 矩阵**，不参与 mirror/镜像纪律；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。勿误当正式平台发布。
+- **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），随 **1.0.6 发行** 纳入 git 管理（保持 1.0.6 特性基线，`build.gradle` 排除 1.0.7 线增量；暂不做 1.0.7 更新），**不在 CI 矩阵**，不参与 mirror/镜像纪律，不入三平台正式发行矩阵；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。测试流程与发布门禁见 `docs/TESTING-FORGE-2612.md`，勿当正式平台发布。
 
 ## 架构约束（CONSTRAINT-001）
 

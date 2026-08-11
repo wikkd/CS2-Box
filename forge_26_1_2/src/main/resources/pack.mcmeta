@@ -1,0 +1,8 @@
+{
+  "pack": {
+    "description": "CS2 Box resources",
+    "pack_format": ${pack_format},
+    "min_format": ${pack_format},
+    "max_format": ${pack_format}
+  }
+}

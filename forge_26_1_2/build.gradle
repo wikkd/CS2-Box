@@ -1,0 +1,162 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version "[7.0.17,8)"
+}
+
+group = mod_group_id
+version = mod_version
+
+base {
+    archivesName = "${mod_id}-forge-${mc_version_forge_26_1_2}"
+}
+
+// Mojang ships Java 25 to end users in 26.1+, so the mod targets Java 25.
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+minecraft {
+    runs {
+        configureEach {
+            workingDir = layout.projectDirectory.dir('run')
+            systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
+            systemProperty 'forge.enabledGameTestNamespaces', mod_id
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'forge.logging.console.level', 'debug'
+            // macOS 上 LWJGL/GLFW 的 earlydisplay 要求 JVM 以主线程启动（-XstartOnFirstThread）。
+            // NeoForge 的 run 配置自带该参数，forge 的 Slime Launcher 默认不带，需显式补上。
+            if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('mac')) {
+                jvmArgs '-XstartOnFirstThread'
+            }
+        }
+
+        register('client') {
+            // 多 agent 并行隔离: -PgameDir=<dir> 覆盖 runClient 的 gameDir（默认 run）
+            if (project.hasProperty('gameDir')) {
+                workingDir = project.file(project.property('gameDir'))
+            }
+        }
+
+        register('server') {
+            args '--nogui'
+        }
+
+        register('gameTestServer')
+
+        register('data') {
+            workingDir = layout.projectDirectory.dir('run-data')
+            args '--mod', mod_id, '--all', '--output', layout.projectDirectory.dir('src/generated/resources'), '--existing', layout.projectDirectory.dir('src/main/resources')
+        }
+    }
+}
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    srcDir 'src/main/resources'
+    srcDir project(':common').file('src/main/resources')
+    // forge 模块保持 1.0.6 特性基线：排除 1.0.7 线专属文件（终端机/军械商/回收机/
+    // 高级箱/军械点及其数据包引用）。lang/命令等已同步内容保留现行版本。
+    // forge 追平 1.0.7 时删除此排除清单。
+    exclude 'data/csgobox/recipe/armory_recycler.json'
+    exclude 'data/csgobox/recipe/armory_point_exchange.json'
+    exclude 'data/csgobox/trade_set/**'
+    exclude 'data/csgobox/villager_trade/**'
+    exclude 'data/minecraft/tags/point_of_interest_type/'
+    exclude 'assets/csgobox/blockstates/armory_recycler.json'
+    exclude 'assets/csgobox/models/block/**'
+    exclude 'assets/csgobox/models/item/armory_point.json'
+    exclude 'assets/csgobox/models/item/armory_recycler.json'
+    exclude 'assets/csgobox/models/item/premium_supply_box.json'
+    exclude 'assets/csgobox/models/item/terminal.json'
+    exclude 'assets/csgobox/items/armory_point.json'
+    exclude 'assets/csgobox/items/premium_supply_box.json'
+    exclude 'assets/csgobox/items/terminal.json'
+    exclude 'assets/csgobox/textures/block/**'
+    exclude 'assets/csgobox/textures/entity/**'
+    exclude 'assets/csgobox/textures/gui/terminal/**'
+    exclude 'assets/csgobox/textures/item/armory_point.png'
+    exclude 'assets/csgobox/textures/item/premium_supply_box.png'
+    exclude 'assets/csgobox/textures/item/terminal_palette.png'
+}
+
+sourceSets.main.java {
+    srcDir project(':common').file('src/main/java')
+    // 1.0.7 专属纯 Java 包（终端机状态机），forge 不引用。
+    exclude 'com/reclizer/csgobox/terminal/**'
+}
+
+// Multiple srcDirs can collide on files like META-INF/mods.toml.
+tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    maven {
+        name = 'LocalPatchedLibraries'
+        url = rootProject.file('local-repo')
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+    }
+    mavenCentral()
+}
+
+dependencies {
+    implementation minecraft.dependency("net.minecraftforge:forge:${mc_version_forge_26_1_2}-${forge_version_26_1_2}")
+    annotationProcessor 'net.minecraftforge:eventbus-validator:7.0.5'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = false
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: mc_version_forge_26_1_2,
+            minecraft_version_range: minecraft_version_range_forge_26_1_2,
+            pack_format: pack_format_forge_26_1_2,
+            forge_version: forge_version_26_1_2,
+            forge_version_range: forge_version_range_26_1_2,
+            loader_version_range: loader_version_range_forge_26_1_2,
+            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors: mod_authors, mod_description: mod_description,
+    ]
+
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName = "${mod_id}-forge-${mc_version_forge_26_1_2}-${version}.jar"
+    manifest {
+        attributes([
+                "Specification-Title": mod_id,
+                "Specification-Vendor": mod_authors,
+                "Specification-Version": "1",
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.jar.archiveVersion,
+                "Implementation-Vendor": mod_authors,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    exclude '**/*+[0-9]+*'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

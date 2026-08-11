@@ -9,12 +9,6 @@
 - **AnimRenderOps 渲染门面（三平台渲染收口重构）**：每平台一份 `utils/AnimRenderOps.java` 作为**唯一渲染原语适配点**（文件头 `// era: legacy|decoupled` 标注时代，26.x 同代整文件镜像），6 屏（CsboxScreen / CsboxProgressScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen / CsboxLookItemScreen / CsboxConfirmScreen）+ 3 助手（IconListTools / GuiItemMove / ButtonPalette）的全部原始 draw 调用（`blitTextured` / `fill` / `fillGradient` / `scissor` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D`，共 13 个公开 op）收口到门面，全仓零原始 draw 调用残留（grep 审计）。关键点：legacy 门面内部强制 SRC_ALPHA blend、decoupled 走 RenderPipelines（自带 blend 状态，`setBlendNormal`/`flush` 空操作）；26.x `renderItem2D` per-item bounding box 居中、`renderItem3D` PIP 路径的 radians→degrees 转换内聚于门面；新增 UV+tint 雪碧图变体（CsLookItemScreen 工具栏，legacy 经 `RenderSystem.setShaderColor`、decoupled 传 blit 末参 tint）。同步清除 3 屏的帧首三连（`setShaderColor(1,1,1,1)`+`enableBlend`+`defaultBlendFunc`），1.21.1 残留 RenderSystem 仅深度开关与工具栏 tint 循环（有意保留）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（3 平台全 OK，CI `common-test` job 已接线），三平台 clean 编译验证通过。
 - **终端机物品 `terminal`**：GLB 造型 3D 体素模型（2.5D 等距观感）+ 原创 4 面 PBR 贴图 + 创造标签注册
 - **终端机屏幕 `TerminalScreen`（HTML 原型全量迁移）**：`design/terminal-chat.html`（1086 行）11 区域全部实现，三平台（1.21.1 / 26.1.2 / 26.2）同构；`common/terminal/` 新包承载纯 Java 状态机与时间轴（`NegotiationModel` 5 轮谈判状态机 IDLE/TYPING/PENDING/ACCEPT_BUSY/REJECT_BUSY/CLOSED/FAILED + 1100ms 打字锁 + 倒计时 2天23:57:45 每秒递减；`TerminalAnims` cubic-bezier/缓动/错峰翻牌/扫描/轮换纯函数；`WearBands` 五档磨损；`TerminalPalette` 调色板），JUnit 覆盖（谈判全流程/倒计时长跳/缓动/档位）；平台层拆 `gui/terminal/` 4 个渲染助手（ChatRegion / ActionBar / OfferRegion / BottomRow）只经 AnimRenderOps 原语渲染（门面 13 op 零新增，drift 检查保持 3 平台 OK）；10 个预烘焙 PNG 资产（圆角白膜/打字点/512px 点阵 tile/扫描带/径向光/马赛克头像/灰度水印/3 把武器 14° 斜置双色渐变）由 `scripts/gen-terminal-assets.py` 生成并经 `TerminalAssetsTest` 守护；交互：长按胶囊 700ms 确认、批量上限下拉、3D 检视自转拖拽、ESC/✕ 关闭恢复 HUD（26.2 走 `HudVisibility.show()`）；1.21.1 `AnimRenderOps` tint 变体内部补 `setShaderColor(1,1,1,1)` 复位（根治历史泄漏隐患）、`RenderFontTool` 补 `drawStringClamped` 双重载；lang 增补 26 键（对话 5 条/皮肤名/稀有度/计数/提示/系统消息，中英）；移除 `CsboxProgressScreen 2.java` 残留副本
-- **终端机 UI 审美回归（AI 视觉 + 人工视觉两轮测试定稿，11 区域全部清零）**：HTML 原型迁移后经 qwen3.8 视觉批量排查 + 用户人工逐区域圈图迭代，全部视觉缺陷修复，三平台（1.21.1 / 26.1.2 / 26.2）同步。排版坐标体系重定标：字号/间距/容器从原型 1.26 放大系改为按画布比例缩放的紧凑系（0.47~0.72 scale），修复 guiScale 4 下 1px fill 渲染成 4px 粗块问题（TERMINAL-LAYOUT-SPEC §1 差距表全部清零，标注见文档头部）。
-  - 区域 6 操作条：信息徽章（浅色圆盘 + 深色 i）与报价上限下拉 chevron 改预烘焙 SVG→PNG 纹理（`terminal_info.png` / `terminal_chevron.png`，`gen-terminal-assets.py` 新增 `make_info`/`make_chevron`）；chevron 恒朝上（菜单向上弹出）；接受/拒绝胶囊按钮改内容自适应宽度（接受居左、拒绝居右），按压填充用 scissor + 圆角纹理实现 pill 形进度
-  - 区域 8 报价卡：中央 3D 物品改 CS2 式前倾展示（rotX -38°/rotY 24°）、放大至水印圆 88%、idle 3°/s 自动旋转；名称框显示实际报价物品名（新增三平台 `TerminalOfferItems` 统一箱池取样/名称/价格/稀有度映射）；稀有度改 CS2 五档色（军规级蓝→违禁金）；磨损标签改方形非圆角；磨损条五档色带 + 当前档顶部高亮 + 1px 分隔线；磨损值 `%.8f` 全精度对齐原版 CS；指示箭头尖端朝下、底部落在条上，条顶加浅灰轨道区（`BAR_TRACK`）；meta 行移至左下，无图案时省略图案字段
-  - 区域 9/10/11 底行：三面板改橄榄边框 + 标题条结构（`STRIP_H`/`DIGIT_SCALE` 0.72）；区域 11 左侧显示终端机实际名称（物品 hover 名 / 玩家自定义命名）；slot 徽章 17px 防顶边挤压
-  - 顶栏：改渐变条（`TITLE_TOP`→`TITLE`）、紧凑电池/信号图标、关闭按钮改 glyph-only（hover 出方框）
-  - 数据/文案：`SKIN_WEAR_VAL` 全精度（0.11383486F 等，测试同步）、报价整数化（¥22/16/16）、`RARITY_TIER_KEYS` 五档、lang 更新（聊天·军火商 / 报价上限 / 五档稀有度 / `meta_no_pattern`，中英 24 键）；`terminal.json` 手持角度/缩放调整；`TerminalPalette` 按 CS2 配色全面重定
 - **`BoxJsonLoader` 解析缓存**：JSON 按 SHA-256 内容指纹缓存解析结果，未变更文件跳过重复解析（`reload` / 首次启动多平台共享加载场景收益）；教程下载改后台线程执行，不再阻塞启动主线程
 - **`/csbox` 命令收口**：`set` 调试子命令退役，`errors` / `tutorial` 并入 `info` / `reload`，帮助文本重写
 
@@ -30,6 +24,12 @@
 ## [1.0.6] - 2026-08-08
 ### 概述
 本版本完成 26.2 平台扩展、教程系统、动态 box item、开箱排行榜、10 平台矩阵（新增 v1_21_0）、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久、TACZ 检视视口与 CI 矩阵等全部开发批次。**批量开箱推迟至 1.0.7 发布**（代码已开发完成、本版本入口与服务端处理均屏蔽，详见下文 `[1.0.7]` 节）。下文按批次记录。
+
+### 补记：forge_26_1_2 模块纳入 git 并发行（2026-08-12）
+- **forge_26_1_2（MinecraftForge 26.1.2-64.1.0，Java 25）随 1.0.6 发行纳入 git 管理**。模块保持 1.0.6 特性基线（`forge_26_1_2/build.gradle` 对 common 源集/资源排除 1.0.7 线增量：terminal/armory/premium 资产与 Java 包等），暂不做 1.0.7 更新；仍为实验模块，不入三平台正式发行矩阵与 CI。
+- **资源修复**：补 5 个 1.0.6 基线物品模型定义（`assets/csgobox/items/{csgo_box,csgo_key0-3}.json`），修复模组物品（箱/钥匙/动态箱）紫黑棋盘格缺失模型；开箱屏箱子渲染改 PIP `Icon3DRenderState` 高清 3D 路径（`utils/GuiItemMove.java` 与 v26_1_2 `AnimRenderOps.renderItem3D` 对齐），消除放大像素化。
+- **测试设施**：`docs/TESTING-FORGE-2612.md`（测试流程 + 发布门禁）与 `scripts/test-forge-2612.sh`（自动化门禁 L0-L3：clean 编译 / jar 产物校验 / 版本四同步 / 渲染门面漂移 / PlatformSmokeTest）；L4 经 mc_tools TestHelper 新增 forge-26.1.2 构建目标自动化 E2E（`test_csbox.sh` / `test_csbox_ext.py`）。发布门禁 L0-L3 7/7 PASS、L4 11P/0F/0W，详见 `docs/TEST-REPORT-FORGE-2612-2026-08-11.md`。
+- **工程**：`settings.gradle` foojay-resolver-convention 0.9.0 → 1.0.0（修复 ForgeGradle 7 run 任务在 Gradle 9 的挂起）、`gradle.properties` 补 `net.minecraftforge.gradle.merge-source-sets=true`（dev 运行 mod 定位）、IDEA run 配置新增 `MC_Forge_26_1_2_*`（清理过时的 `MC_26_1_2/26_2_*Data` 配置）。
 
 ### 上线前补充：TACZ 检视视口 / v1_21_0 平台 / 审美测试脚本
 ### 新增

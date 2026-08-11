@@ -51,7 +51,12 @@ check_pattern "README version mention" "README.md" "${mod_version//./\\.}"
 declare -a TOMLS
 while IFS= read -r toml; do
   TOMLS+=("$toml")
-done < <(find . -path '*/src/main/resources/META-INF/*.toml' -type f 2>/dev/null | sed 's#^\./##' | sort)
+# Prune build/runtime artifact dirs (build/neoForm etc. can be hundreds of MB
+# and make a full-tree find take minutes; manifests only live under src/).
+done < <(find . \
+  \( -type d \( -name build -o -name run -o -name runs -o -name bin -o -name dist \) -prune \) -o \
+  \( -type f -path '*/src/main/resources/META-INF/*.toml' -print \) 2>/dev/null \
+  | sed 's#^\./##' | sort)
 
 if [ "${#TOMLS[@]}" -eq 0 ]; then
   echo "FAIL no META-INF/*.toml found under src/main/resources" >&2

@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="MC 26.2 - ClientData" type="GradleRunConfiguration" factoryName="Gradle">
+  <configuration default="false" name="MC Forge 26.1.2 - Data" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
       <option name="externalSystemIdString" value="GRADLE" />
-      <option name="scriptParameters" value="-Pactive_versions=26.2" />
+      <option name="scriptParameters" value="-Pactive_versions=forge-26.1.2" />
       <option name="taskNames">
         <list>
-          <option value=":v26_2:runClientData" />
+          <option value=":forge_26_1_2:runData" />
         </list>
       </option>
       <option name="vmOptions" value="" />
