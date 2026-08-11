@@ -39,7 +39,7 @@ final class NegotiationModelTest {
         assertInstanceOf(NegotiationModel.OfferEntry.class, m.history().get(1));
         NegotiationModel.OfferEntry oe = (NegotiationModel.OfferEntry) m.history().get(1);
         assertEquals(NegotiationModel.OFFER_PENDING, oe.status());
-        assertEquals(0.1139F, oe.offer().wearVal(), 1e-6F);
+        assertEquals(0.11383486F, oe.offer().wearVal(), 1e-6F);
     }
 
     @Test

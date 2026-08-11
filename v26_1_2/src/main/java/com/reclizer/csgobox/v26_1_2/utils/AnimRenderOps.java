@@ -99,14 +99,24 @@ public final class AnimRenderOps {
                 mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
                 AABB bounds = tracked.getModelBoundingBox();
                 if (bounds != null) {
-                    // Model space is roughly -8..+8 for a 16px item. Shift so
-                    // the measured centre sits at the slot centre.
-                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D));
-                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D));
+                    // item() maps the model ORIGIN to pixel (8,8) of the 16px
+                    // GUI icon, so the visual centre lands at bboxCentre+8.
+                    // Shift by -(centre+8) to pin the visual centre on (pX,pY);
+                    // without the -8 the icon floated toward the bottom-right.
+                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D)) - 8F;
+                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D)) - 8F;
+                } else {
+                    // Some flat items (armour leggings etc.) report no bounds;
+                    // centre the top-left-anchored 16px GUI draw instead of
+                    // letting it float to the bottom-right of the target.
+                    offsetX = -8F;
+                    offsetY = -8F;
                 }
             } catch (Throwable ignored) {
-                // Model measurement is best-effort; fall back to the previous
-                // top-left anchored draw on any resolver hiccup.
+                // Model measurement is best-effort; centre the draw so icons
+                // never drift toward the bottom-right on a resolver hiccup.
+                offsetX = -8F;
+                offsetY = -8F;
             }
         }
         // Anchor-relative scale: translate to the target pixel first, then
@@ -148,6 +158,9 @@ public final class AnimRenderOps {
         float modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
         float modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
 
+        // (cx, cy) is the ITEM CENTRE: the PIP render target rect must be
+        // centred on it, otherwise the preview floats to the bottom-right.
+        int half = textureSize / 2;
         Icon3DRenderState pipState = new Icon3DRenderState(
                 trackedState,
                 radiansToDegrees(angleXComponent),
@@ -158,10 +171,10 @@ public final class AnimRenderOps {
                 modelCenterX,
                 modelCenterY,
                 modelCenterZ,
-                cx,
-                cy,
-                cx + textureSize,
-                cy + textureSize);
+                cx - half,
+                cy - half,
+                cx - half + textureSize,
+                cy - half + textureSize);
 
         guiGraphics.submitPictureInPictureRenderState(pipState);
     }

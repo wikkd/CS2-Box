@@ -67,10 +67,20 @@ public final class NegotiationModel {
             "gui.csgobox.csgo_box.wear_ww",
             "gui.csgobox.csgo_box.wear_ft",
     };
-    public static final float[] SKIN_WEAR_VAL = {0.1139F, 0.4021F, 0.3074F};
-    public static final String[] SKIN_PRICE = {"17.76", "0.28", "0.28"};
-    /** rarity: "purple" | "blue" (matches TerminalPalette RARITY_*). */
-    public static final String[] SKIN_RARITY = {"purple", "blue", "blue"};
+    public static final float[] SKIN_WEAR_VAL = {0.11383486F, 0.40218743F, 0.30740085F};
+    /** Offer price in whole Armory Points (no decimals — the mod's currency). */
+    public static final String[] SKIN_PRICE = {"22", "16", "16"};
+    /** Five rarity tier keys (grade 1..5, CS2-style): 军规级/受限级/保密级/隐秘级/违禁. */
+    public static final String[] RARITY_TIER_KEYS = {
+            "mil_spec", "restricted", "classified", "covert", "contraband"
+    };
+    /** Rarity tier key per script skin (skin0 -> grade4 covert, skin1/2 -> grade3 classified). */
+    public static final String[] SKIN_RARITY = {"covert", "classified", "classified"};
+
+    /** Rarity tier key for a box grade (1..5, clamped). */
+    public static String rarityKeyForGrade(int grade) {
+        return RARITY_TIER_KEYS[Math.max(0, Math.min(grade - 1, RARITY_TIER_KEYS.length - 1))];
+    }
     /** weapon preset id: "pistol" | "rifle" | "smg" (matches weapon_*.png). */
     public static final String[] SKIN_WP = {"pistol", "rifle", "smg"};
     /** weapon gradient endpoints (baked into weapon_*.png, kept for tinting). */
@@ -252,10 +262,10 @@ public final class NegotiationModel {
         return List.copyOf(history);
     }
 
-    /** Display price of the current offer (HTML price formatting). */
+    /** Display price of the current offer (HTML price formatting, integers only). */
     public String offerPrice() {
         Offer off = pending;
-        return off == null ? "0.00" : SKIN_PRICE[off.skinIdx()];
+        return off == null ? "0" : SKIN_PRICE[off.skinIdx()];
     }
 
     /** Counter label for region 6: lang key + translatable args. */

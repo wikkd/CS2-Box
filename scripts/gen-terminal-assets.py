@@ -330,6 +330,72 @@ def make_avatar():
 
 # ---------------------------------------------------------------------------
 
+def make_info():
+    # 32x32 (blitted at 4x4 gui = 16px render, 2:1 downsample): the region-6
+    # info badge — light disc (#cfd6db) + dark "i" (#20242a), baked colours so
+    # the blit tint is white. Replaces the old 3-part draw (TEX_CIRCLE blit +
+    # two 1-gui fills) whose fills rendered as chunky 4px blocks at guiScale 4.
+    # Disc: centre (15.5,15.5), hard edge with a 2px soft band.
+    # "i": 2px-at-render dot + stem (4 texture units = 2 render px each), the
+    # classic info glyph centred in the disc.
+    DISC = (207, 214, 219)
+    I = (32, 36, 42)
+
+    def disc_alpha(x, y):
+        d = math.sqrt((x - 15.5) ** 2 + (y - 15.5) ** 2)
+        if d <= 14.5:
+            return 255
+        if d >= 16.5:
+            return 0
+        return int(255 * (16.5 - d))
+
+    def in_dot(x, y):
+        return 14 <= x <= 17 and 8 <= y <= 11
+
+    def in_stem(x, y):
+        return 14 <= x <= 17 and 14 <= y <= 23
+
+    def pixel(x, y):
+        a = disc_alpha(x, y)
+        if a == 0:
+            return (DISC[0], DISC[1], DISC[2], 0)
+        if in_dot(x, y) or in_stem(x, y):
+            return (I[0], I[1], I[2], 255)
+        return (DISC[0], DISC[1], DISC[2], a)
+
+    write_png(os.path.join(OUT, "terminal_info.png"), 32, 32, pixel)
+
+
+def make_chevron():
+    # 32x32 (blitted at 3x2 gui = 12x8px render): upward triangle #9aa4ad,
+    # matching the HTML .chev (border-top triangle, always pointing up).
+    # 1px AA band via signed distance to the three edges.
+    APEX = (16.0, 5.0)
+    BL = (3.0, 27.0)
+    BR = (29.0, 27.0)
+    COL = (154, 164, 173)
+
+    def sd_tri(x, y):
+        # signed distance: positive inside for the two slants, y <= base
+        d_left = 22.0 * (x - APEX[0]) + 13.0 * (y - APEX[1])  # <=0 inside
+        d_right = 22.0 * (x - APEX[0]) - 13.0 * (y - APEX[1])  # >=0 inside
+        # normalise to px distance
+        n = math.sqrt(22.0 ** 2 + 13.0 ** 2)
+        dl = d_left / n
+        dr = -d_right / n
+        db = 27.0 - y
+        return min(dl, dr, db)
+
+    def pixel(x, y):
+        d = sd_tri(x + 0.5, y + 0.5)
+        if d >= 0.5:
+            return (COL[0], COL[1], COL[2], 255)
+        if d <= -0.5:
+            return (COL[0], COL[1], COL[2], 0)
+        return (COL[0], COL[1], COL[2], int(255 * (d + 0.5)))
+    write_png(os.path.join(OUT, "terminal_chevron.png"), 32, 32, pixel)
+
+
 def main():
     print(OUT)
     make_round_rect()
@@ -337,6 +403,8 @@ def main():
     make_dot_tile()
     make_scan_band()
     make_circle_glow()
+    make_info()
+    make_chevron()
     make_badge()
     make_avatar()
     for name, path_d, c1, c2 in WEAPON_DEFS:
@@ -346,3 +414,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

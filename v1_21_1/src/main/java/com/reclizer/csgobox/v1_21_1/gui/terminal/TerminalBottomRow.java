@@ -9,122 +9,193 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
- * Region 9+10+11: countdown (flip on second change), random-item slot
- * (2.5s cycle with scale pop, real MC items via renderItem2D) and the
- * collection strip (xp name + rarity dots, filled with glow / hollow).
+ * Region 9+10+11: countdown panel, random-item slot (2.5s cycle with scale
+ * pop) and the collection strip — three separate olive-bordered panels with
+ * title strips, matching the HTML prototype's bottom row.
  *
- * era: decoupled
+ * era: legacy
  */
 public final class TerminalBottomRow {
 
-    public static final ResourceLocation TEX_CIRCLE_GLOW = ResourceLocation.fromNamespaceAndPath("csgobox", "gui/terminal/terminal_circle_glow");
-    public static final ResourceLocation TEX_BADGE = ResourceLocation.fromNamespaceAndPath("csgobox", "gui/terminal/terminal_badge");
+    public static final ResourceLocation TEX_CIRCLE_GLOW = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_circle_glow.png");
+    public static final ResourceLocation TEX_BADGE = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_badge.png");
 
-    /** 10 random items cycled by region 10 (HTML MC_ITEMS). */
-    private static final ItemStack[] MC_ITEMS = {
-            new ItemStack(Items.GRASS_BLOCK),
-            new ItemStack(Items.DIAMOND),
-            new ItemStack(Items.GOLD_INGOT),
-            new ItemStack(Items.APPLE),
-            new ItemStack(Items.TORCH),
-            new ItemStack(Items.ENDER_PEARL),
-            new ItemStack(Items.CREEPER_HEAD),
-            new ItemStack(Items.BREAD),
-            new ItemStack(Items.REDSTONE),
-            new ItemStack(Items.IRON_SWORD),
-    };
+
+    /** HTML .title-strip 28px canvas -> gui. */
+    private static final int STRIP_H = 8;
+    /** HTML .digits 21px canvas -> gui scale. */
+    private static final float DIGIT_SCALE = 0.72F;
+    /** HTML letter-spacing 0.5px canvas -> gui. */
+    private static final int DIGIT_SPACE = 1;
+    /** HTML .slot-badge 72px canvas -> gui. */
+    /** HTML .slot-badge 72px canvas -> gui (17 not 18: 18's 9px half-radius
+     *  pressed the badge into the panel's top border at 3x). */
+    private static final int BADGE_SIZE = 17;
+    /** HTML .slot-badge canvas 44px / badge 72px. */
+    private static final float ICON_RATIO = 44F / 72F;
+    /** Panel gap (HTML bottom-row gap 14px canvas -> gui). */
+    private static final int PANEL_GAP = 4;
 
     private String lastCountdown = "";
     private long countdownFlipAtMs;
 
     public void render(GuiGraphics gg, int x0, int y0, int x1, int y1,
-                       long nowMs, NegotiationModel model, Player player) {
-        AnimRenderOps.fill(gg, x0, y0, x1, y1, 0xFF1F2428);
-        AnimRenderOps.fill(gg, x0, y0, x1, y0 + 1, 0xFF39444C);
+                       long nowMs, NegotiationModel model, Player player, Component terminalName) {
         Font font = Minecraft.getInstance().font;
-        int midY = (y0 + y1) >> 1;
 
-        // ---- region 9: countdown ----
-        int cx0 = x0 + (int) ((x1 - x0) * 0.035F);
-        RenderFontTool.drawSpacedText(gg, font,
-                Component.translatable("csgobox.terminal.validity").getString(),
-                cx0, y0 + 4, 2F, 1.5F, TerminalPalette.TITLE);
+        // ---- sizing (count panel adapts to the digits, slot fixed, xp fills) ----
         String text = TerminalAnims.countdownText(model.countdownMs());
-        boolean expired = model.countdownMs() <= 0;
         if (!text.equals(lastCountdown)) {
             lastCountdown = text;
             countdownFlipAtMs = nowMs;
         }
-        float flip = TerminalAnims.counterFlip(nowMs, countdownFlipAtMs);
-        float slide = (1F - flip) * 8F;
-        int color = expired ? TerminalPalette.COUNT_EXPIRED : TerminalPalette.WHITE;
-        String[] toks = {text.substring(0, 2), text.substring(3, 5), text.substring(6, 8), text.substring(9, 11)};
-        float tx = cx0 + 2;
+        int digitW = Math.round(font.width("0") * DIGIT_SCALE);
+        int colonW = Math.round(font.width(":") * DIGIT_SCALE);
+        int digitsW = 8 * digitW + 3 * colonW + 10 * DIGIT_SPACE;
+        int countW = Math.max(46, digitsW + 8);
+        int slotW = 31;
+        int xpW = (x1 - x0) - countW - slotW - PANEL_GAP * 2;
+        // HTML: slot panel top edge sits lower than 9/11 (y 0.895 vs 0.875)
+        int slotY0 = y0 + 5;
+
+        // ---- region 9: countdown panel ----
+        drawPanel(gg, x0, y0, x0 + countW, y1);
+        drawStrip(gg, x0, y0, x0 + countW, y0 + STRIP_H,
+                Component.translatable("csgobox.terminal.validity").getString(), true);
+        boolean expired = model.countdownMs() <= 0;
+        int color = expired ? TerminalPalette.COUNT_EXPIRED : TerminalPalette.ACTION_TEXT;
+        int digitH = Math.round(7F * DIGIT_SCALE);
+        int ty = y0 + STRIP_H + (y1 - (y0 + STRIP_H) - digitH) / 2;
+        // centre on the ACTUAL glyph widths (digits like "1" are narrower than
+        // the "0" estimate, which skewed the row left — asymmetric gutters)
+        int renderW = 0;
+        for (int i = 0; i < text.length(); i++) {
+            renderW += Math.round(font.width(String.valueOf(text.charAt(i))) * DIGIT_SCALE);
+            if (i < text.length() - 1) {
+                renderW += DIGIT_SPACE;
+            }
+        }
+        int tx = x0 + (countW - renderW) / 2;
+        String[] toks = {text.substring(0, 2), text.substring(3, 5),
+                text.substring(6, 8), text.substring(9, 11)};
         for (int i = 0; i < 4; i++) {
-            RenderFontTool.drawString(gg, font, fcs(toks[i]), tx, midY - 8 + slide, 0, 0, 1.8F, color);
-            tx += font.width(toks[i]) * 1.8F;
+            tx += RenderFontTool.drawSpacedText(gg, font, toks[i], tx, ty,
+                    DIGIT_SPACE, DIGIT_SCALE, color);
             if (i < 3) {
-                RenderFontTool.drawString(gg, font, fcs(":"), tx + 1, midY - 8 + slide, 0, 0, 1.8F,
-                        TerminalPalette.COUNT_COLON);
-                tx += font.width(":") * 1.8F + 2;
+                tx += DIGIT_SPACE;
+                tx += RenderFontTool.drawSpacedText(gg, font, ":", tx, ty,
+                        DIGIT_SPACE, DIGIT_SCALE, TerminalPalette.COUNT_COLON);
+                tx += DIGIT_SPACE;
             }
         }
 
-        // ---- region 10: random item slot (2.5s cycle) ----
-        int slotX = x0 + (int) ((x1 - x0) * 0.30F);
-        int slotW = Math.round((x1 - x0) * 0.075F);
-        int slotCy = midY;
-        long slotStart = nowMs - (nowMs % TerminalAnims.SLOT_SWAP_MS);
-        int idx = TerminalAnims.slotIndex(nowMs, MC_ITEMS.length);
-        float pop = TerminalAnims.swapPop(nowMs, slotStart);
-        // circular badge
-        AnimRenderOps.blitTextured(gg, TEX_BADGE, slotX - slotW / 2, slotCy - slotW / 2,
-                slotW, slotW, 72, 72);
-        float scale = slotW / 2.2F * (0.55F + 0.45F * pop);
-        AnimRenderOps.renderItem2D(player, gg, MC_ITEMS[idx],
-                slotX, slotCy, Math.max(1F, scale / 16F));
+        // ---- region 10: slot panel (badge + session item icon) ----
+        int s0 = x0 + countW + PANEL_GAP;
+        int s1 = s0 + slotW;
+        drawPanel(gg, s0, slotY0, s1, y1);
+        // full-size circular badge, centred (HTML: one holographic badge per
+        // terminal session; region 10 is display-only, no item-name caption)
+        int badge = Math.min(BADGE_SIZE, slotW - 10);
+        int bcx = (s0 + s1) / 2;
+        int bcy = slotY0 + (y1 - slotY0) / 2 - 2;
+        AnimRenderOps.blitTextured(gg, TEX_BADGE, bcx - badge / 2, bcy - badge / 2,
+                badge, badge, 72, 72);
+        ItemStack slotItem = TerminalOfferItems.sessionItem();
+        AnimRenderOps.renderItem2D(player, gg, slotItem, bcx, bcy,
+                (badge * ICON_RATIO) / 16F);
 
-        // ---- region 11: collection strip (xp name + rarity dots) ----
-        int xpX = x0 + (int) ((x1 - x0) * 0.50F);
-        RenderFontTool.drawSpacedText(gg, font,
-                Component.translatable("csgobox.terminal.collection").getString(),
-                xpX, y0 + 4, 2F, 1.5F, TerminalPalette.TITLE);
-        String xpName = Component.translatable("csgobox.terminal.name").getString();
-        RenderFontTool.drawString(gg, font, fcs(xpName), xpX, midY - 4, 0, 0, 1.2F, TerminalPalette.TEXT);
-        int dotY = midY - 4;
-        int dotX = xpX + Math.round(font.width(xpName) * 1.2F) + 16;
-        for (NegotiationModel.DotGroup g : NegotiationModel.DOT_GROUPS) {
-            for (int v : g.pattern) {
-                drawDot(gg, dotX, dotY, v == 1, g.color);
-                dotX += 14;
+        // ---- region 11: collection panel (xp name + rarity dots) ----
+        int xp0 = s1 + PANEL_GAP;
+        int xp1 = x1;
+        drawPanel(gg, xp0, y0, xp1, y1);
+        drawStrip(gg, xp0, y0, xp1, y0 + STRIP_H,
+                Component.translatable("csgobox.terminal.collection").getString(), false);
+        // dots inside a pill container (design .xp-dots #262c33d9 / 1px #171b1f)
+        int dotCore = 3;
+        int dotGap = 2;
+        int groupGap = 4;
+        int padX = 4;
+        int padY = 2;
+        int dotsW = 0;
+        for (int g = 0; g < NegotiationModel.DOT_GROUPS.length; g++) {
+            int n = NegotiationModel.DOT_GROUPS[g].pattern.length;
+            dotsW += n * dotCore + (n - 1) * dotGap;
+            if (g < NegotiationModel.DOT_GROUPS.length - 1) {
+                dotsW += groupGap;
             }
-            dotX += 8;
+        }
+        int pillW = dotsW + 2 * padX;
+        int pillH = dotCore + 2 * padY;
+        int pillX = xp1 - 6 - pillW;
+        int pillY = y0 + STRIP_H + (y1 - (y0 + STRIP_H) - pillH) / 2;
+        TerminalChatRegion.drawPill(gg, pillX, pillY, pillW, pillH, 0xD9262C33, 0xFF171B1F);
+        // terminal's actual name: config "#RRGGBB" colour when set (HTML
+        // .xp-name); anvil renames survive via ItemStack.getHoverName()
+        String xpName = terminalName.getString();
+        TextColor tc = terminalName.getStyle().getColor();
+        int nameColor = tc != null ? (0xFF000000 | (tc.getValue() & 0xFFFFFF))
+                : TerminalPalette.OFFER_PRICE;
+        RenderFontTool.drawSpacedText(gg, font, xpName, xp0 + 4, pillY + 1,
+                1F, 0.59F, nameColor);
+        int dotX = pillX + padX;
+        int dotY = pillY + padY;
+        for (int g = 0; g < NegotiationModel.DOT_GROUPS.length; g++) {
+            NegotiationModel.DotGroup grp = NegotiationModel.DOT_GROUPS[g];
+            int n = grp.pattern.length;
+            for (int v : grp.pattern) {
+                drawDot(gg, dotX, dotY, v == 1, grp.color);
+                dotX += dotCore + dotGap;
+            }
+            if (g < NegotiationModel.DOT_GROUPS.length - 1) {
+                dotX += groupGap - dotGap;
+            }
         }
     }
 
-    /** FormattedCharSequence wrapper for plain strings. */
-    private static FormattedCharSequence fcs(String s) {
-        return FormattedCharSequence.forward(s, Style.EMPTY);
+    /** Olive-bordered dark panel (HTML .count-panel/.slot-panel/.xp-panel). */
+    private void drawPanel(GuiGraphics gg, int x0, int y0, int x1, int y1) {
+        AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, TerminalPalette.BODY_LIGHT_TOP,
+                TerminalPalette.BODY_LIGHT_BOTTOM);
+        AnimRenderOps.fill(gg, x0, y0, x1, y0 + 1, TerminalPalette.FRAME);
+        AnimRenderOps.fill(gg, x0, y1 - 1, x1, y1, TerminalPalette.FRAME);
+        AnimRenderOps.fill(gg, x0, y0, x0 + 1, y1, TerminalPalette.FRAME);
+        AnimRenderOps.fill(gg, x1 - 1, y0, x1, y1, TerminalPalette.FRAME);
     }
 
-    /** Filled dot with glow / hollow dot (1px ring). */
+    /** HTML .title-strip: gradient bar + olive bottom edge + 12px label. */
+    private void drawStrip(GuiGraphics gg, int x0, int y0, int x1, int y1,
+                           String label, boolean center) {
+        AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, 0xFF66798A, TerminalPalette.TITLE);
+        AnimRenderOps.fill(gg, x0, y1 - 1, x1, y1, TerminalPalette.FRAME);
+        Font font = Minecraft.getInstance().font;
+        int w = 0;
+        for (int i = 0; i < label.length(); i++) {
+            w += Math.round(font.width(String.valueOf(label.charAt(i))) * 0.47F);
+            if (i < label.length() - 1) {
+                w += 1;
+            }
+        }
+        float lx = center ? x0 + (x1 - x0 - w) / 2F : x0 + 3F;
+        RenderFontTool.drawSpacedText(gg, font, label, lx, y0 + 1, 1F, 0.47F, TerminalPalette.TEXT);
+    }
+
+    /** Round dot: filled = 3px circle + glow; hollow = 1px ring (HTML .dot 10px). */
     private void drawDot(GuiGraphics gg, int x, int y, boolean filled, int color) {
         if (filled) {
-            AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, x - 3, y - 3, 12, 12, 128, 128);
-            AnimRenderOps.fill(gg, x, y, x + 6, y + 6, color);
+            AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, x - 2, y - 2, 7, 7, 128, 128);
+            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
+                    0, 0, 32, 32, 32, 32, color);
         } else {
-            AnimRenderOps.fill(gg, x, y, x + 6, y + 1, color);
-            AnimRenderOps.fill(gg, x, y + 5, x + 6, y + 6, color);
-            AnimRenderOps.fill(gg, x, y, x + 1, y + 6, color);
-            AnimRenderOps.fill(gg, x + 5, y, x + 6, y + 6, color);
+            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
+                    0, 0, 32, 32, 32, 32, color);
+            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x + 1, y + 1, 1, 1,
+                    0, 0, 32, 32, 32, 32, 0xFF262C33);
         }
     }
 }
