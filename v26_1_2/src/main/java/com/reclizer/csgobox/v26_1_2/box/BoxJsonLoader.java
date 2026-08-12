@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -104,6 +105,25 @@ public final class BoxJsonLoader {
             Pattern.compile("^#([0-9A-Fa-f]{6}) (.*)$");
 
     private BoxJsonLoader() {
+    }
+
+    /**
+     * Lightweight read of a box JSON's {@code type} field without parsing the
+     * full definition (registry lookups, DataComponent decode). Used by dynamic
+     * item registration to pick {@code ItemTerminal} for terminal-type boxes
+     * before definitions are loaded into {@link BoxRegistry}. Defaults to
+     * {@code "csbox"} so a malformed file degrades to a regular box item.
+     */
+    public static String readType(Path file) {
+        try (Reader reader = Files.newBufferedReader(file)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
+                return json.get("type").getAsString();
+            }
+        } catch (Exception e) {
+            CsgoBox.LOGGER.warn("Failed to read type from {}: {}", file, e.getMessage());
+        }
+        return "csbox";
     }
 
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */

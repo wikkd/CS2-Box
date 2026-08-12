@@ -61,7 +61,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | S2 | `./gradlew :forge_26_1_2:jar` + 产物校验 | jar 存在非空、文件名 `csgobox-forge-26.1.2-<ver>.jar`、`mods.toml` 内 `version="<ver>"` 已展开 |
 | S3 | `scripts/check-version.sh` | 版本四同步 OK |
 | S4 | `scripts/check-animops-drift.sh` | 3 平台渲染门面签名一致 |
-| S5 | `./gradlew :forge_26_1_2:test` | JUnit 全绿（入口类可加载；`ITEM_TERMINAL`/`ITEM_ARMORY_POINT` 不泄漏） |
+| S5 | `./gradlew :forge_26_1_2:test` | JUnit 全绿（入口类可加载；`ITEM_PREMIUM_BOX`/`ITEM_ARMORY_POINT` 不泄漏；`terminal` 已转动态注册无静态字段） |
 
 常用参数：`--skip-compile` / `--skip-jar` / `--skip-version` / `--skip-drift` /
 `--skip-test`（调试单项时用）；`FORGE_TEST_TIMEOUT=3600` 覆盖 Gradle 阶段超时

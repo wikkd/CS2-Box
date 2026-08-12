@@ -3,13 +3,14 @@ package com.reclizer.csgobox.v1_21_1.item;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -37,36 +38,18 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
 
-                // Terminal creative entry is bound to its own decoupled box
-                // definition (csgobox:terminal) so the terminal UI shows its
-                // own loot list; if that config is missing it falls back to
-                // the first registered box, and on a pure client with an
-                // empty local BoxRegistry it degrades to an unbound terminal.
-                ItemStack terminalStack = new ItemStack(ModItems.ITEM_TERMINAL.get());
-                BoxDefinition terminalDef = BoxRegistry.get(ResourceLocation.parse("csgobox:terminal"));
-                if (terminalDef == null) {
-                    terminalDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
-                }
-                if (terminalDef != null) {
-                    terminalStack.set(ItemCsgoBox.BOX_ID.get(), terminalDef.id());
-                }
-                entries.accept(terminalStack);
-
-                // Village-exclusive premium case: bound to its own decoupled
-                // box definition like the terminal; a missing config falls
-                // back to the item's registry id at open time.
-                ItemStack premiumStack = new ItemStack(ModItems.ITEM_PREMIUM_BOX.get());
-                BoxDefinition premiumDef = BoxRegistry.get(ResourceLocation.parse("csgobox:premium_supply_box"));
-                if (premiumDef == null) {
-                    premiumDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
-                }
-                if (premiumDef != null) {
-                    premiumStack.set(ItemCsgoBox.BOX_ID.get(), premiumDef.id());
-                }
-                entries.accept(premiumStack);
-
                 for (BoxDefinition def : BoxRegistry.getAll()) {
-                    ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+                    // Resolve the item registered for this box id: dynamic
+                    // items are registered under config/csbox file names, so
+                    // terminal-type boxes surface as ItemTerminal and the
+                    // village premium case as ItemPremiumBox. Fall back to the
+                    // plain box item when no matching item exists (e.g. a
+                    // definition added by /csbox reload before a restart).
+                    Item item = BuiltInRegistries.ITEM.get(def.id());
+                    if (item == null || item == Items.AIR) {
+                        item = ModItems.ITEM_CSGOBOX.get();
+                    }
+                    ItemStack stack = new ItemStack(item);
                     ItemCsgoBox.setBoxId(def.id(), stack);
                     entries.accept(stack);
                 }
@@ -81,7 +64,6 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
-    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.register("terminal", ItemTerminal::new);
     public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", ItemPremiumBox::new);
 
     public static void register(IEventBus eventBus) {

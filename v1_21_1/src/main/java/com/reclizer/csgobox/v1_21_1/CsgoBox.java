@@ -1,12 +1,14 @@
 package com.reclizer.csgobox.v1_21_1;
 
 import com.mojang.logging.LogUtils;
+import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v1_21_1.box.BoxJsonLoader;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.capability.ModCapability;
 import com.reclizer.csgobox.v1_21_1.config.CsboxConfig;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.advancement.ModLoadedTrigger;
@@ -65,7 +67,7 @@ public class CsgoBox {
     /** Items statically registered in {@code ModItems}; never re-added from config JSON. */
     private static final Set<String> STATIC_ITEM_IDS = Set.of(
             "csgo_box", "csgo_key0", "csgo_key1", "csgo_key2", "csgo_key3",
-            "armory_point", "terminal", "premium_supply_box");
+            "armory_point", "premium_supply_box");
 
     public static final String MODID = "csgobox";
     /**
@@ -198,11 +200,14 @@ public class CsgoBox {
     }
 
     /**
-     * Scan {@code config/csbox/*.json} and register one dynamic
-     * {@link ItemCsgoBox} per file so vanilla {@code /give} can address any
-     * box by its file name. The dynamic item's {@code box_id} is pre-set to
-     * the same id as the file name, so {@code /give @p csgobox:weapon_supply_box 5}
-     * hands the player 5 ready-to-open boxes.
+     * Scan {@code config/csbox/*.json} and register one dynamic item per file
+     * so vanilla {@code /give} can address any box by its file name. Boxes
+     * whose JSON declares {@code "type": "terminal"} are registered as
+     * {@link ItemTerminal} (they open the terminal UI); everything else is a
+     * plain {@link ItemCsgoBox}. The dynamic item's {@code box_id} is pre-set
+     * to the same id as the file name, so
+     * {@code /give @p csgobox:weapon_supply_box 5} hands the player 5
+     * ready-to-open boxes.
      *
      * <p>Trade-off: items without a matching model file
      * ({@code assets/csgobox/models/item/<name>.json}) render as missing-texture.
@@ -222,8 +227,19 @@ public class CsgoBox {
         }
         Path configDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
         if (!Files.isDirectory(configDir)) {
-            return;
+            try {
+                Files.createDirectories(configDir);
+            } catch (IOException e) {
+                LOGGER.warn("[csgo-dynamic-items] cannot create {}: {}", configDir, e.getMessage());
+                return;
+            }
         }
+        // The terminal is a dynamic item like every other box, so the default
+        // terminal.json must exist before the scan or csgobox:terminal would
+        // not be registered on a fresh install. BoxJsonLoader.loadAll() also
+        // writes it, but that runs at server start, AFTER the item registry
+        // has frozen.
+        BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
         int skipped = 0;
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDir, "*.json")) {
@@ -237,9 +253,7 @@ public class CsgoBox {
                     continue;
                 }
                 // Statically-registered items (ModItems) must not be re-added
-                // from config/csbox/*.json — the terminal's default JSON
-                // (writeDefaultTerminalIfMissing) would otherwise collide with
-                // ItemTerminal and crash bootstrap with a duplicate key.
+                // from config/csbox/*.json.
                 if (STATIC_ITEM_IDS.contains(idStr)) {
                     skipped++;
                     continue;
@@ -256,13 +270,36 @@ public class CsgoBox {
                     continue;
                 }
                 final ResourceLocation boxId = itemId;
-                event.register(Registries.ITEM, itemId, () -> new ItemCsgoBox() {
-                    @Override
-                    public ItemStack getDefaultInstance() {
-                        ItemStack stack = super.getDefaultInstance();
-                        ItemCsgoBox.setBoxId(boxId, stack);
-                        return stack;
+                // Boxes with "type": "terminal" in their JSON are registered as
+                // ItemTerminal so the client can dispatch to the terminal UI
+                // (ClickEvent / PacketTerminalBuy match instanceof
+                // ItemTerminal) without needing the box definition — remote
+                // clients never receive the type field. Everything else stays
+                // a plain ItemCsgoBox. The terminal item model resolves by
+                // registry id to common models/item/terminal.json.
+                final boolean isTerminal = "terminal".equals(BoxJsonLoader.readType(file));
+                event.register(Registries.ITEM, itemId, () -> {
+                    ItemCsgoBox item;
+                    if (isTerminal) {
+                        item = new ItemTerminal() {
+                            @Override
+                            public ItemStack getDefaultInstance() {
+                                ItemStack stack = super.getDefaultInstance();
+                                ItemCsgoBox.setBoxId(boxId, stack);
+                                return stack;
+                            }
+                        };
+                    } else {
+                        item = new ItemCsgoBox() {
+                            @Override
+                            public ItemStack getDefaultInstance() {
+                                ItemStack stack = super.getDefaultInstance();
+                                ItemCsgoBox.setBoxId(boxId, stack);
+                                return stack;
+                            }
+                        };
                     }
+                    return item;
                 });
                 registered++;
             }

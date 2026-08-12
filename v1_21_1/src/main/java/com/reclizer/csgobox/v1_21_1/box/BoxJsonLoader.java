@@ -58,6 +58,25 @@ public final class BoxJsonLoader {
     private BoxJsonLoader() {
     }
 
+    /**
+     * Lightweight read of a box JSON's {@code type} field without parsing the
+     * full definition (registry lookups, DataComponent decode). Used by dynamic
+     * item registration to pick {@code ItemTerminal} for terminal-type boxes
+     * before definitions are loaded into {@link BoxRegistry}. Defaults to
+     * {@code "csbox"} so a malformed file degrades to a regular box item.
+     */
+    public static String readType(Path file) {
+        try (Reader reader = Files.newBufferedReader(file)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
+                return json.get("type").getAsString();
+            }
+        } catch (Exception e) {
+            CsgoBox.LOGGER.warn("Failed to read type from {}: {}", file, e.getMessage());
+        }
+        return "csbox";
+    }
+
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
