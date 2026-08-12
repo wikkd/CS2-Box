@@ -46,7 +46,7 @@ done
    - 批量开箱（Shift+右键 → 确认屏 → 流水结果屏；**1.0.6 已屏蔽，1.0.7 恢复后回归**）
    - 磨损耐久：单开有耐久物品按磨损值扣耐久（查看界面 wear 显示=实际扣损率，无耐久物品仍为随机磨损率）；`damageItemByWear=false` 时关闭
    - 成就触发（`csgobox:opened_boxes` 累计）
-   - `/csbox reload`、`/csbox tutorial refresh`、`/csbox errors`
+   - `/csbox reload`、`/csbox reload tutorial`、`/csbox info error`（加载错误）
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）
    - GUI 渲染验证走自动化工作流：`docs/RUNTIME-UI-TESTING.md`（CGEvent 驱动 + 帧缓冲像素断言）
    - 终端机屏幕（`terminal` 物品右键打开，三平台）：
@@ -65,5 +65,6 @@ done
 ## 5. 发布后收尾
 
 - 更新 `docs/` 下相关文档（`ARCHITECTURE.md` / `CONFIGURATION.md` 若涉及变更）
+- 按新版本号准备教程文档：复制/更新 `docs/tutorials/_tutorial_v<mod_version>.md` 与 `_zh_cn.md`（模组按 jar 清单版本号下载对应文件，缺文件会导致新版本玩家教程下载落空）
 - 教程文档源推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要，运行时下载走 HTTPS 公开访问
 - 打 tag：`git tag v<mod_version> && git push origin v<mod_version>`

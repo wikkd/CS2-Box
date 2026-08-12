@@ -1,6 +1,6 @@
 # CS2-Box Configuration Reference
 
-> Auto-generated reference for the box JSON files in `config/csbox/`. The companion Simplified Chinese version is at [`_tutorial_v1.0.6_zh_cn.md`](./_tutorial_v1.0.6_zh_cn.md).
+> Auto-generated reference for the box JSON files in `config/csbox/`. The companion Simplified Chinese version is at [`_tutorial_v1.0.7_zh_cn.md`](./_tutorial_v1.0.7_zh_cn.md).
 
 ## Overview
 
@@ -21,8 +21,9 @@ To create a new box:
 | `name`   | string                | yes      | the file name          | Display name shown on the box item tooltip and the GUI title. An optional `#RRGGBB ` prefix sets a custom color; see [Box name colors](#box-name-colors). |
 | `key`    | resource_location     | yes      | `csgobox:csgo_key0`    | Item id the player must hold to open this box. Use `minecraft:air` for none.                                                                             |
 | `drop`   | float                 | no       | `0.12`                 | Default drop chance (0.0 to 1.0) for any mob in the `entity` list.                                                                                       |
-| `random` | array of 5 integers   | no       | `[625, 125, 25, 5, 2]` | Weights for `grade1..grade5`. Higher = more likely.                                                                                                      |
+| `random` | array of 5 integers   | no       | `[625, 125, 25, 6, 4]` | Weights for `grade1..grade5`. Higher = more likely.                                                                                                      |
 | `entity` | array                 | no       | `[]`                   | Mob entity ids that drop this box. Two formats accepted (see below).                                                                                     |
+| `type`   | string                | no       | `csbox`                | Box type: `csbox` (regular box, default) / `terminal` (terminal machine).                                                                                |
 | `grade1` | array of item objects | no       | `[]`                   | Consumer-grade items (lowest rarity, blue).                                                                                                              |
 | `grade2` | array of item objects | no       | `[]`                   | Industrial-grade items (indigo).                                                                                                                         |
 | `grade3` | array of item objects | no       | `[]`                   | Mil-spec grade items (magenta).                                                                                                                          |
@@ -47,6 +48,13 @@ The `entity` field accepts two formats.
 
 Rates must be between 0.0 and 1.0. Values outside this range are accepted as-is and not clamped.
 
+### Box types
+
+The `type` field selects which screen and rules the box uses:
+
+- `csbox` (default) — the classic crate. Right-click opens the item-grid preview, a key is required, and opening plays the rolling animation.
+- `terminal` — terminal machine loot. Used by the `csgobox:terminal` item: right-clicking a terminal opens the terminal UI instead of the crate screen. Terminal boxes need no key and their offers are priced in Armory Points — see [Terminal machine](#terminal-machine-107).
+
 ## Box name colors
 
 A box can carry a colored display name by prefixing the `name` value with a hex color and a single ASCII space:
@@ -56,7 +64,7 @@ A box can carry a colored display name by prefixing the `name` value with a hex 
   "name": "#FF5555 Premium Crate",
   "key":  "csgobox:csgo_key0",
   "drop": 0.12,
-  "random": [625, 125, 25, 5, 2],
+  "random": [625, 125, 25, 6, 4],
   "entity": ["minecraft:zombie"],
   "grade5": [{"id": "minecraft:diamond_sword"}]
 }
@@ -79,6 +87,7 @@ Each entry inside a `grade*` array is an item object.
 |--------------|-------------------|----------|---------|----------------------------------------------------------------------|
 | `id`         | resource_location | yes      | -       | Item id, e.g. `minecraft:diamond_sword`. Unknown ids are skipped.    |
 | `count`      | integer           | no       | `1`     | Stack size. Most items accept 1-64.                                  |
+| `price`      | integer           | no       | -       | Reserved for terminal item valuation; must be a non-negative integer. Not used by the economy yet — see [Terminal machine](#terminal-machine-107). |
 | `components` | object            | no       | -       | Minecraft 1.21+ data components (preferred over `tag`).              |
 | `tag`        | string            | no       | -       | Legacy NBT tag string. Kept for backwards compatibility with 1.20.x. |
 
@@ -130,11 +139,11 @@ Player head:
 
 | Grade    | Internal id | Color (hex) | Default weight | Approximate chance |
 |----------|-------------|-------------|----------------|--------------------|
-| `grade1` | consumer    | `#4C70FF`   | 625            | 79.9%              |
-| `grade2` | industrial  | `#8D5EFF`   | 125            | 16.0%              |
+| `grade1` | consumer    | `#4C70FF`   | 625            | 79.6%              |
+| `grade2` | industrial  | `#8D5EFF`   | 125            | 15.9%              |
 | `grade3` | mil_spec    | `#E54AF2`   | 25             | 3.2%               |
-| `grade4` | restricted  | `#F86351`   | 5              | 0.64%              |
-| `grade5` | classified  | `#FFDC1D`   | 2              | 0.26%              |
+| `grade4` | restricted  | `#F86351`   | 6              | 0.8%               |
+| `grade5` | classified  | `#FFDC1D`   | 4              | 0.5%               |
 
 The hex colors are the item-frame and name colors shown in the box GUI, the
 reveal screen, and the bulk-result screen.
@@ -150,19 +159,107 @@ reveal screen, and the bulk-result screen.
 
 Use `minecraft:air` as the `key` field for a box that requires no key. `csgobox:csgo_key3` is only obtainable via the smithing table by upgrading `csgobox:csgo_key2` with a netherite upgrade template.
 
+Keys can also be obtained from the arms-dealer villager in exchange for Armory
+Points (see [Armory economy](#armory-economy-107)), or crafted:
+
+| Key               | Crafting recipe                  |
+|-------------------|----------------------------------|
+| `csgobox:csgo_key0` | 3 iron ingots                    |
+| `csgobox:csgo_key1` | 3 gold ingots                    |
+| `csgobox:csgo_key2` | 3 diamonds                       |
+
+## Bulk opening (1.0.7)
+
+Hold a `csgobox:csgo_box` and **Shift + right-click** to open the bulk overview
+screen instead of the single-open preview. It shows how many boxes and keys you
+have, how many can be opened, and asks for a confirmation before the server
+opens the whole batch.
+
+- Results stream in on a rising ticker; the server computes the batch
+  asynchronously so the game thread is not blocked.
+- Boxes and keys are consumed server-side. If you run out mid-batch, the
+  remaining boxes stay in your inventory and can be opened in the next round.
+- The batch size is capped by `bulkOpenCount` under `[advanced]` in
+  `config/csgobox.toml` (`0` = no limit, the default). The cap is enforced on
+  the server; the overview screen mirrors it.
+- Terminal items always open their own screen and cannot be bulk-opened.
+
+## Terminal machine (1.0.7)
+
+The terminal (`csgobox:terminal`) is a premium box-type item with its own loot
+pool: the `type: terminal` box definition in `config/csbox/terminal.json`.
+Right-click the terminal to open the terminal UI instead of the crate screen.
+
+- **No key required** — the default terminal config uses `"key": "minecraft:air"`.
+- **Offers are priced in Armory Points**, fixed per rarity grade: grade1 = 6,
+  grade2 = 10, grade3 = 16, grade4 = 22, grade5 = 30. Pay the price to accept;
+  accepted items carry a wear value (durability is reduced by the wear
+  percentage when `damageItemByWear` is on).
+- Each session runs a 5-round negotiation; every offer carries a ~3-day
+  countdown, and the offered item is sampled from the terminal box's grade
+  pools.
+- Sources: creative tab, or the arms-dealer villager (level 4) for 12 Armory
+  Points.
+- The per-item `price` field in a terminal box is validated but reserved — the
+  terminal economy uses the fixed per-grade prices above.
+
+## Armory economy (1.0.7)
+
+Armory Points (`csgobox:armory_point`) are the mod's currency. They drop from
+boxes when you add the item to a grade pool, and are rewarded by the
+arms-dealer villager.
+
+- **Armory recycler** (`csgobox:armory_recycler`, crafted with iron ingots, a
+  hopper, copper, and redstone): right-click it while holding an item that was
+  opened from a box to recycle the whole stack. Only items stamped with a grade
+  by the box-opening code are accepted, so raw loot cannot be recycled. Yield
+  per grade: grade1 = 3, grade2 = 5, grade3 = 8, grade4 = 11, grade5 = 15
+  points. Hoppers can also push graded items in for automatic recycling.
+- **Exchange recipe**: a 3x3 grid filled with 64 Armory Points each crafts 1
+  `csgobox:csgo_key0`.
+- **Arms-dealer villager** (profession `arms_dealer`, work site: the armory
+  recycler block) trades materials for points and points for items:
+
+| Level | Trades |
+|-------|--------|
+| 1     | 1 iron ingot → 2 points; 1 emerald → 2 points |
+| 2     | 1 gold ingot → 4 points; 8 points → `csgobox:csgo_box` |
+| 3     | 1 diamond → 12 points; 9 points → `csgobox:csgo_key0`; 16 points → `csgobox:premium_supply_box` |
+| 4     | 24 points → `csgobox:csgo_key1`; 12 points → `csgobox:terminal` |
+| 5     | 45 points + 1 diamond → `csgobox:csgo_key2` |
+
+The **premium supply box** (`csgobox:premium_supply_box`) is a village-exclusive
+`csbox`-type crate: it never drops from mobs (`drop` 0, no `entity` list) and is
+only obtainable from the arms dealer. It opens with `csgobox:csgo_key1` and its
+default pool is weighted toward the upper grades.
+
+## In-game commands
+
+| Command | Permission | Description |
+|---------|------------|-------------|
+| `/csbox` | OP (level 2) | Shows the help summary. |
+| `/csbox info` | OP | Lists all registered boxes plus any load errors. |
+| `/csbox info <box id>` | OP | Shows one box's weights, drop entities, and per-grade items. |
+| `/csbox info error` | OP | Shows load errors only (green confirmation when there are none). |
+| `/csbox reload` | OP | Re-reads every `config/csbox/*.json` file. |
+| `/csbox reload tutorial` | OP | Also forces re-download of the tutorial markdown files. |
+| `/csbox nbt hand` | any player | Prints the held item as serialized JSON, ready to paste into a box `items` entry. |
+| `/give @p csgobox:csgo_box[csgobox:box_id="csgobox:my_custom_box"]` | OP | Gives a specific dynamic box (vanilla command). |
+
 ## Validation rules
 
 - If `grade1` through `grade5` are all empty or all unparseable, the file is skipped with a warning and the box is not registered.
 - Negative or zero `random` weights fall back to the default weight for that grade. Weights above 10000 are clamped to 10000.
 - Unknown item ids are skipped with a warning; the rest of the grade still loads.
 - Item `count` defaults to 1; a count of 0 or less yields an empty stack, which is skipped from the grade pool (the item does not drop).
+- An item `price` must be a non-negative integer; violations are reported as load errors.
 - The loader tolerates extra unknown top-level keys; they are ignored without warning.
 - A `name` that contains a malformed `#RRGGBB ` prefix is preserved verbatim and used as the plain name (no color). See [Box name colors](#box-name-colors).
 
 ## Troubleshooting
 
 **Box does not appear in the game.**
-Run `/csbox list` to see all registered boxes (`/csbox errors` shows load errors). If yours is missing, check `latest.log` for `Failed to load box JSON file` errors. Common causes: a JSON syntax error, a missing comma, or an item id that does not exist.
+Run `/csbox info` to see all registered boxes (`/csbox info error` shows load errors only). If yours is missing, check `latest.log` for `Failed to load box JSON file` errors. Common causes: a JSON syntax error, a missing comma, or an item id that does not exist.
 
 **Box appears but no items drop.**
 All `grade1..grade5` arrays are empty or every item in them failed to parse. Check that every item id is a real Minecraft item (try it in `/give` first).

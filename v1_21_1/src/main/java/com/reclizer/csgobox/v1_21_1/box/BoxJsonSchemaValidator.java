@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Structural validator for box JSON files. Runs after Gson syntax parsing and
  * before any field-level fallback logic in {@link BoxJsonLoader}, so problems
- * here surface as {@link LoadError} entries (visible via {@code /csbox errors})
+ * here surface as {@link LoadError} entries (visible via {@code /csbox info error})
  * rather than silent fallbacks.
  *
  * <p>The validator is a pure {@link JsonElement} function — it never touches

@@ -128,8 +128,8 @@ GUI 渲染、动画、音效、CS:GO 风格的滚动体验等无法用 GameTest 
 - [ ] TC-2:放入对应钥匙,点开启按钮触发滚动动画
 - [ ] TC-3:服务端授权 RNG 决定结果,客户端动画与服务端一致
 - [ ] TC-4:动画结束显示 CsLookItemScreen,展示结果物品
-- [ ] TC-5:`/csbox list` 显示所有已注册箱子
-- [ ] TC-6:`/csbox give` 正确发放箱子物品
+- [ ] TC-5:`/csbox info` 显示所有已注册箱子与加载错误
+- [ ] TC-6:`/give @p csgobox:csgo_box` 正确发放箱子物品
 - [ ] TC-7:`全新的开始` 成就首次主动开箱时解锁
 - [ ] TC-8:`导购` 成就累计 200 个箱子后解锁
 - [ ] TC-9:csgo_key3 通过锻造台配方升级 csgo_key2

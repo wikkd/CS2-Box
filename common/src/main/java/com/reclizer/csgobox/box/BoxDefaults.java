@@ -421,7 +421,7 @@ public final class BoxDefaults {
     /**
      * Forces a re-download of every tutorial file for the current mod
      * version, overwriting existing copies. Used by
-     * {@code /csbox tutorial refresh}; unlike {@link #writeTutorialIfMissing}
+     * {@code /csbox reload tutorial}; unlike {@link #writeTutorialIfMissing}
      * this does not consult {@link #needsRefresh} and does not touch stale
      * versioned tutorials.
      *

@@ -14,6 +14,8 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import com.reclizer.csgobox.box.BoxDefaults;
@@ -68,7 +70,9 @@ public final class CsboxCommand {
                         .executes(CsboxCommand::showInfoOverview)
                         .then(Commands.argument("box", ResourceLocationArgument.id())
                                 .suggests(BOX_SUGGESTIONS)
-                                .executes(ctx -> showBoxInfo(ctx, ResourceLocationArgument.getId(ctx, "box")))))
+                                .executes(ctx -> showBoxInfo(ctx, ResourceLocationArgument.getId(ctx, "box"))))
+                        .then(Commands.literal("error")
+                                .executes(ctx -> showLoadErrors(ctx.getSource()))))
                 .then(Commands.literal("reload")
                         .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::reloadBoxes)
@@ -221,11 +225,11 @@ public final class CsboxCommand {
         try {
             String json = BoxItemCodec.gson().toJson(BoxItemCodec.serializeItemStack(item));
             if (json.length() > MAX_NBT_CHARS) {
-                source.sendSuccess(() -> Component.literal(json.substring(0, MAX_NBT_CHARS)), false);
-                source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.truncated",
-                        String.valueOf(json.length())), false);
+                source.sendSuccess(() -> copyable(Component.literal(json.substring(0, MAX_NBT_CHARS)), json), false);
+                source.sendSuccess(() -> copyable(Component.translatable("commands.csgobox.nbt.hand.truncated",
+                        String.valueOf(json.length())), json), false);
             } else {
-                source.sendSuccess(() -> Component.literal(json), false);
+                source.sendSuccess(() -> copyable(Component.literal(json), json), false);
             }
         } catch (Exception e) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.error",
@@ -235,6 +239,14 @@ public final class CsboxCommand {
     }
 
     // --- Private helpers ---
+
+    /** Wraps a chat component so clicking it copies {@code clipboard} to the player's clipboard. */
+    private static Component copyable(Component component, String clipboard) {
+        return component.copy().withStyle(s -> s
+                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, clipboard))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.translatable("commands.csgobox.nbt.hand.click_copy"))));
+    }
 
     private static BoxDefinition getBoxOrThrow(ResourceLocation boxId) throws CommandSyntaxException {
         BoxDefinition def = BoxRegistry.get(boxId);

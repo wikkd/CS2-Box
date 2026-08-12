@@ -36,7 +36,7 @@ public final class BoxItemCodec {
      * Result of {@link #parseItem}: the parsed {@link ItemStack} on success,
      * or a human-readable error string on failure. {@code error == null}
      * indicates success; callers route the error into the box loader's
-     * LoadError list so it surfaces via {@code /csbox errors} and the
+     * LoadError list so it surfaces via {@code /csbox info error} and the
      * join-time announcement.
      */
     record ParseOutcome(ItemStack stack, String error) {
