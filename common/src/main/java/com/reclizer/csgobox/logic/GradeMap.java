@@ -109,6 +109,11 @@ public final class GradeMap<T> {
         return null;
     }
 
+    /** Returns true when {@code item} passes this map's validity predicate. */
+    public boolean isValid(T item) {
+        return item != null && valid.test(item);
+    }
+
     /** Returns true if this grade map contains no items. */
     public boolean isEmpty() {
         return map.isEmpty();

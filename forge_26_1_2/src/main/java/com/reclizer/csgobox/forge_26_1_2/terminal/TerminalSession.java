@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_26_1_2.terminal;
 
+import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_1_2.box.GradeGroup;
@@ -149,7 +150,7 @@ public final class TerminalSession {
     private static ItemStack sampleSessionItem(BoxDefinition def, Random rnd) {
         List<ItemStack> all = new ArrayList<>();
         for (GradeGroup grade : def.grades()) {
-            if (BoxDefinition.gradeLevel(grade.id()) > 0) {
+            if (BoxGrades.gradeLevel(grade.id()) > 0) {
                 all.addAll(grade.items());
             }
         }
@@ -160,7 +161,7 @@ public final class TerminalSession {
 
     private static List<ItemStack> poolFor(BoxDefinition def, int gradeLevel) {
         for (GradeGroup grade : def.grades()) {
-            if (BoxDefinition.gradeLevel(grade.id()) == gradeLevel) {
+            if (BoxGrades.gradeLevel(grade.id()) == gradeLevel) {
                 return grade.items();
             }
         }

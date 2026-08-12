@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v26_1_2.box;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.reclizer.csgobox.box.BoxGrades;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -33,13 +34,7 @@ public record BoxDefinition(
         Map<Identifier, Float> entityDropRates
 ) {
 
-    public static final int GRADE_COUNT = 5;
-    public static final int[] DEFAULT_WEIGHTS = new int[]{625, 125, 25, 6, 4};
-
     private static final Identifier NO_KEY = Identifier.parse("minecraft:air");
-    private static final int MAX_DROP_ENTITIES = 1024;
-    private static final int MAX_GRADES = 64;
-    private static final int MAX_ENTITY_DROP_RATES = 1024;
 
     public static final Codec<BoxDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
@@ -64,7 +59,7 @@ public record BoxDefinition(
         id = Objects.requireNonNull(id, "box id");
         name = Objects.requireNonNull(name, "box name");
         keyItem = keyItem == null ? NO_KEY : keyItem;
-        dropRate = Math.clamp(dropRate, 0.0F, 1.0F);
+        dropRate = BoxGrades.clampDropRate(dropRate);
         dropEntities = dropEntities == null ? List.of() : List.copyOf(dropEntities);
         grades = grades == null ? List.of() : List.copyOf(grades);
         texture = texture == null ? Optional.empty() : texture;
@@ -77,13 +72,13 @@ public record BoxDefinition(
         ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).encode(buf, def.name());
         Identifier.STREAM_CODEC.encode(buf, def.keyItem());
         buf.writeFloat(def.dropRate());
-        Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
-        GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).encode(buf, def.grades());
+        Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
+        GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_GRADES)).encode(buf, def.grades());
         ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.texture());
         ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.sound());
 
         Map<Identifier, Float> entityRates = def.entityDropRates();
-        if (entityRates.size() > MAX_ENTITY_DROP_RATES) {
+        if (entityRates.size() > BoxGrades.MAX_ENTITY_DROP_RATES) {
             throw new IllegalArgumentException("Too many entity drop rates: " + entityRates.size());
         }
         buf.writeVarInt(entityRates.size());
@@ -99,13 +94,13 @@ public record BoxDefinition(
         Identifier keyItem = Identifier.STREAM_CODEC.decode(buf);
         float dropRate = buf.readFloat();
         List<Identifier> dropEntities = Identifier.STREAM_CODEC
-                .apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).decode(buf);
-        List<GradeGroup> grades = GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).decode(buf);
+                .apply(ByteBufCodecs.list(BoxGrades.MAX_DROP_ENTITIES)).decode(buf);
+        List<GradeGroup> grades = GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_GRADES)).decode(buf);
         Optional<Identifier> texture = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
         Optional<Identifier> sound = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
 
         int entityRatesSize = buf.readVarInt();
-        if (entityRatesSize < 0 || entityRatesSize > MAX_ENTITY_DROP_RATES) {
+        if (entityRatesSize < 0 || entityRatesSize > BoxGrades.MAX_ENTITY_DROP_RATES) {
             throw new DecoderException("Invalid entity drop rate count: " + entityRatesSize);
         }
         Map<Identifier, Float> entityDropRates = new HashMap<>();
@@ -138,9 +133,9 @@ public record BoxDefinition(
     }
 
     public int[] getWeightArray() {
-        int[] weights = new int[GRADE_COUNT];
+        int[] weights = new int[BoxGrades.GRADE_COUNT];
         for (GradeGroup grade : grades) {
-            int gradeLevel = gradeLevel(grade.id());
+            int gradeLevel = BoxGrades.gradeLevel(grade.id());
             if (gradeLevel > 0) {
                 weights[gradeLevel - 1] = Math.max(0, grade.weight());
             }
@@ -155,17 +150,6 @@ public record BoxDefinition(
             }
         }
         return Optional.empty();
-    }
-
-    public static int gradeLevel(String id) {
-        return switch (id) {
-            case "consumer" -> 1;
-            case "industrial" -> 2;
-            case "mil_spec" -> 3;
-            case "restricted" -> 4;
-            case "classified" -> 5;
-            default -> 0;
-        };
     }
 
     public static class Builder {
@@ -216,7 +200,7 @@ public record BoxDefinition(
         }
 
         public Builder entityDropRate(String entityId, float rate) {
-            this.entityDropRates.put(Identifier.parse(entityId), Math.clamp(rate, 0.0F, 1.0F));
+            this.entityDropRates.put(Identifier.parse(entityId), BoxGrades.clampDropRate(rate));
             return this;
         }
 

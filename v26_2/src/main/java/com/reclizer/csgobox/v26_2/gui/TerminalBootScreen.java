@@ -4,6 +4,7 @@ import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
@@ -68,7 +69,7 @@ public class TerminalBootScreen extends Screen {
             List<ItemStack> items = new ArrayList<>();
             List<Integer> grades = new ArrayList<>();
             for (GradeGroup grade : def.grades()) {
-                int lvl = BoxDefinition.gradeLevel(grade.id());
+                int lvl = BoxGrades.gradeLevel(grade.id());
                 if (lvl <= 0) {
                     continue;
                 }

@@ -6,8 +6,8 @@ import com.reclizer.csgobox.forge_26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_1_2.box.BulkBoxContext;
 import com.reclizer.csgobox.forge_26_1_2.box.BulkOpenResult;
 import com.reclizer.csgobox.forge_26_1_2.event.BoxOpenedEvent;
+import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_26_1_2.box.BoxStripGenerator;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.forge_26_1_2.item.ModItems;
@@ -177,7 +177,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
             if (i == 0) {
-                var strip = BoxStripGenerator.generate(snapshot.gradeMap(), snapshot.weights(), rng);
+                var strip = BoxStripGenerator.generate(snapshot.gradeMap(), snapshot.weights(), rng, ItemStack.EMPTY);
                 int winningIndex = Math.max(0, strip.winningIndex());
                 ItemStack giveItem = strip.items().get(winningIndex);
                 int finalGrade = strip.grades().get(winningIndex);

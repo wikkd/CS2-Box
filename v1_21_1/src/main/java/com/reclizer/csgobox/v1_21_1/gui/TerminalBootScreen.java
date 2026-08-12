@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
+import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.GuiRegion;
@@ -71,7 +72,7 @@ public class TerminalBootScreen extends Screen {
             List<ItemStack> items = new ArrayList<>();
             List<Integer> grades = new ArrayList<>();
             for (GradeGroup grade : def.grades()) {
-                int lvl = BoxDefinition.gradeLevel(grade.id());
+                int lvl = BoxGrades.gradeLevel(grade.id());
                 if (lvl <= 0) {
                     continue;
                 }

@@ -6,8 +6,9 @@ import com.reclizer.csgobox.v26_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v26_2.capability.ModCapability;
 import com.reclizer.csgobox.v26_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
+import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
-import com.reclizer.csgobox.v26_2.box.BoxStripGenerator;
 import com.reclizer.csgobox.v26_2.box.GradeGroup;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.GradeMapCache;
@@ -111,7 +112,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            var strip = BoxStripGenerator.generate(gradeMap, weights, rng);
+            var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
             int winningIndex = strip.winningIndex();
             if (winningIndex < 0) {
                 if (player instanceof ServerPlayer sp) {
@@ -250,7 +251,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
             for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxDefinition.gradeLevel(grade.id());
+                int gradeLevel = BoxGrades.gradeLevel(grade.id());
                 if (gradeLevel == 0) continue;
                 for (ItemStack candidate : grade.items()) {
                     if (ItemStack.isSameItemSameComponents(item, candidate)) {

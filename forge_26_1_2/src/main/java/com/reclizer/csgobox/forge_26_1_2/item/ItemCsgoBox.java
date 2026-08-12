@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_26_1_2.item;
 
+import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
@@ -190,14 +191,14 @@ public class ItemCsgoBox extends Item {
     public static int[] getRandom(ItemStack stack) {
         return getDefinition(stack)
                 .map(BoxDefinition::getWeightArray)
-                .orElseGet(() -> BoxDefinition.DEFAULT_WEIGHTS.clone());
+                .orElseGet(() -> BoxGrades.DEFAULT_WEIGHTS.clone());
     }
 
     public static Map<ItemStack, Integer> getItemGroup(ItemStack stack) {
         Map<ItemStack, Integer> itemsMap = new LinkedHashMap<>();
         getDefinition(stack).ifPresent(def -> {
             for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxDefinition.gradeLevel(grade.id());
+                int gradeLevel = BoxGrades.gradeLevel(grade.id());
                 if (gradeLevel == 0) continue;
                 for (ItemStack item : grade.items()) {
                     if (!item.isEmpty()) {
@@ -238,7 +239,7 @@ public class ItemCsgoBox extends Item {
                     tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
                 }
             }
-            if (def.grades().size() >= BoxDefinition.GRADE_COUNT) {
+            if (def.grades().size() >= BoxGrades.GRADE_COUNT) {
                 tooltipComponents.accept(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
             }
         });

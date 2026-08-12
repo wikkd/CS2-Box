@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.reclizer.csgobox.box.BoxDefaults;
+import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.BoxJsonSchemaValidator;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import net.minecraft.resources.Identifier;
@@ -488,7 +489,7 @@ public final class BoxJsonLoader {
      * JSON "random" is ordered grade1 -> grade5.
      */
     private static int[] parseWeights(JsonObject json, Path file, String fileName) {
-        int[] weights = BoxDefinition.DEFAULT_WEIGHTS.clone();
+        int[] weights = BoxGrades.DEFAULT_WEIGHTS.clone();
         if (json.has("random")) {
             JsonArray randomArr = json.getAsJsonArray("random");
             for (int i = 0; i < Math.min(randomArr.size(), 5); i++) {
@@ -500,12 +501,12 @@ public final class BoxJsonLoader {
             if (weights[i] <= 0) {
                 if (weights[i] < 0) {
                     CsgoBox.LOGGER.warn("Negative weight {} for {} in box config, using default: {}",
-                            weights[i], gradeKey, BoxDefinition.DEFAULT_WEIGHTS[i]);
+                            weights[i], gradeKey, BoxGrades.DEFAULT_WEIGHTS[i]);
                     recordLoadError(file, fileName,
                             "Random[" + (i + 1) + "]: negative weight " + weights[i]
-                                    + ", using default " + BoxDefinition.DEFAULT_WEIGHTS[i]);
+                                    + ", using default " + BoxGrades.DEFAULT_WEIGHTS[i]);
                 }
-                weights[i] = BoxDefinition.DEFAULT_WEIGHTS[i];
+                weights[i] = BoxGrades.DEFAULT_WEIGHTS[i];
             } else if (weights[i] > 10000) {
                 CsgoBox.LOGGER.warn("Weight {} for {} exceeds maximum, clamping to 10000", weights[i], gradeKey);
                 recordLoadError(file, fileName,

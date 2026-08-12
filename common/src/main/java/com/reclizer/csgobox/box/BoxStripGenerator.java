@@ -1,10 +1,8 @@
-package com.reclizer.csgobox.v26_1_2.box;
+package com.reclizer.csgobox.box;
 
 import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OddsCalculator;
-import net.minecraft.util.Mth;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +17,10 @@ import java.util.Random;
  * <p>The caller decides what an absent winner ({@code winningIndex < 0}, every
  * strip slot empty) means: the single-open path rejects the whole open while
  * the bulk path coerces the index to 0.</p>
+ *
+ * <p>Generic over the item type so every platform shares one implementation:
+ * platforms pass their own empty sentinel ({@code ItemStack.EMPTY}) and the
+ * pool's validity predicate lives in the {@link GradeMap} itself.</p>
  */
 public final class BoxStripGenerator {
 
@@ -29,26 +31,33 @@ public final class BoxStripGenerator {
      * Mutable strip carrier; the callers may still patch the winning slot
      * (fallback resolution) before the strip is transmitted.
      */
-    public record Strip(List<ItemStack> items, List<Integer> grades, int winningIndex) {
+    public record Strip<T>(List<T> items, List<Integer> grades, int winningIndex) {
     }
 
-    public static Strip generate(GradeMap<ItemStack> gradeMap, int[] weights, Random rng) {
-        List<ItemStack> items = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+    /**
+     * @param gradeMap  grade pool to draw items from
+     * @param weights   per-grade weights (grade1 → grade5 order)
+     * @param rng       roll source (server-authoritative on callers)
+     * @param emptyValue sentinel used when a slot resolves to nothing
+     * @param <T>       item type
+     */
+    public static <T> Strip<T> generate(GradeMap<T> gradeMap, int[] weights, Random rng, T emptyValue) {
+        List<T> items = new ArrayList<>(AnimationStrip.ITEM_COUNT);
         List<Integer> grades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
         for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
             int g = OddsCalculator.pickGrade(rng, weights);
-            ItemStack s = gradeMap.pickRandom(rng, g);
+            T s = gradeMap.pickRandom(rng, g);
             if (s == null) {
                 s = gradeMap.findFallback(g);
             }
             if (s == null) {
-                s = ItemStack.EMPTY;
+                s = emptyValue;
             }
             items.add(s);
-            grades.add(Mth.clamp(g, 1, 5));
+            grades.add(Math.clamp(g, 1, 5));
         }
         int winningIndex = AnimationStrip.randomWinningIndex(rng, items.size());
-        winningIndex = AnimationStrip.findNearestValid(items, winningIndex, stack -> !stack.isEmpty());
-        return new Strip(items, grades, winningIndex);
+        winningIndex = AnimationStrip.findNearestValid(items, winningIndex, gradeMap::isValid);
+        return new Strip<>(items, grades, winningIndex);
     }
 }
