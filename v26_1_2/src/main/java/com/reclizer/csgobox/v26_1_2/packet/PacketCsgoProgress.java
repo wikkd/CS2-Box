@@ -12,6 +12,7 @@ import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.box.GradeGroup;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.GradeMapCache;
+import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -30,10 +31,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Client-to-server request to open the currently held box.
@@ -44,7 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public record PacketCsgoProgress(long requestId) implements CustomPacketPayload {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new ConcurrentHashMap<>();
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
@@ -75,7 +72,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            if (isOpenBlockedStatic(sp)) {
+            if (OpenBlockGuard.isBlocked(sp.getUUID(), sp.level().getGameTime())) {
                 sendRejected(context, requestId);
                 return;
             }
@@ -145,7 +142,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 applyWearDamage(giveItem, wear);
             }
 
-            blockFurtherOpensStatic(sp);
+            OpenBlockGuard.block(sp.getUUID(), sp.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
 
             sp.setData(ModCapability.PLAYER_DATA,
                     new CsboxPlayerData(serverSeed, 0, giveItem.copy(), finalGrade));
@@ -191,33 +188,6 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 List.of(),
                 List.of()
         ));
-    }
-
-    static boolean isOpenBlockedStatic(Player player) {
-        long now = player.level().getGameTime();
-        Long blockedUntil = OPEN_BLOCKED_UNTIL_TICK.get(player.getUUID());
-        if (blockedUntil == null || now >= blockedUntil) {
-            OPEN_BLOCKED_UNTIL_TICK.remove(player.getUUID());
-            return false;
-        }
-        return true;
-    }
-
-    static void blockFurtherOpensStatic(Player player) {
-        long now = player.level().getGameTime();
-        OPEN_BLOCKED_UNTIL_TICK.put(player.getUUID(), now + serverOpenCooldownTicks());
-    }
-
-    /**
-     * Removes expired cooldown entries so the map does not grow without bound.
-     * Invoked periodically from the server tick loop ({@code ModEvents#serverTick}).
-     */
-    public static void tickOpenBlockMap(long nowGameTime) {
-        OPEN_BLOCKED_UNTIL_TICK.entrySet().removeIf(entry -> nowGameTime >= entry.getValue());
-    }
-
-    private static int serverOpenCooldownTicks() {
-        return 10;
     }
 
     /**

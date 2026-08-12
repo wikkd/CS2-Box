@@ -1,11 +1,11 @@
 package com.reclizer.csgobox.v1_21_1.event;
 
+import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
-import com.reclizer.csgobox.v1_21_1.packet.PacketCsgoProgress;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -80,12 +80,12 @@ public final class ModEvents {
 
     /**
      * Periodically prunes expired open-cooldown entries from
-     * {@link PacketCsgoProgress#tickOpenBlockMap(long)} so the map stays bounded.
+     * {@link OpenBlockGuard#tick(long)} so the map stays bounded.
      */
     @SubscribeEvent
     public static void serverTick(ServerTickEvent.Pre event) {
         if (event.getServer().getTickCount() % 100 == 0) {
-            PacketCsgoProgress.tickOpenBlockMap(event.getServer().overworld().getGameTime());
+            OpenBlockGuard.tick(event.getServer().overworld().getGameTime());
         }
         // 1 Hz authoritative terminal countdown on the WORLD clock (game ticks
         // × 50) — it advances only while the world runs, and the deadline

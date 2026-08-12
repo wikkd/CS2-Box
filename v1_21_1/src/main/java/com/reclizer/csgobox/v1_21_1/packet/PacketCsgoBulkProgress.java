@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v1_21_1.box.BulkOpenResult;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
 import com.reclizer.csgobox.logic.GradeMap;
+import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
@@ -67,7 +68,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
                 return;
             }
-            if (PacketCsgoProgress.isOpenBlockedStatic(player)) {
+            if (OpenBlockGuard.isBlocked(player.getUUID(), player.level().getGameTime())) {
                 if (player instanceof ServerPlayer sp) {
                     PacketCsgoProgress.sendRejected(sp, message.requestId());
                 }
@@ -101,7 +102,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
 
-            PacketCsgoProgress.blockFurtherOpensStatic(player);
+            OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
             final int requestedK = K;
             final long requestId = message.requestId();
             final ResourceLocation boxId = ItemCsgoBox.getBoxId(templateBox);
@@ -373,7 +374,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         // concurrent bulk request slip in against the same inventory. This
         // cannot double-consume (finalize re-checks availability), but it
         // wastes a full batch of rolls.
-        PacketCsgoProgress.blockFurtherOpensStatic(sp);
+        OpenBlockGuard.block(sp.getUUID(), sp.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
 
         if (CsgoBox.debug()) {
             CsgoBox.LOGGER.info("[csgo-bulk] player={} K={} (re-validated from {}) -> {} items granted",
