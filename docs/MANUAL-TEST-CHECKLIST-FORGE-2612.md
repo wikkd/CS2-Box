@@ -25,7 +25,7 @@
 - [x] `runServer` 启动至 `Done`，无 ERROR
 - [x] 数据包加载：recipes 1519 / advancements 1620，无错误
 - [x] 动态箱子：`weapon_supply_box.json` → `csgobox:weapon_supply_box`；`CS2 Box server started with 1 box definitions`
-- [x] 命令可用：`/csbox list` / `info` / `errors` / `reload` / `/stop`（优雅停机）
+- [x] 命令可用：`/csbox info` / `info error` / `reload` / `nbt hand` / `/stop`（优雅停机）
 
 ## 3. L4 客户端 GUI 回归（runClient）— 2026-08-11 已用 mc_tools MCP 自动化跑通
 
@@ -50,7 +50,7 @@
 - [ ] F6 配置热重载：改 `config/csbox/*.json`（权重/分级）→ `/csbox reload` → 开箱结果随之变化；`enableHotReload=true` 时文件改动自动生效
 - [ ] F7 磨损耐久：开出有耐久物品，查看界面 `wear` 与实际扣损一致；`damageItemByWear=false` 时不扣
 - [x] F8 成就/统计：first_box 成就触发（E2）；`opened_boxes` 统计 24→25→26 累加（E3）
-- [ ] F9 教程下载：首次启动 `config/csbox/tutorials/` 生成教程 md；`/csbox tutorial refresh` 可重下（dev 运行版本号 `unknown` 属已知限制，正式 jar 安装不受影响）
+- [ ] F9 教程下载：首次启动 `config/csbox/` 生成教程 md；`/csbox reload tutorial` 可重下（dev 运行版本号 `unknown` 属已知限制，正式 jar 安装不受影响）
 - [ ] F10 语言：中/英 locale 下 GUI、提示、物品名无乱码、无 key 原文
 - [ ] F11 服务端权威：单机/联机开箱结果由服务端 RNG 决定（日志 `[CS2 Box]` 与客户端结果一致）
 - [ ] F12 持久化：开箱所得物品重进世界仍在；`csgobox.toml` 配置项读回一致

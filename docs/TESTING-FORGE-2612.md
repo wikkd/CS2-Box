@@ -109,8 +109,8 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | `/give @p csgobox:csgo_box 5` | 默认箱子（动态 item，按 `config/csbox/*.json` 文件名注册） |
 | `/give @p csgobox:csgo_key0 10` | 0 级钥匙（开箱消耗 1 把） |
 | `/give @p csgobox:csgo_key3 1` | 3 级钥匙（仅锻造台合成前置） |
-| `/csbox help` / `/csbox list` / `/csbox info <box>` | 箱子信息 |
-| `/csbox reload` / `/csbox tutorial refresh` / `/csbox errors` | 热重载/教程/错误上报 |
+| `/csbox info [<box>]` / `/csbox info error` | 箱子信息（列表 / 详情 / 加载错误） |
+| `/csbox reload` / `/csbox reload tutorial` | 热重载 / 教程刷新 |
 | `/advancement revoke @s everything` | 重置成就便于复测 |
 
 | # | 用例 | 操作 → 预期 |
@@ -123,7 +123,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | F6 | 配置热重载 | 修改 `config/csbox/*.json`（权重/分级）→ `/csbox reload` → `mc_status` 等价的开箱结果变化；`enableHotReload=true` 时文件改动自动生效 |
 | F7 | 磨损耐久 | 开出有耐久物品 → 查看界面 `wear` 显示与实际扣损一致；`damageItemByWear=false` 时不扣 |
 | F8 | 成就/统计 | 开箱后 `csgobox:opened_box` 自定义统计累计；成就页 CS2 Box 标签出现 |
-| F9 | 教程下载 | 首次启动 `config/csbox/tutorials/` 生成教程 md；`/csbox tutorial refresh` 可重下 |
+| F9 | 教程下载 | 首次启动 `config/csbox/` 生成教程 md；`/csbox reload tutorial` 可重下 |
 | F10 | 语言 | 中/英 locale 下 GUI、提示、物品名无乱码/无 key 原文 |
 | F11 | 服务端权威 | 单机/联机下开箱结果由服务端 RNG 决定（日志 `[CS2 Box]` 输出结果与客户端一致） |
 | F12 | 持久化 | 开箱所得物品重进世界仍在；`csgobox.toml` 配置项读回一致 |

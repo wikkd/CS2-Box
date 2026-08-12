@@ -35,9 +35,8 @@ public final class LoadErrorAnnouncer {
             return;
         }
 
-        sp.sendSystemMessage(Component.literal(
-                "[CS2-Box] 检测到 " + BoxJsonLoader.getLastLoadErrors().size()
-                        + " 个箱子配置错误,使用 /csbox errors 查看详情")
+        sp.sendSystemMessage(Component.translatable("commands.csgobox.errors.announce",
+                        BoxJsonLoader.getLastLoadErrors().size())
                 .withStyle(s -> s.withColor(ChatFormatting.YELLOW)));
 
         for (LoadError err : BoxJsonLoader.getLastLoadErrors()) {

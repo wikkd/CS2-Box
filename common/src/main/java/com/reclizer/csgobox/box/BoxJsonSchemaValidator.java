@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Structural validator for box JSON files. Runs after Gson syntax parsing and
  * before any field-level fallback logic in the box loader, so problems here
- * surface as {@link LoadError} entries (visible via {@code /csbox errors})
+ * surface as {@link LoadError} entries (visible via {@code /csbox info error})
  * rather than silent fallbacks.
  *
  * <p>Pure {@link JsonElement} function — no Minecraft or platform imports —

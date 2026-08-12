@@ -67,8 +67,8 @@ active_versions=26.1.2  # 或 1.21.1
 启动后:
 
 1. 创建或加载一个世界
-2. 用 `/csbox give @p csgobox:csgo_box 1` 获取一个宝箱
-3. 用 `/csbox give @p csgobox:csgo_key0 3` 获取 3 把铁钥匙
+2. 用 `/give @p csgobox:csgo_box` 获取一个宝箱
+3. 用 `/give @p csgobox:csgo_key0 3` 获取 3 把铁钥匙
 4. 手持宝箱右键打开预览界面(2 行 × 10 列物品网格)
 5. 放入对应钥匙,点开启按钮开始滚动动画
 
@@ -84,9 +84,9 @@ active_versions=26.1.2  # 或 1.21.1
 
 | 命令 | 功能 |
 |---|---|
-| `/csbox list` | 列出所有已注册箱子及等级概要 |
-| `/csbox give <box-id> <count> [@p]` | 给自己/指定玩家发放箱子 |
-| `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义(需配合 `/reload`) |
+| `/csbox info` / `/csbox info error` | 列出箱子与加载错误 / 仅显示加载错误;加 `<箱子ID>` 查看详情 |
+| `/give @p csgobox:csgo_box` | 发放箱子(vanilla);用 `csgobox:box_id` 组件覆盖指定箱子 |
+| `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义;`/csbox reload tutorial` 同时刷新教程 |
 
 详细命令列表见 `command/CsboxCommand.java`。
 
@@ -124,7 +124,7 @@ org.gradle.daemon=false
 **解决**:
 
 - TOML:`/reload` 命令或重启游戏
-- JSON:`config/csbox/*.json` 改动**必须重启**(因为 `BoxJsonLoader.loadAll()` 只在 `ServerStartingEvent` 触发)
+- JSON:`config/csbox/*.json` 改动执行 `/csbox reload` 生效(文件监听也会自动重载,300ms 防抖)
 
 ### 配方加载失败
 
