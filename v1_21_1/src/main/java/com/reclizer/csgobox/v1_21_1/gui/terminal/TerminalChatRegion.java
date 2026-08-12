@@ -354,12 +354,12 @@ public final class TerminalChatRegion {
 
     /** Dot grid: one 24x24 tile blit per point (replaces drawDotGrid fills). */
     public static void drawDotGrid(GuiGraphics gg, int x0, int y0, int w, int h) {
-        int period = 8;
+        int period = 24;
         int ox = x0 - (x0 % period + period) % period;
         int oy = y0 - (y0 % period + period) % period;
         for (int y = oy; y < y0 + h; y += period) {
             for (int xx = ox; xx < x0 + w; xx += period) {
-                AnimRenderOps.blitTextured(gg, TEX_DOT_TILE, xx, y, period, period, 512, 512);
+                AnimRenderOps.blitTextured(gg, TEX_DOT_TILE, xx, y, period, period, 24, 24);
             }
         }
     }

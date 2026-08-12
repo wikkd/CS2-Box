@@ -237,13 +237,14 @@ def make_dot():
 
 
 def make_dot_tile():
-    # 512x512: 21x21 grid of 2x2px dots, 24px period, alpha 22; transparent
-    # pixels keep white RGB (like the original tile).
+    # 24x24 minimal tile: one 2x2px dot at (16,17), alpha 22. The old 512x512
+    # asset was the same pattern tiled 21x21 (455x the decoded memory); the
+    # renderer tiles this 24x24 at 1:1. Transparent pixels keep white RGB.
     def pixel(x, y):
-        if (x - 16) % 24 < 2 and (y - 16) % 24 < 2 and 16 <= x < 498 and 16 <= y < 498:
+        if (x - 16) % 24 < 2 and (y - 16) % 24 < 2:
             return (255, 255, 255, 22)
         return (255, 255, 255, 0)
-    write_png(os.path.join(OUT, "terminal_dot_tile.png"), 512, 512, pixel)
+    write_png(os.path.join(OUT, "terminal_dot_tile.png"), 24, 24, pixel)
 
 
 def make_badge():
@@ -414,5 +415,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

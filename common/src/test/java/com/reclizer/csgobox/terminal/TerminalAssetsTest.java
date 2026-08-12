@@ -22,7 +22,7 @@ final class TerminalAssetsTest {
     private static final String[][] ASSETS = {
             {"terminal_round_rect.png", "16", "16"},
             {"terminal_dot.png", "6", "6"},
-            {"terminal_dot_tile.png", "512", "512"},
+            {"terminal_dot_tile.png", "24", "24"},
             {"terminal_scan_band.png", "8", "24"},
             {"terminal_circle_glow.png", "128", "128"},
             {"terminal_badge.png", "72", "72"},
