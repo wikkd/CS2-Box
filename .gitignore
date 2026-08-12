@@ -168,3 +168,13 @@ lsp/dist/
 
 # Local wiki website (Vite/React generated site — local tooling, see AGENTS.md)
 /wiki/wiki-site/
+
+# IDE / 本地工具（不入库）
+.project
+.settings/
+.classpath
+.eclipse/
+.cw_skill/
+opencode.json
+/overview.md
+lsp/
