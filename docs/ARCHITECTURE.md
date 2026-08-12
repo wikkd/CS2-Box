@@ -5,14 +5,14 @@
 
 ## 1. 项目概览
 
-CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制复刻进 Minecraft。核心抽象都在 `common/` 中,两个平台模块(`v1_21_1/`、`v26_1_2/`)只承担入口注册、Screen 实现、网络接线、Attachment 注册等版本敏感工作。
+CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱机制复刻进 Minecraft。核心抽象与 MC 无关的纯业务逻辑都在 `common/` 中,四个平台模块(`v1_21_1/`、`v26_1_2/`、`v26_2/`、`forge_26_1_2/`)只承担入口注册、Screen 实现、网络接线、Attachment 注册等版本敏感工作。
 
 **关键事实**:
 
 - 模组 ID:`csgobox`,当前版本 `1.0.6`(开发线 1.0.7)
 - Java toolchain:`v1_21_1` 用 Java 21,`v26_1_2` 用 Java 25 + `--enable-preview`(NeoForm 重编译要求)
-- 共享资源:`common/src/main/resources/` 由两个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(v26_1_2 设置 `duplicatesStrategy = EXCLUDE`)
-- 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*`**(`grep "import net\.minecraft" common/src/main/java` 0 匹配确认)
+- 共享资源:`common/src/main/resources/` 由四个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(平台侧 `duplicatesStrategy = EXCLUDE`,平台 srcDir 在前、同名文件平台副本优先)
+- 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*` / `net.minecraftforge.*`**(由 `:common:checkCommonArchitecture` Gradle task 自动拦截)
 
 ## 2. 模块拓扑
 
@@ -32,21 +32,28 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制�
          └───── shared: common/src/main/resources/ ←────────────────────────┘
 ```
 
-依赖关系:`v1_21_1` → `common`;`v26_1_2` → `common`;`common` 不依赖任何平台模块。`active_versions` 决定单次构建哪个平台。
+依赖关系:`v1_21_1` / `v26_1_2` / `v26_2` / `forge_26_1_2` → `common`;`common` 不依赖任何平台模块。`active_versions` 决定单次构建哪个平台(每次 Gradle 调用只能构建一个 MC 版本)。
 
 ## 3. 核心抽象(common/)
 
 ### 3.1 箱子数据模型
 
-- **`BoxDefinition`** — 不可变 Record,持有箱子 ID、name、所需钥匙 ID、5 档随机权重数组、物品分档清单
-- **`BoxRegistry`** — 全局箱子注册表(按 ID 查 `BoxDefinition`)
-- **`BoxJsonLoader`** — 加载 `config/csbox/*.json`;首次启动只保证目录存在并异步下载教程 md(`BoxDefaults`),**不写入任何默认箱子配置**(终端机/高级箱/普通箱一律由玩家自建 JSON,建好后才会进入创造物品栏);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxDefinition`** — 平台 record（Codec/网络编解码依赖 MC），静态常量与 `gradeLevel` 纯函数已下沉 `BoxGrades`
+- **`BoxGrades`** — 5 档等级名→等级号映射、默认权重 `{625,125,25,6,4}`、drop rate 夹取与各 schema 上限常量（2026-08 重构下沉）
+- **`BoxRegistryStore<K,V>`** — 泛型注册表容器（register/remove 无条件触发变更回调、clear 触发清空回调）；平台 `BoxRegistry` 是提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调的薄壳
+- **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items/grades/winningIndex，经 `GradeMap.isValid` 定位中奖位）；平台传 `ItemStack.EMPTY` 作空值
+- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动只保证目录存在并异步下载教程 md(`BoxDefaults`),**不写入任何默认箱子配置**(终端机/高级箱/普通箱一律由玩家自建 JSON,建好后才会进入创造物品栏);在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 
+### 3.1a 开箱服务端逻辑（common/logic/）
+
+- **`OpenBlockGuard`** — 服务端权威开箱冷却（10 tick）：`isBlocked(UUID, now)` 惰性过期移除、`block(UUID, now, cooldown)` 后写覆盖、`tick(now)` 周期清理；四平台 packet 与 `ModEvents#serverTick` 共用（原平台 `PacketCsgoProgress.OPEN_BLOCKED_UNTIL_TICK` 逐字迁移，2026-08 重构下沉）
+- **`CsboxConfigDefaults`**（common/config/） — 全部配置默认值与取值范围的唯一来源，四平台 `CsboxConfig` builder 引用（枚举默认以常量名字符串存储，平台侧 `valueOf` 解析）
+
 ### 3.2 配置
 
-- **`CsboxConfig`** — NeoForge `ModConfigSpec`,11 个配置项,4 个 TOML 分组(general / advanced / sound / animation)
+- **`CsboxConfig`**（平台） — NeoForge `ModConfigSpec`/Forge `ForgeConfigSpec`,16 个配置项,5 个 TOML 分组(general / advanced / sound / animation / ui)；默认值与范围统一引 common `CsboxConfigDefaults`
 - 注册为 `ModConfig.Type.COMMON`,TOML 路径 `config/csgobox.toml`
 - `CONFIG` 是 `public static final`,在 `static {}` 块中通过 `ModConfigSpec.Builder().configure(CsboxConfig::new)` 初始化(不用 `init()`,那是一个 v1.0.5 修复的 bug)
 - 监听 `ModConfigEvent.Reloading` 记录日志
@@ -72,7 +79,7 @@ sequenceDiagram
     S->>S: 服务端选 winningIndex<br/>+ 50 个 animationItems + 最终 item
     S-->>C: PacketSyncBoxItems (预览数据)
     C->>S: CsboxCommand 触发开箱(放钥匙点开启)
-    S->>S: SecureRandom 校验冷却 (OPEN_BLOCKED_UNTIL_TICK)<br/>服务器权威 RNG 决定结果
+    S->>S: SecureRandom 校验冷却 (common OpenBlockGuard)<br/>服务器权威 RNG 决定结果
     S-->>C: PacketCsgoProgress (含 winningIndex、物品、动画列表、requestId)
     C->>C: CsboxProgressScreen 开始滚动<br/>tick 节流到 120ms
     C->>C: winningIndex 落入中心金线 → CsLookItemScreen
@@ -112,7 +119,9 @@ sequenceDiagram
 | `PacketRequestBoxItems` | C → S | 客户端拉取预览请求 |
 | `PacketValidation` | S → C | 客户端请求校验(防过期响应匹配) |
 
-每个包都有 `Codec`(持久化)和 `StreamCodec`(网络流)。`PacketCsgoProgress` 内置 `SecureRandom` UUID→tick map 做开箱防双击冷却(`OPEN_BLOCKED_UNTIL_TICK`)。
+每个包都有 `Codec`(持久化)和 `StreamCodec`(网络流)。开箱防双击冷却由 common `OpenBlockGuard` 统一提供（`isBlocked`/`block`/`tick`，10 tick 窗口），packet record 本体与 StreamCodec 保留在平台。
+
+**保留在平台不下沉**（MC 强耦合）：packet record 本体与 StreamCodec、`tryConsumeKeys`/`tryConsumeBoxes`（inventory/EquipmentSlot/BuiltInRegistries）、`CsboxPlayerData`、`OpenedBoxTrigger`/`ModLoadedTrigger`、`ModSounds`、`TerminalSession*`/`TerminalStateStore`、`LoadError`（Component 依赖）、GUI/渲染层。
 
 ## 7. 事件订阅
 

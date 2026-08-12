@@ -2,6 +2,37 @@
 
 日期：2026-06-29
 
+## 2026-08 执行结果（MultiLoader 代码去重重构）
+
+按《MultiLoader 代码去重重构》计划（阶段 0–6）全部完成，共 4 个阶段提交 + 1 个阶段 5 暴露问题的修复提交（阶段 4 无重复资源故跳过提交）：
+
+| 提交 | 内容 |
+|---|---|
+| `da45a85` refactor: remove forked platform copies of schema validator and tutorial fetcher | 删除 4 平台 12 个过时副本（BoxJsonSchemaValidator/TutorialFetcher/TutorialSources）；审计确认平台 BoxJsonLoader 早已 import common 版，副本为纯死代码，直接删除 |
+| `e1f1b41` refactor: sink box grade/strip/registry logic into common | 新增 common `BoxGrades`/`BoxRegistryStore<K,V>`/泛型 `BoxStripGenerator` + 3 个 JUnit；4 平台 BoxDefinition/BoxRegistry/packet/GUI 引用切换，净删除 243 行 |
+| `9e54011` refactor: centralize open cooldown guard in common | 新增 common `logic/OpenBlockGuard` + `OpenBlockGuardTest`（阻塞窗口/到期放行/惰性移除/tick 清理/并发安全）；4 平台 packet 与 ModEvents#serverTick 切换，语义逐字保留 |
+| `6259892` refactor: share command ops and config defaults via common | 新增 common `config/CsboxConfigDefaults`，4 平台 CsboxConfig builder 统一引用（枚举默认以常量名字符串存储 + `valueOf` 解析） |
+| `ab77bf9` fix(distsafe): move client screen openers out of ItemCsgoBox/ItemTerminal | 阶段 5 fullcheck 暴露的 **pre-existing 回归**（0e596c1 终端机会话经济引入，晚于 2026-08-09 全绿 fullcheck）：`ItemCsgoBox` import client-only Screen 导致 26.1.2/26.2 专用服务器启动即 `NoClassDefFoundError: Screen` 崩溃。提取各平台 `gui/BoxScreenOpener`，item 类惰性委托，服务端类加载不再触碰 client 类；4 平台定点适配（v26_2 保留 `setScreenAndShow`、v1_21_1 保留 `Screen.hasShiftDown`） |
+
+**放弃项与审计结论**：
+- **CsboxCommandOps 未拆**（计划 YAGNI 条款）：审计 261 行 `CsboxCommand`，全部 handler 与 Component/CommandSourceStack 强耦合（translatable/sendSuccess/withStyle），MC 无关纯逻辑不足 30 行（仅 MAX_NBT_CHARS 常量 + 截断分支），不强拆。
+- **阶段 4 无删除**：平台资源均为版本敏感物——`assets/csgobox/items/*.json` 是 1.21.4+ item 模型定义（v1_21_1 无此目录，三 26.x 平台间完全一致但 common 无此格式需求）；`data/csgobox/advancement/root.json` 平台版与 common 版 background 路径格式不同（版本格式适配，EXCLUDE 语义下平台副本优先，非隐性分叉）；lang/models/textures 抽查无平台副本。故未提交 `chore: dedupe shared resources into common`。
+- **forge 行为归一**（阶段 1 顺带）：`forge_26_1_2` BoxDefinition 的 `DEFAULT_WEIGHTS {625,125,25,5,2}` 与 MAX 上限 256/16/256 为 v1.0.6 发行快照旧值，按特性同步纪律统一到 common `BoxGrades` 值（`{625,125,25,6,4}` 与 1024/64/1024）。
+- **已知 forge 同步缺口（不在本次范围）**：forge items/ 缺 `armory_point.json`、`premium_supply_box.json`（1.0.6 发行后新增，下次 forge 同步补齐）。
+
+**验证结果**（修复提交后全部重跑）：
+- `:common:test` 全部通过（含新增 BoxGradesTest/BoxRegistryStoreTest/BoxStripGeneratorTest/OpenBlockGuardTest），checkCommonArchitecture 随编译自动拦截通过
+- 4 平台 `clean jar` 全部成功，体积较基线下降：v26_1_2 603K→597K、v26_2 602K→596K、v1_21_1 601K→594K、forge_26_1_2 605K→599K（`ab77bf9` 新增 BoxScreenOpener 后各 +约12K，仍低于基线）
+- `scripts/check-animops-drift.sh` 3 平台 OK（13 ops）
+- `scripts/test-forge-2612.sh` 门禁 7/7 PASS
+- `:v26_1_2:test` PlatformSmokeTest 3/3 PASSED
+- fullcheck（box_variants/achievements/e2e_open/dynamic_box/aesthetic × 3 平台）：
+  - **修复前**：26.1.2/26.2 专用服务器启动即崩（`CsgoBox.<init>` → `ItemCsgoBox` 类加载触发 client-only `Screen`），1.21.1 服务器正常但客户端 MCP 无法就绪
+  - **修复后**：26.1.2 / 26.2 / forge_26_1_2 专用服务器逐一手动启动验证全部成功（`Done (0.095–0.190s)!`，box JSON 正常加载，无 NoClassDefFoundError）
+  - **环境限制（未完成项）**：本机无活动显示器——诊断证据：`pmset -g log` 有 Clamshell Sleep（合盖休眠）记录、无 `AppleBacklightDisplay` 背光节点、`osascript` 桌面查询挂起、`launchctl asuser 501` 下 GLFW 仍报 `glfwGetPrimaryMonitor failed`（沙箱内外均复现）。依赖真实客户端窗口的套件（e2e_open/aesthetic/achievements 的客户端部分）无法执行，`build/fullcheck/SUMMARY.md` 未产出全绿报告。各平台客户端测试环境本身完整（testhelper MCP mod 与 toml 均在 `<module>/runs/client/`）。**需开盖激活屏幕后补跑一次**：`python3 scripts/fullcheck/run_full_check.py --platform 1.21.1,26.1.2,26.2 --only box_variants,achievements,e2e_open,dynamic_box,aesthetic`
+
+---
+
 ## 目标
 
 将当前单版本来源的 NeoForge 模组，重构为可持续维护的 MultiLoader 结构：

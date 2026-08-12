@@ -83,9 +83,20 @@ active_versions=26.1.2  # 或 1.21.1
 
 ### Multiloader 关键约束
 
-- **`common/` 不允许** `import net.minecraft.*` 或 `import net.neoforged.*`
+- **`common/` 不允许** `import net.minecraft.*` 或 `import net.neoforged.*` / `net.minecraftforge.*`（`:common:checkCommonArchitecture` 自动拦截）
 - 所有 GUI / Attachment / 网络上下文 / 注册表访问留在平台模块
-- 修改 `common/` 后**必须**在两个平台都重新构建验证
+- 修改 `common/` 后**必须**在全部受影响平台重新构建验证；**每次 Gradle 调用只能构建一个 MC 版本**，用 `-Pactive_versions=<v>` 指定（`26.1.2` / `26.2` / `1.21.1` / `forge-26.1.2`）
+- 验证一律带 `clean`（增量缓存可能造假象）：
+
+```bash
+./gradlew :common:test                                          # common 单测 + 架构检查
+./gradlew :v26_1_2:clean :v26_1_2:compileJava -Pactive_versions=26.1.2
+./gradlew :v26_2:clean   :v26_2:compileJava   -Pactive_versions=26.2
+./gradlew :v1_21_1:clean :v1_21_1:compileJava -Pactive_versions=1.21.1
+./gradlew :forge_26_1_2:clean :forge_26_1_2:compileJava -Pactive_versions=forge-26.1.2
+```
+
+- **镜像纪律**：跨平台改动先改基准 `v26_1_2`，再定点合入其余平台；**禁止整文件覆盖** `v26_2` 与 `forge_26_1_2`（有 API 适配差异），纯新增文件用 `scripts/mirror.sh new <rel-path>`，forge 同步用 `scripts/port-forge-2612.py`（仅机械转换）+ 手工适配
 - `CONFIG` 是 `public static final`,**不要写 `null` 守卫**
 
 ### 双平台 API 差异
@@ -121,11 +132,14 @@ GUI 代码先在 v1_21_1 落地,再迁移到 v26_1_2。
 CS2-Box/
 ├── common/                              # 跨版本业务逻辑 + 共享资源 + platform 接口
 │   ├── src/main/java/com/reclizer/csgobox/
-│   │   ├── platform/                    # Platform 接口(由 v1_21_1 / v26_1_2 实现)
-│   │   ├── box/                         # BoxDefinition / BoxRegistry / BoxJsonLoader / RandomItem
-│   │   ├── packet/                      # 数据包 Codec / StreamCodec
-│   │   └── sounds/                      # 音效事件定义(共享)
-│   └── src/main/resources/              # 共享资源(纹理、配方、advancement)
+│   │   ├── platform/                    # Platform 接口(由各平台实现)
+│   │   ├── box/                         # BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验 / 教程下载
+│   │   ├── logic/                       # GradeMap / OddsCalculator / OpenBlockGuard / 终端谈判模型
+│   │   ├── config/                      # CsboxConfigDefaults（四平台配置默认值唯一来源）
+│   │   ├── terminal/                    # 谈判算法（平台无关）
+│   │   └── utils/                       # ColorTools / OverlayColor / GuiRegion 等
+│   ├── src/test/java/                   # JUnit 5 单测
+│   └── src/main/resources/              # 共享资源(纹理、配方、advancement、lang、音效)
 │
 ├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.115 / Java 21
 │   └── src/main/java/com/reclizer/csgobox/v1_21_1/

@@ -61,6 +61,9 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize）
 - `gui/CsboxConfirmScreen.java` — 批量开箱二次确认屏（总览屏 → 确认屏 → 发包）
 - `common/box/BoxDefaults.java` — 教程下载（`writeTutorialIfMissing` + `refreshTutorials`，版本不匹配时按 `^_tutorial_v.*\.md$` 白名单直接删除旧版教程，无回收站）
+- `common/box/BoxGrades.java` / `BoxRegistryStore.java` / `BoxStripGenerator.java` — 等级常量与纯函数 / 泛型注册表容器（回调契约固化）/ 泛型开箱滚动条（2026-08 重构下沉，平台 `BoxDefinition`/`BoxRegistry`/packet 引用指向 common）
+- `common/logic/OpenBlockGuard.java` — 服务端权威开箱冷却（10 tick，`isBlocked`/`block`/`tick`），四平台 packet 与 `ModEvents#serverTick` 共用
+- `common/config/CsboxConfigDefaults.java` — 四平台 `CsboxConfig` 默认值与取值范围唯一来源（枚举默认以常量名字符串存储）
 - `utils/AnimRenderOps.java` — **动画渲染唯一适配点**（各平台一份，`// era: legacy|decoupled` 头标注）：屏与逻辑助手只经它调用渲染原语（`blitTextured`×3 变体 / `fill` / `fillGradient` / `scissor` / `scissorDisable` / `setBlendNormal` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D` / `supports3D`，共 13 个公开 op）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（CI `common-test` job 已接线）。**新增原语须三平台同步补**，否则漂移检查失败
 - `utils/IconListTools.java` — 2D 物品网格（26.x/1.21.8+ 有 per-item bounding box 居中；渲染原语已委托 AnimRenderOps）
 - `utils/GuiItemMove.java` — 3D 拖拽预览（`renderRotAngleX/Y` 纯数学保留，渲染委托 `AnimRenderOps.renderItem3D`）
