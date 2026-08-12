@@ -127,6 +127,23 @@ public final class NegotiationModel {
     public static final int[] CAPS = {30, 64, 200, 400, 800};
     public static final int CAP_UNLIMITED = -1;
 
+    /**
+     * The only cap values a client may report back (a display preference in
+     * the action bar). Anything else is rejected so junk values never get
+     * persisted into a session snapshot.
+     */
+    public static boolean isValidCap(int cap) {
+        if (cap == CAP_UNLIMITED) {
+            return true;
+        }
+        for (int c : CAPS) {
+            if (c == cap) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- region 11 collection strip (HTML DOT_GROUPS) ----
 
     /** Dot groups: colour + fill pattern (1 = filled, 0 = hollow). */

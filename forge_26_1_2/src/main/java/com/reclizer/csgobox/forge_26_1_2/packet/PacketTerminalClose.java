@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_26_1_2.packet;
 
+import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSession;
 import com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSessionManager;
@@ -71,8 +72,12 @@ public record PacketTerminalClose(
             // History timestamps live on the WORLD clock (game ticks × 50),
             // same as the countdown — the client renders them against the
             // world clock, so a mixed wall-clock timestamp would hide entries.
+            // cap is a client-side display preference (action-bar selector);
+            // only accept values from the known set, keep the server's
+            // current value otherwise — a junk value must never be persisted.
+            int cap = NegotiationModel.isValidCap(message.cap()) ? message.cap() : session.model().cap();
             session.model().syncClose(message.round(), message.pending(), message.pendingAtMs(),
-                    message.cap(), sp.level().getGameTime() * 50L);
+                    cap, sp.level().getGameTime() * 50L);
             TerminalSessionManager.markDirty();
         });
     }

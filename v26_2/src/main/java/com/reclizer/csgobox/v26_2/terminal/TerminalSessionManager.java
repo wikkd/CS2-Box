@@ -225,7 +225,9 @@ public final class TerminalSessionManager {
         // the next open destroys the terminal wherever it is.
         DESTROYED_UIDS.add(session.uid());
         if (DESTROYED_UIDS.size() > DESTROYED_UID_CAP) {
-            DESTROYED_UIDS.clear();
+            // Evict one entry at a time — wiping the whole set would let a
+            // flood of timeouts resurrect every older expired terminal.
+            DESTROYED_UIDS.remove(DESTROYED_UIDS.iterator().next());
         }
         dirty = true;
     }

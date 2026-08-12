@@ -13,7 +13,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -133,7 +132,8 @@ public record PacketTerminalBuy(
         // never compares count, so a crafted stack must not grant 64 items
         // for the price of one.
         toGive.setCount(1);
-        PacketCsgoProgress.applyWearDamage(toGive, Mth.clamp(message.wearVal(), 0F, 1F));
+        // The wear comes from the server-sampled offer, never the client echo.
+        PacketCsgoProgress.applyWearDamage(toGive, roundData.offer().wearVal());
         toGive.set(ItemCsgoBox.GRADE.get(), grade);
         boolean added = sp.getInventory().add(toGive);
         if (!added && !toGive.isEmpty()) {
