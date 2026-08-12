@@ -11,6 +11,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -44,7 +46,11 @@ public final class ModEvents {
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
-                ItemStack stack = new ItemStack(ModItems.boxItemFor(def).get());
+                Item item = BuiltInRegistries.ITEM.get(def.id());
+                if (item == null || item == Items.AIR) {
+                    item = ModItems.ITEM_CSGOBOX.get();
+                }
+                ItemStack stack = new ItemStack(item);
                 ItemCsgoBox.setBoxId(def.id(), stack);
                 mob.spawnAtLocation(stack);
             }

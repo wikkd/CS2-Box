@@ -56,8 +56,7 @@ class PlatformSmokeTest {
     }
 
     @Test
-    void v107TerminalItemsAreDeclared() throws NoSuchFieldException {
-        assertNotNull(ModItems.class.getDeclaredField("ITEM_TERMINAL"));
+    void v107PremiumAndArmoryItemsAreDeclared() throws NoSuchFieldException {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
     }

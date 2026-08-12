@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v1_21_1.block.ModBlocks;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -79,7 +80,6 @@ public final class ModVillagers {
             Item key0 = ModItems.ITEM_CSGO_KEY0.get();
             Item key1 = ModItems.ITEM_CSGO_KEY1.get();
             Item key2 = ModItems.ITEM_CSGO_KEY2.get();
-            Item terminal = ModItems.ITEM_TERMINAL.get();
 
             Int2ObjectMap<VillagerTrades.ItemListing[]> byLevel = new Int2ObjectOpenHashMap<>();
 
@@ -89,7 +89,7 @@ public final class ModVillagers {
             });
             byLevel.put(2, new VillagerTrades.ItemListing[]{
                     buyPoints(Items.GOLD_INGOT, 1, point, 4, 16, 5),
-                    sellForPoints(point, 8, new ItemStack(Items.AIR), /* placeholder csgo_box */ null, 12, 5),
+                    sellDynamicItem(point, 8, "csgo_box", 12, 5),
             });
             byLevel.put(3, new VillagerTrades.ItemListing[]{
                     buyPoints(Items.DIAMOND, 1, point, 12, 12, 10),
@@ -98,7 +98,7 @@ public final class ModVillagers {
             });
             byLevel.put(4, new VillagerTrades.ItemListing[]{
                     sellKey(point, 24, key1, 8, 15),
-                    sellKey(point, 18, terminal, 4, 15),
+sellDynamicItem(point, 18, "terminal", 4, 15),
             });
             byLevel.put(5, new VillagerTrades.ItemListing[]{
                     (entity, random) -> new MerchantOffer(
@@ -127,13 +127,14 @@ public final class ModVillagers {
                 maxUses, xp, 0.05F);
     }
 
-    /** Points -> 1 dynamic box item (L2). The box is dynamically registered at runtime, so
-     * we have to look it up by name when constructing the offer. */
-    private static VillagerTrades.ItemListing sellForPoints(Item point, int points, ItemStack ignored,
-                                                            Item ignoredBox, int maxUses, int xp) {
+    /** Points -> 1 dynamically registered item (config/csbox file name). The
+     *  item only exists after runtime registration, so it is looked up by name
+     *  when constructing the offer; terminal.json registers as ItemTerminal. */
+    private static VillagerTrades.ItemListing sellDynamicItem(Item point, int points,
+                                                             String itemId, int maxUses, int xp) {
         return (entity, random) -> {
-            Item box = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("csgobox", "csgo_box"));
+            Item box = BuiltInRegistries.ITEM.get(
+                    ResourceLocation.fromNamespaceAndPath("csgobox", itemId));
             if (box == null || box == Items.AIR) {
                 // Fallback: hand back the points themselves, so the trade never lies.
                 return new MerchantOffer(

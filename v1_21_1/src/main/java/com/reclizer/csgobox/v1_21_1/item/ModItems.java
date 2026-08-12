@@ -4,12 +4,14 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.block.ModBlocks;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -38,13 +40,18 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
                 entries.accept(ModBlocks.ARMORY_RECYCLER_ITEM.get());
 
-                // Registered boxes (config/csbox/*.json) appear here the same
-                // way for every kind; the terminal machine and the premium
-                // case join through this loop too, so they only show up once
-                // their definition is registered (no default terminal config
-                // is generated on first run; premium_supply_box.json is).
                 for (BoxDefinition def : BoxRegistry.getAll()) {
-                    ItemStack stack = new ItemStack(boxItemFor(def).get());
+                    // Resolve the item registered for this box id: dynamic
+                    // items are registered under config/csbox file names, so
+                    // terminal-type boxes surface as ItemTerminal and the
+                    // village premium case as ItemPremiumBox. Fall back to the
+                    // plain box item when no matching item exists (e.g. a
+                    // definition added by /csbox reload before a restart).
+                    Item item = BuiltInRegistries.ITEM.get(def.id());
+                    if (item == null || item == Items.AIR) {
+                        item = ModItems.ITEM_CSGOBOX.get();
+                    }
+                    ItemStack stack = new ItemStack(item);
                     ItemCsgoBox.setBoxId(def.id(), stack);
                     entries.accept(stack);
                 }
@@ -59,25 +66,8 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", ItemCsgoKey::new);
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
-    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.register("terminal", () -> new ItemTerminal());
     public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", ItemPremiumBox::new);
 
-    /**
-     * Item class a box definition maps to: the terminal machine uses
-     * {@link ItemTerminal}, the village-exclusive premium case uses
-     * {@link ItemPremiumBox}, every other box uses the generic
-     * {@link ItemCsgoBox}. Shared by the creative tab and mob drops so a
-     * definition always yields the same item kind.
-     */
-    public static Supplier<Item> boxItemFor(BoxDefinition def) {
-        if (def.isTerminal()) {
-            return ModItems.ITEM_TERMINAL;
-        }
-        if ("premium_supply_box".equals(def.id().getPath())) {
-            return ModItems.ITEM_PREMIUM_BOX;
-        }
-        return ModItems.ITEM_CSGOBOX;
-    }
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

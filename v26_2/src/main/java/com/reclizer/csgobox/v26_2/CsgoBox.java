@@ -1,12 +1,14 @@
 package com.reclizer.csgobox.v26_2;
 
 import com.mojang.logging.LogUtils;
+import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v26_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.capability.ModCapability;
 import com.reclizer.csgobox.v26_2.config.CsboxConfig;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_2.item.ItemTerminal;
 import com.reclizer.csgobox.v26_2.item.ModItems;
 import com.reclizer.csgobox.v26_2.menu.ModMenus;
 import com.reclizer.csgobox.v26_2.advancement.OpenedBoxTrigger;
@@ -74,7 +76,7 @@ public class CsgoBox {
     /** Items statically registered in {@code ModItems}; never re-added from config JSON. */
     private static final Set<String> STATIC_ITEM_IDS = Set.of(
             "csgo_box", "csgo_key0", "csgo_key1", "csgo_key2", "csgo_key3",
-            "armory_point", "terminal", "premium_supply_box");
+            "armory_point", "premium_supply_box");
 
     public static final String MODID = "csgobox";
     /**
@@ -234,8 +236,19 @@ public class CsgoBox {
     private void registerDynamicBoxItems(final RegisterEvent event) {
         Path configDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
         if (!Files.isDirectory(configDir)) {
-            return;
+            try {
+                Files.createDirectories(configDir);
+            } catch (IOException e) {
+                LOGGER.warn("[csgo-dynamic-items] cannot create {}: {}", configDir, e.getMessage());
+                return;
+            }
         }
+        // The terminal is a dynamic item like every other box, so the default
+        // terminal.json must exist before the scan or csgobox:terminal would
+        // not be registered on a fresh install. BoxJsonLoader.loadAll() also
+        // writes it, but that runs at server start, AFTER the item registry
+        // has frozen.
+        BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
         int skipped = 0;
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDir, "*.json")) {
@@ -249,9 +262,7 @@ public class CsgoBox {
                     continue;
                 }
                 // Statically-registered items (ModItems) must not be re-added
-                // from config/csbox/*.json — terminal.json / premium_supply_box.json
-                // would otherwise collide with their static items and crash
-                // bootstrap with a duplicate key.
+                // from config/csbox/*.json.
                 if (STATIC_ITEM_IDS.contains(idStr)) {
                     skipped++;
                     continue;
@@ -269,11 +280,19 @@ public class CsgoBox {
                 }
                 final Identifier boxId = itemId;
                 final ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, itemId);
+                // Boxes with "type": "terminal" in their JSON are registered as
+                // ItemTerminal so the client can dispatch to the terminal UI
+                // (ClickEvent / PacketTerminalBuy match instanceof
+                // ItemTerminal) without needing the box definition — remote
+                // clients never receive the type field. Everything else stays
+                // a plain ItemCsgoBox.
+                //
                 // Reuse the base csgo_box item model so dynamic boxes
                 // (registered from config/csbox/*.json filenames) render
                 // with a real icon instead of the missing-texture
                 // checkerboard. ITEM_MODEL is resolved against
-                // assets/csgobox/items/<id>.json in 26.x.
+                // assets/csgobox/items/<id>.json in 26.x; terminal-type boxes
+                // keep the terminal model instead.
                 //
                 // Item.Properties.finalizeInitializer() forcibly sets
                 // ITEM_MODEL = own registry id at Item construction (the
@@ -285,17 +304,31 @@ public class CsgoBox {
                 // world-load; appending our initializer AFTER the Item
                 // constructor runs (i.e. inside the registration supplier)
                 // makes it run after the forced one and win.
+                final boolean isTerminal = "terminal".equals(BoxJsonLoader.readType(file));
                 event.register(Registries.ITEM, itemId, () -> {
-                    ItemCsgoBox item = new ItemCsgoBox(new Item.Properties().setId(itemKey)) {
-                        @Override
-                        public ItemStack getDefaultInstance() {
-                            ItemStack stack = super.getDefaultInstance();
-                            ItemCsgoBox.setBoxId(boxId, stack);
-                            return stack;
-                        }
-                    };
+                    ItemCsgoBox item;
+                    if (isTerminal) {
+                        item = new ItemTerminal(new Item.Properties().setId(itemKey)) {
+                            @Override
+                            public ItemStack getDefaultInstance() {
+                                ItemStack stack = super.getDefaultInstance();
+                                ItemCsgoBox.setBoxId(boxId, stack);
+                                return stack;
+                            }
+                        };
+                    } else {
+                        item = new ItemCsgoBox(new Item.Properties().setId(itemKey)) {
+                            @Override
+                            public ItemStack getDefaultInstance() {
+                                ItemStack stack = super.getDefaultInstance();
+                                ItemCsgoBox.setBoxId(boxId, stack);
+                                return stack;
+                            }
+                        };
+                    }
                     BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.add(itemKey, (components, context, key) ->
-                            components.set(DataComponents.ITEM_MODEL, Identifier.parse(MODID + ":csgo_box")));
+                            components.set(DataComponents.ITEM_MODEL,
+                                    Identifier.parse(MODID + ":" + (isTerminal ? "terminal" : "csgo_box"))));
                     return item;
                 });
                 registered++;

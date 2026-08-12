@@ -5,12 +5,14 @@ import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -47,7 +49,10 @@ public final class ModEvents {
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
-                ItemStack stack = new ItemStack(ModItems.boxItemFor(def).get());
+                Item item = BuiltInRegistries.ITEM.get(def.id())
+                        .map(Holder.Reference::value)
+                        .orElse(ModItems.ITEM_CSGOBOX.get());
+                ItemStack stack = new ItemStack(item);
                 ItemCsgoBox.setBoxId(def.id(), stack);
                 mob.spawnAtLocation((ServerLevel) mob.level(), stack);
             }

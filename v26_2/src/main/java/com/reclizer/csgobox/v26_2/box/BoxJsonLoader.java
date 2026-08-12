@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -106,6 +107,25 @@ public final class BoxJsonLoader {
     private BoxJsonLoader() {
     }
 
+    /**
+     * Lightweight read of a box JSON's {@code type} field without parsing the
+     * full definition (registry lookups, DataComponent decode). Used by dynamic
+     * item registration to pick {@code ItemTerminal} for terminal-type boxes
+     * before definitions are loaded into {@link BoxRegistry}. Defaults to
+     * {@code "csbox"} so a malformed file degrades to a regular box item.
+     */
+    public static String readType(Path file) {
+        try (Reader reader = Files.newBufferedReader(file)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
+                return json.get("type").getAsString();
+            }
+        } catch (Exception e) {
+            CsgoBox.LOGGER.warn("Failed to read type from {}: {}", file, e.getMessage());
+        }
+        return "csbox";
+    }
+
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
@@ -150,6 +170,11 @@ public final class BoxJsonLoader {
             }
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
+
+        // Generate the default terminal box config (decoupled terminal loot)
+        // on first run, before scanning existing box JSON files.
+        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
+        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
 
         // Tutorial download runs on a background thread: its network timeouts
         // (seconds) must not block the server thread during world start.
