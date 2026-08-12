@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v1_21_1.capability.ModCapability;
 import com.reclizer.csgobox.v1_21_1.config.CsboxConfig;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
+import com.reclizer.csgobox.v1_21_1.menu.ModMenus;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.advancement.ModLoadedTrigger;
 import com.reclizer.csgobox.v1_21_1.block.ModBlocks;
@@ -26,6 +27,9 @@ import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalReject;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalState;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.stats.Stat;
@@ -47,6 +51,8 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -54,6 +60,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.util.Map;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -152,6 +159,7 @@ public class CsgoBox {
         ModItems.register(modEventBus);
         ModItems.registerTab(modEventBus);
         ModBlocks.register(modEventBus);
+        ModMenus.register(modEventBus);
         ModVillagers.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -310,6 +318,54 @@ public class CsgoBox {
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        }
+
+        /**
+         * Dynamic box items (registered from {@code config/csbox/*.json}
+         * filenames) have no {@code assets/csgobox/models/item/<id>.json}, so
+         * vanilla bakes them to the missing-texture model (purple/black) in
+         * the inventory and in the 3D preview. 1.21.1 has no per-stack
+         * ITEM_MODEL component (that is a 26.x API), so remap every csgobox
+         * item that ended up with the missing model to the baked csgo_box
+         * model here. Static items (keys, terminal, …) keep their real model
+         * (particle icon is not the "missingno" sprite) and are left alone.
+         */
+        @SubscribeEvent
+        public static void onModelBaking(ModelEvent.ModifyBakingResult event) {
+            Map<ModelResourceLocation, BakedModel> models = event.getModels();
+            ModelResourceLocation base = new ModelResourceLocation(
+                    ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_box"), "inventory");
+            BakedModel baseModel = models.get(base);
+            if (baseModel == null) {
+                return;
+            }
+            ResourceLocation missingSprite = MissingTextureAtlasSprite.getLocation();
+            for (ResourceLocation itemId : BuiltInRegistries.ITEM.keySet()) {
+                if (!CsgoBox.MODID.equals(itemId.getNamespace())) {
+                    continue;
+                }
+                ModelResourceLocation loc = new ModelResourceLocation(itemId, "inventory");
+                BakedModel current = models.get(loc);
+                // Dynamic boxes have no model file, so ModelBakery registers
+                // them with the baked missing model (particle icon is the
+                // "missingno" sprite). Swap those over to the csgo_box model;
+                // items with a real model (particle icon != missingno) are
+                // left untouched so user-provided pack models keep working.
+                if (current == null
+                        || current.getParticleIcon().contents().name().equals(missingSprite)) {
+                    models.put(loc, baseModel);
+                }
+            }
+        }
+
+        /**
+         * Map the recycler {@code MenuType} to its screen. Fired by
+         * {@code MenuScreens.init()} on the mod bus at client start.
+         */
+        @SubscribeEvent
+        public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+            event.register(com.reclizer.csgobox.v1_21_1.menu.ModMenus.ARMORY_RECYCLER.get(),
+                    com.reclizer.csgobox.v1_21_1.gui.ArmoryRecyclerScreen::new);
         }
     }
 }

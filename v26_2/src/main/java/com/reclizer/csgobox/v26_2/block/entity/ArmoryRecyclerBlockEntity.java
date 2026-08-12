@@ -3,50 +3,38 @@ package com.reclizer.csgobox.v26_2.block.entity;
 import com.reclizer.csgobox.v26_2.block.ModBlocks;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ModItems;
-import com.reclizer.csgobox.v26_2.sounds.ModSounds;
+import com.reclizer.csgobox.v26_2.menu.ArmoryRecyclerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.WorldlyContainer;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * The Armory Recycler's block entity.
- *
- * <p>Two recycle paths:
- * <ul>
- *   <li><b>Manual</b> — a player right-clicks the block while holding an item
- *       tagged with {@code csgobox:grade}; the whole held stack is converted
- *       into Armory Points (paid directly to that player).</li>
- *   <li><b>Automated</b> — hoppers may push graded items into the single slot;
- *       the entity ticks and disposes of them, dropping Armory Point items at
- *       the block (no player reference needed).</li>
- * </ul>
- *
- * <p>Only items stamped by the box-opening code (see {@link ItemCsgoBox#GRADE})
- * are accepted, so raw/non-box loot cannot be recycled — this is what keeps
- * the point economy anchored below the key cost.
+ * The Armory Recycler's block entity: a furnace-style converter that turns
+ * graded box items (stamped with {@link ItemCsgoBox#GRADE}) into Armory
+ * Points. One input item is consumed per {@link #SMELT_TICKS} ticks and the
+ * yield appears in the output slot, which the player picks up (or a hopper
+ * extracts). There is no automatic payout, no dismantle button and no fuel:
+ * smelting only advances while the input holds a graded item and the output
+ * can still accept the yield.
  */
-public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer {
+public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer, ContainerData {
 
-    private static final int SLOT = 0;
-    private static final int TICK_COOLDOWN = 10;
+    private static final int INPUT_SLOT = 0;
+    private static final int OUTPUT_SLOT = 1;
+    /** Ticks to convert one input item (furnace-style progress bar). */
+    public static final int SMELT_TICKS = 40;
 
-    private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
-    private int cooldown = 0;
+    private NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
+    private int progress;
 
     public ArmoryRecyclerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.ARMORY_RECYCLER_BE.get(), pos, state);
@@ -57,95 +45,70 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         return switch (grade) {
             case 1 -> 3;   // consumer
             case 2 -> 5;   // industrial
-            case 3 -> 8;   // mil-spec
-            case 4 -> 11;  // restricted
-            case 5 -> 15;  // classified (best tier; single item can't fund a box+key loop = 17 pts)
+            case 3 -> 7;   // mil-spec
+            case 4 -> 8;   // restricted (clamped below the 9-point key cost)
+            case 5 -> 8;   // classified (clamped below the 9-point key cost, so a single
+                           // jackpot item can never fund a key outright — GDD §一)
             default -> 0;
         };
     }
 
-    // ---- Manual path (called from ArmoryRecyclerBlock.use) --------------------
-
-    public InteractionResult recycleHeld(Player player, InteractionHand hand, Level level, BlockPos pos) {
-        ItemStack held = player.getItemInHand(hand);
-        Integer grade = held.isEmpty() ? null : held.get(ItemCsgoBox.GRADE.get());
-        if (grade == null || grade < 1 || grade > 5) {
-            return InteractionResult.PASS;
-        }
-        int count = held.getCount();
-        int points = yieldForGrade(grade) * count;
-        held.shrink(count);
-        payPoints(player, points, level, pos);
-        return InteractionResult.CONSUME;
-    }
-
-    /** Empty-hand right-click: hand the buffered slot back so nothing gets stuck. */
-    public InteractionResult ejectToPlayer(Player player) {
-        ItemStack in = getItem(SLOT);
-        if (in.isEmpty()) {
-            return InteractionResult.PASS;
-        }
-        ItemStack out = in.copy();
-        setItem(SLOT, ItemStack.EMPTY);
-        setChanged();
-        if (!player.getInventory().add(out)) {
-            player.drop(out, false);
-        }
-        return InteractionResult.CONSUME;
-    }
-
-    // ---- Automated path (hopper-fed slot) ------------------------------------
-
     public void tick() {
         if (level == null || level.isClientSide()) return;
-        if (cooldown > 0) {
-            cooldown--;
+        ItemStack in = getItem(INPUT_SLOT);
+        Integer grade = in.isEmpty() ? null : in.get(ItemCsgoBox.GRADE.get());
+        int yield = grade != null && grade >= 1 && grade <= 5 ? yieldForGrade(grade) : 0;
+        if (yield <= 0 || !canAcceptOutput(yield)) {
+            if (progress != 0) {
+                progress = 0;
+                setChanged();
+            }
             return;
         }
-        ItemStack in = getItem(SLOT);
-        Integer grade = in.isEmpty() ? null : in.get(ItemCsgoBox.GRADE.get());
-        if (grade == null || grade < 1 || grade > 5) return;
-        int points = yieldForGrade(grade);
-        in.shrink(1);
+        progress++;
+        if (progress >= SMELT_TICKS) {
+            progress = 0;
+            in.shrink(1);
+            addOutput(yield);
+            level.playSound(null, worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,
+                    worldPosition.getZ() + 0.5D, SoundEvents.VILLAGER_WORK_ARMORER,
+                    SoundSource.BLOCKS, 1.0F, 1.0F);
+        }
         setChanged();
-        dropPoints(points);
-        cooldown = TICK_COOLDOWN;
     }
 
-    private void dropPoints(int points) {
-        if (points <= 0 || level == null) return;
-        Item item = ModItems.ITEM_ARMORY_POINT.get();
-        int max = item.getDefaultMaxStackSize();
-        int left = points;
-        while (left > 0) {
-            int s = Math.min(left, max);
-            Block.popResource(level, worldPosition.above(), new ItemStack(item, s));
-            left -= s;
+    private boolean canAcceptOutput(int amount) {
+        ItemStack out = getItem(OUTPUT_SLOT);
+        if (out.isEmpty()) return true;
+        return out.is(ModItems.ITEM_ARMORY_POINT.get())
+                && out.getCount() + amount <= out.getMaxStackSize();
+    }
+
+    private void addOutput(int amount) {
+        ItemStack out = getItem(OUTPUT_SLOT);
+        if (out.isEmpty()) {
+            setItem(OUTPUT_SLOT, new ItemStack(ModItems.ITEM_ARMORY_POINT.get(), amount));
+        } else {
+            out.grow(amount);
         }
     }
 
-    private void payPoints(Player player, int points, Level level, BlockPos pos) {
-        if (points <= 0) return;
-        Item item = ModItems.ITEM_ARMORY_POINT.get();
-        int max = item.getDefaultMaxStackSize();
-        int left = points;
-        while (left > 0) {
-            int s = Math.min(left, max);
-            ItemStack stack = new ItemStack(item, s);
-            if (!player.getInventory().add(stack)) {
-                player.drop(stack, false);
-            }
-            left -= s;
-        }
-        player.sendSystemMessage(
-                Component.literal("+" + points + " ").append(
-                        Component.translatable("item.csgobox.armory_point")).withStyle(net.minecraft.ChatFormatting.GREEN));
-        level.playSound(player, pos, ModSounds.CS_FINSH.get(), SoundSource.BLOCKS, 0.7F, 1.0F);
-        for (int i = 0; i < 6; i++) {
-            double x = pos.getX() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.5;
-            double y = pos.getY() + 1.0 + level.getRandom().nextDouble() * 0.4;
-            double z = pos.getZ() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.5;
-            level.addParticle(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, x, y, z, 0, 0.05, 0);
+    // ---- ContainerData (progress bar sync to the GUI) ------------------------
+
+    @Override
+    public int getCount() {
+        return 1;
+    }
+
+    @Override
+    public int get(int index) {
+        return index == 0 ? progress : 0;
+    }
+
+    @Override
+    public void set(int index, int value) {
+        if (index == 0) {
+            progress = value;
         }
     }
 
@@ -163,7 +126,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
 
     @Override
     public int getContainerSize() {
-        return 1;
+        return 2;
     }
 
     @Override
@@ -176,24 +139,25 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         return Component.translatable("block.csgobox.armory_recycler");
     }
 
-    @Nullable
     @Override
-    protected net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv) {
-        return null; // no GUI — recycling is manual / hopper-driven
+    protected AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv) {
+        return new ArmoryRecyclerMenu(id, inv, this, this, this);
     }
 
     @Override
-    public boolean canPlaceItemThroughFace(int index, ItemStack stack, net.minecraft.core.Direction direction) {
-        return stack.get(ItemCsgoBox.GRADE.get()) != null;
+    public boolean canPlaceItemThroughFace(int index, ItemStack stack, Direction direction) {
+        if (index == OUTPUT_SLOT) return false;
+        Integer grade = stack.get(ItemCsgoBox.GRADE.get());
+        return grade != null && grade >= 1 && grade <= 5;
     }
 
     @Override
-    public boolean canTakeItemThroughFace(int index, ItemStack stack, net.minecraft.core.Direction direction) {
-        return false;
+    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
+        return index == OUTPUT_SLOT;
     }
 
     @Override
-    public int[] getSlotsForFace(net.minecraft.core.Direction direction) {
-        return new int[]{SLOT};
+    public int[] getSlotsForFace(Direction direction) {
+        return new int[]{INPUT_SLOT, OUTPUT_SLOT};
     }
 }

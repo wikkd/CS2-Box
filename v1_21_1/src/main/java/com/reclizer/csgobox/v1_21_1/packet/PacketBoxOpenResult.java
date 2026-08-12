@@ -3,12 +3,14 @@ package com.reclizer.csgobox.v1_21_1.packet;
 import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import io.netty.handler.codec.DecoderException;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayDeque;
@@ -83,15 +85,23 @@ public record PacketBoxOpenResult(
     }
 
     /**
-     * Returns a copy of {@code stack} with all data components removed, or the
-     * stack unchanged when there is nothing to strip. Decoys travel component-
-     * free because they only render icons; the winner keeps full data.
+     * Returns a copy of {@code stack} stripped to its identity components, or
+     * the stack unchanged when there is nothing to strip. Decoys keep
+     * {@code minecraft:custom_data} because TACZ guns carry their GunId there:
+     * without it the client renders a plain gun whose TACZ slot fallback paints
+     * the missing-texture checkerboard over the whole animation card. The
+     * winner always keeps full data.
      */
     private static ItemStack stripComponents(ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return stack;
         }
-        return new ItemStack(stack.getItem(), stack.getCount());
+        ItemStack stripped = new ItemStack(stack.getItem(), stack.getCount());
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null && !customData.isEmpty()) {
+            stripped.set(DataComponents.CUSTOM_DATA, customData);
+        }
+        return stripped;
     }
 
     private static PacketBoxOpenResult read(RegistryFriendlyByteBuf buf) {

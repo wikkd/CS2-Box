@@ -8,6 +8,7 @@ import com.reclizer.csgobox.forge_26_1_2.capability.ModCapability;
 import com.reclizer.csgobox.forge_26_1_2.config.CsboxConfig;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ModItems;
+import com.reclizer.csgobox.forge_26_1_2.menu.ModMenus;
 import com.reclizer.csgobox.forge_26_1_2.packet.Networking;
 import com.reclizer.csgobox.forge_26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_1_2.advancement.ModLoadedTrigger;
@@ -139,6 +140,7 @@ public class CsgoBox {
         ItemCsgoBox.registerDataComponents(modEventBus);
         ModItems.register(modEventBus);
         ModItems.registerTab(modEventBus);
+        ModMenus.register(modEventBus);
 
         // Forge 26.1's MinecraftForge.EVENT_BUS is an EventBusMigrationHelper that
         // validates @SubscribeEvent on every method of a registered object (strict
@@ -285,6 +287,10 @@ public class CsgoBox {
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+            event.enqueueWork(() ->
+                    net.minecraft.client.gui.screens.MenuScreens.register(
+                            ModMenus.ARMORY_RECYCLER.get(),
+                            com.reclizer.csgobox.forge_26_1_2.gui.ArmoryRecyclerScreen::new));
         }
 
         /**

@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.reclizer.csgobox.utils.Quat;
+import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.api.item.IGun;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -125,6 +127,13 @@ public final class AnimRenderOps {
     /** 2D item icon centred at (x, y), scaled (16px per block unit). */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
+        // TACZ guns without a loaded display instance have no model to draw;
+        // their custom renderer falls back to the missing-texture slot icon,
+        // painting a magenta checkerboard across the card. Skip the draw so
+        // the card frame alone shows until the display is available.
+        if (stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
+            return;
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(x, y, 2F);
@@ -158,6 +167,9 @@ public final class AnimRenderOps {
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
+        if (item.getItem() instanceof IGun && TimelessAPI.getGunDisplay(item).isEmpty()) {
+            return;
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);

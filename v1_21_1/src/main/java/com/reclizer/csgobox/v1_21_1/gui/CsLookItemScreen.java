@@ -37,6 +37,11 @@ public class CsLookItemScreen extends Screen {
     private boolean taczViewportActive = false;
     /** One-shot guard for the default TACZ 3D display attempt on first render. */
     private boolean taczDisplayChecked = false;
+    /** Frames spent waiting for the TACZ gun display to load before giving up
+     *  on the 3D viewport (TACZ loads gun displays asynchronously after world
+     *  join, so a reward opened immediately can lack its display for a moment). */
+    private static final int MAX_DISPLAY_RETRY_TICKS = 100;
+    private int taczDisplayRetries = 0;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -205,12 +210,16 @@ public class CsLookItemScreen extends Screen {
                 this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
         // TACZ guns default to the 3D display viewport: TACZ's own GUI item
         // rendering only draws the flat slot texture, so drive its renderer
-        // ourselves. One-shot attempt on the first frame; failure keeps 2D.
+        // ourselves. Retry for a few seconds: the gun display may still be
+        // loading right after world join; after the window, failure keeps 2D.
         if (!this.taczDisplayChecked && this.minecraft != null && this.minecraft.player != null) {
-            this.taczDisplayChecked = true;
+            this.taczDisplayRetries++;
             if (TaczInspectViewport.isAvailable(this.openItem)
                     && TaczInspectViewport.enterDisplay(this.openItem, this.minecraft.player)) {
                 this.taczViewportActive = true;
+                this.taczDisplayChecked = true;
+            } else if (this.taczDisplayRetries >= MAX_DISPLAY_RETRY_TICKS) {
+                this.taczDisplayChecked = true;
             }
         }
         boolean viewportRendered = false;

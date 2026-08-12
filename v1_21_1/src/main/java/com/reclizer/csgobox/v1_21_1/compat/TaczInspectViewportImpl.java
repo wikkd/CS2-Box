@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.compat;
 
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
 import com.tacz.guns.api.TimelessAPI;
@@ -7,7 +9,7 @@ import com.tacz.guns.api.client.animation.statemachine.LuaAnimationStateMachine;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.client.animation.statemachine.GunAnimationConstant;
 import com.tacz.guns.client.animation.statemachine.ItemAnimationStateContext;
-import com.tacz.guns.client.model.BedrockAnimatedModel;
+import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.renderer.item.AnimateGeoItemRenderer;
 import com.tacz.guns.client.resource.GunDisplayInstance;
 import com.tacz.guns.client.resource.index.ClientGunIndex;
@@ -26,6 +28,7 @@ import com.mojang.math.Axis;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.slf4j.Logger;
+import org.joml.Matrix4fStack;
 
 import javax.annotation.Nullable;
 
@@ -48,8 +51,17 @@ public final class TaczInspectViewportImpl {
     /** Fixed display pose of the gun in the viewport (degrees). */
     private static final float DISPLAY_YAW = -35F;
     private static final float DISPLAY_PITCH = 10F;
-    /** Vertical model-space offset so the gun sits in the display area center. */
-    private static final float MODEL_Y_OFFSET = -1.5F;
+    /**
+     * Vertical model-space offset so the gun's bounding box sits centered in
+     * the display area. Calibrated for mk23-like gun bounds (y -3.58..20
+     * block units) under the viewport transform below.
+     */
+    private static final float MODEL_Y_OFFSET = -0.47F;
+    /** Identity render stack: the viewport pose is applied via RenderSystem's
+     * model-view stack (matching AnimRenderOps.renderItem3D), so the model's
+     * bone transforms accumulate on an identity stack while the outer
+     * translate/rotate/scale lives in the shader's model-view matrix. */
+    private static final PoseStack RENDER_STACK = new PoseStack();
 
     private TaczInspectViewportImpl() {
     }
@@ -244,7 +256,9 @@ public final class TaczInspectViewportImpl {
             return false;
         }
         LuaAnimationStateMachine<?> stateMachine = renderer.getStateMachine(stack);
-        BedrockAnimatedModel model = renderer.getModel(stack);
+        BedrockGunModel model = TimelessAPI.getGunDisplay(stack)
+                .map(GunDisplayInstance::getGunModel)
+                .orElse(null);
         if (stateMachine == null || model == null || !stateMachine.isInitialized()) {
             return false;
         }
@@ -259,17 +273,45 @@ public final class TaczInspectViewportImpl {
         pose.mulPose(Axis.YP.rotationDegrees(DISPLAY_YAW));
         float pixelsPerUnit = 16.0F * scale;
         pose.scale(pixelsPerUnit, pixelsPerUnit, pixelsPerUnit);
-        // Bedrock model alignment, mirroring AnimateGeoItemRenderer.renderByItem
-        // (Y sign flipped because the GUI frame above already inverts Y).
-        pose.translate(0.5F, MODEL_Y_OFFSET, 0.5F);
-        pose.mulPose(Axis.ZP.rotationDegrees(180F));
+        // Vertical centering only: BedrockGunModel.render applies no internal
+        // frame transform of its own, so the pose above fully controls the
+        // model placement (the GUI frame's Y flip already orients the model
+        // upright; a ZP 180 inside would double-flip and push it off-screen).
+        pose.translate(0.0F, MODEL_Y_OFFSET, 0.0F);
 
-        model.render(pose, ItemDisplayContext.GUI,
-                RenderType.entityCutout(renderer.getTextureLocation(stack)),
-                0xF000F0, OverlayTexture.NO_OVERLAY);
+        // Apply the viewport pose to RenderSystem's model-view stack and render
+        // the bedrock model through an identity stack: cube vertices are
+        // multiplied by the bone transforms only, and the shader's model-view
+        // matrix carries the outer placement. Passing the GUI pose directly to
+        // model.render double-transforms every vertex and renders nothing.
+        Lighting.setupForEntityInInventory();
+        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.mul(pose.last().pose());
+        RenderSystem.applyModelViewMatrix();
+        RENDER_STACK.setIdentity();
+        // Must use the BedrockGunModel render overload that takes the
+        // ItemStack: it fills currentAttachmentItem (laser/grip/scope…) from
+        // the stack before walking the part tree. The inherited 5-arg
+        // BedrockModel.render skips that, leaving the attachment map empty and
+        // NPE-ing in handguardTacticalRender for guns with a tactical rail.
+        try {
+            model.render(RENDER_STACK, stack, ItemDisplayContext.GUI,
+                    RenderType.entityCutout(renderer.getTextureLocation(stack)),
+                    0xF000F0, OverlayTexture.NO_OVERLAY);
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ inspect viewport model.render failed", t);
+            modelViewStack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            pose.popPose();
+            return false;
+        }
         model.cleanAnimationTransform();
-        pose.popPose();
         Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+        modelViewStack.popMatrix();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.enableDepthTest();
+        pose.popPose();
         return true;
     }
 

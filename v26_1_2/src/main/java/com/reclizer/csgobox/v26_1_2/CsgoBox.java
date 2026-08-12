@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v26_1_2.capability.ModCapability;
 import com.reclizer.csgobox.v26_1_2.config.CsboxConfig;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
+import com.reclizer.csgobox.v26_1_2.menu.ModMenus;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxBulkResult;
@@ -49,6 +50,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
@@ -155,6 +157,7 @@ public class CsgoBox {
         ModItems.register(modEventBus);
         ModItems.registerTab(modEventBus);
         ModBlocks.register(modEventBus);
+        ModMenus.register(modEventBus);
         ModVillagers.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
@@ -356,6 +359,16 @@ public class CsgoBox {
             event.register(
                     com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState.class,
                     bufferSource -> new com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderer(bufferSource));
+        }
+
+        /**
+         * Map the recycler {@code MenuType} to its screen. Fired by
+         * {@code MenuScreens.init()} on the mod bus at client start.
+         */
+        @SubscribeEvent
+        public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+            event.register(com.reclizer.csgobox.v26_1_2.menu.ModMenus.ARMORY_RECYCLER.get(),
+                    com.reclizer.csgobox.v26_1_2.gui.ArmoryRecyclerScreen::new);
         }
     }
 }

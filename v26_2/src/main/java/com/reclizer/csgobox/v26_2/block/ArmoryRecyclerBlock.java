@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
@@ -34,12 +35,11 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The Armory Recycler: a job-site / workstation block that converts opened
  * box items (stamped with the {@code csgobox:grade} data component) into
- * Armory Points. Two paths: right-click with a graded item in hand (manual),
- * or push graded items into its single slot with a hopper (automated).
- * Also serves as the POI for the arms-dealer villager.
- *
- * <p>Deliberately has no GUI — a {@code MenuType} would need a per-platform
- * screen and the menu API drifts across 1.21.1 / 26.1 / 26.2.</p>
+ * Armory Points. Right-clicking opens a vanilla furnace-style container GUI:
+ * graded items go into the input slot, smelt over a short progress bar and
+ * come out of the output slot as Armory Points; hoppers may also feed the
+ * input and extract the output. Also serves as the POI for the arms-dealer
+ * villager.
  */
 public class ArmoryRecyclerBlock extends BaseEntityBlock {
 
@@ -113,39 +113,38 @@ public class ArmoryRecyclerBlock extends BaseEntityBlock {
     }
 
     /**
-     * Right-click with an item: recycle it if it carries a {@code csgobox:grade}.
-     * Returning {@link InteractionResult#TRY_WITH_EMPTY_HAND} when the held item is
-     * not recyclable lets vanilla fall through to {@link #useWithoutItem}.
+     * Right-click with an item in hand: open the recycler GUI. Recycling is
+     * furnace-style (input -&gt; progress -&gt; output), there is no button and
+     * nothing is consumed until the smelt completes.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                           Player player, InteractionHand hand, BlockHitResult hit) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
-        if (level.getBlockEntity(pos) instanceof ArmoryRecyclerBlockEntity be) {
-            InteractionResult result = be.recycleHeld(player, hand, level, pos);
-            if (result == InteractionResult.PASS) {
-                return InteractionResult.TRY_WITH_EMPTY_HAND;
-            }
-            return result;
-        }
-        return InteractionResult.TRY_WITH_EMPTY_HAND;
+        return openGui(level, pos, player);
     }
 
     /**
-     * Right-click with an empty hand (or a non-recyclable item): eject whatever
-     * is sitting in the hopper slot, so the block never swallows items.
+     * Right-click with an empty hand: also opens the recycler GUI (the input
+     * slot is fully managed inside it, including taking items back).
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hit) {
+        return openGui(level, pos, player);
+    }
+
+    private InteractionResult openGui(Level level, BlockPos pos, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        if (level.getBlockEntity(pos) instanceof ArmoryRecyclerBlockEntity be) {
-            return be.ejectToPlayer(player);
+        if (level.getBlockEntity(pos) instanceof MenuProvider menuProvider) {
+            player.openMenu(menuProvider);
         }
-        return InteractionResult.PASS;
+        return InteractionResult.CONSUME;
+    }
+
+    @Override
+    protected MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof MenuProvider menuProvider ? menuProvider : null;
     }
 }

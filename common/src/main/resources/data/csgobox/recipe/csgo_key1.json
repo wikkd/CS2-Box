@@ -7,9 +7,7 @@
     "G"
   ],
   "key": {
-    "G": [
-      "minecraft:gold_ingot"
-    ]
+    "G": "minecraft:gold_ingot"
   },
   "result": {
     "count": 1,

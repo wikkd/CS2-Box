@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.item;
 
 import com.reclizer.csgobox.v26_2.CsgoBox;
+import com.reclizer.csgobox.v26_2.block.ModBlocks;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import net.minecraft.core.registries.Registries;
@@ -35,6 +36,7 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
+                entries.accept(ModBlocks.ARMORY_RECYCLER_ITEM.get());
 
                 // Registered boxes (config/csbox/*.json) appear here the same
                 // way for every kind; the terminal machine and the premium

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>武库拆解台 — 原版容器 GUI 原型</title>
+<style>
+  :root {
+    /* 原版容器面板色（container 纹理主色） */
+    --panel-bg: #c6c6c6;
+    --panel-border-dark: #3b3b3b;
+    --panel-border-light: #ffffff;
+    --slot-bg: #8b8b8b;
+    --slot-border-dark: #373737;
+    --slot-border-light: #ffffff;
+    --title-text: #ffffff;
+    --text-shadow: #3f3f3f;
+    --hover-outline: #ffffa0;
+    /* 武库点数 / 稀有度（对齐 TerminalPalette） */
+    --point-gold: #e4ae39;
+    --grade1: #4b69ff; /* 军规级 mil-spec */
+    --grade2: #8847ff; /* 受限级 restricted */
+    --grade3: #d32ce6; /* 保密级 classified */
+    --grade4: #eb4b4b; /* 隐秘级 covert */
+    --grade5: #e4ae39; /* 违禁 contraband */
+    --tooltip-bg: #100010cc;
+    --tooltip-border: #5000ff55;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 700px at 50% 30%, #3a4a5a 0%, #1c232b 55%, #0e1216 100%);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    gap: 28px; min-height: 100vh; padding: 20px;
+    color: #d8dee3;
+  }
+
+  /* ============ 原版容器面板（176×166 放大 3× = 528×498） ============ */
+  .panel {
+    position: relative;
+    width: 540px;
+    padding: 0 6px 6px;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border-dark);
+    box-shadow:
+      inset 0 0 0 2px var(--panel-border-light),
+      inset 0 0 0 4px var(--panel-border-dark),
+      0 18px 50px rgba(0,0,0,.55);
+    image-rendering: pixelated;
+    user-select: none;
+  }
+  /* 标题（原版：面板顶部中央，白字 + 灰阴影） */
+  .title {
+    text-align: center;
+    font-family: "Courier New", monospace;
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--title-text);
+    text-shadow: 2px 2px 0 var(--text-shadow);
+    padding: 8px 0 4px;
+    letter-spacing: 2px;
+  }
+
+  /* 机器区：输入槽 + 回收结果 */
+  .machine { display: flex; align-items: center; justify-content: center; gap: 26px; padding: 14px 0 10px; }
+
+  /* 槽位（原版内凹样式） */
+  .slot {
+    width: 60px; height: 60px;
+    background: var(--slot-bg);
+    border: 2px solid;
+    border-color: var(--slot-border-dark) var(--slot-border-light) var(--slot-border-light) var(--slot-border-dark);
+    box-shadow: inset 0 2px 3px rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; cursor: pointer;
+  }
+  .slot .icon { width: 48px; height: 48px; image-rendering: pixelated; object-fit: contain; }
+  .slot .count {
+    position: absolute; right: 2px; bottom: 0;
+    font-family: "Courier New", monospace; font-size: 15px; font-weight: bold;
+    color: #fff; text-shadow: 1px 1px 0 #3f3f3f; pointer-events: none;
+  }
+  .slot:hover { outline: 2px solid var(--hover-outline); outline-offset: -2px; }
+  .slot.empty { cursor: default; }
+  .slot.empty:hover { outline: none; }
+  .slot-label {
+    text-align: center; font-size: 11px; color: #555;
+    margin-top: 4px; text-shadow: 1px 1px 0 rgba(255,255,255,.4);
+  }
+
+  /* 回收结果区 */
+  .result {
+    width: 150px; min-height: 62px;
+    background: #b7b7b7;
+    border: 2px solid; border-color: #6e6e6e #efefef #efefef #6e6e6e;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.25);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 6px;
+  }
+  .result .hint { font-size: 12px; color: #5a5a5a; text-align: center; line-height: 1.5; }
+  .result .gain {
+    display: flex; align-items: center; gap: 6px;
+    font-family: "Courier New", monospace; font-size: 22px; font-weight: bold;
+    color: #2e6b12; text-shadow: 1px 1px 0 rgba(255,255,255,.5);
+  }
+  .result .gain img { width: 26px; height: 26px; image-rendering: pixelated; }
+  .result .gain.zero { color: #8a2b2b; }
+  /* 拆解按钮（原版凸起按钮风格） */
+  .dismantle-btn {
+    font-family: "Courier New", monospace; font-size: 14px; font-weight: bold;
+    color: #fff; text-shadow: 1px 1px 0 #3f3f3f;
+    background: #6b6b6b;
+    border: 2px solid; border-color: #fff #3b3b3b #3b3b3b #fff;
+    padding: 5px 16px; cursor: pointer; margin-top: 6px;
+  }
+  .dismantle-btn:disabled { color: #9a9a9a; cursor: not-allowed; opacity: .75; }
+  .dismantle-btn:not(:disabled):hover { background: #7d7d7d; }
+  .dismantle-btn:not(:disabled):active { border-color: #3b3b3b #fff #fff #3b3b3b; }
+
+  /* 背包区 */
+  .inv-label {
+    font-family: "Courier New", monospace; font-size: 14px; font-weight: bold;
+    color: #3a3a3a; text-shadow: 1px 1px 0 rgba(255,255,255,.4);
+    margin: 6px 0 4px;
+  }
+  .inv-grid { display: grid; grid-template-columns: repeat(9, 48px); gap: 4px; justify-content: center; }
+  .inv-grid .slot { width: 48px; height: 48px; }
+  .inv-grid .slot .icon { width: 38px; height: 38px; }
+  .inv-grid .slot .count { font-size: 13px; }
+  .hotbar { margin-top: 4px; }
+  .inv-spacer { height: 14px; }
+
+  /* ============ 原版 tooltip ============ */
+  #tooltip {
+    position: fixed; z-index: 50; pointer-events: none;
+    background: var(--tooltip-bg);
+    border: 1px solid var(--tooltip-border);
+    padding: 6px 9px; max-width: 260px;
+    font-family: "Segoe UI", "PingFang SC", sans-serif; font-size: 13px; line-height: 1.45;
+    color: #fff; box-shadow: 2px 2px 6px rgba(0,0,0,.6);
+    display: none;
+  }
+  #tooltip .name { font-weight: bold; }
+  #tooltip .sub { color: #b9c0c6; font-size: 12px; }
+  #tooltip .yield { color: #ffe08a; }
+
+  /* ============ 说明侧栏 ============ */
+  .notes {
+    width: 300px; background: #1e242bdd; border: 1px solid #3a4654;
+    padding: 16px 18px; border-radius: 6px; font-size: 13px; line-height: 1.7;
+  }
+  .notes h2 { font-size: 15px; color: #ffd76e; margin-bottom: 8px; }
+  .notes ul { padding-left: 18px; }
+  .notes li { margin: 4px 0; color: #c3ccd4; }
+  .notes .tag {
+    display: inline-block; background: #2c3540; border: 1px solid #44525f;
+    border-radius: 3px; padding: 0 6px; margin: 2px 2px 2px 0; font-size: 12px; color: #9fd0ff;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 原版容器面板 -->
+  <div class="panel">
+    <div class="title">武库拆解台</div>
+
+    <!-- 机器区：投料口 → 回收结果 -->
+    <div class="machine">
+      <div>
+        <div class="slot" id="inputSlot" data-state="empty" title=""></div>
+        <div class="slot-label">投料口</div>
+      </div>
+      <div class="result" id="resultBox">
+        <div class="hint" id="resultHint">放入开箱物品<br>以回收为武库点数</div>
+        <div class="gain zero" id="resultGain" style="display:none"></div>
+        <button class="dismantle-btn" id="dismantleBtn" disabled>拆解</button>
+      </div>
+    </div>
+
+    <!-- 玩家背包 -->
+    <div class="inv-label">玩家背包</div>
+    <div class="inv-grid" id="invGrid"></div>
+    <div class="inv-spacer"></div>
+    <div class="inv-label">快捷栏</div>
+    <div class="inv-grid hotbar" id="hotbarGrid"></div>
+  </div>
+
+  <!-- tooltip -->
+  <div id="tooltip"></div>
+
+  <!-- 说明 -->
+  <div class="notes">
+    <h2>原版容器 GUI 原型 · 说明</h2>
+    <ul>
+      <li>面板为原版容器样式（灰面板 + 内凹槽位），后续 Java 落地用 <span class="tag">AbstractContainerScreen</span> + 原版 container 纹理即可。</li>
+      <li><b>投料口</b>：1 格输入槽（与漏斗投喂共用同一格，呼应贴图顶部投料口）。</li>
+      <li><b>拆解按钮</b>：放入带品级物品后按钮亮起，点击执行回收并发放 <b>+N 武库点数</b>（对齐 GDD「+N 点数」正反馈）；不可回收物按钮保持禁用。</li>
+      <li><b>无钱包</b>：武库点数是实物，拆解后直接进玩家背包（背包满则掉落在拆解台上方）；不设全局余额，散落在背包/箱子里的点数无法统计。</li>
+      <li>点击背包物品放入投料口 → 点「拆解」按钮执行回收 → 快捷栏中武库点数堆叠数量增加；点击投料口物品可取回。悬停任意物品显示原版 tooltip。</li>
+      <li>回收数值为当前实现：<b>3 / 5 / 7 / 8 / 8</b>（g1→g5，clamp 于钥匙成本 9 之下）。</li>
+      <li>演示物品来自高级箱默认池（石/铁/金/钻/下界合金），品级 1→5。</li>
+    </ul>
+  </div>
+
+<script>
+  // ---- 演示物品数据（品级 → 回收点数，对齐 ArmoryRecyclerBlockEntity.yieldForGrade） ----
+  const YIELD = { 1: 3, 2: 5, 3: 7, 4: 8, 5: 8 };
+  const RARITY = {
+    1: { name: '军规级', color: '#4b69ff' },
+    2: { name: '受限级', color: '#8847ff' },
+    3: { name: '保密级', color: '#d32ce6' },
+    4: { name: '隐秘级', color: '#eb4b4b' },
+    5: { name: '违禁',   color: '#e4ae39' }
+  };
+  // 图标：优先用模组真实贴图；原版装备用色块模拟
+  const TEX = '../common/src/main/resources/assets/csgobox/textures/item/';
+
+  // 物品定义：{ id, name, grade?, icon?, css? }
+  const DEMO = [
+    { id: 'netherite_sword', name: '下界合金剑', grade: 5, css: 'linear-gradient(135deg,#3b3b3b,#777)', count: 1 },
+    { id: 'diamond_sword',   name: '钻石剑',     grade: 4, css: 'linear-gradient(135deg,#4aedc9,#1d8a74)', count: 1 },
+    { id: 'golden_sword',    name: '金剑',       grade: 3, css: 'linear-gradient(135deg,#ffe066,#d4a017)', count: 2 },
+    { id: 'iron_sword',      name: '铁剑',       grade: 2, css: 'linear-gradient(135deg,#e8e8e8,#9a9a9a)', count: 1 },
+    { id: 'stone_sword',     name: '石剑',       grade: 1, css: 'linear-gradient(135deg,#a8a8a8,#5c5c5c)', count: 3 },
+    { id: 'csgo_box',        name: '军火箱',     grade: null, icon: TEX + 'csgo_box.png', count: 2 },
+    { id: 'csgo_key3',       name: '钥匙',       grade: null, icon: TEX + 'csgo_key3.png', count: 5 },
+    { id: 'premium_supply_box', name: '军火商高级箱', grade: null, icon: TEX + 'premium_supply_box.png', count: 1 },
+    { id: 'armory_point',    name: '武库点数',   grade: null, icon: TEX + 'armory_point.png', count: 16 }
+  ];
+
+  // 快捷栏里的武库点数堆叠（演示：拆解所得直接进背包，与真实发放逻辑一致）
+  let armoryPointCount = DEMO.find(d => d.id === 'armory_point').count;
+  let armoryPointSlotEl = null;
+
+  // ---- 渲染 ----
+  function iconFor(item) {
+    if (item.icon) return `<img class="icon" src="${item.icon}" alt="">`;
+    return `<div class="icon" style="background:${item.css};border:2px solid #0008;box-shadow:inset 0 0 0 1px #fff3;"></div>`;
+  }
+
+  function slotHTML(item, size) {
+    return `<div class="slot" data-id="${item.id}" data-grade="${item.grade ?? ''}">${iconFor(item)}<span class="count">${item.count ?? ''}</span></div>`;
+  }
+
+  function fillGrid(sel, list, total) {
+    const grid = document.querySelector(sel);
+    grid.innerHTML = '';
+    const items = [...list];
+    for (let i = 0; i < (total ?? list.length); i++) {
+      const item = items.shift() ?? null;
+      if (!item) {
+        const empty = document.createElement('div');
+        empty.className = 'slot empty';
+        grid.appendChild(empty);
+        continue;
+      }
+      const el = document.createElement('div');
+      el.innerHTML = slotHTML(item);
+      const slot = el.firstElementChild;
+      if (item.id === 'armory_point') armoryPointSlotEl = slot;
+      slot.addEventListener('click', () => putIntoInput(item));
+      slot.addEventListener('mousemove', e => showTip(e, item));
+      slot.addEventListener('mouseleave', hideTip);
+      grid.appendChild(slot);
+    }
+  }
+  fillGrid('#invGrid', DEMO.slice(0, 6), 27);
+  fillGrid('#hotbarGrid', DEMO.slice(6), 9);
+
+  // ---- 投料口 + 拆解 ----
+  const inputSlot = document.getElementById('inputSlot');
+  const resultHint = document.getElementById('resultHint');
+  const resultGain = document.getElementById('resultGain');
+  const dismantleBtn = document.getElementById('dismantleBtn');
+  let pendingItem = null; // 投料口中待拆解的物品
+
+  function resetResult() {
+    resultHint.style.display = '';
+    resultHint.style.color = '#5a5a5a';
+    resultHint.innerHTML = '放入开箱物品<br>以回收为武库点数';
+    resultGain.style.display = 'none';
+    resultGain.className = 'gain zero';
+    dismantleBtn.disabled = true;
+  }
+
+  function clearInput() {
+    inputSlot.setAttribute('data-state', 'empty');
+    inputSlot.innerHTML = '';
+    pendingItem = null;
+  }
+
+  function putIntoInput(item) {
+    inputSlot.setAttribute('data-state', 'filled');
+    inputSlot.setAttribute('data-id', item.id);
+    inputSlot.innerHTML = iconFor(item);
+    pendingItem = item;
+
+    const grade = item.grade;
+    if (!grade) {
+      // 不可回收：红字提示，按钮禁用
+      resultGain.style.display = 'none';
+      resultHint.style.display = '';
+      resultHint.innerHTML = '此物品无法回收';
+      resultHint.style.color = '#8a2b2b';
+      dismantleBtn.disabled = true;
+    } else {
+      // 可回收：显示预期产出，启用拆解按钮
+      const gain = YIELD[grade];
+      resultGain.style.display = 'flex';
+      resultGain.className = 'gain';
+      resultGain.innerHTML = '<img src="' + TEX + 'armory_point.png" alt=""> +' + gain;
+      resultHint.style.display = 'none';
+      dismantleBtn.disabled = false;
+    }
+    // 点击投料口 → 取回物品
+    inputSlot.onclick = () => { clearInput(); resetResult(); };
+  }
+
+  // 拆解按钮：回收投料口物品
+  dismantleBtn.addEventListener('click', () => {
+    if (!pendingItem || !pendingItem.grade) return;
+    const gain = YIELD[pendingItem.grade];
+    // 点数以实物进背包：快捷栏武库点数堆叠数量同步增加
+    armoryPointCount += gain;
+    if (armoryPointSlotEl) {
+      const c = armoryPointSlotEl.querySelector('.count');
+      if (c) c.textContent = armoryPointCount;
+    }
+    // 结果区显示实际获得（提示进背包）
+    resultGain.style.display = 'flex';
+    resultGain.className = 'gain';
+    resultGain.innerHTML = '<img src="' + TEX + 'armory_point.png" alt=""> +' + gain;
+    resultHint.style.color = '#2e6b12';
+    resultHint.style.display = '';
+    resultHint.innerHTML = '已放入背包';
+    clearInput();
+    dismantleBtn.disabled = true;
+  });
+
+  // ---- 原版 tooltip ----
+  const tip = document.getElementById('tooltip');
+  function showTip(e, item) {
+    const g = item.grade;
+    let html = `<div class="name" style="color:${g ? RARITY[g].color : '#fff'}">${item.name}</div>`;
+    if (g) {
+      html += `<div class="sub">品级 ${g} · ${RARITY[g].name}</div>`;
+      html += `<div class="yield">回收：+${YIELD[g]} 武库点数</div>`;
+    } else {
+      html += `<div class="sub">此物品无法回收</div>`;
+    }
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + 14, y = e.clientY - h - 8;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+    if (y < 8) y = e.clientY + 16;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+</script>
+</body>
+</html>
