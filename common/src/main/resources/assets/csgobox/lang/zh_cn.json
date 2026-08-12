@@ -159,7 +159,7 @@
   "csgobox.terminal.confirm.price": "价格：%s 武库点数",
   "csgobox.terminal.confirm.wear": "磨损：%s · %s",
   "csgobox.terminal.confirm.waiting": "交易中…",
-  "csgobox.terminal.sys.poor": "武库点数不足，交易未完成。",
+  "csgobox.terminal.sys.poor": "等你拿了足够的钱再来谈吧",
   "csgobox.terminal.sys.invalid": "交易失败，请重新操作。",
   "block.csgobox.armory_recycler": "武库拆解台",
   "item.csgobox.armory_recycler": "武库拆解台",
