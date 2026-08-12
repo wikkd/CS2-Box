@@ -2,6 +2,7 @@ package com.reclizer.csgobox.forge_26_1_2.gui;
 
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.forge_26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_26_1_2.utils.IconListTools;
 import com.reclizer.csgobox.forge_26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -108,8 +109,8 @@ public class CsboxBulkResultScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            guiGraphics.fillGradient(0, 0, this.width, this.height,
-                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
         }
         renderHeader(guiGraphics);
         renderEntries(guiGraphics, partialTicks);

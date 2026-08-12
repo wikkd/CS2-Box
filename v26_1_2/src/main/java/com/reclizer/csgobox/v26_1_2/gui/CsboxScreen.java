@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
@@ -48,8 +49,7 @@ public class CsboxScreen extends Screen {
 
 
 
-    private float itemRotX;
-    private float itemRotY;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     private Map<ItemStack, Integer> itemGroup;
 
@@ -232,15 +232,21 @@ public class CsboxScreen extends Screen {
         boolean isInRange = (pMouseX >= x && pMouseX <= x + size)
                 && (pMouseY >= y && pMouseY <= y + size);
         if (event.button() == 0 && isInRange) {
-            this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
-            this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
+            this.itemDrag.accumulate(pDragX, pDragY);
         }
         return super.mouseDragged(event, pDragX, pDragY);
     }
 
     @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        this.itemDrag.release();
+        return super.mouseReleased(event);
+    }
+
+    @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.hint != null) {
@@ -272,7 +278,7 @@ public class CsboxScreen extends Screen {
         // making both unreadable.
         if (!boxEmpty && this.entity != null) {
             GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, previewPixelX(), previewPixelY(),
-                    this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
+                    this.itemDrag.rotation(), itemMenu, this.entity, scale);
         }
 
         renderGridAnimated(guiGraphics, partialTicks);

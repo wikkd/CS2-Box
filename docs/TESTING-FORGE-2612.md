@@ -1,6 +1,7 @@
-# forge_26_1_2 (MinecraftForge) 1.0.6 测试流程
+# forge_26_1_2 (MinecraftForge) 测试流程（随 1.0.7 线同步开发）
 
-> 适用范围：`forge_26_1_2` 平台模块，基线 **v1.0.6**（tag `v1.0.6`）。
+> 适用范围：`forge_26_1_2` 平台模块，与 `v26_1_2` 基准**特性同步**（自 1.0.7 线起，
+> 见 AGENTS.md「forge_26_1_2 同步」；1.0.6 基线发行记录见 §6 发布记录）。
 > 设计对齐 `mc_tools`（`~/Desktop/mc_tools`）的测试理念（分层门禁 + 回归清单 +
 > 统一报告/退出码），但**只依赖 CS2-Box 仓库自身**——forge 是 MinecraftForge
 > loader，无法加载 NeoForge 版的 TestHelper MCP 辅助模组（详见 §7 路线）。
@@ -32,7 +33,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | L0 | clean 编译 + 架构约束 | `test-forge-2612.sh` S1 | 自动化 |
 | L1 | jar 产物（文件名/非空/mods.toml 版本） | `test-forge-2612.sh` S2 | 自动化 |
 | L2 | 一致性（版本四同步 / 渲染门面漂移） | `test-forge-2612.sh` S3-S4 | 自动化 |
-| L3 | 平台层冒烟（入口可加载 + 1.0.6 基线守卫） | `test-forge-2612.sh` S5 | 自动化 |
+| L3 | 平台层冒烟（入口可加载 + 1.0.7 同步物品断言） | `test-forge-2612.sh` S5 | 自动化 |
 | L4 | 运行时 E2E（Forge 客户端） | §5 手动清单 | 人工 |
 
 ## 3. 前置条件
@@ -92,11 +93,12 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 `forge_26_1_2/build/libs/csgobox-forge-26.1.2-1.0.6.jar` 放入 `mods/`。
 建议删掉旧的 `config/csgobox.toml` 与 `config/csbox/` 后再测，避免脏数据。
 
-> **1.0.6 资源基线**：forge 模块保持 1.0.6 特性基线（暂不做 1.0.7 更新），
-> `forge_26_1_2/build.gradle` 对 common 资源/源码源集排除了 1.0.7 线增量
-> （`villager_trade`/`trade_set`/armory 配方与资产/terminal 资产与 Java 包等）。
-> 注意：排除清单是硬编码的，common 若新增同路径文件会被一并排除；forge 追平
-> 1.0.7 时删除该清单即可。
+> **同步开发状态**：forge 模块自 1.0.7 线起与 `v26_1_2` 保持特性同步（同一
+> `mod_version`，同步纪律见 AGENTS.md「forge_26_1_2 同步」）。同步进行中时，
+> `forge_26_1_2/build.gradle` 对 common 资源/源码源集保留 1.0.7 线排除清单
+> （`villager_trade`/`trade_set`/armory 配方与资产/terminal 资产与 Java 包等），
+> 已同步的部分随进度删除排除项。漂移盘点：`scripts/port-forge-2612.py --dry-run`；
+> 同步后必跑本文件 L0-L3 门禁。
 
 ### 5.2 用例（F1-F12）
 
@@ -117,7 +119,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | F2 | 动态箱子注册 | `/give @p csgobox:weapon_supply_box 5`（文件名与 `config/csbox/` 中 json 一致）→ 获得物品，图标**非紫黑** |
 | F3 | 开箱主流程 | 手持箱子右键 → 开箱确认/进度屏 → 动画（CS2 风格滚动）→ 结果屏；无卡屏、无异常日志 |
 | F4 | 消耗与产出 | 开箱后钥匙 `-1`；结果屏物品进入背包；关闭 GUI 回世界正常 |
-| F5 | 批量开箱 | 配置 `bulkOpenCount`（如 10）→ Shift+右键 → 总览屏 → 确认屏 → 流水结果屏（1.0.6 屏蔽开关生效） |
+| F5 | 批量开箱 | 配置 `bulkOpenCount`（如 10）→ Shift+右键 → 总览屏 → 确认屏 → 流水结果屏（1.0.7 线已恢复，随 forge 同步生效） |
 | F6 | 配置热重载 | 修改 `config/csbox/*.json`（权重/分级）→ `/csbox reload` → `mc_status` 等价的开箱结果变化；`enableHotReload=true` 时文件改动自动生效 |
 | F7 | 磨损耐久 | 开出有耐久物品 → 查看界面 `wear` 显示与实际扣损一致；`damageItemByWear=false` 时不扣 |
 | F8 | 成就/统计 | 开箱后 `csgobox:opened_box` 自定义统计累计；成就页 CS2 Box 标签出现 |
@@ -160,7 +162,7 @@ MCP_PORT=41502 python3 scripts/test_csbox_ext.py --skip-enter --port 41502
 
 ## 6. 发布门禁
 
-对照 `docs/RELEASE.md` §3 质量门，forge 1.0.6 发布前必须：
+对照 `docs/RELEASE.md` §3 质量门，forge 同步/发布前必须：
 
 - [x] L0-L3 全绿（`./scripts/test-forge-2612.sh` 退出码 0）；
 - [x] L4 关键路径 F1-F5 通过；
@@ -175,6 +177,33 @@ MCP_PORT=41502 python3 scripts/test_csbox_ext.py --skip-enter --port 41502
 
 forge **不参与** 3 平台镜像纪律与 `build.yml` 构建矩阵（保持实验模块定位，
 直到 §7 路线落地并决定转正）。
+
+> **同步记录（2026-08-12，1.0.7 线首轮）**：机械移植 19 文件 + 手工适配
+> （ModItems / ModBlocks / CsboxConfig / AnimRenderOps / IconListTools /
+> ButtonPalette / GuiItemMove / PacketTerminalBuy / Networking 等）后
+> `clean compileJava` 通过，L0-L3 门禁 7/7 PASS；`PlatformSmokeTest` 基线守卫
+> 已更新为 1.0.7 同步断言（terminal / premium / armory 为预期项）。
+>
+> **同步记录（2026-08-12，1.0.7 线第二轮）**：Blur 软适配合入 forge 全部 6 屏
+> （CsboxScreen 删除 `extractBackground` override、背景 fill 移入 `renderBg` 走
+> `UiBackdrop.fill()` + `AnimRenderOps.fillGradient`；CsLookItemScreen /
+> CsboxConfirmScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen 同管线；
+> CsboxProgressScreen `extractBlurredBackground` 在 forge `ModList.isLoaded("blur")`
+> 时走 vanilla、否则 `AnimRenderOps.renderBlurredBackground`），并顺带并入
+> CsLookItemScreen 进入淡出 + `ItemDrag3D` 拖拽、CsboxProgressScreen 拒绝横幅
+> （`rejected` 40 tick 关闭）。批量开箱管线对齐 v26：`PacketCsgoBulkProgress`
+> 换 `BoxStripGenerator`（`BulkOpenResult` 补 `fallback` 第 8 参、finalize 补回退
+> 分级修复循环，forge `PacketCsgoProgress` 新增 boxId 版 `resolveGrade`）；
+> `PacketBoxBulkResult` 按 `BULK_PER_PACKET=32` 分块发送、`MAX_PENDING_BULK` 提到
+> 64，客户端 `CsboxProgressScreen` 以 `drainBulkChunks()` while 循环聚合全部
+> chunk 后进 `CsboxBulkResultScreen`。单开路径同步收口：`PacketCsgoProgress`
+> 弃用手写 `itemList`+`AnimationStrip` 循环，改走 `GradeMapCache.get(boxId)`
+> 缓存池 + `BoxStripGenerator.generate` 统一抽条（删除旧 Map 版 `resolveGrade`，
+> 仅留 boxId 版）；`/csbox` 命令按 v26 收口对齐（移除 `set`/`give`/独立
+> `errors`/`tutorial` 子命令，仅留裸命令帮助、`info` 含可选 box 参数并附加载
+> 错误列表、`reload` 含 `tutorial` 子命令、`nbt hand` 任意玩家可用；
+> `BoxItemCodec` 补 `gson()` 访问器）。`clean compileJava` 通过，L0-L3 门禁 7/7
+> PASS（`build/test-reports/forge-2612.xml`）。
 
 ## 7. 已知限制与后续路线
 
@@ -234,5 +263,5 @@ forge 已获得与 NeoForge 平台同等的黑盒 E2E（`mc_*` 工具 + `test_cs
 | S1 失败 | 看编译错误；改动涉及平台时不要依赖增量缓存，必须 `clean` |
 | S2 产物缺失 | 确认 `-Pactive_versions=forge-26.1.2` 传了；看 jar task 输出路径 |
 | S3 失败 | 按 `scripts/check-version.sh` 输出四处版本同步 |
-| S5 失败 | 看 `forge_26_1_2/build/test-results/test/` 报告；若 `ITEM_TERMINAL` 存在，说明 1.0.7 内容泄漏，需回退到 v1.0.6 基线 |
+| S5 失败 | 看 `forge_26_1_2/build/test-results/test/` 报告；`PlatformSmokeTest` 断言已随 1.0.7 同步更新（terminal/armory/premium 为预期项），失败说明同步回退或字段被误删 |
 | runClient 起不来 | 检查 JDK 25 toolchain、删除 `run/` 后重试、看 `logs/latest.log` |

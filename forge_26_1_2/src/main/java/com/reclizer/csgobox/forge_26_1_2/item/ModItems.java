@@ -11,6 +11,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraftforge.eventbus.api.bus.BusGroup;
 import net.minecraftforge.registries.DeferredRegister;
 
@@ -35,6 +36,35 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY1.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
+                entries.accept(ModItems.ITEM_ARMORY_POINT.get());
+
+                // Terminal creative entry is bound to its own decoupled box
+                // definition (csgobox:terminal) so the terminal UI shows its
+                // own loot list; if that config is missing it falls back to
+                // the first registered box, and on a pure client with an
+                // empty local BoxRegistry it degrades to an unbound terminal.
+                ItemStack terminalStack = new ItemStack(ModItems.ITEM_TERMINAL.get());
+                BoxDefinition terminalDef = BoxRegistry.get(Identifier.parse("csgobox:terminal"));
+                if (terminalDef == null) {
+                    terminalDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
+                }
+                if (terminalDef != null) {
+                    terminalStack.set(ItemCsgoBox.BOX_ID.get(), terminalDef.id());
+                }
+                entries.accept(terminalStack);
+
+                // Village-exclusive premium case: bound to its own decoupled
+                // box definition like the terminal; a missing config falls
+                // back to the item's registry id at open time.
+                ItemStack premiumStack = new ItemStack(ModItems.ITEM_PREMIUM_BOX.get());
+                BoxDefinition premiumDef = BoxRegistry.get(Identifier.parse("csgobox:premium_supply_box"));
+                if (premiumDef == null) {
+                    premiumDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
+                }
+                if (premiumDef != null) {
+                    premiumStack.set(ItemCsgoBox.BOX_ID.get(), premiumDef.id());
+                }
+                entries.accept(premiumStack);
 
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
@@ -51,6 +81,9 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY1 = ITEMS.register("csgo_key1", () -> new ItemCsgoKey(itemProperties("csgo_key1")));
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", () -> new ItemCsgoKey(itemProperties("csgo_key2")));
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", () -> new ItemCsgoKey(itemProperties("csgo_key3")));
+    public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(itemProperties("armory_point").rarity(Rarity.COMMON)));
+    public static final Supplier<Item> ITEM_TERMINAL = ITEMS.register("terminal", () -> new ItemTerminal(itemProperties("terminal")));
+    public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", () -> new ItemPremiumBox(itemProperties("premium_supply_box")));
 
     /** Forge 26.1 requires the item id to be set on Properties before construction. */
     private static Item.Properties itemProperties(String name) {

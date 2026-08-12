@@ -3,7 +3,7 @@ package com.reclizer.csgobox.v26_1_2.event;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.v26_1_2.gui.CsboxScreen;
-import com.reclizer.csgobox.v26_1_2.gui.TerminalScreen;
+import com.reclizer.csgobox.v26_1_2.gui.TerminalBootScreen;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
@@ -41,7 +41,7 @@ public final class ClickEvent {
         if (heldItem.getItem() instanceof ItemTerminal) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.execute(() -> mc.setScreen(new TerminalScreen(heldItem.copy())));
+                mc.execute(() -> mc.setScreen(new TerminalBootScreen(heldItem.copy())));
             }
             return;
         }

@@ -23,4 +23,4 @@ CS2-Box 是 CS:GO 风格开箱玩法的 Minecraft NeoForge 模组，当前 9 平
 
 ## Connections
 - [[multiloader-architecture]] / [[server-authoritative-rng]] / [[achievement-system]]
-- [[ARCHITECTURE]] / [[DEVELOPMENT]] / [[CONFIGURATION]] 等 source
+- [[architecture]] / [[development]] / [[configuration]] 等 source

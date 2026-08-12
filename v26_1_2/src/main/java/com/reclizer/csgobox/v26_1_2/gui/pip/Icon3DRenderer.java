@@ -2,7 +2,8 @@ package com.reclizer.csgobox.v26_1_2.gui.pip;
 
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.reclizer.csgobox.utils.Quat;
+import org.joml.Quaternionf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -68,19 +69,13 @@ public class Icon3DRenderer extends PictureInPictureRenderer<Icon3DRenderState> 
 
         // User-driven rotation. Done AFTER the flip so the rotation lives
         //    in the same posestack frame as 1.21.1's
-        //    scale(1, -1, 1) -> mulPose -> mulPose order. This keeps the
-        //    horizontal-drag -> "model spins one way" mapping consistent with
-        //    the 1.21.1 reference behaviour the rest of the GUI was tuned
-        //    against.
-        if (renderState.rotXDeg() != 0.0F) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(renderState.rotXDeg()));
-        }
-        if (renderState.rotYDeg() != 0.0F) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(renderState.rotYDeg()));
-        }
-        if (renderState.rotZDeg() != 0.0F) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(renderState.rotZDeg()));
-        }
+        //    scale(1, -1, 1) -> mulPose -> mulPose order. The state carries a
+        //    unit quaternion (the drag-feel algorithm's orientation) instead
+        //    of two euler angles, so the horizontal-drag -> "model spins one
+        //    way" mapping stays exactly as tuned and no gimbal projection
+        //    loss occurs.
+        Quat q = renderState.rotation();
+        poseStack.mulPose(new Quaternionf(q.x(), q.y(), q.z(), q.w()).normalize());
 
         // 3D lighting path (matches the visual character of the 1.21.1 preview).
         Lighting.Entry lightingEntry = itemUsesFlatLight(renderState.itemStackRenderState())

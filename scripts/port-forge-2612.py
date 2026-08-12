@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
-"""Port v26_1_2 (NeoForge) source to forge_26_1_2 (MinecraftForge 26.1.2).
+"""Sync v26_1_2 (NeoForge) source -> forge_26_1_2 (MinecraftForge 26.1.2).
 
-Mechanical transformations:
-- Package rename: com.reclizer.csgobox.v26_1_2 -> com.reclizer.csgobox.forge_26_1_2
-- NeoForge imports -> Forge imports
-- NeoForge API patterns -> Forge API patterns
+Sync discipline (see AGENTS.md «forge_26_1_2 同步»):
+- Mechanical port only: package rename + NeoForge->Forge import/API mapping.
+- Files with manual adaptations are SKIPPED by default and reported; the drift
+  between the mechanical port and the current forge file must be hand-merged.
+  Use --force to re-plant them (only when no local changes are intended).
+- --dry-run prints the sync plan (missing / drifted / manual) without writing.
+
+Usage:
+  scripts/port-forge-2612.py            # port missing files, report drifted
+  scripts/port-forge-2612.py --dry-run  # plan only, no writes
+  scripts/port-forge-2612.py --force    # also re-plant manual-adaptation files
+  scripts/port-forge-2612.py --skip-manual   # do not even report manual files
+
+Exit code: 0 = nothing to do / fully synced; 1 = missing files ported or
+drifted/manual files remain (dry-run reports them too).
 """
+import argparse
 import os
 import re
-import shutil
+import sys
 
 SRC_ROOT = "/Users/shuangyuexingxun/Desktop/CS2-Box/v26_1_2/src/main/java/com/reclizer/csgobox/v26_1_2"
 DST_ROOT = "/Users/shuangyuexingxun/Desktop/CS2-Box/forge_26_1_2/src/main/java/com/reclizer/csgobox/forge_26_1_2"
@@ -18,7 +30,7 @@ REPLACEMENTS = [
     # Package rename
     ("com.reclizer.csgobox.v26_1_2", "com.reclizer.csgobox.forge_26_1_2"),
     # NeoForge event bus
-    ("net.neoforged.bus.api.IEventBus", "net.minecraftforge.eventbus.api.IEventBus"),
+    ("net.neoforged.bus.api.IEventBus", "net.minecraftforge.eventbus.api.bus.BusGroup"),
     ("net.neoforged.bus.api.SubscribeEvent", "net.minecraftforge.eventbus.api.listener.SubscribeEvent"),
     # FML
     ("net.neoforged.fml.ModLoadingContext", "net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext"),
@@ -36,9 +48,12 @@ REPLACEMENTS = [
     ("net.neoforged.neoforge.registries.DeferredRegister", "net.minecraftforge.registries.DeferredRegister"),
     ("net.neoforged.neoforge.registries.NeoForgeRegistries", "net.minecraftforge.registries.ForgeRegistries"),
     ("net.neoforged.neoforge.registries.RegisterEvent", "net.minecraftforge.registries.RegisterEvent"),
+    ("net.neoforged.neoforge.registries.DeferredItem", "net.minecraftforge.registries.DeferredItem"),
     # NeoForge network
     ("net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent", ""),
-    ("net.neoforged.neoforge.network.handling.IPayloadContext", "net.minecraftforge.network.NetworkEvent"),
+    ("net.neoforged.neoforge.network.registration.PayloadRegistrar", ""),
+    ("net.neoforged.neoforge.network.handling.IPayloadContext", "net.minecraftforge.event.network.CustomPayloadEvent"),
+    ("final IPayloadContext context", "final CustomPayloadEvent.Context context"),
     ("net.neoforged.neoforge.network.PacketDistributor", "net.minecraftforge.network.PacketDistributor"),
     # NeoForge events
     ("net.neoforged.neoforge.event.RegisterCommandsEvent", "net.minecraftforge.event.RegisterCommandsEvent"),
@@ -48,6 +63,7 @@ REPLACEMENTS = [
     ("net.neoforged.neoforge.event.server.ServerStartingEvent", "net.minecraftforge.event.server.ServerStartingEvent"),
     ("net.neoforged.neoforge.event.server.ServerStoppingEvent", "net.minecraftforge.event.server.ServerStoppingEvent"),
     ("net.neoforged.neoforge.event.tick.ServerTickEvent", "net.minecraftforge.event.tick.ServerTickEvent"),
+    ("net.neoforged.neoforge.event.entity.player.PlayerContainerEvent", "net.minecraftforge.event.entity.player.PlayerContainerEvent"),
     # NeoForge attachment (capability)
     ("net.neoforged.neoforge.attachment.AttachmentType", "net.minecraftforge.common.capabilities.Capability"),
     ("net.neoforged.neoforge.attachment.IAttachmentHolder", "net.minecraftforge.common.capabilities.ICapabilityProvider"),
@@ -63,43 +79,126 @@ REPLACEMENTS = [
     ("@EventBusSubscriber(", "@Mod.EventBusSubscriber("),
 ]
 
-def port_file(src_path, dst_path):
-    """Read a source file, apply transformations, write to destination."""
-    with open(src_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+# Files whose forge side carries manual adaptations: the mechanical port would
+# clobber them, so they are skipped by default and must be hand-merged.
+MANUAL_ADAPTATION_FILES = {
+    "CsgoBox.java",
+    "item/ModItems.java",
+    "item/ItemCsgoBox.java",
+    "item/ItemCsgoKey.java",
+    "packet/PacketCsgoProgress.java",
+    "packet/PacketCsgoBulkProgress.java",
+    "packet/PacketBoxOpenResult.java",
+    "packet/PacketBoxBulkResult.java",
+    "packet/PacketRequestBoxItems.java",
+    "packet/PacketSyncBoxItems.java",
+    "packet/PacketValidation.java",
+    "capability/ModCapability.java",
+    "capability/CsboxPlayerData.java",
+    "config/CsboxConfig.java",
+    "event/ClickEvent.java",
+    "event/ModEvents.java",
+    "event/LoadErrorAnnouncer.java",
+    "command/CsboxCommand.java",
+    "gui/CsboxScreen.java",
+    "gui/CsboxProgressScreen.java",
+    "gui/CsboxBulkOverviewScreen.java",
+    "gui/CsboxBulkResultScreen.java",
+    "gui/CsboxConfirmScreen.java",
+    "gui/CsLookItemScreen.java",
+    "utils/GuiItemMove.java",
+    "utils/IconListTools.java",
+    "utils/ButtonPalette.java",
+    "utils/RenderFontTool.java",
+    "box/BoxJsonLoader.java",
+    "box/BoxDefaults.java",
+    "box/BoxJsonSchemaValidator.java",
+    "box/BoxDefinition.java",
+    "box/BoxRegistry.java",
+    "box/GradeGroup.java",
+    "box/BulkBoxContext.java",
+    "box/BulkOpenResult.java",
+    "box/LoadError.java",
+    "box/TutorialFetcher.java",
+    "box/TutorialSources.java",
+    "box/BoxItemCodec.java",
+    "advancement/OpenedBoxTrigger.java",
+    "advancement/ModLoadedTrigger.java",
+    "sounds/ModSounds.java",
+    "gui/pip/Icon3DRenderState.java",
+    "gui/pip/Icon3DRenderer.java",
+}
 
+
+def port_content(content: str) -> str:
     for old, new in REPLACEMENTS:
-        if old:  # skip empty replacements
+        if old:
             content = content.replace(old, new)
+    return content
 
-    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-    with open(dst_path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    print(f"  Ported: {os.path.relpath(dst_path, DST_ROOT)}")
 
-def main():
-    print(f"Porting from: {SRC_ROOT}")
-    print(f"         to: {DST_ROOT}")
-    print()
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Sync v26_1_2 -> forge_26_1_2 (mechanical port)")
+    ap.add_argument("--dry-run", action="store_true", help="print plan, do not write")
+    ap.add_argument("--force", action="store_true", help="re-plant manual-adaptation files too")
+    ap.add_argument("--skip-manual", action="store_true", help="do not report manual-adaptation files")
+    args = ap.parse_args()
 
-    file_count = 0
+    missing, drifted, manual, up_to_date = [], [], [], []
     for root, dirs, files in os.walk(SRC_ROOT):
         for filename in sorted(files):
-            if not filename.endswith('.java'):
+            if not filename.endswith(".java"):
                 continue
             src_path = os.path.join(root, filename)
-            rel_path = os.path.relpath(src_path, SRC_ROOT)
-            dst_path = os.path.join(DST_ROOT, rel_path)
-            port_file(src_path, dst_path)
-            file_count += 1
+            rel = os.path.relpath(src_path, SRC_ROOT)
+            dst_path = os.path.join(DST_ROOT, rel)
+            ported = port_content(open(src_path, encoding="utf-8").read())
+            if not os.path.exists(dst_path):
+                missing.append((rel, dst_path, ported))
+                continue
+            if rel in MANUAL_ADAPTATION_FILES:
+                manual.append(rel)
+                continue
+            current = open(dst_path, encoding="utf-8").read()
+            if current == ported:
+                up_to_date.append(rel)
+            else:
+                drifted.append((rel, dst_path, ported))
 
-    print(f"\nDone! Ported {file_count} files.")
-    print("\nNOTE: The following files need MANUAL adaptation:")
-    print("  - CsgoBox.java (entry point: constructor, event bus, networking)")
-    print("  - capability/ModCapability.java (AttachmentType -> Forge Capability)")
-    print("  - packet/*.java (CustomPacketPayload -> SimpleChannel)")
-    print("  - item/ModItems.java (DeferredRegister API differences)")
-    print("  - gui/*.java (decoupled rendering -> GuiGraphics)")
+    print(f"v26_1_2 -> forge_26_1_2 同步盘点（dry-run={args.dry_run} force={args.force}）")
+    print(f"  missing(新增可机械移植): {len(missing)}")
+    for rel, _, _ in missing:
+        print(f"    + {rel}")
+    print(f"  drifted(机械漂移,可--force重灌或手工合入): {len(drifted)}")
+    for rel, _, _ in drifted:
+        print(f"    ~ {rel}")
+    if not args.skip_manual:
+        print(f"  manual(手工适配,需人工合入): {len(manual)}")
+        for rel in manual:
+            print(f"    M {rel}")
+    print(f"  up-to-date(与机械移植一致): {len(up_to_date)}")
 
-if __name__ == '__main__':
-    main()
+    if args.dry_run:
+        return 1 if (missing or drifted) else 0
+
+    writes = 0
+    for rel, dst, content in missing:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"  ported: {rel}")
+        writes += 1
+    if args.force:
+        for rel, dst, content in drifted:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"  re-planted: {rel}")
+            writes += 1
+    print(f"\n{len(missing)} missing ported, {len(drifted) if args.force else 0} drifted re-planted, "
+          f"{len(manual)} manual kept. writes={writes}")
+    return 1 if (missing or (drifted and not args.force) or manual) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

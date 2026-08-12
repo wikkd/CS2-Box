@@ -21,9 +21,6 @@ import java.util.Random;
  */
 public final class TerminalOfferItems {
 
-    /** Armory Point offer price per box grade (recycle yield × 2, integers only). */
-    private static final int[] GRADE_PRICE = {6, 10, 16, 22, 30};
-
     private static List<ItemStack>[] gradePools;
     private static final Map<Integer, ItemStack> ROUND_ITEM = new HashMap<>();
     private static final Map<Integer, Integer> ROUND_GRADE = new HashMap<>();
@@ -72,10 +69,9 @@ public final class TerminalOfferItems {
         return NegotiationModel.rarityKeyForGrade(gradeFor(offer));
     }
 
-    /** Whole Armory Point price of the offered item (no decimals). */
+    /** Whole Armory Point price of the offered item (shared grade price table). */
     public static int priceFor(NegotiationModel.Offer offer) {
-        int g = gradeFor(offer);
-        return GRADE_PRICE[Math.max(0, Math.min(g - 1, GRADE_PRICE.length - 1))];
+        return NegotiationModel.priceForGrade(gradeFor(offer));
     }
 
     /** One fixed random item per terminal session (region 10 slot). */

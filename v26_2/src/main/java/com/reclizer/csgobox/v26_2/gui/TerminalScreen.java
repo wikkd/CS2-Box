@@ -2,16 +2,23 @@ package com.reclizer.csgobox.v26_2.gui;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
+import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalActionBar;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalChatRegion;
+import com.reclizer.csgobox.v26_2.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalOfferRegion;
+import com.reclizer.csgobox.v26_2.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuy;
+import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuyResult;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.HudVisibility;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -19,6 +26,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -35,18 +43,34 @@ import net.minecraft.world.item.ItemStack;
  */
 public class TerminalScreen extends Screen {
 
+    /** The open terminal screen, or null. Only one screen can be open at a time. */
+    private static TerminalScreen OPEN_INSTANCE;
+
+    /** Current open terminal screen (buy result handler looks it up this way). */
+    public static TerminalScreen getOpen() {
+        return OPEN_INSTANCE;
+    }
+
     private final NegotiationModel model = new NegotiationModel();
     private final TerminalChatRegion chatRegion = new TerminalChatRegion();
     private final TerminalActionBar actionBar = new TerminalActionBar();
     private final TerminalOfferRegion offerRegion = new TerminalOfferRegion();
     private final TerminalBottomRow bottomRow = new TerminalBottomRow();
+    private final TerminalConfirmDialog confirmDialog = new TerminalConfirmDialog();
+    private static final int INTRO_FADE_TICKS = 10;
+    private int introTicks;
     private long nowMs;
+    private long buyRequestId;
+    /** Terminal item stack (copy) — box_id travels with the buy request. */
+    private final ItemStack terminalStack;
     /** Terminal item display name (config name or anvil rename). */
     private final Component terminalName;
 
     public TerminalScreen(ItemStack terminalStack) {
         super(Component.translatable("gui.csgobox.terminal.title"));
+        OPEN_INSTANCE = this;
         this.model.start(System.currentTimeMillis());
+        this.terminalStack = terminalStack.copy();
         this.terminalName = terminalStack.getHoverName();
         offerRegion.setGradePools(buildGradePools(terminalStack));
     }
@@ -71,6 +95,14 @@ public class TerminalScreen extends Screen {
 
     private int py(double f) {
         return (int) Math.round(height * f);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.introTicks < INTRO_FADE_TICKS) {
+            this.introTicks++;
+        }
     }
 
     @Override
@@ -153,6 +185,18 @@ public class TerminalScreen extends Screen {
         int bx0 = px(0.370), by0 = py(0.875), bx1 = px(0.998), by1 = py(0.988);
         drawPanel(gg, bx0, by0, bx1, by1);
         bottomRow.render(gg, bx0, by0, bx1, by1, nowMs, model, player, terminalName);
+        confirmDialog.render(gg, width, height, player);
+        renderIntroFade(gg);
+    }
+
+    /** Black overlay fading out over the first ticks after opening. */
+    private void renderIntroFade(GuiGraphicsExtractor gg) {
+        if (this.introTicks >= INTRO_FADE_TICKS) {
+            return;
+        }
+        float p = Easing.smoothstep(0F, 1F, Math.min(1F, this.introTicks / (float) INTRO_FADE_TICKS));
+        int alpha = Math.round(255F * (1F - p));
+        AnimRenderOps.fill(gg, 0, 0, this.width, this.height, ColorTools.withAlpha(0xFF000000, alpha));
     }
 
     /** FormattedCharSequence wrapper for plain strings. */
@@ -177,6 +221,16 @@ public class TerminalScreen extends Screen {
         this.mouseX = (int) event.x();
         this.mouseY = (int) event.y();
         long now = System.currentTimeMillis();
+        if (confirmDialog.isOpen()) {
+            TerminalConfirmDialog.Hit hit = confirmDialog.mouseDown(mouseX, mouseY, now);
+            if (hit == TerminalConfirmDialog.Hit.CONFIRM) {
+                sendBuyRequest(now);
+            } else if (hit == TerminalConfirmDialog.Hit.CANCEL) {
+                confirmDialog.close();
+                model.dealerReconsider(now);
+            }
+            return true;
+        }
         if (mouseX >= closeX && mouseX <= closeX + closeW && mouseY >= closeY && mouseY <= closeY + closeH) {
             onClose();
             return true;
@@ -194,7 +248,21 @@ public class TerminalScreen extends Screen {
     public boolean mouseReleased(MouseButtonEvent event) {
         this.mouseX = (int) event.x();
         this.mouseY = (int) event.y();
-        actionBar.mouseUp(System.currentTimeMillis(), model);
+        if (confirmDialog.isOpen()) {
+            offerRegion.mouseUp();
+            return true;
+        }
+        long now = System.currentTimeMillis();
+        TerminalActionBar.Fired fired = actionBar.mouseUp(now);
+        if (fired == TerminalActionBar.Fired.ACCEPT) {
+            NegotiationModel.Offer offer = model.pending();
+            if (offer != null) {
+                confirmDialog.open(offer, TerminalOfferItems.itemFor(offer),
+                        TerminalOfferItems.priceFor(offer), offer.wearVal());
+            }
+        } else if (fired == TerminalActionBar.Fired.REJECT) {
+            model.rejectNow(now);
+        }
         offerRegion.mouseUp();
         return super.mouseReleased(event);
     }
@@ -221,15 +289,63 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) { // GLFW_KEY_ESCAPE
+            if (confirmDialog.isOpen()) {
+                long now = System.currentTimeMillis();
+                confirmDialog.close();
+                model.dealerReconsider(now);
+                return true;
+            }
             onClose();
             return true;
         }
         return super.keyPressed(event);
     }
 
+    /** Sends the buy request for the offer currently shown in the dialog. */
+    private void sendBuyRequest(long now) {
+        NegotiationModel.Offer offer = model.pending();
+        if (offer == null) {
+            confirmDialog.close();
+            return;
+        }
+        this.buyRequestId = System.nanoTime();
+        confirmDialog.setWaiting();
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalBuy(
+                    buyRequestId, terminalStack, TerminalOfferItems.itemFor(offer),
+                    offer.wearVal(), offer.round())));
+        } else {
+            confirmDialog.close();
+            model.dealerReconsider(now);
+        }
+    }
+
+    /** Server verdict for the pending buy request. */
+    public void onBuyResult(long requestId, int result, ItemStack givenItem) {
+        if (requestId != buyRequestId || !confirmDialog.isOpen()) {
+            return;
+        }
+        confirmDialog.close();
+        long now = System.currentTimeMillis();
+        if (result == PacketTerminalBuyResult.RESULT_SUCCESS) {
+            model.acceptNow(now);
+        } else if (result == PacketTerminalBuyResult.RESULT_INSUFFICIENT) {
+            model.dealerReconsider(now);
+            model.addSystem("csgobox.terminal.sys.poor", now);
+        } else {
+            model.dealerReconsider(now);
+            model.addSystem("csgobox.terminal.sys.invalid", now);
+        }
+    }
+
     @Override
     public void onClose() {
+        if (OPEN_INSTANCE == this) {
+            OPEN_INSTANCE = null;
+        }
         actionBar.close();
+        confirmDialog.close();
         // 26.2 has no Options.hideGui; restore the HUD through the wrapper.
         HudVisibility.show();
         super.onClose();

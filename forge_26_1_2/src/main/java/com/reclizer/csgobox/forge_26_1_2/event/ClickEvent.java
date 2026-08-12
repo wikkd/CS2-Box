@@ -3,7 +3,9 @@ package com.reclizer.csgobox.forge_26_1_2.event;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.forge_26_1_2.gui.CsboxScreen;
+import com.reclizer.csgobox.forge_26_1_2.gui.TerminalBootScreen;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.forge_26_1_2.item.ModItems;
 import com.reclizer.csgobox.forge_26_1_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
@@ -34,6 +36,16 @@ public final class ClickEvent {
 
         ItemStack heldItem = player.getMainHandItem();
 
+        // Terminal branch first: ItemTerminal extends ItemCsgoBox, so it must
+        // be matched before the generic box branch. No sound yet by design.
+        if (heldItem.getItem() instanceof ItemTerminal) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                mc.execute(() -> mc.setScreen(new TerminalBootScreen(heldItem.copy())));
+            }
+            return;
+        }
+
         if (heldItem.getItem() instanceof ItemCsgoBox) {
 
             float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
@@ -43,7 +55,7 @@ public final class ClickEvent {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                boolean shift = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
+                boolean shift = mc.options.keyShift.isDown();
                 mc.execute(() -> {
                     if (shift) {
                         mc.setScreen(new CsboxBulkOverviewScreen());

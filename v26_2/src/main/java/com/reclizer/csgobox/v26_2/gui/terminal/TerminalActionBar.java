@@ -35,6 +35,9 @@ public final class TerminalActionBar {
 
     private enum Pill { NONE, ACCEPT, REJECT }
 
+    /** What a completed pill press asked the screen to do. */
+    public enum Fired { NONE, ACCEPT, REJECT }
+
     private Pill pressPill = Pill.NONE;
     private long pressStartMs;
     private boolean capOpen;
@@ -264,20 +267,22 @@ public final class TerminalActionBar {
         return false;
     }
 
-    /** Fires the pill if the hold completed; always clears the press. */
-    public void mouseUp(long nowMs, NegotiationModel model) {
+    /**
+     * Reports the pill that completed its hold (the screen decides the model
+     * transition: accept opens the trade-confirm dialog, reject advances the
+     * negotiation). Always clears the press.
+     */
+    public Fired mouseUp(long nowMs) {
         if (pressPill == Pill.NONE) {
-            return;
+            return Fired.NONE;
         }
+        Fired fired = Fired.NONE;
         float fill = TerminalAnims.holdFill(nowMs, pressStartMs);
         if (fill >= HOLD_FULL) {
-            if (pressPill == Pill.ACCEPT) {
-                model.acceptNow(nowMs);
-            } else {
-                model.rejectNow(nowMs);
-            }
+            fired = pressPill == Pill.ACCEPT ? Fired.ACCEPT : Fired.REJECT;
         }
         pressPill = Pill.NONE;
+        return fired;
     }
 
     public boolean isOpen() {

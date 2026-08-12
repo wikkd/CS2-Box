@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.utils;
 
+import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.v26_1_2.gui.pip.Icon3DRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -99,12 +100,14 @@ public final class AnimRenderOps {
                 mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
                 AABB bounds = tracked.getModelBoundingBox();
                 if (bounds != null) {
-                    // item() maps the model ORIGIN to pixel (8,8) of the 16px
-                    // GUI icon, so the visual centre lands at bboxCentre+8.
-                    // Shift by -(centre+8) to pin the visual centre on (pX,pY);
-                    // without the -8 the icon floated toward the bottom-right.
-                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D)) - 8F;
-                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D)) - 8F;
+                    // item() renders the model into a 16x16 GUI icon with the
+                    // model ORIGIN pinned to pixel (8,8) of that icon and one
+                    // block unit = 16px (GuiItemAtlas.drawToSlot translates to
+                    // the slot centre then scales by 16). The visual centre
+                    // therefore lands at (8 + 16*centreX, 8 + 16*centreY);
+                    // shift by the negated value so it pins onto (pX,pY).
+                    offsetX = -16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F;
+                    offsetY = -16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F;
                 } else {
                     // Some flat items (armour leggings etc.) report no bounds;
                     // centre the top-left-anchored 16px GUI draw instead of
@@ -129,12 +132,14 @@ public final class AnimRenderOps {
         guiGraphics.pose().popMatrix();
     }
 
-    /** 3D rotating item preview (drag-to-rotate). Angle params are radians;
-     *  callers pass exactly what GuiItemMove.renderRotAngleX/Y produce.
+    /** 3D rotating item preview (drag-to-rotate). The rotation is the raw
+     *  unit quaternion produced by {@link ItemDrag3D} — the drag-feel scheme
+     *  (One-Euro + arcball + damped spring) works in quaternion space, so we
+     *  pass it through unchanged instead of projecting onto two euler angles.
      *  Decoupled path: the item re-routes through the PictureInPicture
      *  renderer (Icon3DRenderState) to restore 1.21.1's drag-to-spin. */
     public static void renderItem3D(GuiGraphicsExtractor guiGraphics, ItemStack item, LivingEntity player,
-                                    int cx, int cy, float angleXComponent, float angleYComponent, float scale) {
+                                    int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) {
             return;
         }
@@ -158,32 +163,29 @@ public final class AnimRenderOps {
         float modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
         float modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
 
-        // (cx, cy) is the ITEM CENTRE: the PIP render target rect must be
-        // centred on it, otherwise the preview floats to the bottom-right.
-        int half = textureSize / 2;
+        // (cx, cy) is the TOP-LEFT of the preview square, matching the
+        // 1.21.1 reference renderItem3D and every 26.x caller (CsboxScreen /
+        // TerminalBootScreen pass previewPixelX/Y, BulkOverview passes
+        // centre - size/2). The PIP renderer centres the model inside its
+        // target rect, so the square spans (cx, cy) .. (cx+size, cy+size)
+        // and the model centre lands on (cx+half, cy+half).
         Icon3DRenderState pipState = new Icon3DRenderState(
                 trackedState,
-                radiansToDegrees(angleXComponent),
-                radiansToDegrees(angleYComponent),
-                0.0F,
+                rotation,
                 textureSize,
                 modelSpan,
                 modelCenterX,
                 modelCenterY,
                 modelCenterZ,
-                cx - half,
-                cy - half,
-                cx - half + textureSize,
-                cy - half + textureSize);
+                cx,
+                cy,
+                cx + textureSize,
+                cy + textureSize);
 
         guiGraphics.submitPictureInPictureRenderState(pipState);
     }
 
     public static boolean supports3D() {
         return true;
-    }
-
-    private static float radiansToDegrees(float radians) {
-        return radians * (180.0F / (float) Math.PI);
     }
 }

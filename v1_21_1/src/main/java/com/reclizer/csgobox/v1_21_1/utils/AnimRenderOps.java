@@ -3,7 +3,7 @@ package com.reclizer.csgobox.v1_21_1.utils;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.reclizer.csgobox.utils.Quat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,6 +15,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4fStack;
+import org.joml.Quaternionf;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -149,10 +150,12 @@ public final class AnimRenderOps {
         RenderSystem.applyModelViewMatrix();
     }
 
-    /** 3D rotating item preview (drag-to-rotate). Angle params are radians;
-     *  callers pass exactly what GuiItemMove.renderRotAngleX/Y produce. */
+    /** 3D rotating item preview (drag-to-rotate). The rotation is the raw
+     *  unit quaternion produced by {@link ItemDrag3D} — the drag-feel scheme
+     *  (One-Euro + arcball + damped spring) works in quaternion space, so we
+     *  pass it through unchanged instead of projecting onto two euler angles. */
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
-                                    int cx, int cy, float angleXComponent, float angleYComponent, float scale) {
+                                    int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         PoseStack pose = gg.pose();
@@ -160,8 +163,7 @@ public final class AnimRenderOps {
         pose.translate(cx, cy, 100.0F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(Axis.XP.rotation(angleYComponent));
-        pose.mulPose(Axis.YP.rotation(angleXComponent));
+        pose.mulPose(new Quaternionf(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize());
         Lighting.setupForEntityInInventory();
         pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();

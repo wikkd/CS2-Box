@@ -5,7 +5,25 @@
 - **Blur 模组背景模糊软适配**（`blur` 可选集成，不强制加载、无依赖声明）：主屏 / 出货屏 / 批量总览屏 / 批量结果屏 / 确认屏背景由不透明 `0xFF2a2a33` 改为半透明主题灰 `0x8C2a2a33`（新增 `backgroundStyle` 配置，`TRANSLUCENT` 默认 / `OPAQUE` 恢复旧观感；`common/OverlayColor#getBackgroundTranslucent()`），模糊世界透过背景显示；屏幕回归 vanilla 背景管线（26.x 删除 `CsboxScreen.extractBackground` override、全屏 fill 移入 `renderBg`，三平台共用一个 `gui/UiBackdrop#fill()` 取值助手），安装 Blur 模组后其淡入动画与模糊半径/渐变自动生效；进度屏 26.x `extractBlurredBackground` 在 `ModList.isLoaded("blur")` 时改走 vanilla 实现（Blur 动画生效），未装时维持"无视选项强制模糊"现状；终端机屏保持不透明（设计决策）。未装 Blur 时半透明背景遵循原版 `menuBackgroundBlurriness` 选项。设计文档：`docs/superpowers/specs/2026-08-10-blur-mod-adaptation-design.md`
 - **恢复批量开箱**（1.0.6 屏蔽 → 1.0.7 恢复）：移除 1.0.6 的两处屏蔽——客户端入口 `ClickEvent` 的 shift 硬编码 `false`（恢复 `mc.options.keyShift.isDown()`，Shift+右键进总览屏）与 `PacketCsgoBulkProgress` 的 `BULK_OPEN_ENABLED` 服务端开关；恢复服务端权威计数（箱/钥匙/`bulkOpenCount` 上限）→ 异步线程池计算 → 主线程扣减的完整链路；另修复恢复后暴露的边界缺陷：`finalizeBulkOpen` 复核时 `actualK` 未 clamp 到已计算结果数（异步窗口内库存增长会致 `results.subList` 越界、整批中止且重试必失败），现按 `Math.min(actualK, results.size())` 截断，剩余箱子下轮再开；1.21.1 / 26.1.2 / 26.2 三平台同步恢复（forge_26_1_2 实验模块一并同步）。
 - **`/csbox nbt hand` 命令**：打印主手物品的序列化 JSON（新增 `BoxItemCodec` 统一物品序列化，`tag` 字符串与 `components` 元数据均解析为扁平 key-value），超过 20000 字符截断提示；`/csbox` 裸命令与 `help` 子命令现执行 2 级权限检查
-- **forge_26_1_2 只读实验模块**：`port-forge-2612.py` 已同步携带新文件与命令改动（编译验证失败系该模块 ForgeGradle 插件解析的既有环境问题，见 AGENTS.md）
+- **forge_26_1_2 纳入同步开发（1.0.7 线）**：随 `v26_1_2` 基准同步终端机 / 军火商 / 高级箱 / 村民等 19 个文件，手工适配 forge API（`ModItems` 补 `armory_point` / `terminal` / `premium_supply_box` 注册与创造栏条目、`ModBlocks` POI `Set` 包装、`CsboxConfig` 补 `BackgroundStyle` UI 段、`AnimRenderOps.renderItem3D` 适配 forge `Icon3DRenderState` 13 参 Euler 签名、`IconListTools` 移植 alpha 淡入版本、`ButtonPalette` 补 `CLOSE`、`GuiItemMove` 补 `Quat` 重载、`PacketTerminalBuy` 改 forge `CustomPayloadEvent` API、`Networking` 注册 terminal 包）；`build.gradle` 删除 1.0.7 排除清单；`clean compileJava` 通过，`test-forge-2612.sh` L0-L3 门禁 7/7 PASS，`PlatformSmokeTest` 基线守卫更新为 1.0.7 同步断言。
+- **forge_26_1_2 同步第二轮（Blur + 批量开箱管线对齐，仍 1.0.6 版本标签）**：
+  Blur 软适配合入 forge 全部 6 屏（`CsboxScreen` 删 `extractBackground` override、
+  背景 fill 移入 `renderBg` 走 `UiBackdrop.fill()` + `AnimRenderOps.fillGradient`；
+  出货 / 确认 / 批量总览 / 批量结果 4 屏同管线；`CsboxProgressScreen`
+  `extractBlurredBackground` 在 `ModList.isLoaded("blur")` 时走 vanilla 否则
+  `AnimRenderOps.renderBlurredBackground`），顺带并入出货屏进入淡出 + `ItemDrag3D`
+  拖拽与进度屏拒绝横幅；批量开箱对齐 v26：`PacketCsgoBulkProgress` 换
+  `BoxStripGenerator`（`BulkOpenResult` 补 `fallback` 第 8 参、finalize 补回退分级
+  修复循环，forge `PacketCsgoProgress` 新增 boxId 版 `resolveGrade`），
+  `PacketBoxBulkResult` 按 `BULK_PER_PACKET=32` 分块、`MAX_PENDING_BULK` 64，
+  客户端 `drainBulkChunks()` while 聚合全部 chunk；单开路径同步收口：
+  `PacketCsgoProgress` 弃用手写 `itemList`+`AnimationStrip` 循环，改走
+  `GradeMapCache.get(boxId)` 缓存池 + `BoxStripGenerator.generate` 统一抽条
+  （并删除旧 Map 版 `resolveGrade`，仅留 boxId 版）；`/csbox` 命令按 v26
+  收口对齐（`set`/`give`/独立 `errors`/`tutorial` 子命令移除，仅留裸命令帮助、
+  `info` 含可选 box 参数并附加载错误列表、`reload` 含 `tutorial` 子命令、
+  `nbt hand` 任意玩家可用，`BoxItemCodec` 补 `gson()` 访问器）；
+  `clean compileJava` 通过，L0-L3 门禁 7/7 PASS。
 - **AnimRenderOps 渲染门面（三平台渲染收口重构）**：每平台一份 `utils/AnimRenderOps.java` 作为**唯一渲染原语适配点**（文件头 `// era: legacy|decoupled` 标注时代，26.x 同代整文件镜像），6 屏（CsboxScreen / CsboxProgressScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen / CsboxLookItemScreen / CsboxConfirmScreen）+ 3 助手（IconListTools / GuiItemMove / ButtonPalette）的全部原始 draw 调用（`blitTextured` / `fill` / `fillGradient` / `scissor` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D`，共 13 个公开 op）收口到门面，全仓零原始 draw 调用残留（grep 审计）。关键点：legacy 门面内部强制 SRC_ALPHA blend、decoupled 走 RenderPipelines（自带 blend 状态，`setBlendNormal`/`flush` 空操作）；26.x `renderItem2D` per-item bounding box 居中、`renderItem3D` PIP 路径的 radians→degrees 转换内聚于门面；新增 UV+tint 雪碧图变体（CsLookItemScreen 工具栏，legacy 经 `RenderSystem.setShaderColor`、decoupled 传 blit 末参 tint）。同步清除 3 屏的帧首三连（`setShaderColor(1,1,1,1)`+`enableBlend`+`defaultBlendFunc`），1.21.1 残留 RenderSystem 仅深度开关与工具栏 tint 循环（有意保留）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（3 平台全 OK，CI `common-test` job 已接线），三平台 clean 编译验证通过。
 - **终端机物品 `terminal`**：GLB 造型 3D 体素模型（2.5D 等距观感）+ 原创 4 面 PBR 贴图 + 创造标签注册
 - **终端机屏幕 `TerminalScreen`（HTML 原型全量迁移）**：`design/terminal-chat.html`（1086 行）11 区域全部实现，三平台（1.21.1 / 26.1.2 / 26.2）同构；`common/terminal/` 新包承载纯 Java 状态机与时间轴（`NegotiationModel` 5 轮谈判状态机 IDLE/TYPING/PENDING/ACCEPT_BUSY/REJECT_BUSY/CLOSED/FAILED + 1100ms 打字锁 + 倒计时 2天23:57:45 每秒递减；`TerminalAnims` cubic-bezier/缓动/错峰翻牌/扫描/轮换纯函数；`WearBands` 五档磨损；`TerminalPalette` 调色板），JUnit 覆盖（谈判全流程/倒计时长跳/缓动/档位）；平台层拆 `gui/terminal/` 4 个渲染助手（ChatRegion / ActionBar / OfferRegion / BottomRow）只经 AnimRenderOps 原语渲染（门面 13 op 零新增，drift 检查保持 3 平台 OK）；10 个预烘焙 PNG 资产（圆角白膜/打字点/512px 点阵 tile/扫描带/径向光/马赛克头像/灰度水印/3 把武器 14° 斜置双色渐变）由 `scripts/gen-terminal-assets.py` 生成并经 `TerminalAssetsTest` 守护；交互：长按胶囊 700ms 确认、批量上限下拉、3D 检视自转拖拽、ESC/✕ 关闭恢复 HUD（26.2 走 `HudVisibility.show()`）；1.21.1 `AnimRenderOps` tint 变体内部补 `setShaderColor(1,1,1,1)` 复位（根治历史泄漏隐患）、`RenderFontTool` 补 `drawStringClamped` 双重载；lang 增补 26 键（对话 5 条/皮肤名/稀有度/计数/提示/系统消息，中英）；移除 `CsboxProgressScreen 2.java` 残留副本
@@ -26,10 +44,18 @@
 本版本完成 26.2 平台扩展、教程系统、动态 box item、开箱排行榜、10 平台矩阵（新增 v1_21_0）、GUI 设计系统（token + 容器化 + per-item 基线）、并发安全、磨损扣耐久、TACZ 检视视口与 CI 矩阵等全部开发批次。**批量开箱推迟至 1.0.7 发布**（代码已开发完成、本版本入口与服务端处理均屏蔽，详见下文 `[1.0.7]` 节）。下文按批次记录。
 
 ### 补记：forge_26_1_2 模块纳入 git 并发行（2026-08-12）
-- **forge_26_1_2（MinecraftForge 26.1.2-64.1.0，Java 25）随 1.0.6 发行纳入 git 管理**。模块保持 1.0.6 特性基线（`forge_26_1_2/build.gradle` 对 common 源集/资源排除 1.0.7 线增量：terminal/armory/premium 资产与 Java 包等），暂不做 1.0.7 更新；仍为实验模块，不入三平台正式发行矩阵与 CI。
+- **forge_26_1_2（MinecraftForge 26.1.2-64.1.0，Java 25）随 1.0.6 发行纳入 git 管理**。发行时先保持 1.0.6 特性基线（`forge_26_1_2/build.gradle` 对 common 源集/资源排除 1.0.7 线增量），**同日转入 1.0.7 同步开发线**：`build.gradle` 排除清单已删除，随 `v26_1_2` 基准同步终端机 / 军火商 / 高级箱 / 村民 / Blur / 批量开箱恢复等增量（见上文 [未发布] 节），`clean compileJava` 与 `test-forge-2612.sh` L0-L3 门禁 7/7 PASS；仍为实验模块，不入三平台正式发行矩阵与 CI。
 - **资源修复**：补 5 个 1.0.6 基线物品模型定义（`assets/csgobox/items/{csgo_box,csgo_key0-3}.json`），修复模组物品（箱/钥匙/动态箱）紫黑棋盘格缺失模型；开箱屏箱子渲染改 PIP `Icon3DRenderState` 高清 3D 路径（`utils/GuiItemMove.java` 与 v26_1_2 `AnimRenderOps.renderItem3D` 对齐），消除放大像素化。
 - **测试设施**：`docs/TESTING-FORGE-2612.md`（测试流程 + 发布门禁）与 `scripts/test-forge-2612.sh`（自动化门禁 L0-L3：clean 编译 / jar 产物校验 / 版本四同步 / 渲染门面漂移 / PlatformSmokeTest）；L4 经 mc_tools TestHelper 新增 forge-26.1.2 构建目标自动化 E2E（`test_csbox.sh` / `test_csbox_ext.py`）。发布门禁 L0-L3 7/7 PASS、L4 11P/0F/0W，详见 `docs/TEST-REPORT-FORGE-2612-2026-08-11.md`。
 - **工程**：`settings.gradle` foojay-resolver-convention 0.9.0 → 1.0.0（修复 ForgeGradle 7 run 任务在 Gradle 9 的挂起）、`gradle.properties` 补 `net.minecraftforge.gradle.merge-source-sets=true`（dev 运行 mod 定位）、IDEA run 配置新增 `MC_Forge_26_1_2_*`（清理过时的 `MC_26_1_2/26_2_*Data` 配置）。
+
+### 玩家更新摘要（forge 版 1.0.6，2026-08-12）
+- 模组现可运行于 **MinecraftForge 26.1.2**（Java 25），1.0.6 全部功能与 NeoForge 多平台版本一致。
+- **修复物品显示为紫黑棋盘格**：箱子 / 钥匙等模组物品补齐模型定义，不再出现"没有模型"的紫黑贴图。
+- **修复开箱屏箱子"像素贴图化"**：箱子渲染改为高清 3D（PIP）路径，放大查看不再模糊、有立体感。
+- 本版本随带的玩法功能：教程文档自动下载与更新、动态箱子 JSON（`config/csbox/*.json`）、开箱排行榜、按磨损值扣耐久、JSON 加载错误红色提示等。
+- **安装**：将 `csgobox-forge-26.1.2-1.0.6.jar` 放入 `mods/` 文件夹，需要 MinecraftForge 26.1.2（Java 25）。
+- **本版分发 jar 已含同步并入的新增玩法**（批量开箱恢复、终端机、武库拆解台 / 武库点数、军火商高级箱、Blur 软兼容、`/csbox nbt hand`），玩家向更新日志见 `docs/PLAYER-CHANGELOG-FORGE-1.0.6.md`。
 
 ### 上线前补充：TACZ 检视视口 / v1_21_0 平台 / 审美测试脚本
 ### 新增

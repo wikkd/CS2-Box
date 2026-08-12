@@ -111,9 +111,9 @@ legacy 门面内部强制 `SRC_ALPHA` blend；decoupled 走 `RenderPipelines`（
   - 帧首三连（`setShaderColor(1,1,1,1)`+`enableBlend`+`defaultBlendFunc`）是否已统一收口到门面（不应再散落）？
 
 ### 4.9 forge_26_1_2 实验模块边界 🟡
-`forge_26_1_2` 是实验模块（MinecraftForge 26.1.2，随 1.0.6 发行纳入 git、保持 1.0.6 基线、不做 1.0.7 更新；不在 CI、不参与镜像纪律、不入三平台正式发行矩阵），由 `scripts/port-forge-2612.py` 从 `v26_1_2` 机械转换 + 手工适配；编译/门禁状态由 `scripts/test-forge-2612.sh` 守护，审查时不再忽略其编译状态。
+`forge_26_1_2` 是同步开发模块（MinecraftForge 26.1.2，随 1.0.6 发行纳入 git、自 1.0.7 线起与 `v26_1_2` 特性同步；不在 CI、不入三平台正式发行矩阵），由 `scripts/port-forge-2612.py` 机械转换 + 手工适配；编译/门禁状态由 `scripts/test-forge-2612.sh` 守护，审查时不再忽略其编译状态。
 
-- 审查点：是否误把 `forge_26_1_2` 当正式平台发布、或要求它进入 CI 矩阵 / 镜像纪律？该模块随 1.0.6 发行纳入 git（1.0.6 基线、不做 1.0.7 更新），不入三平台正式发行矩阵；编译状态由 `scripts/test-forge-2612.sh` 门禁守护。
+- 审查点：是否误把 `forge_26_1_2` 当正式平台发布、或要求它进入 CI 矩阵 / NeoForge 镜像纪律？该模块随 1.0.6 发行纳入 git、自 1.0.7 线起与 `v26_1_2` 特性同步（经 `scripts/port-forge-2612.py` + 手工适配，见 AGENTS.md「forge_26_1_2 同步」），不入三平台正式发行矩阵；编译状态由 `scripts/test-forge-2612.sh` 门禁守护。
 
 ---
 

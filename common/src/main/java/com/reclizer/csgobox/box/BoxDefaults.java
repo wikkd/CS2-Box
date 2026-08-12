@@ -60,61 +60,179 @@ public final class BoxDefaults {
     private static final String TERMINAL_DEFAULT_JSON = """
             {
               "name": "#00E5FF CS2 终端机",
-              "key": "csgobox:csgo_key0",
+              "key": "minecraft:air",
               "type": "terminal",
-              "drop": 1.0,
-              "random": [20, 40, 80, 160, 300],
+              "drop": 0.06,
+              "random": [
+                20,
+                40,
+                80,
+                160,
+                300
+              ],
               "grade5": [
-                {"id": "minecraft:netherite_sword"},
-                {"id": "minecraft:netherite_axe"},
-                {"id": "minecraft:netherite_pickaxe"},
-                {"id": "minecraft:netherite_helmet"},
-                {"id": "minecraft:netherite_chestplate"},
-                {"id": "minecraft:netherite_leggings"},
-                {"id": "minecraft:netherite_boots"}
+                {
+                  "id": "minecraft:netherite_sword",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_axe",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_pickaxe",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_helmet",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_chestplate",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_leggings",
+                  "price": 4000
+                },
+                {
+                  "id": "minecraft:netherite_boots",
+                  "price": 4000
+                }
               ],
               "grade4": [
-                {"id": "minecraft:diamond_sword"},
-                {"id": "minecraft:diamond_axe"},
-                {"id": "minecraft:diamond_pickaxe"},
-                {"id": "minecraft:diamond_helmet"},
-                {"id": "minecraft:diamond_chestplate"},
-                {"id": "minecraft:diamond_leggings"},
-                {"id": "minecraft:diamond_boots"}
+                {
+                  "id": "minecraft:diamond_sword",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_axe",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_pickaxe",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_helmet",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_chestplate",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_leggings",
+                  "price": 1500
+                },
+                {
+                  "id": "minecraft:diamond_boots",
+                  "price": 1500
+                }
               ],
               "grade3": [
-                {"id": "minecraft:golden_sword"},
-                {"id": "minecraft:golden_axe"},
-                {"id": "minecraft:golden_pickaxe"},
-                {"id": "minecraft:golden_helmet"},
-                {"id": "minecraft:golden_chestplate"},
-                {"id": "minecraft:golden_leggings"},
-                {"id": "minecraft:golden_boots"},
-                {"id": "minecraft:totem_of_undying"}
+                {
+                  "id": "minecraft:golden_sword",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_axe",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_pickaxe",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_helmet",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_chestplate",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_leggings",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:golden_boots",
+                  "price": 500
+                },
+                {
+                  "id": "minecraft:totem_of_undying",
+                  "price": 500
+                }
               ],
               "grade2": [
-                {"id": "minecraft:iron_sword"},
-                {"id": "minecraft:iron_axe"},
-                {"id": "minecraft:iron_pickaxe"},
-                {"id": "minecraft:iron_helmet"},
-                {"id": "minecraft:iron_chestplate"},
-                {"id": "minecraft:iron_leggings"},
-                {"id": "minecraft:iron_boots"},
-                {"id": "minecraft:crossbow"}
+                {
+                  "id": "minecraft:iron_sword",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_axe",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_pickaxe",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_helmet",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_chestplate",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_leggings",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:iron_boots",
+                  "price": 200
+                },
+                {
+                  "id": "minecraft:crossbow",
+                  "price": 200
+                }
               ],
               "grade1": [
-                {"id": "minecraft:leather_helmet"},
-                {"id": "minecraft:leather_chestplate"},
-                {"id": "minecraft:leather_leggings"},
-                {"id": "minecraft:leather_boots"},
-                {"id": "minecraft:bow"}
+                {
+                  "id": "minecraft:leather_helmet",
+                  "price": 50
+                },
+                {
+                  "id": "minecraft:leather_chestplate",
+                  "price": 50
+                },
+                {
+                  "id": "minecraft:leather_leggings",
+                  "price": 50
+                },
+                {
+                  "id": "minecraft:leather_boots",
+                  "price": 50
+                },
+                {
+                  "id": "minecraft:bow",
+                  "price": 50
+                }
+              ],
+              "entity": [
+                "minecraft:wither_skeleton",
+                "minecraft:piglin_brute",
+                "minecraft:elder_guardian",
+                "minecraft:ravager",
+                "minecraft:warden"
               ]
             }
             """;
 
     /**
      * Default loot pool for the village-exclusive premium case. Unlike the
-     * terminal (key0) the premium case opens with the mid-tier gold key
+     * terminal (no key, minecraft:air) the premium case opens with the mid-tier gold key
      * (key1 = 3 gold = 12 points), so its total cost is the trade price
      * plus 12 points. It has NO {@code entity} list and {@code drop} 0, so
      * it never drops from mobs — the arms-dealer villager is the only

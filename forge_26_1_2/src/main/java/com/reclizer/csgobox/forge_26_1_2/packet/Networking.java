@@ -41,6 +41,11 @@ public final class Networking {
                 .codec(PacketRequestBoxItems.STREAM_CODEC)
                 .consumer(PacketRequestBoxItems::handle)
                 .add();
+        INSTANCE.messageBuilder(PacketTerminalBuy.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.SERVERBOUND)
+                .codec(PacketTerminalBuy.STREAM_CODEC)
+                .consumer(PacketTerminalBuy::handleServer)
+                .add();
 
         // Clientbound packets (server → client)
         INSTANCE.messageBuilder(PacketBoxOpenResult.class, NetworkProtocol.PLAY)
@@ -57,6 +62,11 @@ public final class Networking {
                 .direction(PacketFlow.CLIENTBOUND)
                 .codec(PacketSyncBoxItems.STREAM_CODEC)
                 .consumer(PacketSyncBoxItems::handle)
+                .add();
+        INSTANCE.messageBuilder(PacketTerminalBuyResult.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.CLIENTBOUND)
+                .codec(PacketTerminalBuyResult.STREAM_CODEC)
+                .consumer(PacketTerminalBuyResult::handle)
                 .add();
 
         INSTANCE.build();

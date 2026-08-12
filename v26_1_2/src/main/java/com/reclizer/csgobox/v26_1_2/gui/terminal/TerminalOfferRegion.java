@@ -1,11 +1,12 @@
 package com.reclizer.csgobox.v26_1_2.gui.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.utils.ItemDrag3D;
+import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
-import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -44,8 +45,7 @@ public final class TerminalOfferRegion {
     private boolean dragging;
     private int dragLastX;
     private int dragLastY;
-    private float rotX = INITIAL_ROT_X;
-    private float rotY = INITIAL_ROT_Y;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(INITIAL_ROT_X, INITIAL_ROT_Y);
     /** The offer seen by the last render() pass (null until round 1 lands). */
     private NegotiationModel.Offer currentOffer;
     /** Box grade pools by gradeLevel 1..5 (index 0 unused), null entries = absent tier. */
@@ -61,6 +61,7 @@ public final class TerminalOfferRegion {
     public void render(GuiGraphicsExtractor gg, int x0, int y0, int x1, int y1,
                        long nowMs, NegotiationModel model, Player player,
                        int mx, int my) {
+        this.itemDrag.tick();
         // body gradient
         AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, TerminalPalette.BODY_LIGHT_TOP,
                 TerminalPalette.BODY_LIGHT_BOTTOM);
@@ -91,14 +92,20 @@ public final class TerminalOfferRegion {
             // span reads as a balanced showcase inside the halo)
             float itemSize = Math.max(14F, wmSize * 0.88F);
             // slow idle auto-spin (6 deg/s); inspect capsule boosts to 24 deg/s
+            // The spin composes as an X-axis rotation pre-multiplied onto the
+            // drag orientation (equivalent to the legacy rotY += spinDeg form).
             float spinDeg = inspectOn ? TerminalAnims.spinDeg(nowMs) : nowMs / 1000F * 3F;
-            float rotYNow = rotY + (float) Math.toRadians(spinDeg);
+            Quat spun = Quat.mul(Quat.fromAxisAngle(1, 0, 0, (float) Math.toRadians(spinDeg)),
+                    this.itemDrag.rotation());
             ItemStack stack = TerminalOfferItems.itemFor(offer);
             if (AnimRenderOps.supports3D()) {
                 // visual audit: the item's optical centre sat ~25px (3x) below
-                // the halo's — raise the render anchor to match the halo centre
-                AnimRenderOps.renderItem3D(gg, stack, player, itemCx, itemCy,
-                        rotX, rotYNow, itemSize / 16F);
+                // the halo's — raise the render anchor to match the halo centre.
+                // renderItem3D takes the top-left of the preview square, so
+                // centre the square on the (itemCx, itemCy) anchor.
+                int itemHalf = Math.round(itemSize / 2F);
+                AnimRenderOps.renderItem3D(gg, stack, player, itemCx - itemHalf, itemCy - itemHalf,
+                        spun, itemSize / 16F);
             } else {
                 AnimRenderOps.renderItem2D(player, gg, stack, itemCx, itemCy, itemSize / 16F);
             }
@@ -270,7 +277,7 @@ public final class TerminalOfferRegion {
         return false;
     }
 
-    /** Drag accumulates rotation through GuiItemMove's clamped math. */
+    /** Drag accumulates raw deltas into the shared drag-feel state. */
     public boolean mouseDragged(int mx, int my) {
         if (!dragging) {
             return false;
@@ -282,19 +289,20 @@ public final class TerminalOfferRegion {
         if (dx == 0 && dy == 0) {
             return true;
         }
-        rotY = GuiItemMove.renderRotAngleY(dx, rotY);
-        rotX = GuiItemMove.renderRotAngleX(dy, rotX);
+        // This region's legacy mapping was dx -> X-axis, dy -> Y-axis (the
+        // box screens are the opposite); accumulate(dy, dx) preserves that.
+        this.itemDrag.accumulate(dy, dx);
         return true;
     }
 
     public void mouseUp() {
         dragging = false;
+        this.itemDrag.release();
     }
 
     public void reset() {
         inspectOn = false;
-        rotX = INITIAL_ROT_X;
-        rotY = INITIAL_ROT_Y;
+        this.itemDrag.reset();
     }
 
     public void setGradePools(java.util.List<ItemStack>[] pools) {

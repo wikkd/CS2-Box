@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v1_21_1.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v1_21_1.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
@@ -45,8 +46,7 @@ public class CsboxScreen extends Screen {
 
 
 
-    private float itemRotX;
-    private float itemRotY;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     private Map<ItemStack, Integer> itemGroup;
 
@@ -195,15 +195,21 @@ public class CsboxScreen extends Screen {
         boolean isInRange = (pMouseX >= this.width * 37F / 100 && pMouseX <= this.width * 37F / 100 + 200)
                 && (pMouseY >= this.height * 12F / 100 && pMouseY <= this.height * 12F / 100 + 176);
         if (pButton == 0 && isInRange) {
-            this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
-            this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
+            this.itemDrag.accumulate(pDragX, pDragY);
         }
         return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
     }
 
     @Override
+    public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
+        this.itemDrag.release();
+        return super.mouseReleased(pMouseX, pMouseY, pButton);
+    }
+
+    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.hint != null) {
@@ -232,7 +238,7 @@ public class CsboxScreen extends Screen {
         float scale = FrameWidth / 16F;
         if (this.entity != null) {
             GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics, this.width * 37 / 100, this.height * 12 / 100,
-                    this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
+                    this.itemDrag.rotation(), itemMenu, this.entity, scale);
         }
 
         renderGridAnimated(guiGraphics, partialTicks);

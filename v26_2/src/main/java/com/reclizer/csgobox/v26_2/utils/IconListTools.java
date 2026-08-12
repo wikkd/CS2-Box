@@ -78,8 +78,12 @@ public final class IconListTools {
         float scale = frameWidth * 60F / 100F / 16F;
         int toX = pX + frameWidth;
         int toY = pY + frameHeight;
-        int itemX = pX + frameWidth * 20 / 100;
-        int itemY = pY + frameHeight * 10 / 100;
+        // 26.x renderItem2D takes the ICON CENTRE (1.21.1 took the top-left
+        // and added 8*scale internally, so the old 20%/10% offsets happened to
+        // centre it there). Pass the slot centre directly, otherwise the icon
+        // floats toward the top-left corner of the frame.
+        int itemX = pX + frameWidth / 2;
+        int itemY = pY + frameHeight / 2;
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY,
                     ColorTools.withAlpha(0xFF533c00, alpha), ColorTools.withAlpha(0xFFb69008, alpha));
@@ -97,9 +101,10 @@ public final class IconListTools {
         int color = ColorTools.colorItems(grade);
         int pad = Math.max(3, Math.min(8, width / 10));
         int iconW = Math.max(8, width - pad * 2);
-        int iconH = Math.max(8, height - pad * 2);
-        int itemX = pX + (width - iconW) / 2;
-        int itemY = pY + (height - iconH) / 2;
+        // 26.x renderItem2D takes the ICON CENTRE: pin the visual centre on
+        // the cell centre instead of the icon-box top-left.
+        int itemX = pX + width / 2;
+        int itemY = pY + height / 2;
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
@@ -118,8 +123,8 @@ public final class IconListTools {
         float scale = frameWidth * 60F / 100F / 16F;
         int toX = (int)(pX + frameWidth);
         int toY = (int)(pY + frameHeight);
-        float itemX = pX + frameWidth * 20 / 100F;
-        float itemY = pY + frameHeight * 10 / 100F;
+        float itemX = pX + frameWidth / 2F;
+        float itemY = pY + frameHeight / 2F;
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
             blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
@@ -153,8 +158,8 @@ public final class IconListTools {
         int toY = (int) (pY + frameHeight);
         int bx0 = (int) pX;
         int by0 = (int) pY;
-        float itemX = pX + (frameWidth - scale * 16F) / 2F;
-        float itemY = pY + (frameHeight - scale * 16F) / 2F;
+        float itemX = pX + frameWidth / 2F;
+        float itemY = pY + frameHeight / 2F;
 
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);

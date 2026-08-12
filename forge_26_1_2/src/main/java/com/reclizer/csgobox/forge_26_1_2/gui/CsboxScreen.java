@@ -7,6 +7,7 @@ import com.reclizer.csgobox.forge_26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.forge_26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.forge_26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.forge_26_1_2.utils.ButtonPalette;
+import com.reclizer.csgobox.forge_26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.forge_26_1_2.utils.GuiItemMove;
@@ -182,15 +183,6 @@ public class CsboxScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        if (this.minecraft != null && this.minecraft.level != null) {
-            pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
-        } else {
-            super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-        }
-    }
-
-    @Override
     public boolean mouseDragged(MouseButtonEvent event, double pDragX, double pDragY) {
         double pMouseX = event.x();
         double pMouseY = event.y();
@@ -218,10 +210,14 @@ public class CsboxScreen extends Screen {
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
+        if (this.minecraft != null && this.minecraft.level != null) {
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+        }
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
-        guiGraphics.fill(listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
-        guiGraphics.fill(footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
+        AnimRenderOps.fill(guiGraphics, footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
 
         float scale = previewTextureSize() / 16F;
         // Skip the 3D crate when the box has no configured items — the empty
@@ -252,13 +248,13 @@ public class CsboxScreen extends Screen {
                 if (grade > 4) break;
                 IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
                         listArea.x() + px * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, py), this.width, this.height, grade);
+                        GuiRegion.pctH(this.height, py), this.width, this.height, grade, 255);
             }
             if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
                     && this.page == pageCount() - 1) {
                 IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
                         listArea.x() + x * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, y), this.width, this.height, 5);
+                        GuiRegion.pctH(this.height, y), this.width, this.height, 5, 255);
             }
         }
 

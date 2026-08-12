@@ -4,11 +4,13 @@ import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_1_2.box.GradeGroup;
+import com.mojang.serialization.Codec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -42,6 +44,19 @@ public class ItemCsgoBox extends Item {
                     DataComponentType.<Identifier>builder()
                             .persistent(Identifier.CODEC)
                             .networkSynchronized(Identifier.STREAM_CODEC)
+                            .build());
+
+    /**
+     * Rarity grade (1=consumer .. 5=classified) stamped onto the opened item
+     * when it is granted to the player. The Armory Recycler reads this to
+     * decide how many Armory Points an item is worth, so recycling stays
+     * rarity-accurate without re-deriving grade from the (ambiguous) item id.
+     */
+    public static final Supplier<DataComponentType<Integer>> GRADE =
+            BOX_DATA_COMPONENTS.register("grade", () ->
+                    DataComponentType.<Integer>builder()
+                            .persistent(Codec.INT)
+                            .networkSynchronized(ByteBufCodecs.INT)
                             .build());
 
     public static void registerDataComponents(BusGroup bus) {

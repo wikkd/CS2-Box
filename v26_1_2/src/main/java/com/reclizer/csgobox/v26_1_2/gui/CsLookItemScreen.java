@@ -5,6 +5,7 @@ import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
@@ -28,8 +29,7 @@ public class CsLookItemScreen extends Screen {
     private final Player player;
     private final ItemStack openItem;
     private final int grade;
-    private float rotX = 0;
-    private float rotY = 0;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
@@ -188,6 +188,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         renderLookBackground(guiGraphics);
         // renderBg before renderLabels: button rectangle must be drawn first,
         // then the centered button text on top. Reversed order (the previous
@@ -230,7 +231,7 @@ public class CsLookItemScreen extends Screen {
         // the user sees.
         AnimRenderOps.renderItem3D(guiGraphics, openItem, this.player,
                 previewPixelX(), previewPixelY(),
-                this.rotX, this.rotY, scale);
+                this.itemDrag.rotation(), scale);
 
         int btnX = backButtonX();
         int btnY = backButtonY();
@@ -462,10 +463,15 @@ public class CsLookItemScreen extends Screen {
         boolean isInRange = mouseX >= x && mouseX <= x + size
                 && mouseY >= y && mouseY <= y + size;
         if (event.button() == 0 && isInRange) {
-            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
-            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
+            this.itemDrag.accumulate(dragX, dragY);
         }
         return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        this.itemDrag.release();
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -503,6 +509,17 @@ public class CsLookItemScreen extends Screen {
             this.minecraft.options.hideGui = false;
         }
         super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        // Same protection as onClose(): death/respawn replaces this screen via
+        // setScreen() -> Screen.removed(), which would otherwise leave
+        // hideGui=true and hide the HUD permanently.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.removed();
     }
 
     @Override

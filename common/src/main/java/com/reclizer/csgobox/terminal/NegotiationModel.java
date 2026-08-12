@@ -70,6 +70,10 @@ public final class NegotiationModel {
     public static final float[] SKIN_WEAR_VAL = {0.11383486F, 0.40218743F, 0.30740085F};
     /** Offer price in whole Armory Points (no decimals — the mod's currency). */
     public static final String[] SKIN_PRICE = {"22", "16", "16"};
+    /** Whole Armory Point price per box grade (1..5, index 0 unused). */
+    public static final int[] GRADE_PRICE = {6, 10, 16, 22, 30};
+    /** Dealer line when the player cancels a trade or lacks Armory Points. */
+    public static final String LINE_RECONSIDER = "csgobox.terminal.line.reconsider";
     /** Five rarity tier keys (grade 1..5, CS2-style): 军规级/受限级/保密级/隐秘级/违禁. */
     public static final String[] RARITY_TIER_KEYS = {
             "mil_spec", "restricted", "classified", "covert", "contraband"
@@ -80,6 +84,11 @@ public final class NegotiationModel {
     /** Rarity tier key for a box grade (1..5, clamped). */
     public static String rarityKeyForGrade(int grade) {
         return RARITY_TIER_KEYS[Math.max(0, Math.min(grade - 1, RARITY_TIER_KEYS.length - 1))];
+    }
+
+    /** Whole Armory Point price for a box grade (1..5, clamped). */
+    public static int priceForGrade(int grade) {
+        return GRADE_PRICE[Math.max(0, Math.min(grade - 1, GRADE_PRICE.length - 1))];
     }
     /** weapon preset id: "pistol" | "rifle" | "smg" (matches weapon_*.png). */
     public static final String[] SKIN_WP = {"pistol", "rifle", "smg"};
@@ -215,6 +224,16 @@ public final class NegotiationModel {
         statusSinceMs = nowMs;
         markOfferStatus(OFFER_REJECTED);
         history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
+    }
+
+    /** Dealer chat line: "think it over" — keeps the current offer pending. */
+    public void dealerReconsider(long nowMs) {
+        history.add(new LineEntry(Math.max(1, round), LINE_RECONSIDER, nowMs));
+    }
+
+    /** Add a plain system bubble (e.g. insufficient Armory Points). */
+    public void addSystem(String textKey, long nowMs) {
+        history.add(new SystemEntry(textKey, false, nowMs));
     }
 
     // ---- accessors ----

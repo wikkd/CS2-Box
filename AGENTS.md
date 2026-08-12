@@ -13,7 +13,7 @@
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
 - **3 个平台模块**：`v1_21_1`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。**已归档（EOL）平台** `v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11` 于 2026-08-09 从仓库删除，最后状态在 tag `eol-legacy-21x-1.0.6`，复活需从该 tag 检出。
 - **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
-- **实验模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），随 **1.0.6 发行** 纳入 git 管理（保持 1.0.6 特性基线，`build.gradle` 排除 1.0.7 线增量；暂不做 1.0.7 更新），**不在 CI 矩阵**，不参与 mirror/镜像纪律，不入三平台正式发行矩阵；内容由 `scripts/port-forge-2612.py` 从 v26_1_2 机械转换 + 手工适配。测试流程与发布门禁见 `docs/TESTING-FORGE-2612.md`，勿当正式平台发布。
+- **同步开发模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），随 **1.0.6 发行** 纳入 git 管理，自 **1.0.7 线起纳入同步开发**——与 `v26_1_2` 基准保持特性同步（同一 `mod_version`，经 `scripts/port-forge-2612.py` 机械转换 + 手工适配，见「平台模块镜像纪律」§forge 同步），`build.gradle` 的 1.0.7 线排除清单已随首轮同步删除；**不在 CI 矩阵**，不入三平台正式发行矩阵（仍为实验模块，勿当正式平台发布）。测试流程与发布门禁见 `docs/TESTING-FORGE-2612.md`。
 
 ## 架构约束（CONSTRAINT-001）
 
@@ -23,7 +23,7 @@
 
 ## 平台模块镜像纪律（重要！）
 
-3 个平台模块**不是纯拷贝**：26.2 有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v26_1_2` 整文件覆盖 `v26_2`**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败；该平台现已与其余 legacy 一并归档）。
+3 个 NeoForge 平台模块**不是纯拷贝**：26.2 有 API 适配（如 `BuiltInRegistries.ITEM.get()` 返回 Optional、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent` 事件、`setScreenAndShow`、PIP 渲染器等）。**禁止用 `v26_1_2` 整文件覆盖 `v26_2`**——会破坏适配（历史教训，曾导致 v1_21_10 编译失败；该平台现已与其余 legacy 一并归档）。
 
 跨平台改动的正确姿势：
 
@@ -31,6 +31,23 @@
 2. `scripts/mirror.sh new <rel-path>` — 仅用于**无适配差异**的纯新增文件（目标已存在会警告跳过，`--force` 覆盖，`--dry-run` 预演不写盘）
 3. 有适配差异的文件用**定点合入**（`v26_1_2` → `v26_2` 手工适配；幂等合入脚本范例与 `scripts/port-12111.py` 已随 EOL 平台删除）
 4. 每平台 `compileJava` 验证（增量缓存可能造假象——**改动涉及平台时用 `clean` 编译确认**）
+
+### forge_26_1_2 同步（自 1.0.7 线起）
+
+`forge_26_1_2` 与 `v26_1_2` 保持**特性同步**，但 loader 不同（MinecraftForge vs
+NeoForge），**整文件覆盖同样禁止**。同步纪律：
+
+1. 基准仍是 `v26_1_2`（先改基准模块）；
+2. `scripts/port-forge-2612.py` 做机械转换（包名 `v26_1_2 → forge_26_1_2` +
+   NeoForge→Forge import/API 映射），**只负责纯机械文件与新增文件**；
+3. 有适配差异的文件（入口 `CsgoBox.java`、`Networking`、`ModItems`、`ModCapability`、
+   packet handler、GUI/渲染层、AnimRenderOps 等）走**手工适配**，不得被脚本覆盖
+   （`--force` 仅用于确认无本地改动时重灌）；
+4. forge 侧专有的修复（如 `GuiItemMove` PIP 高清 3D、`items/` 模型定义）保留在
+   forge 模块内，同步时手工合入对应 v26_1_2 改动；
+5. 每次同步后：删除 `build.gradle` 中已同步的 1.0.7 排除项 → `clean compileJava`
+   （`-Pactive_versions=forge-26.1.2`）→ `scripts/test-forge-2612.sh` 门禁 → 必要时
+   L4 运行时回归。漂移盘点用 `scripts/port-forge-2612.py --dry-run`。
 
 ## 版本号管理（升级时四处同步）
 

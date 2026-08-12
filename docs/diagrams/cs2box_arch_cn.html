@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS2-Box 模组整体架构（中文 · 依赖与数据流）</title>
+<style>
+  :root{
+    --blue:#4185BF; --blue-deep:#1F5C99; --ink:#1f2937; --line:#34495E;
+    --zone:#EAF2FB; --muted:#6B7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:28px; background:#f5f7fb; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .diagram{max-width:1120px; margin:0 auto;}
+  .title{text-align:center; font-size:24px; font-weight:700; margin-bottom:4px;}
+  .subtitle{text-align:center; color:var(--muted); font-size:13px; margin-bottom:22px;}
+  .zone{
+    border:2px solid var(--blue); border-radius:14px; background:var(--zone);
+    padding:16px 18px; margin-bottom:18px;
+  }
+  .zone-label{font-size:15px; font-weight:700; color:var(--blue-deep); margin-bottom:12px;}
+  .row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .box{
+    border:1.5px solid var(--line); border-radius:9px; background:#fff;
+    padding:10px 14px; min-width:140px; text-align:center; line-height:1.45;
+  }
+  .box b{font-size:14px;}
+  .box .sub{font-size:11px; color:#555; margin-top:3px;}
+  .box.code{border-style:dashed; border-color:#94a3b8; color:#475569;}
+  .box.diamond{border-radius:4px; transform:rotate(0);}
+  .arrow{font-size:22px; font-weight:700; color:var(--blue); padding:0 2px;}
+  .note{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.6;}
+  .subzone{border:1.5px dashed var(--blue); border-radius:10px; padding:12px; background:rgba(255,255,255,.45);}
+  .subzone .sl{font-size:13px; font-weight:700; color:var(--blue-deep); margin-bottom:10px;}
+  .flow-label{font-size:14px; font-weight:700; color:var(--blue-deep); margin:4px 0 10px;}
+  .flow-num{display:inline-block; min-width:22px; height:22px; line-height:22px; text-align:center;
+    background:var(--blue); color:#fff; border-radius:50%; font-size:12px; margin-right:8px;}
+  .branch{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; padding-left:34px;}
+  .branch .tag{font-size:12px; color:var(--blue-deep); font-weight:700; width:34px;}
+  .buildnote{border:1.5px solid #cbd5e1; border-radius:10px; background:#fff; padding:12px 16px; font-size:13px; color:#334155;}
+  .buildnote b{color:var(--blue-deep);}
+  .legend{font-size:12px; color:var(--muted); margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="diagram">
+  <div class="title">CS2-Box 模组整体架构</div>
+  <div class="subtitle">依赖与数据流视角 · 科技蓝 · 呈现逻辑：逻辑（动态流程）/ 构图范式：流转式</div>
+
+  <!-- 模块拓扑 -->
+  <div class="zone">
+    <div class="zone-label">模块拓扑 · 依赖方向严格为「平台 → common」</div>
+    <div class="row">
+      <div class="subzone">
+        <div class="sl">平台模块 Platform Modules</div>
+        <div class="row">
+          <div class="box"><b>v1_21_1</b><div class="sub">legacy<br>NeoForge 21.x · Java 21<br>TACZ 可选 · 运行时降级</div></div>
+          <div class="box"><b>v26_1_2</b><div class="sub">decoupled<br>NeoForge 26.x · Java 25+preview</div></div>
+          <div class="box"><b>v26_2</b><div class="sub">decoupled<br>26.x 小改 · HudVisibility 适配</div></div>
+        </div>
+        <div class="note">forge_26_1_2（实验性 · 未提交，不在正式矩阵）· 已归档：v1_21_0 / 3 / 4 / 5 / 8 / 10 / 11</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="box" style="min-width:200px;">
+        <b>common 模块</b>
+        <div class="sub">共享代码 + 资源<br>纹理 / 音效 / lang / 配方 / 成就<br>受 CONSTRAINT-001 约束</div>
+      </div>
+    </div>
+    <div class="note"><span class="flow-num">①</span>编译期依赖 + 共享资源：平台经 Gradle <code>srcDir project(':common').file('src/main/resources')</code> 引用 common 资源；common 不反向依赖任何平台。</div>
+  </div>
+
+  <!-- ② 渲染原语流 -->
+  <div class="flow-label"><span class="flow-num">②</span>渲染原语流（运行时）</div>
+  <div class="zone">
+    <div class="row">
+      <div class="box"><b>GUI 屏 &amp; 逻辑助手</b></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>AnimRenderOps 门面</b><div class="sub">utils/AnimRenderOps.java<br>// era: legacy|decoupled<br>每平台一份</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>13 个渲染原语</b><div class="sub">每平台实现<br>blitTextured×3 · fill · fillGradient · scissor<br>scissorDisable · setBlendNormal · flush<br>renderBlurredBackground · renderItem2D · renderItem3D · supports3D</div></div>
+    </div>
+    <div class="note">check-animops-drift.sh 守护三平台 13 个公开 op 的签名一致性（CI 已接线）。</div>
+  </div>
+
+  <!-- ③ 架构约束守门 -->
+  <div class="flow-label"><span class="flow-num">③</span>架构约束守门（编译期）</div>
+  <div class="zone">
+    <div class="row">
+      <div class="box"><b>common</b></div>
+      <div class="arrow">→</div>
+      <div class="box code"><b>:common:checkCommonArchitecture</b><div class="sub">Gradle task，挂载在 compileJava</div></div>
+      <div class="arrow">→</div>
+      <div class="box diamond"><b>CONSTRAINT-001</b><div class="sub">禁 import<br>net.minecraft.* / net.neoforged.*</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>门 on compileJava</b><div class="sub">违反即编译失败</div></div>
+    </div>
+    <div class="note">common 编译环境无 MC classpath，任何越界 import 立即失败；该检查在测试与平台矩阵中自动触发。</div>
+  </div>
+
+  <!-- ④ 版本四处同步 -->
+  <div class="flow-label"><span class="flow-num">④</span>版本四处同步（发布期）</div>
+  <div class="zone">
+    <div class="row">
+      <div class="box"><b>mod_version</b></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>四处文件须同步</b>
+        <div class="sub">gradle.properties<br>neoforge.mods.toml<br>CHANGELOG.md<br>README.md</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="box code"><b>check-version.sh</b><div class="sub">CI 校验一致性</div></div>
+    </div>
+    <div class="note">升级版本号时四处必须同步，缺失任一即被检查拦截。</div>
+  </div>
+
+  <!-- ⑤ 镜像纪律 -->
+  <div class="flow-label"><span class="flow-num">⑤</span>镜像纪律（开发期）</div>
+  <div class="zone">
+    <div class="row">
+      <div class="box"><b>v26_1_2 新改动</b><div class="sub">基准模块</div></div>
+      <div class="arrow">→</div>
+      <div class="box code"><b>mirror.sh</b></div>
+      <div class="arrow">→</div>
+      <div class="box diamond"><b>有 API 适配差异？</b></div>
+    </div>
+    <div class="branch">
+      <span class="tag">有</span>
+      <div class="box"><b>定点合入</b><div class="sub">手工适配到 v26_2</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>v26_2</b></div>
+    </div>
+    <div class="branch">
+      <span class="tag">无</span>
+      <div class="box"><b>拷贝</b><div class="sub">纯新增文件 mirror --force</div></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>v26_2</b></div>
+    </div>
+    <div class="note">⚠ 禁止用 v26_1_2 整文件覆盖 v26_2（会破坏 26.2 的 decoupled 适配）。每次改动后三平台各自 compileJava 验证。</div>
+  </div>
+
+  <!-- 构建约束 -->
+  <div class="buildnote">
+    <b>构建约束</b>：NeoGradle 全平台统一 7.1.38，wrapper 9.5.1；每次 Gradle 调用仅构建一个 MC 版本（<code>-Pactive_versions=&lt;v&gt;</code>，默认 26.1.2）。<br>
+    <span class="legend">代码标识符（common / v1_21_1 / v26_1_2 / v26_2 / AnimRenderOps / CONSTRAINT-001 等）保留英文原名；其余显示文本均为中文。</span>
+  </div>
+</div>
+</body>
+</html>

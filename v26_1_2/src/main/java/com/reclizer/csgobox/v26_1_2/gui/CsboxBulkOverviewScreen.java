@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
 import com.reclizer.csgobox.utils.GuiRegion;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
@@ -44,8 +45,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int openableCount;
     private long lastRecountTick = -1;
 
-    private float rotX = 0;
-    private float rotY = 0;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     public CsboxBulkOverviewScreen() {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("csgo_bulk_overview"));
@@ -130,6 +130,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         if (this.minecraft != null && this.minecraft.level != null) {
             int fill = UiBackdrop.fill();
             AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
@@ -154,7 +155,7 @@ public class CsboxBulkOverviewScreen extends Screen {
 
         AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
                 centerX - textureSize / 2, centerY - textureSize / 2,
-                this.rotX, this.rotY, scale);
+                this.itemDrag.rotation(), scale);
     }
 
     // Preview geometry shared by render3DBox and mouseDragged
@@ -180,10 +181,15 @@ public class CsboxBulkOverviewScreen extends Screen {
         boolean isInRange = mouseX >= x && mouseX <= x + size
                 && mouseY >= y && mouseY <= y + size;
         if (event.button() == 0 && isInRange) {
-            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
-            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
+            this.itemDrag.accumulate(dragX, dragY);
         }
         return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        this.itemDrag.release();
+        return super.mouseReleased(event);
     }
 
     private void renderLabels(GuiGraphicsExtractor guiGraphics) {

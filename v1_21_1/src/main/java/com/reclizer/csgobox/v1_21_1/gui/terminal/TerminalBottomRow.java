@@ -107,8 +107,11 @@ public final class TerminalBottomRow {
         AnimRenderOps.blitTextured(gg, TEX_BADGE, bcx - badge / 2, bcy - badge / 2,
                 badge, badge, 72, 72);
         ItemStack slotItem = TerminalOfferItems.sessionItem();
-        AnimRenderOps.renderItem2D(player, gg, slotItem, bcx, bcy,
-                (badge * ICON_RATIO) / 16F);
+        // 1.21.1 renderItem2D anchors at the icon-box TOP-LEFT: back out half
+        // the scaled box so the icon centre lands on the badge centre.
+        float slotScale = (badge * ICON_RATIO) / 16F;
+        AnimRenderOps.renderItem2D(player, gg, slotItem,
+                bcx - 8F * slotScale, bcy - 8F * slotScale, slotScale);
 
         // ---- region 11: collection panel (xp name + rarity dots) ----
         int xp0 = s1 + PANEL_GAP;

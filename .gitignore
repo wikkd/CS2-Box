@@ -165,3 +165,6 @@ reasonix.toml
 # csbox-lsp
 lsp/node_modules/
 lsp/dist/
+
+# Local wiki website (Vite/React generated site — local tooling, see AGENTS.md)
+/wiki/wiki-site/

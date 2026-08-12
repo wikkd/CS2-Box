@@ -16,7 +16,8 @@ public record BulkOpenResult(
         int winningIndex,
         List<ItemStack> animationItems,
         List<Integer> animationGrades,
-        float wear
+        float wear,
+        boolean fallback
 ) {
     public BulkOpenResult {
         resultItem = resultItem == null ? ItemStack.EMPTY : resultItem.copy();

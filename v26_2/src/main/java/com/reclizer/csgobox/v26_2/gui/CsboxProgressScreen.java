@@ -512,6 +512,15 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
+    public void removed() {
+        // Death/respawn or any external setScreen() replacement only calls
+        // Screen.removed() (never onClose()), so restore the HUD here too —
+        // otherwise dying mid-animation leaves the HUD hidden permanently.
+        HudVisibility.show();
+        super.removed();
+    }
+
+    @Override
     public boolean isPauseScreen() {
         return false;
     }

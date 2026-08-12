@@ -30,6 +30,11 @@ done
 
 > 已归档（EOL）平台 v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 自 2026-08-09 起不再构建发布，最后状态见 tag `eol-legacy-21x-1.0.6`。
 
+> `forge_26_1_2`（MinecraftForge，实验模块）与 `v26_1_2` 保持特性同步（同一
+> `mod_version`，同步纪律见 AGENTS.md「forge_26_1_2 同步」），**不进入本构建矩阵**
+> 与 CI；其发布门禁独立运行 `scripts/test-forge-2612.sh`（L0-L3）+ L4 运行时 E2E，
+> 流程见 `docs/TESTING-FORGE-2612.md` §6。
+
 产物命名：`<module>/build/libs/csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
 
 ## 3. 质量门（发布前必须全绿）

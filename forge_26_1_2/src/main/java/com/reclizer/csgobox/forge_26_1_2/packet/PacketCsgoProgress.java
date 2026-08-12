@@ -5,9 +5,12 @@ import com.reclizer.csgobox.forge_26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_1_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.forge_26_1_2.capability.ModCapability;
 import com.reclizer.csgobox.forge_26_1_2.event.BoxOpenedEvent;
-import com.reclizer.csgobox.logic.AnimationStrip;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxStripGenerator;
+import com.reclizer.csgobox.forge_26_1_2.box.GradeGroup;
 import com.reclizer.csgobox.logic.GradeMap;
-import com.reclizer.csgobox.logic.OddsCalculator;
+import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,7 +27,6 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -78,8 +80,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            var itemList = ItemCsgoBox.getItemGroup(box);
-            if (itemList.isEmpty()) {
+            var boxId = ItemCsgoBox.getBoxId(box);
+            if (boxId == null) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
@@ -103,25 +105,24 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
-            var gradeMap = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy);
 
-            List<ItemStack> animationItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-            List<Integer> animationGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
-            for (int i = 0; i < AnimationStrip.ITEM_COUNT; i++) {
-                int grade = OddsCalculator.pickGrade(rng, weights);
-                ItemStack itemStack = gradeMap.pickRandom(rng, grade);
-                if (itemStack == null) {
-                    itemStack = gradeMap.findFallback(grade);
+            // The grade pool is definition-derived and immutable, so it is
+            // built once per box id (same cache the bulk path uses) instead
+            // of re-copied on every single open. GradeMapCache is invalidated
+            // by BoxRegistry on reload, so a config change can never serve a
+            // stale pool. pickRandom always returns ItemStack::copy results,
+            // so callers may mutate the returned stack freely.
+            var gradeMap = GradeMapCache.get(boxId.toString(),
+                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
+            if (gradeMap.isEmpty()) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(context, message.requestId());
                 }
-                if (itemStack == null) {
-                    itemStack = ItemStack.EMPTY;
-                }
-                animationGrades.add(Mth.clamp(grade, 1, 5));
-                animationItems.add(itemStack);
+                return;
             }
 
-            int winningIndex = AnimationStrip.randomWinningIndex(SECURE_RANDOM, animationItems.size());
-            winningIndex = AnimationStrip.findNearestValid(animationItems, winningIndex, stack -> !stack.isEmpty());
+            var strip = BoxStripGenerator.generate(gradeMap, weights, rng);
+            int winningIndex = strip.winningIndex();
             if (winningIndex < 0) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
@@ -129,11 +130,11 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            ItemStack giveItem = animationItems.get(winningIndex);
-            int finalGrade = animationGrades.get(winningIndex);
+            ItemStack giveItem = strip.items().get(winningIndex);
+            int finalGrade = strip.grades().get(winningIndex);
 
             if (giveItem.isEmpty()) {
-                giveItem = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy).findFallback(1);
+                giveItem = gradeMap.findFallback(1);
                 if (giveItem == null) giveItem = ItemStack.EMPTY;
                 if (giveItem.isEmpty()) {
                     if (player instanceof ServerPlayer sp) {
@@ -141,9 +142,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                     }
                     return;
                 }
-                finalGrade = resolveGrade(giveItem, itemList, 1);
-                animationItems.set(winningIndex, giveItem.copy());
-                animationGrades.set(winningIndex, finalGrade);
+                finalGrade = resolveGrade(giveItem, boxId, 1);
+                strip.items().set(winningIndex, giveItem.copy());
+                strip.grades().set(winningIndex, finalGrade);
             }
 
             float wear = 0F;
@@ -165,8 +166,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                     winningIndex,
                     serverSeed,
                     message.requestId(),
-                    animationItems,
-                    animationGrades
+                    strip.items(),
+                    strip.grades()
             ), context);
 
             ItemStack toGive = giveItem.copy();
@@ -183,13 +184,12 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 }
             }
 
-            Identifier boxId = ItemCsgoBox.getBoxId(box);
             BoxOpenedEvent.BUS.fire(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));
         });
     }
 
 
-    private static void sendRejected(CustomPayloadEvent.Context context, long requestId) {
+    static void sendRejected(CustomPayloadEvent.Context context, long requestId) {
         Networking.INSTANCE.reply(new PacketBoxOpenResult(
                 ItemStack.EMPTY,
                 1,
@@ -242,10 +242,22 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    private static int resolveGrade(ItemStack item, Map<ItemStack, Integer> itemList, int fallback) {
-        for (Map.Entry<ItemStack, Integer> entry : itemList.entrySet()) {
-            if (ItemStack.isSameItemSameComponents(item, entry.getKey())) {
-                return Mth.clamp(entry.getValue(), 1, 5);
+    /**
+     * Resolves the grade (1..5) of an item produced by the fallback path. The
+     * box definition is the source of truth; the per-open item list no longer
+     * exists now that the grade pool is cached.
+     */
+    static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
+        BoxDefinition def = BoxRegistry.get(boxId);
+        if (def != null) {
+            for (GradeGroup grade : def.grades()) {
+                int gradeLevel = BoxDefinition.gradeLevel(grade.id());
+                if (gradeLevel == 0) continue;
+                for (ItemStack candidate : grade.items()) {
+                    if (ItemStack.isSameItemSameComponents(item, candidate)) {
+                        return Mth.clamp(gradeLevel, 1, 5);
+                    }
+                }
             }
         }
         return Mth.clamp(fallback, 1, 5);

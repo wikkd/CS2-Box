@@ -518,6 +518,19 @@ public class CsboxProgressScreen extends Screen {
     }
 
     @Override
+    public void removed() {
+        // Death/respawn or any external setScreen() replacement only calls
+        // Screen.removed() (never onClose()), so restore the HUD here too —
+        // otherwise dying mid-animation leaves hideGui=true and the HUD
+        // (health bar / hotbar / crosshair) disappears permanently after
+        // respawn.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.removed();
+    }
+
+    @Override
     public boolean isPauseScreen() {
         return false;
     }

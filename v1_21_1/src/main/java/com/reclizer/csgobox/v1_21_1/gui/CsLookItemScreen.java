@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
@@ -26,8 +27,7 @@ public class CsLookItemScreen extends Screen {
     private final Player player;
     private final ItemStack openItem;
     private final int grade;
-    private float rotX = 0;
-    private float rotY = 0;
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
@@ -165,6 +165,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         renderLookBackground(guiGraphics);
         renderBg(guiGraphics, mouseX, mouseY, partialTicks);
         renderLabels(guiGraphics);
@@ -225,7 +226,7 @@ public class CsLookItemScreen extends Screen {
         }
         if (!viewportRendered) {
             AnimRenderOps.renderItem3D(guiGraphics, openItem, this.player,
-                    this.width * 37 / 100, this.height * 30 / 100, this.rotX, this.rotY, scale);
+                    this.width * 37 / 100, this.height * 30 / 100, this.itemDrag.rotation(), scale);
         }
 
         int btnX = backButtonX();
@@ -440,10 +441,15 @@ public class CsLookItemScreen extends Screen {
         boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
                 && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
         if (button == 0 && isInRange) {
-            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
-            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
+            this.itemDrag.accumulate(dragX, dragY);
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        this.itemDrag.release();
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_2.gui.pip;
 
+import com.reclizer.csgobox.utils.Quat;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
@@ -10,9 +11,9 @@ import org.jspecify.annotations.Nullable;
  * the rotation/scale settings the GUI wants applied at draw time.
  *
  * <p>The 3D rendering work happens inside {@link Icon3DRenderer#renderToTexture}
- * — the {@code rotXDeg} / {@code rotYDeg} fields are inputs to a fresh
- * {@code PoseStack} built there, not pre-baked matrices. Carrying primitives
- * (degrees, not matrices) keeps the state immutable and safe to reuse across
+ * — the {@link Quat} field is the user-driven orientation in the renderer's
+ * rotation frame (horizontal drag spins the vertical axis). Carrying the raw
+ * quaternion (four floats) keeps the state immutable and safe to reuse across
  * frames for PIP texture caching.</p>
  *
  * <p>Note: this class references {@link PictureInPictureRenderState}, which
@@ -26,9 +27,7 @@ import org.jspecify.annotations.Nullable;
  */
 public record Icon3DRenderState(
         TrackingItemStackRenderState itemStackRenderState,
-        float rotXDeg,
-        float rotYDeg,
-        float rotZDeg,
+        Quat rotation,
         float targetPixelSize,
         float modelSpan,
         float modelCenterX,

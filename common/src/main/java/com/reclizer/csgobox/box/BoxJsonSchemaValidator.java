@@ -40,6 +40,7 @@ public final class BoxJsonSchemaValidator {
         validateEntity(json, issues);
         validateNameColorPrefix(json, issues);
         validateType(json, issues);
+        validateItemPrices(json, issues);
         return issues;
     }
 
@@ -117,6 +118,33 @@ public final class BoxJsonSchemaValidator {
         if (raw.length() == 7 || raw.charAt(7) != ' ') {
             issues.add(new SchemaIssue("name",
                     "Color prefix '#" + tail + "' must be followed by a single ASCII space"));
+        }
+    }
+
+    private static void validateItemPrices(JsonObject json, List<SchemaIssue> issues) {
+        for (int g = 1; g <= 5; g++) {
+            String key = "grade" + g;
+            if (!json.has(key)) continue;
+            JsonElement elem = json.get(key);
+            if (!elem.isJsonArray()) continue;
+            JsonArray arr = elem.getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonElement e = arr.get(i);
+                if (!e.isJsonObject()) continue;
+                JsonObject item = e.getAsJsonObject();
+                if (!item.has("price")) continue;
+                JsonElement p = item.get("price");
+                if (!p.isJsonPrimitive() || !p.getAsJsonPrimitive().isNumber()) {
+                    issues.add(new SchemaIssue(key + "[" + i + "].price",
+                            "Expected integer, got " + typeOf(p)));
+                    continue;
+                }
+                double val = p.getAsDouble();
+                if (val < 0 || val != Math.floor(val)) {
+                    issues.add(new SchemaIssue(key + "[" + i + "].price",
+                            "Expected non-negative integer, got " + val));
+                }
+            }
         }
     }
 

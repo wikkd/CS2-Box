@@ -30,7 +30,11 @@ wiki/
 │   ├── index.md          # 内容目录（LLM 操作的入口）
 │   ├── log.md            # 操作日志（append-only）
 │   ├── overview.md       # 知识库总览
-│   ├── sources/          # 每个 raw 源一份摘要
+│   ├── sources/          # 资料摘要，按用途分四子目录：
+│   ├── guides/       #   上手与流程（readme/changelog/architecture/development/configuration/release/...）
+│   ├── updates/      #   版本与移植说明（update-*/port-*）
+│   ├── testing/      #   测试体系与规格（testing/manual-testing/superpowers-specs/...）
+│   └── features/     #   功能设计与 GDD（wear-durability/armory-points/arms-dealer-economy-design/...）
 │   ├── concepts/         # 架构概念文章
 │   ├── entities/         # 代码组件/文件条目
 │   └── comparisons/      # 跨平台对比分析

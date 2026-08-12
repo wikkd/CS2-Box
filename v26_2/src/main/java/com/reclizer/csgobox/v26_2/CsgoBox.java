@@ -18,6 +18,8 @@ import com.reclizer.csgobox.v26_2.packet.PacketCsgoBulkProgress;
 import com.reclizer.csgobox.v26_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_2.packet.PacketSyncBoxItems;
+import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuy;
+import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuyResult;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -163,6 +165,8 @@ public class CsgoBox {
         registrar.playToClient(PacketBoxBulkResult.TYPE, PacketBoxBulkResult.STREAM_CODEC, PacketBoxBulkResult::handle);
         registrar.playToServer(PacketRequestBoxItems.TYPE, PacketRequestBoxItems.STREAM_CODEC, PacketRequestBoxItems::handle);
         registrar.playToClient(PacketSyncBoxItems.TYPE, PacketSyncBoxItems.STREAM_CODEC, PacketSyncBoxItems::handle);
+        registrar.playToServer(PacketTerminalBuy.TYPE, PacketTerminalBuy.STREAM_CODEC, PacketTerminalBuy::handleServer);
+        registrar.playToClient(PacketTerminalBuyResult.TYPE, PacketTerminalBuyResult.STREAM_CODEC, PacketTerminalBuyResult::handle);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

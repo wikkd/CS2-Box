@@ -16,6 +16,8 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalBuy;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalBuyResult;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_1_2.block.ModBlocks;
 import com.reclizer.csgobox.v26_1_2.villager.ModVillagers;
@@ -162,6 +164,8 @@ public class CsgoBox {
         registrar.playToClient(PacketBoxBulkResult.TYPE, PacketBoxBulkResult.STREAM_CODEC, PacketBoxBulkResult::handle);
         registrar.playToServer(PacketRequestBoxItems.TYPE, PacketRequestBoxItems.STREAM_CODEC, PacketRequestBoxItems::handle);
         registrar.playToClient(PacketSyncBoxItems.TYPE, PacketSyncBoxItems.STREAM_CODEC, PacketSyncBoxItems::handle);
+        registrar.playToServer(PacketTerminalBuy.TYPE, PacketTerminalBuy.STREAM_CODEC, PacketTerminalBuy::handleServer);
+        registrar.playToClient(PacketTerminalBuyResult.TYPE, PacketTerminalBuyResult.STREAM_CODEC, PacketTerminalBuyResult::handle);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
