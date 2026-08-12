@@ -5,12 +5,9 @@ import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.box.GradeGroup;
-import com.reclizer.csgobox.v26_2.gui.CsboxBulkOverviewScreen;
-import com.reclizer.csgobox.v26_2.gui.CsboxScreen;
-import com.reclizer.csgobox.v26_2.sounds.ModSounds;
+import com.reclizer.csgobox.v26_2.gui.BoxScreenOpener;
 import com.mojang.serialization.Codec;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -167,25 +164,11 @@ public class ItemCsgoBox extends Item {
      * Client-side open entry: plays the open sound and opens the classic crate
      * screen (Shift → bulk overview). The terminal machine overrides this in
      * {@link ItemTerminal}. Only called from {@code ClickEvent} on the client;
-     * never invoke on a dedicated server.
+     * never invoke on a dedicated server. The actual screen code lives in
+     * {@link BoxScreenOpener} so server-side class loading stays client-free.
      */
     public void openScreen(ItemStack stack) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) {
-            return;
-        }
-        float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
-        if (vol > 0) {
-            mc.player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
-        }
-        boolean shift = mc.options.keyShift.isDown();
-        mc.execute(() -> {
-            if (shift) {
-                mc.setScreenAndShow(new CsboxBulkOverviewScreen());
-            } else {
-                mc.setScreenAndShow(new CsboxScreen());
-            }
-        });
+        BoxScreenOpener.openClassic(stack);
     }
 
     public static int[] getRandom(ItemStack stack) {

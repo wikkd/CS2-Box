@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.forge_26_1_2.item;
 
-import com.reclizer.csgobox.forge_26_1_2.gui.TerminalBootScreen;
-import net.minecraft.client.Minecraft;
+import com.reclizer.csgobox.forge_26_1_2.gui.BoxScreenOpener;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -23,9 +22,6 @@ public class ItemTerminal extends ItemCsgoBox {
     /** The terminal opens its boot screen instead of the classic crate UI. */
     @Override
     public void openScreen(ItemStack stack) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null) {
-            mc.execute(() -> mc.setScreen(new TerminalBootScreen(stack.copy())));
-        }
+        BoxScreenOpener.openTerminal(stack);
     }
 }
