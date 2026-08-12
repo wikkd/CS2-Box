@@ -32,7 +32,7 @@
 | 2 卡片标签/系统文案 | `zh_cn.json`/`en_us.json` | `TerminalChatRegion.java` | 同 | 同 |
 | 3 胶囊填充 | `TerminalPalette.java` | `TerminalActionBar.java` | 同 | 同 |
 | 4 聊天滚动 | — | `TerminalChatRegion.java` + `TerminalScreen.java` | 同 | 同 |
-| 5 水印 | — | `TerminalChatRegion.java` | 同 | 同 |
+| 5 ~~水印~~（2026-08-12 全平台移除） | — | `TerminalChatRegion.java` | 同 | 同 |
 | 6 底行三件套 | `TerminalAssetsTest.java` + `scripts/gen-terminal-assets.py` + `TerminalPalette.java` | `TerminalBottomRow.java` | 同 | 同 |
 | 7 中央物品接箱池 | — | `TerminalScreen.java` + `ClickEvent.java` + `TerminalOfferRegion.java` | 同 | 同 |
 
@@ -306,6 +306,10 @@ public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, doubl
 **Files:**
 - Modify: `{3 平台}/.../gui/terminal/TerminalChatRegion.java`
 
+> **2026-08-12 更新：该水印已按玩家反馈全平台移除**（v1_21_1 / v26_1_2 / v26_2 /
+> forge_26_1_2 同步删除 `render()` 中的 ♞ 绘制；`design/terminal-chat.html` 原型同步
+> 删除 `.watermark` 元素与样式）。以下步骤仅作历史实现记录，不再执行。
+
 - [ ] **Step 1: v26_1_2** `render()` 中 `drawDotGrid` 之后、条目绘制之前插入：
 ```java
 // 棋子水印（HTML .watermark &#9822; = U+265E，Unifont 含字形；alpha 0.045×255≈12）
@@ -442,6 +446,6 @@ private ItemStack offerItem(NegotiationModel.Offer offer) {
 - [ ] `./gradlew :common:test -Pactive_versions=26.1.2`
 - [ ] 三平台 `clean compileJava`（26.1.2 / 26.2 / 1.21.1）
 - [ ] `scripts/check-animops-drift.sh`（未新增 op，应通过）
-- [ ] 运行时冒烟清单：①♞ 水印；②滚轮回看 + 底部自动跟随；③拒绝后" - 已拒绝"、450ms 下一轮；接受立即成交 + " - 已接受"；④系统行玩家名；⑤接受按钮"接受报价 ¥17.76"；⑥胶囊绿/红实色 + 拒绝按下红框；⑦中央真实 MC 3D 物品按轮次稳定、拖拽/自旋正常；⑧区域 11 "毁灭之手终端机"；⑨倒计时冒号变暗；⑩圆形徽章 2.5s 换卡
+- [ ] 运行时冒烟清单：①~~♞ 水印~~（2026-08-12 全平台移除）；②滚轮回看 + 底部自动跟随；③拒绝后" - 已拒绝"、450ms 下一轮；接受立即成交 + " - 已接受"；④系统行玩家名；⑤接受按钮"接受报价 ¥17.76"；⑥胶囊绿/红实色 + 拒绝按下红框；⑦中央真实 MC 3D 物品按轮次稳定、拖拽/自旋正常；⑧区域 11 "毁灭之手终端机"；⑨倒计时冒号变暗；⑩圆形徽章 2.5s 换卡
 - [ ] docs/CODE-REVIEW.md 自查清单
 - [ ] 提交：`chore(terminal): verification pass`（如无代码改动可跳过）

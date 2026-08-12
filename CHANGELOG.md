@@ -35,6 +35,9 @@
 - **armory_point 贴图替换为原创金色硬币造型**（原素材存在版权风险，随 1.0.6 发布后玩家端自动生效）
 - **开箱音效重编码**（`cs_open` / `cs_dita` / `cs_finish` 体积大幅缩减，文件更小、加载更快；音质待人工听感回归验证，验证记录见 docs/RUNTIME-UI-TESTING.md）
 
+### 移除
+- **终端机聊天区 ♞ 水印**（按玩家反馈，三平台 + forge 同步）：删除 `TerminalChatRegion.render()` 中象棋棋子字符（`U+265E`）水印绘制——该水印源自 `design/terminal-chat.html` 原型 `.watermark`（1.0.7 演示对齐 Task 5 落地），移除后聊天区保留点阵网格与标题条；`design/terminal-chat.html` 原型同步删除水印元素与样式，保持设计源与实现一致
+
 ## [归档] - 2026-08-09
 ### 平台归档（EOL）
 - **v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 移出仓库**：仅玩家基数大的 1.21.1 / 26.1.2 / 26.2 三平台继续维护。7 个 EOL 模块的代码整体删除（最后状态保留在 tag `eol-legacy-21x-1.0.6`，需要时从该 tag 检出复活）；`settings.gradle` 的 `versionModules`、`gradle.properties` 的版本变量组、CI `build.yml` 矩阵（10 → 3 行）同步裁剪，`scripts/mirror.sh` 移除 legacy variant，legacy 专用迁移脚本（`merge-*.py` / `port-12111.py` / `port-focus.py` / `migrate-randomitem.py`）一并删除。

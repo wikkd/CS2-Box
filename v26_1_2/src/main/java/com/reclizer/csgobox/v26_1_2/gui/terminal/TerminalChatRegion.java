@@ -74,14 +74,6 @@ public final class TerminalChatRegion {
         // replaces the old per-frame fill storm of drawDotGrid).
         int bodyTop = y0 + 9; // below the title strip (28px strip -> gui 9)
         drawDotGrid(gg, x0 + 3, bodyTop + 1, x1 - x0 - 5, y1 - bodyTop - 3);
-        // 棋子水印（HTML .watermark &#9822; = U+265E，Unifont 含字形；alpha 0.045×255≈12）
-        String wm = "♞";
-        Font f = Minecraft.getInstance().font;
-        float wmScale = (x1 - x0) / 12.7F;
-        RenderFontTool.drawString(gg, f, fcs(wm),
-                (x0 + x1) / 2F - f.width(wm) * wmScale / 2F,
-                (bodyTop + y1) / 2F - f.lineHeight * wmScale / 2F,
-                0, 0, wmScale, 0x0CFFFFFF);
         // title strip
         Font font = Minecraft.getInstance().font;
         RenderFontTool.drawSpacedText(gg, font,
