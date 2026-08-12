@@ -53,8 +53,8 @@ public final class TerminalBottomRow {
             lastCountdown = text;
             countdownFlipAtMs = nowMs;
         }
-        int digitW = Math.round(font.width("0") * DIGIT_SCALE);
-        int colonW = Math.round(font.width(":") * DIGIT_SCALE);
+        int digitW = RenderFontTool.width(font, "0", DIGIT_SCALE);
+        int colonW = RenderFontTool.width(font, ":", DIGIT_SCALE);
         int digitsW = 8 * digitW + 3 * colonW + 10 * DIGIT_SPACE;
         int countW = Math.max(46, digitsW + 8);
         int slotW = 31;
@@ -73,13 +73,7 @@ public final class TerminalBottomRow {
         int ty = y0 + STRIP_H + (y1 - (y0 + STRIP_H) - digitH) / 2;
         // centre on the ACTUAL glyph widths (digits like "1" are narrower than
         // the "0" estimate, which skewed the row left — asymmetric gutters)
-        int renderW = 0;
-        for (int i = 0; i < text.length(); i++) {
-            renderW += Math.round(font.width(String.valueOf(text.charAt(i))) * DIGIT_SCALE);
-            if (i < text.length() - 1) {
-                renderW += DIGIT_SPACE;
-            }
-        }
+        int renderW = RenderFontTool.widthSpaced(font, text, DIGIT_SPACE, DIGIT_SCALE);
         int tx = x0 + (countW - renderW) / 2;
         String[] toks = {text.substring(0, 2), text.substring(3, 5),
                 text.substring(6, 8), text.substring(9, 11)};
@@ -140,7 +134,7 @@ public final class TerminalBottomRow {
         TextColor tc = terminalName.getStyle().getColor();
         int nameColor = tc != null ? (0xFF000000 | (tc.getValue() & 0xFFFFFF))
                 : TerminalPalette.OFFER_PRICE;
-        RenderFontTool.drawSpacedText(gg, font, xpName, xp0 + 4, pillY + 1,
+        RenderFontTool.drawSpacedTextVanilla(gg, font, xpName, xp0 + 4, pillY + 1,
                 1F, 0.59F, nameColor);
         int dotX = pillX + padX;
         int dotY = pillY + padY;
@@ -173,28 +167,24 @@ public final class TerminalBottomRow {
         AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, 0xFF66798A, TerminalPalette.TITLE);
         AnimRenderOps.fill(gg, x0, y1 - 1, x1, y1, TerminalPalette.FRAME);
         Font font = Minecraft.getInstance().font;
-        int w = 0;
-        for (int i = 0; i < label.length(); i++) {
-            w += Math.round(font.width(String.valueOf(label.charAt(i))) * 0.47F);
-            if (i < label.length() - 1) {
-                w += 1;
-            }
-        }
+        int w = RenderFontTool.widthSpaced(font, label, 1F, 0.47F);
         float lx = center ? x0 + (x1 - x0 - w) / 2F : x0 + 3F;
         RenderFontTool.drawSpacedText(gg, font, label, lx, y0 + 1, 1F, 0.47F, TerminalPalette.TEXT);
     }
 
-    /** Round dot: filled = 3px circle + glow; hollow = 1px ring (HTML .dot 10px). */
+    /** Round dot: filled = 3px disc + glow; hollow = 1px ring (HTML .dot 10px),
+     *  drawn as crisp fill geometry (no 32px -> 3px circle down-scaling). */
     private void drawDot(GuiGraphicsExtractor gg, int x, int y, boolean filled, int color) {
         if (filled) {
             AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, x - 2, y - 2, 7, 7, 128, 128);
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
-                    0, 0, 32, 32, 32, 32, color);
+            AnimRenderOps.fill(gg, x + 1, y, x + 2, y + 1, color);
+            AnimRenderOps.fill(gg, x, y + 1, x + 3, y + 3, color);
+            AnimRenderOps.fill(gg, x + 1, y + 3, x + 2, y + 4, color);
         } else {
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
-                    0, 0, 32, 32, 32, 32, color);
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x + 1, y + 1, 1, 1,
-                    0, 0, 32, 32, 32, 32, 0xFF262C33);
+            AnimRenderOps.fill(gg, x + 1, y, x + 2, y + 1, color);
+            AnimRenderOps.fill(gg, x, y + 1, x + 3, y + 3, color);
+            AnimRenderOps.fill(gg, x + 1, y + 3, x + 2, y + 4, color);
+            AnimRenderOps.fill(gg, x + 1, y + 1, x + 2, y + 2, 0xFF262C33);
         }
     }
 }
