@@ -7,11 +7,15 @@
 # once before the first local build of :v1_21_1; CI runs it automatically.
 #
 # Source: https://github.com/MUKSC/TACZ-1.21.1 (unofficial port, mod id "tacz")
+# Slow direct GitHub release assets? Set TACZ_MIRROR to a proxy prefix, e.g.
+#   TACZ_MIRROR="https://ghproxy.vip/" ./scripts/download-tacz.sh
+# (tested ~3.8MB/s vs ~30KB/s direct on CN networks, 2026-08)
 set -euo pipefail
 
 VERSION="1.1.8-hotfix-r6"
 TAG="neoforge-${VERSION}"
-URL="https://github.com/MUKSC/TACZ-1.21.1/releases/download/${TAG}/tacz-neoforge-1.21.1-${VERSION}.jar"
+MIRROR="${TACZ_MIRROR:-}"
+URL="${MIRROR}https://github.com/MUKSC/TACZ-1.21.1/releases/download/${TAG}/tacz-neoforge-1.21.1-${VERSION}.jar"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST_DIR="${ROOT}/local-repo/com/tacz/tacz/${VERSION}"
