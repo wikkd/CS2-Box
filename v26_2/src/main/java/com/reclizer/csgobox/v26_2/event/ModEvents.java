@@ -47,7 +47,7 @@ public final class ModEvents {
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
-                ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+                ItemStack stack = new ItemStack(ModItems.boxItemFor(def).get());
                 ItemCsgoBox.setBoxId(def.id(), stack);
                 mob.spawnAtLocation((ServerLevel) mob.level(), stack);
             }
@@ -82,6 +82,13 @@ public final class ModEvents {
     public static void serverTick(ServerTickEvent.Pre event) {
         if (event.getServer().getTickCount() % 100 == 0) {
             com.reclizer.csgobox.v26_2.packet.PacketCsgoProgress.tickOpenBlockMap(event.getServer().overworld().getGameTime());
+        }
+        // 1 Hz authoritative terminal countdown on the WORLD clock (game ticks
+        // × 50) — it advances only while the world runs, and the deadline
+        // survives restarts exactly (game time is part of the world save).
+        if (event.getServer().getTickCount() % 20 == 0) {
+            com.reclizer.csgobox.v26_2.terminal.TerminalSessionManager.tickSessions(
+                    event.getServer(), event.getServer().overworld().getGameTime() * 50L);
         }
     }
 

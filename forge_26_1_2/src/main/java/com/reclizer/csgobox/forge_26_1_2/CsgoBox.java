@@ -264,11 +264,14 @@ public class CsgoBox {
         if (CONFIG.loadDefaultBoxes()) {
             BoxJsonLoader.loadAll();
         }
+        com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSessionManager.bindServer(event.getServer());
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
+        com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSessionManager.saveNow();
+        com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSessionManager.unbindServer();
         if (boxWatcher != null) {
             boxWatcher.stop();
             boxWatcher = null;

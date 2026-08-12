@@ -96,13 +96,6 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            if (!tryConsumeKeys(player, box, 1)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
-                return;
-            }
-
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
 
@@ -147,6 +140,17 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 strip.grades().set(winningIndex, finalGrade);
             }
 
+            // Keys are consumed only after the whole roll is validated (box id,
+            // weights, grade pool, winning index, fallback). A broken or
+            // hot-reloaded-empty definition must never eat a key: every failure
+            // above replies sendRejected before any consumption happens.
+            if (!tryConsumeKeys(player, box, 1)) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(context, message.requestId());
+                }
+                return;
+            }
+
             float wear = 0F;
             if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
                 wear = rng.nextFloat();
@@ -175,7 +179,11 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
             }
-            box.shrink(1);
+            // Creative mode is fully free: keys, Armory Points and now boxes
+            // (parity with tryConsumeKeys / PacketTerminalBuy).
+            if (!player.getAbilities().instabuild) {
+                box.shrink(1);
+            }
 
             if (player instanceof ServerPlayer sp) {
                 sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
@@ -306,6 +314,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
      */
     static boolean tryConsumeBoxes(Player entity, ItemStack box, int count) {
         if (count <= 0) {
+            return true;
+        }
+        if (entity.getAbilities().instabuild) {
             return true;
         }
         int remaining = count;

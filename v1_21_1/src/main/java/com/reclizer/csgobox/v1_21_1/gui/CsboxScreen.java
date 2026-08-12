@@ -182,9 +182,13 @@ public class CsboxScreen extends Screen {
         }
         if (keyRl != null && this.entity != null) {
             for (ItemStack stack : entity.getInventory().items) {
-                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                    total += stack.getCount();
-                }
+                if (isKey(stack, keyRl)) total += stack.getCount();
+            }
+            for (ItemStack stack : entity.getInventory().armor) {
+                if (isKey(stack, keyRl)) total += stack.getCount();
+            }
+            for (ItemStack stack : entity.getInventory().offhand) {
+                if (isKey(stack, keyRl)) total += stack.getCount();
             }
         }
         return total;
@@ -554,12 +558,7 @@ public class CsboxScreen extends Screen {
                             if (entity.getAbilities().instabuild) {
                                 canOpen = true;
                             } else {
-                                for (ItemStack stack : entity.getInventory().items) {
-                                    if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                                        canOpen = true;
-                                        break;
-                                    }
-                                }
+                                canOpen = hasKeyAnywhere(entity, keyRl);
                             }
                         }
                         if (canOpen) {
@@ -569,9 +568,6 @@ public class CsboxScreen extends Screen {
                             PacketDistributor.sendToServer(new PacketCsgoProgress(openRequestId));
                             openClicked = true;
                         } else {
-                            // The client only checks the main inventory slots;
-                            // keys in armor/offhand are decided server-side, so
-                            // this is a hint, never a hard disable.
                             this.hint = Component.translatable("gui.csgobox.box.no_key");
                             this.hintTicks = 200;
                         }
@@ -593,6 +589,31 @@ public class CsboxScreen extends Screen {
             }
         }
         return super.mouseClicked(pMouseX, pMouseY, pButton);
+    }
+
+    /**
+     * Client-side key availability check mirroring the server's
+     * {@code tryConsumeKeys} slot coverage (main inventory + armor + offhand)
+     * so keys stashed in armor/offhand are not wrongly reported as missing.
+     * Box instances are never keys, matching the server's consumption rule.
+     */
+    private static boolean hasKeyAnywhere(Player player, ResourceLocation keyRl) {
+        for (ItemStack stack : player.getInventory().items) {
+            if (isKey(stack, keyRl)) return true;
+        }
+        for (ItemStack stack : player.getInventory().armor) {
+            if (isKey(stack, keyRl)) return true;
+        }
+        for (ItemStack stack : player.getInventory().offhand) {
+            if (isKey(stack, keyRl)) return true;
+        }
+        return false;
+    }
+
+    private static boolean isKey(ItemStack stack, ResourceLocation keyRl) {
+        return !stack.isEmpty()
+                && !(stack.getItem() instanceof ItemCsgoBox)
+                && keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     @Override

@@ -269,8 +269,16 @@ public final class TerminalChatRegion {
                 x + (availW - textW) / 2F, y + 1, 0.16F, 0.43F, color);
     }
 
-    /** System text with the local player name as %s (multi-arg safe). */
+    /**
+     * System text: server-supplied translatable args win (e.g. the terminal
+     * owner's name in the locked refusal); without args the local player name
+     * is used as the default single %s arg (multi-arg safe).
+     */
     private static String sysText(NegotiationModel.SystemEntry se) {
+        String[] args = se.args();
+        if (args != null) {
+            return Component.translatable(se.textKey(), (Object[]) args).getString();
+        }
         net.minecraft.world.entity.player.Player p = Minecraft.getInstance().player;
         return Component.translatable(se.textKey(),
                 p == null ? "?" : p.getName().getString()).getString();

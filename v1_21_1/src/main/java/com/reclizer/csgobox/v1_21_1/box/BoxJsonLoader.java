@@ -103,11 +103,6 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        // Generate the default terminal box config (decoupled terminal loot)
-        // on first run, before scanning existing box JSON files.
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
-        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
-
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 
         List<Path> scannedFiles = new ArrayList<>();
@@ -294,7 +289,6 @@ public final class BoxJsonLoader {
             ParsedName parsedName = parseColoredName(getString(json, "name", boxIdStr));
             ResourceLocation keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
             float dropRate = getFloat(json, "drop", 0.12F);
-            String type = getString(json, "type", "csbox");
 
             int[] weights = parseWeights(json, file, fileName);
 
@@ -335,7 +329,6 @@ public final class BoxJsonLoader {
             parsedName.color().ifPresent(builder::nameColor);
             builder.key(keyItem);
             builder.dropRate(dropRate);
-            builder.type(type);
             for (ResourceLocation entityId : dropEntityIds) {
                 Float rate = entityDropRates.get(entityId);
                 if (rate != null) {

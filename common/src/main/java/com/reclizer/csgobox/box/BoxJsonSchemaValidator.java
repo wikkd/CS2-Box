@@ -39,7 +39,6 @@ public final class BoxJsonSchemaValidator {
         validateGrades(json, issues);
         validateEntity(json, issues);
         validateNameColorPrefix(json, issues);
-        validateType(json, issues);
         validateItemPrices(json, issues);
         return issues;
     }
@@ -145,21 +144,6 @@ public final class BoxJsonSchemaValidator {
                             "Expected non-negative integer, got " + val));
                 }
             }
-        }
-    }
-
-    private static void validateType(JsonObject json, List<SchemaIssue> issues) {
-        if (!json.has("type")) return;
-        JsonElement elem = json.get("type");
-        if (!elem.isJsonPrimitive() || !elem.getAsJsonPrimitive().isString()) {
-            issues.add(new SchemaIssue("type",
-                    "Expected string 'csbox' or 'terminal', got " + typeOf(elem)));
-            return;
-        }
-        String type = elem.getAsString();
-        if (!type.equals("csbox") && !type.equals("terminal")) {
-            issues.add(new SchemaIssue("type",
-                    "Unknown box type '" + type + "'; expected 'csbox' or 'terminal'"));
         }
     }
 

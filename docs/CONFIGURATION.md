@@ -65,12 +65,13 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `name` | 字符串 | 是 | 宝箱在界面显示的名称 |
-| `type` | 字符串 | 否 | 箱子类型:`csbox`(默认,普通宝箱)/ `terminal`(终端机,独立 loot 池) |
-| `key` | 字符串 | 是 | 所需钥匙物品 ID;`minecraft:air` 表示不需要钥匙。**终端机默认 `minecraft:air`(免钥匙)——这是终端机与普通箱子在 `key` 上的唯一区分点** |
+| `key` | 字符串 | 是 | 所需钥匙物品 ID;**`minecraft:air`(免钥匙)不代表终端机**——只有专用终端定义(`csgobox:terminal`)配合 air 钥匙才是终端机,不再有 `type` 字段 |
 | `drop` | 浮点数 | 否 | 默认实体掉落概率(0.0 到 1.0)。**当 `entity` 为纯实体 ID 列表时,本值是每个实体的掉落概率;若 `entity` 用 ID/概率交替数组,本值作为未显式指定概率实体的兜底** |
 | `random` | 浮点数组[5] | 否 | 5 个等级权重(grade1 到 grade5 顺序) |
-| `entity` | 数组 | 否 | 掉落该宝箱的实体 ID 列表(或 ID/概率 交替数组)。**终端机已启用:危险生物按 `drop` 概率掉落终端机** |
+| `entity` | 数组 | 否 | 掉落该宝箱的实体 ID 列表(或 ID/概率 交替数组)。玩家自建 `terminal.json` 时可给终端机配置危险生物掉落 |
 | `grade1` ~ `grade5` | 数组 | 否 | 各等级物品清单(industry / consumer / mil_spec / restricted / classified) |
+
+> **箱子类型判定（v1.0.7 起）**：`type` 字段已移除。箱子类型由派生访问器 `type()` 判定——**仅当箱子 ID 为 `csgobox:terminal` 且 `key` 为 `minecraft:air` 时才返回 `terminal`**，其余一律为普通宝箱（`csbox`）。`key: "minecraft:air"` 单独出现不会把普通宝箱标记为终端机。该类型是派生标签，运行时打开哪个 UI 仍由物品决定（`csgobox:terminal` 物品 → 终端机 UI）。
 
 ### 3.2 物品对象
 
@@ -95,10 +96,11 @@
 
 首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
 
-- 写入 `terminal.json`（类型 `terminal`，独立 loot 池，`key: minecraft:air` 免钥匙，并带 `entity` 危险生物掉落）—— 终端机开箱即有专属掉落，不再借用其他箱子；已有用户配置则跳过。
+- **不再自动写入 `terminal.json`**：终端机与普通宝箱一样是空箱子——首次启动不生成任何终端配置，配置文件夹内不出现 `terminal.json`；玩家创建 `terminal.json` 后，终端机才会与 `csbox` 一样按新箱子逻辑出现在创造物品栏（ID `csgobox:terminal` + `key: minecraft:air` → 终端机 UI）。
+- **不再自动写入 `premium_supply_box.json`**：军火商高级箱与终端机/普通箱一致，首次启动不生成配置；玩家创建 `premium_supply_box.json` 后，高级箱才会出现在创造物品栏（军火商村民售卖的仍是该 ID 的高级箱，未配置时无法开启，需服主创建）。
 - 异步下载 `_tutorial_v<版本>.md` 教程文档（联网时）。
 
-**普通箱子没有内置默认配置**：`weapon_supply_box.json` 等文件需要由玩家/服主自行创建，或从教程文档中复制示例。
+**箱子没有内置默认配置**：`weapon_supply_box.json`、`premium_supply_box.json`、`terminal.json` 等文件需要由玩家/服主自行创建，或从教程文档中复制示例。
 
 ### 3.4 五个等级命名
 

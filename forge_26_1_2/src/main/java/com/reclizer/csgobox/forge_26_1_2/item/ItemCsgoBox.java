@@ -4,8 +4,12 @@ import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_1_2.box.GradeGroup;
+import com.reclizer.csgobox.forge_26_1_2.gui.CsboxBulkOverviewScreen;
+import com.reclizer.csgobox.forge_26_1_2.gui.CsboxScreen;
+import com.reclizer.csgobox.forge_26_1_2.sounds.ModSounds;
 import com.mojang.serialization.Codec;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -23,6 +27,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -59,12 +64,44 @@ public class ItemCsgoBox extends Item {
                             .networkSynchronized(ByteBufCodecs.INT)
                             .build());
 
+    /**
+     * Unique per-terminal id, stamped by the server the first time the player
+     * opens that terminal. The locked session binds to it so a timeout can
+     * destroy THE terminal that was opened (and only that one), even after a
+     * rename or a trip through a chest.
+     */
+    public static final Supplier<DataComponentType<String>> TERMINAL_UID =
+            BOX_DATA_COMPONENTS.register("terminal_uid", () ->
+                    DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                            .build());
+
+    /**
+     * Display name of the player whose live negotiation owns this terminal,
+     * stamped by the server when a fresh session is created for the terminal.
+     * The dealer reads it when another player opens a locked terminal ("去问问
+     * xxx吧"), so the owner's name survives hand-offs, server restarts and the
+     * owner being offline without needing a runtime profile lookup.
+     */
+    public static final Supplier<DataComponentType<String>> TERMINAL_OWNER =
+            BOX_DATA_COMPONENTS.register("terminal_owner", () ->
+                    DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                            .build());
+
     public static void registerDataComponents(BusGroup bus) {
         BOX_DATA_COMPONENTS.register(bus);
     }
 
     public ItemCsgoBox(Properties properties) {
-        super(properties.stacksTo(16).rarity(Rarity.EPIC));
+        this(properties, 16);
+    }
+
+    /** Terminal machines are unstackable — every terminal owns its own uid/lock. */
+    protected ItemCsgoBox(Properties properties, int maxStack) {
+        super(properties.stacksTo(maxStack).rarity(Rarity.EPIC));
     }
 
     public static Optional<BoxDefinition> getDefinition(ItemStack stack) {
@@ -87,6 +124,33 @@ public class ItemCsgoBox extends Item {
         return null;
     }
 
+    /** The terminal's unique id, or null when never opened (e.g. a fresh /give). */
+    public static String getTerminalUid(ItemStack stack) {
+        return stack.get(TERMINAL_UID.get());
+    }
+
+    /** Returns the terminal's unique id, stamping a fresh one on first use. */
+    public static String ensureTerminalUid(ItemStack stack) {
+        String uid = stack.get(TERMINAL_UID.get());
+        if (uid == null) {
+            uid = UUID.randomUUID().toString();
+            stack.set(TERMINAL_UID.get(), uid);
+        }
+        return uid;
+    }
+
+    /** The stamped owner name of the terminal, or null when never opened. */
+    public static String getTerminalOwner(ItemStack stack) {
+        return stack.get(TERMINAL_OWNER.get());
+    }
+
+    /** Stamp the terminal's owner name (kept current on every fresh session). */
+    public static void stampTerminalOwner(ItemStack stack, String name) {
+        if (name != null && !name.isEmpty()) {
+            stack.set(TERMINAL_OWNER.get(), name);
+        }
+    }
+
     public static ItemStack setBoxId(Identifier boxId, ItemStack stack) {
         if (stack.getItem() instanceof ItemCsgoBox) {
             stack.set(BOX_ID.get(), boxId);
@@ -96,6 +160,31 @@ public class ItemCsgoBox extends Item {
             }
         }
         return stack;
+    }
+
+    /**
+     * Client-side open entry: plays the open sound and opens the classic crate
+     * screen (Shift → bulk overview). The terminal machine overrides this in
+     * {@link ItemTerminal}. Only called from {@code ClickEvent} on the client;
+     * never invoke on a dedicated server.
+     */
+    public void openScreen(ItemStack stack) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null) {
+            return;
+        }
+        float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+        if (vol > 0) {
+            mc.player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
+        }
+        boolean shift = mc.options.keyShift.isDown();
+        mc.execute(() -> {
+            if (shift) {
+                mc.setScreen(new CsboxBulkOverviewScreen());
+            } else {
+                mc.setScreen(new CsboxScreen());
+            }
+        });
     }
 
     public static int[] getRandom(ItemStack stack) {

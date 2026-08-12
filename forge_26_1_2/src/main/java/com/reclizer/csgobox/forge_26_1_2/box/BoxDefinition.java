@@ -120,6 +120,21 @@ public record BoxDefinition(
         return new Builder(id, name);
     }
 
+    /** Box type: only the dedicated terminal definition ({@code csgobox:terminal}
+     *  with a keyless {@code minecraft:air} key) is a terminal machine; an air
+     *  key alone never makes a crate a terminal. */
+    /** Whether this definition is the dedicated terminal machine: only
+     *  {@code csgobox:terminal} with a keyless {@code minecraft:air} key is a
+     *  terminal; an air key alone never makes a crate a terminal. */
+    public boolean isTerminal() {
+        return "terminal".equals(id.getPath()) && keyItem.equals(NO_KEY);
+    }
+
+    /** Box type: terminal machine or regular crate. See {@link #isTerminal()}. */
+    public String type() {
+        return isTerminal() ? "terminal" : "csbox";
+    }
+
     public float getDropRateForEntity(Identifier entityType) {
         Float entityRate = entityDropRates.get(entityType);
         return Math.min(entityRate != null ? entityRate : dropRate, 1.0F);

@@ -1,14 +1,7 @@
 package com.reclizer.csgobox.v26_2.event;
 
 import com.reclizer.csgobox.v26_2.CsgoBox;
-import com.reclizer.csgobox.v26_2.gui.CsboxBulkOverviewScreen;
-import com.reclizer.csgobox.v26_2.gui.CsboxScreen;
-import com.reclizer.csgobox.v26_2.gui.TerminalBootScreen;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.v26_2.item.ItemTerminal;
-import com.reclizer.csgobox.v26_2.item.ModItems;
-import com.reclizer.csgobox.v26_2.sounds.ModSounds;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -36,34 +29,10 @@ public final class ClickEvent {
 
         ItemStack heldItem = player.getMainHandItem();
 
-        // Terminal branch first: ItemTerminal extends ItemCsgoBox, so it must
-        // be matched before the generic box branch. No sound yet by design.
-        if (heldItem.getItem() instanceof ItemTerminal) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc != null) {
-                mc.execute(() -> mc.setScreenAndShow(new TerminalBootScreen(heldItem.copy())));
-            }
-            return;
-        }
-
-        if (heldItem.getItem() instanceof ItemCsgoBox) {
-
-            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
-            if (vol > 0) {
-                player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
-            }
-
-            Minecraft mc = Minecraft.getInstance();
-            if (mc != null) {
-                boolean shift = mc.options.keyShift.isDown();
-                mc.execute(() -> {
-                    if (shift) {
-                        mc.setScreenAndShow(new CsboxBulkOverviewScreen());
-                    } else {
-                        mc.setScreenAndShow(new CsboxScreen());
-                    }
-                });
-            }
+        // Box kind decides the screen: ItemTerminal opens the terminal boot
+        // screen, every other box opens the classic crate UI (Shift → bulk).
+        if (heldItem.getItem() instanceof ItemCsgoBox boxItem) {
+            boxItem.openScreen(heldItem);
         }
     }
 }

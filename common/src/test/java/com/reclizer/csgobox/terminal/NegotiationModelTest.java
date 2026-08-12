@@ -152,6 +152,105 @@ final class NegotiationModelTest {
     }
 
     @Test
+    @DisplayName("snapshot/restore round-trips the full negotiation state")
+    void snapshotRestore() {
+        NegotiationModel m = fresh();
+        m.tick(100_000L + NegotiationModel.TYPING_MS); // PENDING round 1
+        m.rejectNow(200_000L);
+        m.tick(200_000L + NegotiationModel.REJECT_BUSY_MS); // TYPING round 2
+        m.setCap(200);
+        NegotiationModel.Snapshot snap = m.snapshot();
+
+        NegotiationModel m2 = new NegotiationModel();
+        m2.restore(snap, 500_000L);
+        assertEquals(2, m2.round());
+        assertSame(NegotiationModel.Status.TYPING, m2.status());
+        assertEquals(200, m2.cap());
+        assertEquals(m.history(), m2.history());
+        assertNull(m2.pending());
+
+        // resume the typing window and land on the same round-2 offer data
+        m2.tick(500_000L + NegotiationModel.TYPING_MS);
+        assertSame(NegotiationModel.Status.PENDING, m2.status());
+        assertEquals(2, m2.pending().round());
+    }
+
+    @Test
+    @DisplayName("restore of a PENDING snapshot keeps the pending offer")
+    void restorePending() {
+        NegotiationModel m = fresh();
+        m.tick(100_000L + NegotiationModel.TYPING_MS);
+        NegotiationModel.Offer offer = m.pending();
+        NegotiationModel.Snapshot snap = m.snapshot();
+
+        NegotiationModel m2 = new NegotiationModel();
+        m2.restore(snap, 500_000L);
+        assertSame(NegotiationModel.Status.PENDING, m2.status());
+        assertEquals(offer, m2.pending());
+        assertEquals(2, m2.history().size());
+    }
+
+    @Test
+    @DisplayName("offer source drives becomePending (server pre-sampled offers)")
+    void offerSource() {
+        NegotiationModel m = fresh();
+        NegotiationModel.Offer preset = new NegotiationModel.Offer(1, 1, 0.4F, 3, 1234, 567, false);
+        m.setOfferSource(round -> round == 1 ? preset : null);
+        m.tick(100_000L + NegotiationModel.TYPING_MS);
+        assertEquals(preset, m.pending());
+    }
+
+    @Test
+    @DisplayName("rejectForced advances server-side without the typing window")
+    void rejectForced() {
+        NegotiationModel m = fresh();
+        m.rejectForced(200_000L);
+        assertEquals(2, m.round());
+        assertSame(NegotiationModel.Status.TYPING, m.status());
+        assertEquals(NegotiationModel.OFFER_REJECTED,
+                ((NegotiationModel.OfferEntry) m.history().get(1)).status());
+    }
+
+    @Test
+    @DisplayName("fifth rejectForced -> FAILED, buyForced -> CLOSED")
+    void forcedFinals() {
+        NegotiationModel m = fresh();
+        for (int r = 1; r <= 5; r++) {
+            m.rejectForced(200_000L + r * 1_000L);
+        }
+        assertSame(NegotiationModel.Status.FAILED, m.status());
+
+        NegotiationModel m2 = fresh();
+        m2.buyForced(300_000L);
+        assertSame(NegotiationModel.Status.CLOSED, m2.status());
+        assertEquals(NegotiationModel.OFFER_ACCEPTED,
+                ((NegotiationModel.OfferEntry) m2.history().get(1)).status());
+    }
+
+    @Test
+    @DisplayName("syncClose pins TYPING/PENDING for exact reopen resume")
+    void syncClose() {
+        NegotiationModel m = fresh();
+        // close while the round-1 offer is on screen
+        m.tick(100_000L + NegotiationModel.TYPING_MS);
+        NegotiationModel.Offer offer = m.pending();
+        long countdown = m.countdownRemainingMs();
+        m.syncClose(1, true, 150_000L, 64, 200_000L);
+        assertSame(NegotiationModel.Status.PENDING, m.status());
+        assertEquals(offer, m.pending());
+        assertEquals(64, m.cap());
+        assertEquals(countdown, m.countdownRemainingMs(), "countdown is server-authoritative, syncClose must not touch it");
+        // no duplicate offer card
+        assertEquals(2, m.history().size());
+
+        NegotiationModel m2 = fresh();
+        m2.syncClose(1, false, 0, NegotiationModel.CAP_UNLIMITED, 200_000L);
+        assertSame(NegotiationModel.Status.TYPING, m2.status());
+        assertNull(m2.pending());
+        assertEquals(NegotiationModel.COUNT_INITIAL_MS, m2.countdownRemainingMs());
+    }
+
+    @Test
     @DisplayName("timing constants aligned with HTML")
     void timings() {
         assertEquals(450L, NegotiationModel.REJECT_BUSY_MS);
@@ -159,16 +258,45 @@ final class NegotiationModelTest {
     }
 
     @Test
-    @DisplayName("countdown ticks down per second and floors at zero")
+    @DisplayName("countdown ticks down per second; at zero the negotiation expires (FAILED)")
     void countdown() {
         NegotiationModel m = fresh();
         m.tick(103_000L);
-        assertEquals(NegotiationModel.COUNT_INITIAL_MS - 3_000L, m.countdownMs());
+        assertEquals(NegotiationModel.COUNT_INITIAL_MS - 3_000L, m.countdownRemainingMs());
         m.tick(100_000L + NegotiationModel.COUNT_INITIAL_MS + 1_000L); // long jump drains the rest
-        assertEquals(0, m.countdownMs());
-        long prev = m.countdownMs();
+        assertEquals(0, m.countdownRemainingMs());
+        assertSame(NegotiationModel.Status.FAILED, m.status());
+        assertTrue(m.history().stream().anyMatch(e ->
+                e instanceof NegotiationModel.SystemEntry se
+                        && "csgobox.terminal.sys.timeout".equals(se.textKey())
+                        && se.failed()));
+        long prev = m.countdownRemainingMs();
         m.tick(100_000L + NegotiationModel.COUNT_INITIAL_MS + 5_000L);
-        assertEquals(prev, m.countdownMs(), "must not go negative");
+        assertEquals(prev, m.countdownRemainingMs(), "must not go negative");
+        assertSame(NegotiationModel.Status.FAILED, m.status(), "expired stays expired");
+    }
+
+    @Test
+    @DisplayName("tickServer advances only the countdown, never round transitions")
+    void tickServerCountdownOnly() {
+        NegotiationModel m = fresh();
+        m.tickServer(103_000L);
+        assertEquals(NegotiationModel.COUNT_INITIAL_MS - 3_000L, m.countdownRemainingMs());
+        // still TYPING round 1 — the offer reveal is the client's job
+        assertSame(NegotiationModel.Status.TYPING, m.status());
+        assertEquals(1, m.round());
+        assertFalse(m.tickServer(104_000L));
+    }
+
+    @Test
+    @DisplayName("tickServer expiry returns true once and only on the draining pass")
+    void tickServerExpiry() {
+        NegotiationModel m = fresh();
+        m.tickServer(103_000L);
+        assertTrue(m.tickServer(100_000L + NegotiationModel.COUNT_INITIAL_MS + 1_000L));
+        assertSame(NegotiationModel.Status.FAILED, m.status());
+        assertFalse(m.tickServer(100_000L + NegotiationModel.COUNT_INITIAL_MS + 5_000L),
+                "finished sessions never re-expire");
     }
 
     @Test

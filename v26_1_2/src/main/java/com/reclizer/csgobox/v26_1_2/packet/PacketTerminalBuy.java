@@ -2,12 +2,12 @@ package com.reclizer.csgobox.v26_1_2.packet;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
-import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
-import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
-import com.reclizer.csgobox.v26_1_2.box.GradeGroup;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
+import com.reclizer.csgobox.v26_1_2.terminal.TerminalRoundData;
+import com.reclizer.csgobox.v26_1_2.terminal.TerminalSession;
+import com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -23,11 +23,13 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * Client-to-server request to buy the current terminal offer after the
  * in-screen confirm dialog is accepted.
  *
- * <p>The server never trusts the client price: the offered item is matched
- * against the terminal's box definition to re-derive its grade and the
- * authoritative Armory Point price, then Armory Points are consumed and the
- * item is granted with the offered wear applied. {@code requestId} only ties
- * the reply to the open screen's dialog.</p>
+ * <p>The server never trusts the client price: the buy is matched against the
+ * player's locked {@link TerminalSession} — the offer must be the exact item
+ * the server sampled for the current round, and its grade derives the
+ * authoritative Armory Point price. Armory Points are then consumed and the
+ * item granted with the offered wear applied. A successful buy releases the
+ * lock ({@code CLOSED}); {@code requestId} only ties the reply to the open
+ * screen's dialog.</p>
  */
 public record PacketTerminalBuy(
         long requestId,
@@ -79,7 +81,7 @@ public record PacketTerminalBuy(
     private static PacketTerminalBuyResult executeBuy(ServerPlayer sp, PacketTerminalBuy message) {
         PacketTerminalBuyResult invalid = new PacketTerminalBuyResult(
                 message.requestId(), PacketTerminalBuyResult.RESULT_INVALID, ItemStack.EMPTY, 1);
-        if (sp.isRemoved() || !sp.isAlive() || PacketCsgoProgress.isOpenBlockedStatic(sp)) {
+        if (sp.isRemoved() || !sp.isAlive()) {
             return invalid;
         }
         // The player must still be holding the terminal that generated the offer.
@@ -92,54 +94,57 @@ public record PacketTerminalBuy(
         if (heldBox == null || !heldBox.equals(sentBox)) {
             return invalid;
         }
+        // The offer must come from the locked session's current round.
+        TerminalSession session = TerminalSessionManager.getByUid(sp, ItemCsgoBox.getTerminalUid(held));
+        if (session == null || session.isFinished() || session.model().round() != message.offerRound()) {
+            return invalid;
+        }
         ItemStack offerItem = message.offerItem();
         if (offerItem == null || offerItem.isEmpty()) {
             return invalid;
         }
-        int grade = resolveGrade(offerItem, heldBox);
+        TerminalRoundData roundData = session.rounds().get(message.offerRound());
+        if (roundData == null || !ItemStack.isSameItemSameComponents(roundData.item(), offerItem)) {
+            return invalid;
+        }
+        int grade = roundData.grade();
         if (grade < 1 || grade > 5) {
             return invalid;
         }
         int price = NegotiationModel.priceForGrade(grade);
         boolean creative = sp.getAbilities().instabuild;
+        // World clock (game ticks × 50): history timestamps must match the
+        // client's render clock, otherwise reopened cards stay invisible.
+        long worldMs = sp.level().getGameTime() * 50L;
         if (!creative && countArmoryPoints(sp) < price) {
+            session.model().dealerReconsider(worldMs);
+            session.model().addSystem("csgobox.terminal.sys.poor", worldMs);
+            TerminalSessionManager.markDirty();
             return new PacketTerminalBuyResult(message.requestId(),
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
         }
 
-        PacketCsgoProgress.blockFurtherOpensStatic(sp);
         if (!creative) {
             consumeArmoryPoints(sp, price);
         }
         ItemStack toGive = offerItem.copy();
+        // The terminal sells ONE item per offer: isSameItemSameComponents
+        // never compares count, so a crafted stack must not grant 64 items
+        // for the price of one.
+        toGive.setCount(1);
         PacketCsgoProgress.applyWearDamage(toGive, Mth.clamp(message.wearVal(), 0F, 1F));
         toGive.set(ItemCsgoBox.GRADE.get(), grade);
         boolean added = sp.getInventory().add(toGive);
         if (!added && !toGive.isEmpty()) {
             sp.drop(toGive, false);
         }
+        session.model().buyForced(worldMs);
+        // A purchase consumes the terminal machine: the item and its uid are
+        // destroyed, and the session lock is released immediately.
+        TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+        held.setCount(0);
         return new PacketTerminalBuyResult(message.requestId(),
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
-    }
-
-    /** Grade (1..5) of the offered item within the terminal's box definition, 0 if absent. */
-    private static int resolveGrade(ItemStack item, Identifier boxId) {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            return 0;
-        }
-        for (GradeGroup grade : def.grades()) {
-            int level = BoxDefinition.gradeLevel(grade.id());
-            if (level == 0) {
-                continue;
-            }
-            for (ItemStack candidate : grade.items()) {
-                if (ItemStack.isSameItemSameComponents(item, candidate)) {
-                    return Mth.clamp(level, 1, 5);
-                }
-            }
-        }
-        return 0;
     }
 
     // ---- Armory Point inventory walking (same slot coverage as key consumption) ----

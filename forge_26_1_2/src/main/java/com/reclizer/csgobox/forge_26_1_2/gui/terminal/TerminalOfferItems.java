@@ -2,60 +2,52 @@ package com.reclizer.csgobox.forge_26_1_2.gui.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Resolves the ACTUAL offered item for each negotiation round from the
- * terminal box's grade pools, so the offer card thumb (region 5), the 3D
- * preview + name + rarity (region 8) and the bottom slot (region 10) all
- * show the same real item. One sample per round; one fixed slot item per
- * terminal session.
+ * server's locked terminal session (the server samples one item per round
+ * and the region-10 slot item; the client never randomizes). Populated from
+ * {@code PacketTerminalState} when the screen opens.
  *
  * era: decoupled
  */
 public final class TerminalOfferItems {
 
-    private static List<ItemStack>[] gradePools;
     private static final Map<Integer, ItemStack> ROUND_ITEM = new HashMap<>();
     private static final Map<Integer, Integer> ROUND_GRADE = new HashMap<>();
-    private static ItemStack sessionItem;
-    private static final Random RND = new Random();
+    private static ItemStack sessionItem = ItemStack.EMPTY;
 
     private TerminalOfferItems() {
     }
 
-    public static void setGradePools(List<ItemStack>[] pools) {
-        gradePools = pools;
+    /** Start a fresh session view: drop the previous terminal's sampled data. */
+    public static void reset() {
         ROUND_ITEM.clear();
         ROUND_GRADE.clear();
-        sessionItem = null;
+        sessionItem = ItemStack.EMPTY;
     }
 
-    /** 每轮一次取样（缓存），等级为空时向下退级，全空回退铁剑。 */
+    /** Register the server-sampled item + box grade for one round. */
+    public static void setRoundItem(int round, ItemStack item, int grade) {
+        ROUND_ITEM.put(round, item.copy());
+        ROUND_GRADE.put(round, grade);
+    }
+
+    /** Register the server-sampled region-10 slot item. */
+    public static void setSessionItem(ItemStack item) {
+        sessionItem = item.copy();
+    }
+
+    /** The round's actual offered item (server-sampled), or empty before sync. */
     public static ItemStack itemFor(NegotiationModel.Offer offer) {
-        return ROUND_ITEM.computeIfAbsent(offer.round(), r -> {
-            for (int g = gradeForOffer(offer); g >= 1; g--) {
-                List<ItemStack> pool = gradePools != null && g < gradePools.length
-                        ? gradePools[g] : null;
-                if (pool != null && !pool.isEmpty()) {
-                    ROUND_GRADE.put(r, g);
-                    return pool.get(RND.nextInt(pool.size())).copy();
-                }
-            }
-            ROUND_GRADE.put(r, 1);
-            return new ItemStack(Items.IRON_SWORD);
-        });
+        return ROUND_ITEM.getOrDefault(offer.round(), ItemStack.EMPTY);
     }
 
-    /** Box grade (1..5) of the round's offered item. */
+    /** Box grade (1..5) of the round's offered item (server-sampled). */
     public static int gradeFor(NegotiationModel.Offer offer) {
-        itemFor(offer); // ensure sampled & cached
         return ROUND_GRADE.getOrDefault(offer.round(), 1);
     }
 
@@ -74,30 +66,8 @@ public final class TerminalOfferItems {
         return NegotiationModel.priceForGrade(gradeFor(offer));
     }
 
-    /** One fixed random item per terminal session (region 10 slot). */
+    /** The server-sampled region-10 slot item. */
     public static ItemStack sessionItem() {
-        if (sessionItem == null) {
-            List<ItemStack> all = new ArrayList<>();
-            if (gradePools != null) {
-                for (int g = 1; g < gradePools.length; g++) {
-                    if (gradePools[g] != null) {
-                        all.addAll(gradePools[g]);
-                    }
-                }
-            }
-            sessionItem = all.isEmpty()
-                    ? new ItemStack(Items.DIAMOND)
-                    : all.get(RND.nextInt(all.size())).copy();
-        }
         return sessionItem;
-    }
-
-    /**
-     * Script skin -> box grade: random base grade 1..5 so every rarity tier
-     * (军规级..违禁) can show up; {@link #itemFor} falls back down the pools
-     * when the sampled tier is empty.
-     */
-    private static int gradeForOffer(NegotiationModel.Offer offer) {
-        return 1 + RND.nextInt(5);
     }
 }

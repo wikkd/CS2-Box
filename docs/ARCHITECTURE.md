@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # CS2-Box 架构
 
-> 跨 v1_21_1 / v26_1_2 双平台的 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流与渲染管线。
+> 跨 v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 四平台的 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流与渲染管线。
 
 ## 1. 项目概览
 
@@ -9,7 +9,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制�
 
 **关键事实**:
 
-- 模组 ID:`csgobox`,当前版本 `1.0.5`
+- 模组 ID:`csgobox`,当前版本 `1.0.6`(开发线 1.0.7)
 - Java toolchain:`v1_21_1` 用 Java 21,`v26_1_2` 用 Java 25 + `--enable-preview`(NeoForm 重编译要求)
 - 共享资源:`common/src/main/resources/` 由两个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(v26_1_2 设置 `duplicatesStrategy = EXCLUDE`)
 - 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*`**(`grep "import net\.minecraft" common/src/main/java` 0 匹配确认)
@@ -40,7 +40,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制�
 
 - **`BoxDefinition`** — 不可变 Record,持有箱子 ID、name、所需钥匙 ID、5 档随机权重数组、物品分档清单
 - **`BoxRegistry`** — 全局箱子注册表(按 ID 查 `BoxDefinition`)
-- **`BoxJsonLoader`** — 加载 `config/csbox/*.json`,首次启动时若目录为空则写入默认 `weapon_supply_box.json`(含 `_tutorial` 字段,loader 忽略);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxJsonLoader`** — 加载 `config/csbox/*.json`;首次启动只保证目录存在并异步下载教程 md(`BoxDefaults`),**不写入任何默认箱子配置**(终端机/高级箱/普通箱一律由玩家自建 JSON,建好后才会进入创造物品栏);在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 
@@ -55,6 +55,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge 模组,把 CS:GO 的开箱机制�
 
 - **`ItemCsgoBox`** / **`ItemCsgoKey`** + `ModItems`(DeferredRegister 集中注册)
 - 4 把钥匙:`csgo_key0`(铁)、`csgo_key1`(金)、`csgo_key2`(钻石)、`csgo_key3`(下界合金,仅锻造台配方)
+- **`ItemTerminal`**(终端机,继承 `ItemCsgoBox`,覆写 `openScreen` 打开终端谈判屏)/ **`ItemPremiumBox`**(军火商高级箱)
 
 ### 3.4 平台接口
 
@@ -152,15 +153,67 @@ runs/server/
 - 所有版本敏感代码(GUI 渲染、Attachment 注册、网络上下文、注册表访问)留在平台模块
 - 平台模块不重复实现 common 业务逻辑
 
-## 11. 版本矩阵
+## 11. 终端机谈判子系统
 
-| 组件 | v1_21_1 | v26_1_2 |
+终端机（`ItemTerminal` 物品）走独立的服务端权威谈判会话,与普通宝箱的 RNG 开箱
+流水线完全隔离。完整演进与边界见仓库根目录 `terminal-decoupling.md`。
+
+### 11.1 会话锁
+
+- **`TerminalSessionManager`** — 静态 `ConcurrentHashMap`,键 `玩家UUID:箱子ID`,
+  持有每个玩家的谈判会话;`TerminalSession` 内含 common `NegotiationModel`
+  (轮次/状态/聊天历史/倒计时/报价)+ 5 轮 `TerminalRoundData` + 区域 10 槽位物品。
+- 生命周期:`PacketTerminalOpen` 取锁(新会话采样 5 轮报价 / 已有会话恢复快照);
+  `PacketTerminalReject` / `PacketTerminalBuy` / `PacketTerminalClose` 走服务端
+  强制推进;`isFinished()`(`CLOSED` 成交 / `FAILED` 第 5 轮拒绝或超时)后释放锁,
+  下次开启为全新谈判。
+- 未满 5 轮拒绝 / 未成交前重开终端机,对话、报价、物品与上次离开完全一致。
+
+### 11.2 计时与自毁
+
+- 四平台 `ModEvents.serverTick`(原版 `ServerTickEvent`)每 1Hz 驱动
+  `tickSessions`,按**世界时钟**(`player.level().getGameTime() * 50L`)推进倒计时;
+  世界暂停 / 服务端停机不计时,重启后精确续算。默认超时 3 小时
+  (`NegotiationModel.COUNT_INITIAL_MS`,common 单点)。
+- 超时未成交与 5 轮拒绝同等对待:`FAILED` + 系统消息「交易超时,军火商已离开。」
+  并释放锁。超时同时**销毁终端机物品本身**——服务端按 `terminal_uid`
+  (`DataComponentType<String>`,首开时写入物品)在背包(主栏+护甲+副手)精确销毁;
+  离线/在容器时 uid 进「已销毁 uid 集合」,下次持有者打开当场销毁(FAILED 快照)。
+
+### 11.3 持久化与转手
+
+- **`TerminalStateStore`** — 会话 + 已销毁 uid 集合落盘 `<world>/csgobox/terminal_state.bin`
+  (魔数 + VERSION=3),随服务端启停 bind/unbind,任何变更 `markDirty()` 即时写盘。
+- 物主名字盖在物品组件 `terminal_owner`(创建会话时盖章);终端机转手后若原会话
+  仍被原主活跃持有(未过期未成交),新持有者打开进入**锁死态** FAILED,军火商发
+  「去问问xx吧。」(`csgobox.terminal.sys.locked`,优先用在线玩家名处理改名);
+  服务端买/拒按发送者会话键校验,无法越权交易。
+- 购买成功(`PacketTerminalBuy` 通过服务端当轮物品校验)后:授予物品 + 销毁终端机
+  物品与 uid + 释放会话锁。
+
+### 11.4 终端网络包
+
+| 包 | 方向 | 作用 |
 |---|---|---|
-| Minecraft | 1.21.1 | 26.1.2 |
-| NeoForge | 21.1.115 | 26.1.2.76 |
-| NeoGradle | 7.0.171 | 7.1.38 |
-| Gradle | 8.11 | 8.14 |
-| Java toolchain | 21 | 25 `--enable-preview` |
-| mod_version | `1.0.5` | `1.0.5-26.1.2`(后缀区分) |
-| pack_format | 34 | 80 |
+| `PacketTerminalOpen` | C → S | 开屏取锁(主手为权威);回 `PacketTerminalState` |
+| `PacketTerminalState` | S → C | 全量快照:轮次/状态/历史/倒计时/上限/5 轮报价+物品/槽位物品;`locked()` 带物主名 |
+| `PacketTerminalReject` | C → S | 拒绝报价,服务端 `rejectForced` 无条件推进 |
+| `PacketTerminalBuy` | C → S | 按服务端当轮实际物品逐字段校验 + 扣军械库点数;成功销毁终端机 |
+| `PacketTerminalBuyResult` | S → C | 购买结果展示 |
+| `PacketTerminalClose` | C → S | 关屏钉住轮次/状态/倒计时(倒计时服务端权威,不上报) |
+
+## 12. 版本矩阵
+
+| 组件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 |
+|---|---|---|---|---|
+| Minecraft | 1.21.1 | 26.1.2 | 26.2 | 26.1.2 |
+| Loader | NeoForge 21.1.115 | NeoForge 26.1.2.94 | NeoForge 26.2.0.7-beta | MinecraftForge 26.1.2-64.1.0 |
+| NeoGradle / ForgeGradle | 7.1.38 | 7.1.38 | 7.1.38 | ForgeGradle 7.0.31 |
+| Gradle | 9.5.1 | 9.5.1 | 9.5.1 | 9.5.1 |
+| Java toolchain | 21 | 25 `--enable-preview` | 25 `--enable-preview` | 25 `--enable-preview` |
+| mod_version | `1.0.6` | `1.0.6` | `1.0.6` | `1.0.6` |
+| pack_format | 34 | 80 | 81 | 80 |
+
+> 三平台（v1_21_1 / v26_1_2 / v26_2）为正式发行矩阵;forge_26_1_2 为实验模块,
+> 随 v26_1_2 基准同步开发,不入 CI 与正式发行(见 `docs/TESTING-FORGE-2612.md`)。
 | 包名 | `com.reclizer.csgobox.v1_21_1.*` | `com.reclizer.csgobox.v26_1_2.*` |

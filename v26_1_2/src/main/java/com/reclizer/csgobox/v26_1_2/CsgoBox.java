@@ -18,6 +18,10 @@ import com.reclizer.csgobox.v26_1_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalBuy;
 import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalBuyResult;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalClose;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalOpen;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalReject;
+import com.reclizer.csgobox.v26_1_2.packet.PacketTerminalState;
 import com.reclizer.csgobox.v26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_1_2.block.ModBlocks;
 import com.reclizer.csgobox.v26_1_2.villager.ModVillagers;
@@ -166,6 +170,10 @@ public class CsgoBox {
         registrar.playToClient(PacketSyncBoxItems.TYPE, PacketSyncBoxItems.STREAM_CODEC, PacketSyncBoxItems::handle);
         registrar.playToServer(PacketTerminalBuy.TYPE, PacketTerminalBuy.STREAM_CODEC, PacketTerminalBuy::handleServer);
         registrar.playToClient(PacketTerminalBuyResult.TYPE, PacketTerminalBuyResult.STREAM_CODEC, PacketTerminalBuyResult::handle);
+        registrar.playToServer(PacketTerminalOpen.TYPE, PacketTerminalOpen.STREAM_CODEC, PacketTerminalOpen::handleServer);
+        registrar.playToClient(PacketTerminalState.TYPE, PacketTerminalState.STREAM_CODEC, PacketTerminalState::handle);
+        registrar.playToServer(PacketTerminalReject.TYPE, PacketTerminalReject.STREAM_CODEC, PacketTerminalReject::handleServer);
+        registrar.playToServer(PacketTerminalClose.TYPE, PacketTerminalClose.STREAM_CODEC, PacketTerminalClose::handleServer);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -240,9 +248,9 @@ public class CsgoBox {
                     continue;
                 }
                 // Statically-registered items (ModItems) must not be re-added
-                // from config/csbox/*.json — the terminal's default JSON
-                // (writeDefaultTerminalIfMissing) would otherwise collide with
-                // ItemTerminal and crash bootstrap with a duplicate key.
+                // from config/csbox/*.json — terminal.json / premium_supply_box.json
+                // would otherwise collide with their static items and crash
+                // bootstrap with a duplicate key.
                 if (STATIC_ITEM_IDS.contains(idStr)) {
                     skipped++;
                     continue;
@@ -306,11 +314,14 @@ public class CsgoBox {
         if (CONFIG.loadDefaultBoxes()) {
             BoxJsonLoader.loadAll();
         }
+        com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager.bindServer(event.getServer());
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
+        com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager.saveNow();
+        com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager.unbindServer();
         if (boxWatcher != null) {
             boxWatcher.stop();
             boxWatcher = null;

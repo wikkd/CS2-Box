@@ -46,6 +46,21 @@ public final class Networking {
                 .codec(PacketTerminalBuy.STREAM_CODEC)
                 .consumer(PacketTerminalBuy::handleServer)
                 .add();
+        INSTANCE.messageBuilder(PacketTerminalOpen.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.SERVERBOUND)
+                .codec(PacketTerminalOpen.STREAM_CODEC)
+                .consumer(PacketTerminalOpen::handleServer)
+                .add();
+        INSTANCE.messageBuilder(PacketTerminalReject.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.SERVERBOUND)
+                .codec(PacketTerminalReject.STREAM_CODEC)
+                .consumer(PacketTerminalReject::handleServer)
+                .add();
+        INSTANCE.messageBuilder(PacketTerminalClose.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.SERVERBOUND)
+                .codec(PacketTerminalClose.STREAM_CODEC)
+                .consumer(PacketTerminalClose::handleServer)
+                .add();
 
         // Clientbound packets (server → client)
         INSTANCE.messageBuilder(PacketBoxOpenResult.class, NetworkProtocol.PLAY)
@@ -67,6 +82,11 @@ public final class Networking {
                 .direction(PacketFlow.CLIENTBOUND)
                 .codec(PacketTerminalBuyResult.STREAM_CODEC)
                 .consumer(PacketTerminalBuyResult::handle)
+                .add();
+        INSTANCE.messageBuilder(PacketTerminalState.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.CLIENTBOUND)
+                .codec(PacketTerminalState.STREAM_CODEC)
+                .consumer(PacketTerminalState::handle)
                 .add();
 
         INSTANCE.build();

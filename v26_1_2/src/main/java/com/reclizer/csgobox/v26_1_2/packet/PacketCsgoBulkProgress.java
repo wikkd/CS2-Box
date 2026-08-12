@@ -246,6 +246,15 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
         List<BulkOpenResult> truncated = results.subList(0, actualK);
 
+        // A fully-broken definition (every grade pool empty even after
+        // fallback) rolls empty winners for the whole batch. Abort before
+        // consuming anything: a bad config must not eat boxes + keys.
+        if (truncated.stream().allMatch(r -> r.resultItem().isEmpty())) {
+            CsgoBox.LOGGER.warn("[csgo-bulk] all {} rolls empty for box={}; aborting without consumption",
+                    truncated.size(), snapshot.boxId());
+            return;
+        }
+
         // Resolve the true grade for fallback items (parity with the single-open
         // path, which resolves the fallback winner against BoxDefinition). A
         // fallback item drawn from another grade pool must not keep the picked

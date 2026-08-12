@@ -43,6 +43,10 @@ public final class TerminalConfirmDialog {
         return state != State.CLOSED;
     }
 
+    public boolean isWaiting() {
+        return state == State.WAITING;
+    }
+
     public void open(NegotiationModel.Offer offer, ItemStack stack, int price, float wearVal) {
         this.itemStack = stack.copy();
         this.price = price;

@@ -48,11 +48,6 @@ public final class TerminalOfferRegion {
     private final ItemDrag3D itemDrag = new ItemDrag3D(INITIAL_ROT_X, INITIAL_ROT_Y);
     /** The offer seen by the last render() pass (null until round 1 lands). */
     private NegotiationModel.Offer currentOffer;
-    /** Box grade pools by gradeLevel 1..5 (index 0 unused), null entries = absent tier. */
-    private java.util.List<ItemStack>[] gradePools;
-    /** One sample per round: a round keeps the same 3D item across renders. */
-    private final java.util.Map<Integer, ItemStack> roundItemCache = new java.util.HashMap<>();
-    private final java.util.Random itemRnd = new java.util.Random();
 
     // hit-test rects (updated each render)
     private int inspectX, inspectY, inspectW, inspectH;
@@ -303,11 +298,5 @@ public final class TerminalOfferRegion {
     public void reset() {
         inspectOn = false;
         this.itemDrag.reset();
-    }
-
-    public void setGradePools(java.util.List<ItemStack>[] pools) {
-        this.gradePools = pools;
-        this.roundItemCache.clear();
-        TerminalOfferItems.setGradePools(pools);
     }
 }

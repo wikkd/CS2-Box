@@ -1,5 +1,9 @@
 package com.reclizer.csgobox.v1_21_1.item;
 
+import com.reclizer.csgobox.v1_21_1.gui.TerminalBootScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.ItemStack;
+
 /**
  * Terminal device item — a box-type item that opens the terminal-style UI
  * ({@code gui.TerminalScreen}) instead of the classic crate screen.
@@ -13,6 +17,15 @@ package com.reclizer.csgobox.v1_21_1.item;
 public class ItemTerminal extends ItemCsgoBox {
 
     public ItemTerminal() {
-        super();
+        super(1);
+    }
+
+    /** The terminal opens its boot screen instead of the classic crate UI. */
+    @Override
+    public void openScreen(ItemStack stack) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null) {
+            mc.execute(() -> mc.setScreen(new TerminalBootScreen(stack.copy())));
+        }
     }
 }

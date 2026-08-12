@@ -5,7 +5,6 @@ import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -37,36 +36,13 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
 
-                // Terminal creative entry is bound to its own decoupled box
-                // definition (csgobox:terminal) so the terminal UI shows its
-                // own loot list; if that config is missing it falls back to
-                // the first registered box, and on a pure client with an
-                // empty local BoxRegistry it degrades to an unbound terminal.
-                ItemStack terminalStack = new ItemStack(ModItems.ITEM_TERMINAL.get());
-                BoxDefinition terminalDef = BoxRegistry.get(Identifier.parse("csgobox:terminal"));
-                if (terminalDef == null) {
-                    terminalDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
-                }
-                if (terminalDef != null) {
-                    terminalStack.set(ItemCsgoBox.BOX_ID.get(), terminalDef.id());
-                }
-                entries.accept(terminalStack);
-
-                // Village-exclusive premium case: bound to its own decoupled
-                // box definition like the terminal; a missing config falls
-                // back to the item's registry id at open time.
-                ItemStack premiumStack = new ItemStack(ModItems.ITEM_PREMIUM_BOX.get());
-                BoxDefinition premiumDef = BoxRegistry.get(Identifier.parse("csgobox:premium_supply_box"));
-                if (premiumDef == null) {
-                    premiumDef = BoxRegistry.getAll().stream().findFirst().orElse(null);
-                }
-                if (premiumDef != null) {
-                    premiumStack.set(ItemCsgoBox.BOX_ID.get(), premiumDef.id());
-                }
-                entries.accept(premiumStack);
-
+                // Registered boxes (config/csbox/*.json) appear here the same
+                // way for every kind; the terminal machine and the premium
+                // case join through this loop too, so they only show up once
+                // their definition is registered (no default terminal config
+                // is generated on first run; premium_supply_box.json is).
                 for (BoxDefinition def : BoxRegistry.getAll()) {
-                    ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+                    ItemStack stack = new ItemStack(boxItemFor(def).get());
                     ItemCsgoBox.setBoxId(def.id(), stack);
                     entries.accept(stack);
                 }
@@ -83,6 +59,23 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.registerItem("armory_point", p -> new Item(p.rarity(Rarity.COMMON)), p -> p);
     public static final Supplier<Item> ITEM_TERMINAL = ITEMS.registerItem("terminal", ItemTerminal::new, p -> p);
     public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.registerItem("premium_supply_box", ItemPremiumBox::new, p -> p);
+
+    /**
+     * Item class a box definition maps to: the terminal machine uses
+     * {@link ItemTerminal}, the village-exclusive premium case uses
+     * {@link ItemPremiumBox}, every other box uses the generic
+     * {@link ItemCsgoBox}. Shared by the creative tab and mob drops so a
+     * definition always yields the same item kind.
+     */
+    public static Supplier<Item> boxItemFor(BoxDefinition def) {
+        if (def.isTerminal()) {
+            return ModItems.ITEM_TERMINAL;
+        }
+        if ("premium_supply_box".equals(def.id().getPath())) {
+            return ModItems.ITEM_PREMIUM_BOX;
+        }
+        return ModItems.ITEM_CSGOBOX;
+    }
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

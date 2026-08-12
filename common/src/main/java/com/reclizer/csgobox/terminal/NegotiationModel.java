@@ -28,12 +28,30 @@ public final class NegotiationModel {
                         boolean finalRound) {
     }
 
+    /**
+     * Serialisable negotiation state — server sessions and reopen restore.
+     * {@code countdownDeadlineMs} is an ABSOLUTE deadline on the world clock
+     * (world game ticks × 50): it advances only while the world runs, so a
+     * server stop / crash never grants free time and offline time never counts.
+     */
+    public record Snapshot(int round, Status status, long generation, int cap, long countdownDeadlineMs,
+                           Offer pending, List<Object> history) {
+    }
+
     /** Dealer chat line (bubble). */
     public record LineEntry(int round, String textKey, long atMs) {
     }
 
-    /** System bubble (已接受 / 已拒绝 / 谈判破裂). */
-    public record SystemEntry(String textKey, boolean failed, long atMs) {
+    /**
+     * System bubble (已接受 / 已拒绝 / 谈判破裂). {@code args} optionally
+     * carries translatable placeholders (e.g. the terminal owner's name in the
+     * "locked" refusal) — null means "no args" and the client falls back to
+     * its default single-arg behaviour.
+     */
+    public record SystemEntry(String textKey, boolean failed, long atMs, String[] args) {
+        public SystemEntry(String textKey, boolean failed, long atMs) {
+            this(textKey, failed, atMs, null);
+        }
     }
 
     /** Offer card appended when the round becomes PENDING. */
@@ -101,8 +119,8 @@ public final class NegotiationModel {
     public static final long TYPING_MS = 1100L;
     public static final long ACCEPT_BUSY_MS = 0L;
     public static final long REJECT_BUSY_MS = 450L;
-    /** Countdown start: 2d 23:57:45. */
-    public static final long COUNT_INITIAL_MS = (2L * 86400L + 23L * 3600L + 57L * 60L + 45L) * 1000L;
+    /** Countdown start: 3 hours. */
+    public static final long COUNT_INITIAL_MS = 3L * 3600L * 1000L;
 
     // ---- cap ----
 
@@ -135,15 +153,15 @@ public final class NegotiationModel {
 
     private final List<Object> history = new ArrayList<>();
     private final Random rnd = new Random();
+    private OfferSource offerSource;
     private Status status = Status.IDLE;
     private int round = 0;
     private long roundStartMs;
     private long statusSinceMs;
     private long generation = 0;
     private int cap = CAP_UNLIMITED;
-    private long countdownMs = COUNT_INITIAL_MS;
-    private long lastCountMs;
-    private boolean countdownStarted;
+    private long countdownDeadlineMs = COUNT_INITIAL_MS;
+    private long lastTickMs;
     private Offer pending;
 
     // ---- lifecycle ----
@@ -156,26 +174,35 @@ public final class NegotiationModel {
         round = 0;
         pending = null;
         cap = CAP_UNLIMITED;
-        countdownMs = COUNT_INITIAL_MS;
-        lastCountMs = nowMs;
-        countdownStarted = true;
+        countdownDeadlineMs = nowMs + COUNT_INITIAL_MS;
+        lastTickMs = nowMs;
         presentRound(nowMs);
+    }
+
+    /** Replace the whole state with a server-provided snapshot (reopen resume). */
+    public void restore(Snapshot snap, long nowMs) {
+        history.clear();
+        history.addAll(snap.history());
+        status = snap.status();
+        round = snap.round();
+        generation = snap.generation();
+        cap = snap.cap();
+        countdownDeadlineMs = snap.countdownDeadlineMs();
+        pending = snap.pending();
+        roundStartMs = nowMs;
+        statusSinceMs = nowMs;
+        lastTickMs = nowMs;
+    }
+
+    /** Full state snapshot for server sessions / reopen transport. */
+    public Snapshot snapshot() {
+        return new Snapshot(round, status, generation, cap, countdownDeadlineMs,
+                pending, List.copyOf(history));
     }
 
     /** Advance the machine for the given client clock. */
     public void tick(long nowMs) {
-        if (!countdownStarted) {
-            lastCountMs = nowMs;
-            countdownStarted = true;
-        }
-        if (nowMs - lastCountMs >= 1000L) {
-            long deltaMs = nowMs - lastCountMs;
-            long steps = deltaMs / 1000L;
-            if (countdownMs > 0) {
-                countdownMs = Math.max(0L, countdownMs - steps * 1000L);
-            }
-            lastCountMs += steps * 1000L;
-        }
+        tickServer(nowMs);
         switch (status) {
             case TYPING -> {
                 if (nowMs - roundStartMs >= TYPING_MS) {
@@ -204,6 +231,38 @@ public final class NegotiationModel {
         }
     }
 
+    /**
+     * Server-side clock (driven by the vanilla server tick, once per second):
+     * checks the absolute deadline and expires the negotiation — never the
+     * round transitions, because the client owns the typing/offer-reveal
+     * animation. {@code nowMs} must be the WORLD clock (game ticks × 50), so
+     * the countdown follows world running time and pauses/stops with the world.
+     * When the deadline passes the negotiation expires (dealer leaves), which
+     * also releases the terminal session lock on the server.
+     *
+     * @return true when the deadline just passed and the negotiation expired
+     */
+    public boolean tickServer(long nowMs) {
+        if (status == Status.CLOSED || status == Status.FAILED) {
+            return false;
+        }
+        lastTickMs = nowMs;
+        if (nowMs >= countdownDeadlineMs) {
+            expire(nowMs);
+            return true;
+        }
+        return false;
+    }
+
+    /** Timeout: the dealer left before a deal — session-wide, releases the lock. */
+    private void expire(long nowMs) {
+        status = Status.FAILED;
+        statusSinceMs = nowMs;
+        pending = null;
+        ensureOfferEntry(nowMs);
+        history.add(new SystemEntry("csgobox.terminal.sys.timeout", true, nowMs));
+    }
+
     /** Accept the current offer (only valid while PENDING — typing window lock). */
     public void acceptNow(long nowMs) {
         if (status != Status.PENDING) {
@@ -224,6 +283,70 @@ public final class NegotiationModel {
         statusSinceMs = nowMs;
         markOfferStatus(OFFER_REJECTED);
         history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
+    }
+
+    /**
+     * Server-authoritative reject: the server never watches the client's
+     * typing window, so unlike {@link #rejectNow} this advances unconditionally
+     * to the next round (or FAILED on round 5).
+     */
+    public void rejectForced(long nowMs) {
+        status = Status.REJECT_BUSY;
+        statusSinceMs = nowMs;
+        pending = null;
+        ensureOfferEntry(nowMs);
+        markOfferStatus(OFFER_REJECTED);
+        history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
+        if (round < MAX_ROUNDS) {
+            presentRound(nowMs);
+        } else {
+            status = Status.FAILED;
+            statusSinceMs = nowMs;
+            history.add(new SystemEntry("csgobox.terminal.sys.failed", true, nowMs));
+        }
+    }
+
+    /** Server-authoritative buy success — the negotiation is finished. */
+    public void buyForced(long nowMs) {
+        status = Status.CLOSED;
+        statusSinceMs = nowMs;
+        pending = null;
+        ensureOfferEntry(nowMs);
+        markOfferStatus(OFFER_ACCEPTED);
+        history.add(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
+    }
+
+    /**
+     * Apply the client's on-close view so a reopen resumes at the exact same
+     * round/status (TYPING vs PENDING) instead of replaying the typing window.
+     */
+    public void syncClose(int round, boolean pendingVisible, long pendingAtMs, int cap, long nowMs) {
+        if (status == Status.CLOSED || status == Status.FAILED) {
+            return;
+        }
+        if (round < 1 || round > MAX_ROUNDS) {
+            return;
+        }
+        this.round = round;
+        this.status = pendingVisible ? Status.PENDING : Status.TYPING;
+        this.pending = pendingVisible ? currentOffer() : null;
+        // The countdown is server-authoritative (tickServer) — never overwritten
+        // from the client, otherwise a reopen would resurrect expired time.
+        this.cap = cap;
+        roundStartMs = nowMs;
+        statusSinceMs = nowMs;
+        if (pendingVisible && this.pending != null && !hasOfferEntryFor(round)) {
+            history.add(new OfferEntry(this.pending, Math.max(0, pendingAtMs), OFFER_PENDING));
+        }
+    }
+
+    /** Provider for the offer of a round — server sessions supply pre-sampled offers. */
+    public interface OfferSource {
+        Offer offerFor(int round);
+    }
+
+    public void setOfferSource(OfferSource source) {
+        this.offerSource = source;
     }
 
     /** Dealer chat line: "think it over" — keeps the current offer pending. */
@@ -258,8 +381,9 @@ public final class NegotiationModel {
         this.cap = cap;
     }
 
-    public long countdownMs() {
-        return countdownMs;
+    /** Remaining countdown at the last clock input — display only, the server expiry is deadline-based. */
+    public long countdownRemainingMs() {
+        return Math.max(0L, countdownDeadlineMs - lastTickMs);
     }
 
     public Offer pending() {
@@ -314,6 +438,22 @@ public final class NegotiationModel {
         }
     }
 
+    private boolean hasOfferEntryFor(int targetRound) {
+        for (int i = history.size() - 1; i >= 0; i--) {
+            if (history.get(i) instanceof OfferEntry oe && oe.offer().round() == targetRound) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The server's model never ticks, so an offer card may be missing — add it. */
+    private void ensureOfferEntry(long nowMs) {
+        if (!hasOfferEntryFor(round)) {
+            history.add(new OfferEntry(currentOffer(), nowMs, OFFER_PENDING));
+        }
+    }
+
     private void presentRound(long nowMs) {
         round++;
         status = Status.TYPING;
@@ -326,15 +466,28 @@ public final class NegotiationModel {
     private void becomePending(long nowMs) {
         status = Status.PENDING;
         statusSinceMs = nowMs;
+        Offer offer = currentOffer();
+        pending = offer;
+        history.add(new OfferEntry(offer, nowMs, OFFER_PENDING));
+    }
+
+    private Offer currentOffer() {
+        if (pending != null && pending.round() == round) {
+            return pending;
+        }
+        if (offerSource != null) {
+            Offer offered = offerSource.offerFor(round);
+            if (offered != null) {
+                return offered;
+            }
+        }
         int skinIdx = ROUND_SKIN[round - 1];
         float wearVal = SKIN_WEAR_VAL[skinIdx];
         boolean finalRound = round == MAX_ROUNDS;
-        Offer offer = new Offer(round, skinIdx, wearVal,
+        return new Offer(round, skinIdx, wearVal,
                 rnd.nextInt(5),                    // style 0..4 (style.* keys)
                 1000 + rnd.nextInt(900),           // serial no
                 rnd.nextInt(1000),                 // pattern
                 finalRound);
-        pending = offer;
-        history.add(new OfferEntry(offer, nowMs, OFFER_PENDING));
     }
 }

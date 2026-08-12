@@ -119,7 +119,7 @@ final class TerminalAnimsTest {
     @Test
     @DisplayName("countdown renders DD:HH:MM:SS")
     void countdown() {
-        assertEquals("02:23:57:45", TerminalAnims.countdownText(NegotiationModel.COUNT_INITIAL_MS));
+        assertEquals("00:03:00:00", TerminalAnims.countdownText(NegotiationModel.COUNT_INITIAL_MS));
         assertEquals("00:00:00:00", TerminalAnims.countdownText(0));
         assertEquals("00:00:00:00", TerminalAnims.countdownText(-500));
         assertEquals("00:00:01:01", TerminalAnims.countdownText(61_000));

@@ -30,8 +30,7 @@ public record BoxDefinition(
         List<GradeGroup> grades,
         Optional<ResourceLocation> texture,
         Optional<ResourceLocation> sound,
-        Map<ResourceLocation, Float> entityDropRates,
-        String type
+        Map<ResourceLocation, Float> entityDropRates
 ) {
 
     public static final int GRADE_COUNT = 5;
@@ -53,8 +52,7 @@ public record BoxDefinition(
             ResourceLocation.CODEC.optionalFieldOf("sound").forGetter(BoxDefinition::sound),
             Codec.unboundedMap(ResourceLocation.CODEC, Codec.FLOAT)
                     .optionalFieldOf("entity_drop_rates", Map.of())
-                    .forGetter(BoxDefinition::entityDropRates),
-            Codec.STRING.optionalFieldOf("type", "csbox").forGetter(BoxDefinition::type)
+                    .forGetter(BoxDefinition::entityDropRates)
     ).apply(instance, BoxDefinition::new));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, BoxDefinition> STREAM_CODEC = StreamCodec.of(
@@ -72,7 +70,6 @@ public record BoxDefinition(
         texture = texture == null ? Optional.empty() : texture;
         sound = sound == null ? Optional.empty() : sound;
         entityDropRates = entityDropRates == null ? Map.of() : Map.copyOf(entityDropRates);
-        type = type == null ? "csbox" : type;
     }
 
     private static void write(RegistryFriendlyByteBuf buf, BoxDefinition def) {
@@ -94,7 +91,6 @@ public record BoxDefinition(
             ResourceLocation.STREAM_CODEC.encode(buf, entry.getKey());
             buf.writeFloat(entry.getValue());
         }
-        buf.writeUtf(def.type());
     }
 
     private static BoxDefinition read(RegistryFriendlyByteBuf buf) {
@@ -117,8 +113,22 @@ public record BoxDefinition(
             ResourceLocation entityId = ResourceLocation.STREAM_CODEC.decode(buf);
             entityDropRates.put(entityId, buf.readFloat());
         }
-        String type = buf.readUtf();
-        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates, type);
+        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
+    }
+
+    /** Box type: only the dedicated terminal definition ({@code csgobox:terminal}
+     *  with a keyless {@code minecraft:air} key) is a terminal machine; an air
+     *  key alone never makes a crate a terminal. */
+    /** Whether this definition is the dedicated terminal machine: only
+     *  {@code csgobox:terminal} with a keyless {@code minecraft:air} key is a
+     *  terminal; an air key alone never makes a crate a terminal. */
+    public boolean isTerminal() {
+        return "terminal".equals(id.getPath()) && keyItem.equals(NO_KEY);
+    }
+
+    /** Box type: terminal machine or regular crate. See {@link #isTerminal()}. */
+    public String type() {
+        return isTerminal() ? "terminal" : "csbox";
     }
 
     public static Builder builder(ResourceLocation id, String name) {
@@ -155,7 +165,7 @@ public record BoxDefinition(
         for (GradeGroup grade : grades) {
             newGrades.add(grade.id().equals(gradeId) ? updatedGrade : grade);
         }
-        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates, type);
+        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
     }
 
     public static int gradeLevel(String id) {
@@ -180,7 +190,6 @@ public record BoxDefinition(
         private Optional<ResourceLocation> texture = Optional.empty();
         private Optional<ResourceLocation> sound = Optional.empty();
         private final Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
-        private String type = "csbox";
 
         public Builder(ResourceLocation id, String name) {
             this.id = Objects.requireNonNull(id, "box id");
@@ -237,11 +246,6 @@ public record BoxDefinition(
             return this;
         }
 
-        public Builder type(String type) {
-            this.type = type == null ? "csbox" : type;
-            return this;
-        }
-
         public BoxDefinition build() {
             Component finalName = name;
             if (nameColor.isPresent()) {
@@ -250,7 +254,7 @@ public record BoxDefinition(
             }
             return new BoxDefinition(id, finalName, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
-                    Map.copyOf(entityDropRates), type);
+                    Map.copyOf(entityDropRates));
         }
     }
 }

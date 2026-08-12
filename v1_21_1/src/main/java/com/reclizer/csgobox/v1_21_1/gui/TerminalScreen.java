@@ -2,16 +2,19 @@ package com.reclizer.csgobox.v1_21_1.gui;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
-import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalActionBar;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalOfferRegion;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalOfferItems;
-import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalBuy;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalBuyResult;
+import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalClose;
+import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalOpen;
+import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalReject;
+import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalState;
+import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -25,6 +28,9 @@ import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Terminal machine screen — the full HTML prototype (design/terminal-chat.html)
@@ -54,6 +60,17 @@ public class TerminalScreen extends Screen {
     private final TerminalConfirmDialog confirmDialog = new TerminalConfirmDialog();
     private long nowMs;
     private long buyRequestId;
+    /** When the buy request was sent — the waiting dialog must not hang forever. */
+    private long buySentAtMs;
+    /** True once the server's locked session state has been applied. */
+    private boolean stateReceived;
+    private boolean closeSynced;
+    /** The server-side session uid — identifies THIS terminal on close. */
+    private String terminalUid;
+    /** Nonce echoed by the server so a stale reply for another terminal is dropped. */
+    private final long requestId = System.nanoTime();
+    /** When this open was requested — the server must answer within 5s. */
+    private final long openSentAtMs = System.currentTimeMillis();
     /** Terminal item stack (copy) — box_id travels with the buy request. */
     private final ItemStack terminalStack;
     /** Terminal item display name (config name or anvil rename). */
@@ -62,23 +79,87 @@ public class TerminalScreen extends Screen {
     public TerminalScreen(ItemStack terminalStack) {
         super(Component.translatable("gui.csgobox.terminal.title"));
         OPEN_INSTANCE = this;
-        this.model.start(System.currentTimeMillis());
         this.terminalStack = terminalStack.copy();
         this.terminalName = terminalStack.getHoverName();
-        offerRegion.setGradePools(buildGradePools(terminalStack));
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalOpen(this.terminalStack, requestId)));
+        }
     }
 
-    @SuppressWarnings("unchecked")
-    private static java.util.List<ItemStack>[] buildGradePools(ItemStack terminalStack) {
-        java.util.List<ItemStack>[] pools = new java.util.List[6]; // index = gradeLevel 1..5
-        ItemCsgoBox.getDefinition(terminalStack).ifPresent(def ->
-                def.grades().forEach(g -> {
-                    int lvl = BoxDefinition.gradeLevel(g.id());
-                    if (lvl > 0 && lvl < pools.length) {
-                        pools[lvl] = g.items();
-                    }
-                }));
-        return pools;
+    /**
+     * Applies the server's locked session snapshot (round/status/history,
+     * sampled per-round items, slot item) so this open resumes exactly where
+     * the player left off — or starts a fresh negotiation when the lock was
+     * released by a buy or five rejects.
+     */
+    public void onTerminalState(PacketTerminalState state) {
+        if (stateReceived) {
+            return;
+        }
+        // A stale reply from a previously opened terminal (or a server push)
+        // must never leak into this screen — every terminal of the same type
+        // shares the box id, so only the matching request nonce proves this
+        // reply belongs to THIS open.
+        if (state.requestId() != requestId) {
+            return;
+        }
+        TerminalOfferItems.reset();
+        // A stale reply from a previously opened terminal (or a server push)
+        // must never leak into a different terminal's screen.
+        net.minecraft.resources.ResourceLocation boxId = ItemCsgoBox.getBoxId(terminalStack);
+        if (boxId == null || !boxId.toString().equals(state.boxId())) {
+            return;
+        }
+        this.stateReceived = true;
+        this.terminalUid = state.terminalUid();
+        Map<Integer, NegotiationModel.Offer> offers = new HashMap<>();
+        for (PacketTerminalState.RoundItem ri : state.rounds()) {
+            offers.put(ri.round(), ri.offer());
+            TerminalOfferItems.setRoundItem(ri.round(), ri.item(), ri.grade());
+        }
+        TerminalOfferItems.setSessionItem(state.sessionItem());
+        model.setOfferSource(offers::get);
+        NegotiationModel.Status status = NegotiationModel.Status.values()[
+                Math.max(0, Math.min(state.status(), NegotiationModel.Status.values().length - 1))];
+        model.restore(new NegotiationModel.Snapshot(
+                state.round(), status, state.generation(), state.cap(),
+                state.countdownDeadlineMs(), state.pending(), state.history()),
+                worldNowMs());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        long wallNow = System.currentTimeMillis();
+        // The server never answered (held item changed mid-open, death, or an
+        // unexpected server error): fail visibly instead of hanging forever.
+        if (!stateReceived && wallNow - openSentAtMs > 5_000L) {
+            if (this.minecraft != null && this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(
+                        Component.translatable("csgobox.terminal.sys.unreachable"));
+            }
+            onClose();
+            return;
+        }
+        // A buy reply that never arrives must not trap the confirm dialog in
+        // its input-consuming waiting state forever — bail out after 6 s.
+        if (confirmDialog.isWaiting() && wallNow - buySentAtMs > 6_000L) {
+            long worldNow = worldNowMs();
+            confirmDialog.close();
+            model.dealerReconsider(worldNow);
+            model.addSystem("csgobox.terminal.sys.unreachable", worldNow);
+        }
+    }
+
+    /**
+     * World running time in ms (world game ticks × 50) — the terminal
+     * countdown follows the world's clock, so it pauses/stops with the world
+     * instead of the player's wall clock.
+     */
+    private static long worldNowMs() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level != null ? mc.level.getGameTime() * 50L : System.currentTimeMillis();
     }
 
     // ---- layout fractions (HTML prototype) ----
@@ -93,7 +174,7 @@ public class TerminalScreen extends Screen {
     @Override
     public void render(GuiGraphics gg, int mouseX, int mouseY, float partialTick) {
         super.render(gg, mouseX, mouseY, partialTick);
-        this.nowMs = System.currentTimeMillis();
+        this.nowMs = worldNowMs();
         model.tick(nowMs);
         Player player = Minecraft.getInstance().player;
 
@@ -196,7 +277,7 @@ public class TerminalScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         this.mouseX = (int) mouseX;
         this.mouseY = (int) mouseY;
-        long now = System.currentTimeMillis();
+        long now = worldNowMs();
         if (confirmDialog.isOpen()) {
             TerminalConfirmDialog.Hit hit = confirmDialog.mouseDown(this.mouseX, this.mouseY, now);
             if (hit == TerminalConfirmDialog.Hit.CONFIRM) {
@@ -228,8 +309,8 @@ public class TerminalScreen extends Screen {
             offerRegion.mouseUp();
             return true;
         }
-        long now = System.currentTimeMillis();
-        TerminalActionBar.Fired fired = actionBar.mouseUp(now);
+        long now = worldNowMs();
+        TerminalActionBar.Fired fired = actionBar.mouseUp(this.mouseX, this.mouseY, now);
         if (fired == TerminalActionBar.Fired.ACCEPT) {
             NegotiationModel.Offer offer = model.pending();
             if (offer != null) {
@@ -238,6 +319,7 @@ public class TerminalScreen extends Screen {
             }
         } else if (fired == TerminalActionBar.Fired.REJECT) {
             model.rejectNow(now);
+            sendRejectRequest(model.round());
         }
         offerRegion.mouseUp();
         return super.mouseReleased(mouseX, mouseY, button);
@@ -266,7 +348,10 @@ public class TerminalScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { // GLFW_KEY_ESCAPE
             if (confirmDialog.isOpen()) {
-                long now = System.currentTimeMillis();
+                if (confirmDialog.isWaiting()) {
+                    return true; // buy request in flight — never cancel mid-trade
+                }
+                long now = worldNowMs();
                 confirmDialog.close();
                 model.dealerReconsider(now);
                 return true;
@@ -285,6 +370,7 @@ public class TerminalScreen extends Screen {
             return;
         }
         this.buyRequestId = System.nanoTime();
+        this.buySentAtMs = System.currentTimeMillis();
         confirmDialog.setWaiting();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {
@@ -297,13 +383,41 @@ public class TerminalScreen extends Screen {
         }
     }
 
+    /** Tells the server the current round was rejected (server commits the advance). */
+    private void sendRejectRequest(int round) {
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalReject(round)));
+        }
+    }
+
+    /** Pins the session to the view we leave, so a reopen resumes identically. */
+    private void syncCloseState() {
+        if (closeSynced || !stateReceived) {
+            return;
+        }
+        closeSynced = true;
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn == null) {
+            return;
+        }
+        long pendingAtMs = 0L;
+        NegotiationModel.OfferEntry lastOffer = model.lastOfferEntry();
+        if (lastOffer != null) {
+            pendingAtMs = lastOffer.atMs();
+        }
+        conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalClose(
+                terminalUid, model.round(), model.pending() != null,
+                pendingAtMs, model.cap())));
+    }
+
     /** Server verdict for the pending buy request. */
     public void onBuyResult(long requestId, int result, ItemStack givenItem) {
         if (requestId != buyRequestId || !confirmDialog.isOpen()) {
             return;
         }
         confirmDialog.close();
-        long now = System.currentTimeMillis();
+        long now = worldNowMs();
         if (result == PacketTerminalBuyResult.RESULT_SUCCESS) {
             model.acceptNow(now);
         } else if (result == PacketTerminalBuyResult.RESULT_INSUFFICIENT) {
@@ -317,15 +431,24 @@ public class TerminalScreen extends Screen {
 
     @Override
     public void onClose() {
+        syncCloseState();
         if (OPEN_INSTANCE == this) {
             OPEN_INSTANCE = null;
         }
         actionBar.close();
         confirmDialog.close();
-        if (this.minecraft != null) {
-            this.minecraft.options.hideGui = false;
-        }
         super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        // setScreen() replacement / death only calls removed(), never
+        // onClose() — clear the stale singleton so late buy results are dropped.
+        syncCloseState();
+        if (OPEN_INSTANCE == this) {
+            OPEN_INSTANCE = null;
+        }
+        super.removed();
     }
 
     @Override

@@ -17,7 +17,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
  * Region 8: the offer inspection panel — A name box, B rarity block,
@@ -48,11 +47,6 @@ public final class TerminalOfferRegion {
     private final ItemDrag3D itemDrag = new ItemDrag3D(INITIAL_ROT_X, INITIAL_ROT_Y);
     /** The offer seen by the last render() pass (null until round 1 lands). */
     private NegotiationModel.Offer currentOffer;
-    /** Box grade pools by gradeLevel 1..5 (index 0 unused), null entries = absent tier. */
-    private java.util.List<ItemStack>[] gradePools;
-    /** One sample per round: a round keeps the same 3D item across renders. */
-    private final java.util.Map<Integer, ItemStack> roundItemCache = new java.util.HashMap<>();
-    private final java.util.Random itemRnd = new java.util.Random();
 
     // hit-test rects (updated each render)
     private int inspectX, inspectY, inspectW, inspectH;
@@ -307,27 +301,8 @@ public final class TerminalOfferRegion {
         this.itemDrag.reset();
     }
 
-    public void setGradePools(java.util.List<ItemStack>[] pools) {
-        this.gradePools = pools;
-        this.roundItemCache.clear();
-    }
-
-    /** Script skin → box grade: covert=4, classified=3. */
-    private static int gradeForOffer(NegotiationModel.Offer offer) {
-        return "covert".equals(NegotiationModel.SKIN_RARITY[offer.skinIdx()]) ? 4 : 3;
-    }
-
-    /** 每轮一次取样（缓存），等级为空时向下退级，全空回退铁剑。 */
+    /** The round's actual offered item (server-sampled in the locked session). */
     private ItemStack offerItem(NegotiationModel.Offer offer) {
-        return roundItemCache.computeIfAbsent(offer.round(), r -> {
-            for (int g = gradeForOffer(offer); g >= 1; g--) {
-                java.util.List<ItemStack> pool = gradePools != null && g < gradePools.length
-                        ? gradePools[g] : null;
-                if (pool != null && !pool.isEmpty()) {
-                    return pool.get(itemRnd.nextInt(pool.size())).copy();
-                }
-            }
-            return new ItemStack(Items.IRON_SWORD);
-        });
+        return TerminalOfferItems.itemFor(offer);
     }
 }

@@ -50,7 +50,7 @@ public final class TerminalBottomRow {
         Font font = Minecraft.getInstance().font;
 
         // ---- sizing (count panel adapts to the digits, slot fixed, xp fills) ----
-        String text = TerminalAnims.countdownText(model.countdownMs());
+        String text = TerminalAnims.countdownText(model.countdownRemainingMs());
         if (!text.equals(lastCountdown)) {
             lastCountdown = text;
             countdownFlipAtMs = nowMs;
@@ -68,7 +68,7 @@ public final class TerminalBottomRow {
         drawPanel(gg, x0, y0, x0 + countW, y1);
         drawStrip(gg, x0, y0, x0 + countW, y0 + STRIP_H,
                 Component.translatable("csgobox.terminal.validity").getString(), true);
-        boolean expired = model.countdownMs() <= 0;
+        boolean expired = model.countdownRemainingMs() <= 0;
         int color = expired ? TerminalPalette.COUNT_EXPIRED : TerminalPalette.ACTION_TEXT;
         int digitH = Math.round(7F * DIGIT_SCALE);
         int ty = y0 + STRIP_H + (y1 - (y0 + STRIP_H) - digitH) / 2;

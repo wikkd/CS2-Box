@@ -272,14 +272,23 @@ public final class TerminalActionBar {
      * transition: accept opens the trade-confirm dialog, reject advances the
      * negotiation). Always clears the press.
      */
-    public Fired mouseUp(long nowMs) {
+    public Fired mouseUp(int absX, int absY, long nowMs) {
         if (pressPill == Pill.NONE) {
             return Fired.NONE;
         }
+        boolean inside = switch (pressPill) {
+            case ACCEPT -> absX >= acceptX && absX <= acceptX + acceptW
+                    && absY >= acceptY && absY <= acceptY + acceptH;
+            case REJECT -> absX >= rejectX && absX <= rejectX + rejectW
+                    && absY >= rejectY && absY <= rejectY + rejectH;
+            default -> false;
+        };
         Fired fired = Fired.NONE;
-        float fill = TerminalAnims.holdFill(nowMs, pressStartMs);
-        if (fill >= HOLD_FULL) {
-            fired = pressPill == Pill.ACCEPT ? Fired.ACCEPT : Fired.REJECT;
+        if (inside) {
+            float fill = TerminalAnims.holdFill(nowMs, pressStartMs);
+            if (fill >= HOLD_FULL) {
+                fired = pressPill == Pill.ACCEPT ? Fired.ACCEPT : Fired.REJECT;
+            }
         }
         pressPill = Pill.NONE;
         return fired;

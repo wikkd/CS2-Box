@@ -2,6 +2,12 @@
 
 ## [未发布]
 ### 新增
+- **终端机超时自毁（物品消失）**：超时未成交不仅释放谈判锁，**终端机物品本身也销毁**——终端机首次打开时服务端在其物品组件上打唯一 `terminal_uid`（`DataComponentType<String>`，四平台注册），会话与该 uid 绑定；倒计时归零时服务端从玩家背包（主栏+护甲+副手）销毁持有该 uid 的终端机并提示「终端机已超时自毁。」，改名/放箱子不影响定位；离线或放在容器里的终端机，下次打开时由「已销毁 uid 集合」兜底当场销毁（开屏返回 FAILED 状态而非悬挂）。`PacketTerminalOpen` 改为以服务端主手物品为权威并处理销毁路径，`onTerminalState` 先重置静态物品表防残留上一台数据。
+- **终端机计时器落实（服务端权威，原版 tick 驱动）**：倒计时改由服务端持有——四平台 `ModEvents.serverTick`（原版 `ServerTickEvent`）每秒驱动 `TerminalSessionManager.tickSessions`，按世界运行时间（世界游戏刻 × 50）推进每会话倒计时——世界暂停/服务端停机不计时，重启后精确续算；玩家打开终端机与军火商对话即开始计时，超时未成交的会话与 5 轮拒绝同样自毁（`FAILED` + 新系统消息「交易超时，军火商已离开。」，锁释放、下次重开全新谈判）。common `NegotiationModel` 新增 `tickServer`（只推进倒计时与过期，不碰轮次转换——打字/出价动画仍归客户端）与 `expire`；客户端屏同步自过期（倒计时归零原地翻转 FAILED 横幅），`PacketTerminalClose` 不再上报倒计时（服务端权威，杜绝客户端回填时间复活已过期会话），`PacketTerminalState` 增补 `boxId` 字段用于屏侧校验（顺带修复「快速切换两个终端机时迟到的旧会话快照误入新屏」竞态）。
+- **终端机会话锁（重开续谈，未成交不重开）**：服务端按「玩家 UUID + 箱子 ID」持有每个终端机的谈判会话（新增 `TerminalSessionManager` / `TerminalSession`，common `NegotiationModel` 补 `Snapshot`/`restore`/`rejectForced`/`buyForced`/`syncClose`），开屏发 `PacketTerminalOpen` 取锁并下发全量快照 `PacketTerminalState`（轮次 / 状态 / 聊天历史 / 倒计时 / 报价上限 / 5 轮报价与物品 / 区域 10 槽位物品），关屏发 `PacketTerminalClose` 钉住当前轮与 TYPING/PENDING 状态——玩家未成交或未满 5 轮拒绝前重开终端机，对话、报价、物品与上次离开完全一致；5 轮全部拒绝（FAILED）或成交（CLOSED）后锁自动释放，下次开启为全新谈判、重新采样。拒绝改走 `PacketTerminalReject` 服务端强制推进（客户端只播本地动画，不依赖回包），购买 `PacketTerminalBuy` 按服务端当轮实际物品逐字段校验（消除伪造 `offerItem` 提级低买）。
+- **终端机会话持久化 + 转手锁死 + 购买销毁**：会话与「已销毁 uid 集合」落盘 `<world>/csgobox/terminal_state.bin`（`TerminalStateStore`，魔数 + VERSION=3，随服务端启停 bind/unbind，任何变更即时写盘；v3 起 SystemEntry 历史带可翻译参数）；超时未能在原主身上确认销毁（离线 / 放容器 / 已转手）的终端机，uid 进已销毁集合——该 uid 无论落到谁手里，下次打开当场销毁并清理过期 uid；已打开但未过期、且正被**他人**活跃会话持有的终端机转为锁死态，军火商发「去问问xx吧。」——物主名字盖在终端机物品组件 `terminal_owner` 上（服务端创建新会话时盖章，转手/重启/物主离线都可用），另优先用在线玩家名处理改名（新 lang key `csgobox.terminal.sys.locked`，FAILED 状态天然禁用接受/拒绝，服务端买/拒按发送者会话键校验，无法越权交易）；购买成功后终端机物品与 uid 一并销毁并释放会话锁（`PacketTerminalBuy` 成功路径 `removeByUid` + `setCount(0)`）。四平台同步，各平台 `clean compileJava` 通过，`:common:test` 与 forge L0-L3 门禁 7/7 PASS。
+- **终端机默认超时改为 3 小时 + 删除启动屏钥匙计数残留**：`NegotiationModel.COUNT_INITIAL_MS` 由遗留的调试值「2 天 23:57:45」改为 3 小时（common 单点，四平台共用）；`TerminalBootScreen` 移除 `boxKeyCount` / `keyRl` / `itemKey` 及钥匙图标与「需要钥匙」文案——终端机打开不消耗钥匙，启动屏不再误导玩家（四平台同步，各平台 `clean compileJava` 通过，`:common:test` 104 用例通过，forge L0-L3 门禁 7/7 PASS）。
+- **终端机打开悬挂兜底**：服务端 `PacketTerminalOpen` 对「主手已非终端机」的提前 return 改为回 `PacketTerminalState.unreachable(...)` FAILED 快照（新增 `sys.unreachable` lang key「无法联系军火商，请重新打开终端机。」），不再静默不回复；客户端 `TerminalScreen` 新增 5 秒无有效回复超时——仍未收到匹配 `requestId` 的会话快照时发提示并关闭屏幕，杜绝「开屏瞬间切热栏 / 死亡 / 服务端异常」导致的永久空白等待（四平台同步，各平台 `clean compileJava` 通过，`:common:test` 通过，forge L0-L3 门禁 7/7 PASS）。
 - **Blur 模组背景模糊软适配**（`blur` 可选集成，不强制加载、无依赖声明）：主屏 / 出货屏 / 批量总览屏 / 批量结果屏 / 确认屏背景由不透明 `0xFF2a2a33` 改为半透明主题灰 `0x8C2a2a33`（新增 `backgroundStyle` 配置，`TRANSLUCENT` 默认 / `OPAQUE` 恢复旧观感；`common/OverlayColor#getBackgroundTranslucent()`），模糊世界透过背景显示；屏幕回归 vanilla 背景管线（26.x 删除 `CsboxScreen.extractBackground` override、全屏 fill 移入 `renderBg`，三平台共用一个 `gui/UiBackdrop#fill()` 取值助手），安装 Blur 模组后其淡入动画与模糊半径/渐变自动生效；进度屏 26.x `extractBlurredBackground` 在 `ModList.isLoaded("blur")` 时改走 vanilla 实现（Blur 动画生效），未装时维持"无视选项强制模糊"现状；终端机屏保持不透明（设计决策）。未装 Blur 时半透明背景遵循原版 `menuBackgroundBlurriness` 选项。设计文档：`docs/superpowers/specs/2026-08-10-blur-mod-adaptation-design.md`
 - **恢复批量开箱**（1.0.6 屏蔽 → 1.0.7 恢复）：移除 1.0.6 的两处屏蔽——客户端入口 `ClickEvent` 的 shift 硬编码 `false`（恢复 `mc.options.keyShift.isDown()`，Shift+右键进总览屏）与 `PacketCsgoBulkProgress` 的 `BULK_OPEN_ENABLED` 服务端开关；恢复服务端权威计数（箱/钥匙/`bulkOpenCount` 上限）→ 异步线程池计算 → 主线程扣减的完整链路；另修复恢复后暴露的边界缺陷：`finalizeBulkOpen` 复核时 `actualK` 未 clamp 到已计算结果数（异步窗口内库存增长会致 `results.subList` 越界、整批中止且重试必失败），现按 `Math.min(actualK, results.size())` 截断，剩余箱子下轮再开；1.21.1 / 26.1.2 / 26.2 三平台同步恢复（forge_26_1_2 实验模块一并同步）。
 - **`/csbox nbt hand` 命令**：打印主手物品的序列化 JSON（新增 `BoxItemCodec` 统一物品序列化，`tag` 字符串与 `components` 元数据均解析为扁平 key-value），超过 20000 字符截断提示；`/csbox` 裸命令与 `help` 子命令现执行 2 级权限检查
@@ -31,9 +37,40 @@
 - **`/csbox` 命令收口**：`set` 调试子命令退役，`errors` / `tutorial` 并入 `info` / `reload`，帮助文本重写
 
 ### 更改
+- **终端机报价与物品改为服务端采样**：5 轮 offer（皮肤 / 磨损 / 风格 / 编号 / 图案）+ 每轮实际给予物品 + 区域 10 槽位物品全部在会话创建时由服务端从箱子分级池一次性采样（原客户端 `TerminalOfferItems` 随机逻辑迁至 `TerminalSession.create`）；`TerminalOfferItems` 改静态查表、`TerminalOfferRegion` 删除本地随机池与逐轮缓存，客户端不再本地随机——重开一致性由服务端快照保证，客户端只负责渲染。
+- **终端机供给与宝箱统一（空箱子 + 按注册入栏）**：首次启动不再自动写入
+  `config/csbox/terminal.json`（删除默认终端配置），终端机与 `csbox` 一样只在
+  玩家创建 `terminal.json` 后出现在创造物品栏；高级箱同步取消自动生成
+  （`writeDefaultPremiumBoxIfMissing` 及其默认配置删除，`premium_supply_box.json`
+  由玩家/服主自行创建后入栏）；配置 JSON 不再需要 `type` 字段，箱子类型由
+  `key` 推导（仅 `csgobox:terminal` + `minecraft:air` 钥匙视为终端机，air 单独
+  出现不会误判）。
+- **终端机与宝箱共享逻辑封装**：`BoxDefinition.isTerminal()` 集中类型判定；
+  `ModItems.boxItemFor()` 统一「定义 → 物品类」映射，创造栏单循环覆盖终端机 /
+  高级箱 / 动态箱子（顺带修复高级箱在创造栏重复出现两次）；`ItemCsgoBox.openScreen()`
+  多态打开入口（终端机覆写为启动屏），右键事件不再按物品类先后分支；怪物掉落
+  复用同一映射，终端/高级箱定义配置掉落时掉出对应物品类。
 - **代码审查机制落地**：新增 `docs/CODE-REVIEW.md`（审查标准与流程，含 CS2-Box 专属 9 项审查清单）、`.github/PULL_REQUEST_TEMPLATE.md`（PR 提交自查模板）；CI 新增 `gametest.yml`（GameTest 集成测试，1.21.1 + 26.1.2，当前无用例时跳过）与 `pr-checks.yml`（PR 描述模板校验，脚本 `scripts/check-pr-description.sh`）；分支保护设置指南见 `docs/CI-PROTECTION.md`（required checks 需仓库 admin 手动执行，见该文档）
 - **armory_point 贴图替换为原创金色硬币造型**（原素材存在版权风险，随 1.0.6 发布后玩家端自动生效）
 - **开箱音效重编码**（`cs_open` / `cs_dita` / `cs_finish` 体积大幅缩减，文件更小、加载更快；音质待人工听感回归验证，验证记录见 docs/RUNTIME-UI-TESTING.md）
+- **终端机会话锁与计时器四平台同步**：`TerminalSessionManager` / `TerminalSession` / `TerminalRoundData` / 4 个新 packet（Open/State/Reject/Close）+ `TerminalOfferItems` / `TerminalOfferRegion` / `TerminalScreen` / `PacketTerminalBuy` / `ModEvents` tick 挂接全部同步 v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2（forge 走 `Networking` 注册与 `CustomPayloadEvent` 适配）；各平台 `clean compileJava` 通过，`:common:test` 通过（NegotiationModel 新增快照恢复 / 强制推进 / 倒计时过期用例），v26_1_2 `PlatformSmokeTest` 与 forge L0-L3 门禁 7/7 PASS。
+
+### 修复
+- **终端机购买步骤不再永久悬挂**：交易确认框进入「交易中」后若服务端回包始终不到（丢包 / 服务端异常），此前 ESC 与点击全被等待态吞掉、界面卡死——现在客户端 6 秒无回包自动关闭确认框并提示「无法联系军火商，请重新打开终端机。」（复用 `sys.unreachable` key，晚到的回包因 `requestId` / 对话框已关被丢弃）；服务端 `PacketTerminalOpen` 5 秒兜底已覆盖开屏，购买补上后开屏 / 购买两处都不再悬挂。
+- **终端机购买不再受开箱冷却误伤**：`PacketTerminalBuy` 移除对开箱冷却 `isOpenBlockedStatic` 的校验（刚开完宝箱立刻买终端机不会被 INVALID 挡掉），购买成功也不再调用 `blockFurtherOpensStatic`（终端机成交后开宝箱不再被莫名冷却 10 tick）——终端机交易是经济系统而非开箱，不与开箱冷却共用。
+- **终端机会话变更即时持久化**：拒绝推进 / 关屏状态钉住 / 点数不足提示此前只改内存态、未置 `dirty`——服务器重启后会话回滚到上一持久化点（拒绝的轮次复活、对话丢失），违反「重新打开与上次打开一致」；三处处理补 `TerminalSessionManager.markDirty()`（配合 1Hz tick 兜底写盘）。
+- **关闭瞬间不再回卷已拒绝轮次**：玩家在拒绝动画（450ms）内关屏时，`PacketTerminalClose` 携带的是旧轮次，会把服务端已推进的会话「回卷」到被拒绝的报价——`syncClose` 前先比较轮次，`round < 服务端当前轮` 直接忽略，保证拒绝不可撤销。
+- **持久化文件损坏不再崩服务端 tick**：`TerminalSessionManager.destroyTerminal` 对 `UUID.fromString` 加防御（损坏的 `terminal_state.bin` 中非法玩家 UUID 此前会让异常冒泡到 `ServerTickEvent` 崩服）。
+- 以上修复四平台同步（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2），各平台 `clean compileJava` 通过，`:common:test` 通过，forge L0-L3 门禁 7/7 PASS。
+
+- **单开扣钥匙时机**：`PacketCsgoProgress.handleServer` 把 `tryConsumeKeys` 移到整条校验链（box_id / 权重 / 分级池 / 获胜索引 / 保底解析）全部通过之后——配置损坏或热重载竞态下不再出现「丢钥匙但没奖励」（此前钥匙先于最终校验被消耗）。批量同家族防御：`finalizeBulkOpen` 在整批结果全为空时直接中止、不消耗任何箱子与钥匙（坏配置不再整批吞物品）。
+- **客户端钥匙判定覆盖全槽位**：`CsboxScreen` 单开点【开启】的钥匙检查与钥匙计数从「仅主物品栏」扩展到「主物品栏 + 护甲 + 副手」，并跳过箱子实例（与服务端 `tryConsumeKeys` 槽位覆盖和防误吞规则一致）——钥匙放在护甲/副手的玩家不再被客户端误判为「没有钥匙」而点不开箱子。
+- **创造模式开箱不再消耗箱子**：单开 `box.shrink(1)` 与批量 `tryConsumeBoxes` 增加 `instabuild` 豁免，与钥匙/军械库点数在创造模式下的免费行为对齐。
+
+- **终端机购买服务端数量校验**：`PacketTerminalBuy` 服务端授予物品前强制 `toGive.setCount(1)`——`isSameItemSameComponents` 不比较数量，伪造 `offerItem` 数量可「1 件价格买 64 件」；同时确认交易对话框进入「交易中」后 ESC 不再可关闭（此前 ESC 会关掉等待框，服务端已扣点给物而客户端静默丢弃结果、谈判停留在 PENDING）。
+- **终端机屏幕关闭逻辑修正**：移除两个终端屏 `onClose` 中无条件的 `hideGui = false`（v26_2 为 `HudVisibility.show()`，屏幕从未隐藏 HUD，此前会破坏玩家 F1 隐藏 HUD 状态）；新增 `removed()` 清理静态 `OPEN_INSTANCE` 单例（被 `setScreen` 顶替/死亡时 MC 只调 `removed()`，此前残留脏引用会命中迟到的购买回包）；长按「接受/拒绝」胶囊后拖出胶囊再松手不再触发（`TerminalActionBar.mouseUp` 校验释放点仍在胶囊内）。
+- 以上四处修复四平台同步（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2），各平台 `clean compileJava` 通过，`:common:test` 与 v26_1_2 `PlatformSmokeTest` 通过，forge L0-L3 门禁 7/7 PASS。
+
 
 ### 移除
 - **终端机聊天区 ♞ 水印**（按玩家反馈，三平台 + forge 同步）：删除 `TerminalChatRegion.render()` 中象棋棋子字符（`U+265E`）水印绘制——该水印源自 `design/terminal-chat.html` 原型 `.watermark`（1.0.7 演示对齐 Task 5 落地），移除后聊天区保留点阵网格与标题条；`design/terminal-chat.html` 原型同步删除水印元素与样式，保持设计源与实现一致

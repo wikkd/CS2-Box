@@ -16,14 +16,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -57,10 +54,6 @@ public class TerminalBootScreen extends Screen {
     private final Component boxName;
     private final List<ItemStack> itemsList = new ArrayList<>();
     private final List<Integer> gradeList = new ArrayList<>();
-    private ItemStack itemKey;
-    private ResourceLocation keyRl;
-    private int boxKeyCount;
-
     private int page;
     private int enterTicks = 0;
 
@@ -75,13 +68,6 @@ public class TerminalBootScreen extends Screen {
         BoxDefinition def = ItemCsgoBox.getDefinition(terminalStack).orElse(null);
         if (def != null) {
             this.boxName = def.name();
-            this.keyRl = def.keyItem();
-            if (keyRl != null && !keyRl.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "air"))) {
-                Item keyItem = BuiltInRegistries.ITEM.get(keyRl);
-                if (keyItem != null) {
-                    this.itemKey = new ItemStack(keyItem);
-                }
-            }
             List<ItemStack> items = new ArrayList<>();
             List<Integer> grades = new ArrayList<>();
             for (GradeGroup grade : def.grades()) {
@@ -106,11 +92,9 @@ public class TerminalBootScreen extends Screen {
                 gradeList.add(grades.get(idx));
             }
             this.boxEmpty = itemsList.isEmpty();
-            this.boxKeyCount = countKeys();
         } else {
             this.boxName = terminalStack.getHoverName();
             this.boxEmpty = true;
-            this.boxKeyCount = 0;
         }
     }
 
@@ -174,25 +158,6 @@ public class TerminalBootScreen extends Screen {
         return Math.max(1, (n + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE);
     }
 
-    private int countKeys() {
-        Player player = this.minecraft != null ? this.minecraft.player : null;
-        if (player == null) {
-            return 0;
-        }
-        if (player.getAbilities().instabuild) {
-            return Integer.MAX_VALUE;
-        }
-        int total = 0;
-        if (keyRl != null) {
-            for (ItemStack stack : player.getInventory().items) {
-                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-                    total += stack.getCount();
-                }
-            }
-        }
-        return total;
-    }
-
     @Override
     public void tick() {
         super.tick();
@@ -234,11 +199,6 @@ public class TerminalBootScreen extends Screen {
         }
 
         renderGrid(gg, player);
-
-        if (itemKey != null) {
-            IconListTools.renderGuiItem(player, this.minecraft.level, gg, itemKey,
-                    this.width * 25F / 100, this.height * 93F / 100, 1);
-        }
 
         drawOpenButton(gg, gx, gy);
         drawCloseButton(gg, gx, gy);
@@ -335,23 +295,6 @@ public class TerminalBootScreen extends Screen {
         RenderFontTool.drawStringClamped(gg, this.font, boxName,
                 boxNameX, this.height * 13F / 100F, 0, 0, boxNameScale,
                 boxNameMaxWidth, titleColor);
-
-        if (itemKey != null && !itemKey.isEmpty()) {
-            if (boxKeyCount > 0) {
-                String count = boxKeyCount == Integer.MAX_VALUE
-                        ? " \u00D7 \u221E"
-                        : " \u00D7 " + boxKeyCount;
-                renderText(gg, Component.literal(count).getVisualOrderText(),
-                        this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
-            } else {
-                renderText(gg, Component.translatable("gui.csgobox.csgo_box.label_open").getVisualOrderText(),
-                        this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
-                renderText(gg, Component.translatable("gui.csgobox.csgo_box.label_open_1").getVisualOrderText(),
-                        this.width * 40F / 100F, this.height * 94F / 100F, 0.8F);
-                renderText(gg, itemKey.getItem().getName(itemKey).getVisualOrderText(),
-                        this.width * 35F / 100F, this.height * 94F / 100F, 0.8F);
-            }
-        }
 
         renderText(gg, Component.translatable("gui.csgobox.csgo_box.label_items").withStyle(style).getVisualOrderText(),
                 this.width * 3F / 100F, this.height * 50.3F / 100F, 0.8F);

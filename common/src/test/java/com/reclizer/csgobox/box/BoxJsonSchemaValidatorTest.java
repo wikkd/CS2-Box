@@ -286,41 +286,6 @@ final class BoxJsonSchemaValidatorTest {
     }
 
     @Nested
-    @DisplayName("type keyword")
-    class TypeField {
-
-        @Test
-        @DisplayName("type csbox is accepted")
-        void csbox() {
-            assertTrue(validate("{ \"type\": \"csbox\" }").isEmpty());
-        }
-
-        @Test
-        @DisplayName("type terminal is accepted")
-        void terminal() {
-            assertTrue(validate("{ \"type\": \"terminal\" }").isEmpty());
-        }
-
-        @Test
-        @DisplayName("type absent is accepted (defaults to csbox)")
-        void absent() {
-            assertTrue(validate("{}").isEmpty());
-        }
-
-        @Test
-        @DisplayName("unknown type reports type field")
-        void unknown() {
-            assertSingleIssue(validate("{ \"type\": \"vending_machine\" }"), "type");
-        }
-
-        @Test
-        @DisplayName("non-string type reports type field")
-        void nonString() {
-            assertSingleIssue(validate("{ \"type\": 7 }"), "type");
-        }
-    }
-
-    @Nested
     @DisplayName("multi-issue composition")
     class MultiIssue {
 
