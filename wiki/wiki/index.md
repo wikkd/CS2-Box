@@ -1,17 +1,18 @@
 ---
 type: index
 title: 内容目录
-updated: 2026-08-10
+updated: 2026-08-13
 ---
 
 # CS2-Box 知识库 — 内容目录
 
 > 任何操作前先读本页。查询时通过 `[[wikilinks]]` 跳转。
+> ⚠️ 已归档（废弃）页面见 `archived/` 目录（2026-08-13：军火商经济相关 3 页），不参与索引与 lint。
 
 ## Schema
 - [[CLAUDE]] — 本知识库的 schema 与规则
 
-## Sources（资料摘要 — 42 个）
+## Sources（资料摘要 — 40 个）
 按用途分四组：guides（上手/流程）、updates（版本变更）、testing（测试体系）、features（功能设计/GDD）。目录结构见 `sources/{guides,updates,testing,features}/`。
 
 ### 上手与流程（guides — 15）
@@ -48,7 +49,7 @@ updated: 2026-08-10
 - [[animation-aesthetics-test-plan]] — 动画审美测试脚本 实施计划
 - [[clean-test-shots]] — 清理测试照片功能（clean 子命令）
 
-### 功能设计与 GDD（features — 14）
+### 功能设计与 GDD（features — 12）
 - [[wear-durability]] — 开箱物品按磨损值损耗耐久（服务端权威 RNG）
 - [[creative-no-key]] — 创造模式免钥匙开箱
 - [[toolbar-hover]] — CsLookItemScreen 工具栏悬停反馈（反白 + tooltip）
@@ -56,15 +57,13 @@ updated: 2026-08-10
 - [[tacz-inspect-viewport]] — TACZ 检视视口集成（v1_21_1 专属）
 - [[animops-facade]] — AnimRenderOps 动画渲染门面设计
 - [[blur-mod-adaptation]] — CS2-Box × Blur 背景模糊适配
-- [[armory-points]] — 武库点数物品实施计划
 - [[csbox-nbt-hand]] — /csbox nbt hand 实现计划
-- [[arms-dealer-economy-design]] — 军火商经济数值设计 GDD（设计摘要；概念版见 [[arms-dealer-economy]]）
 - [[gui-animation-gaps]] — GUI 动效补全 + Easing 提取计划
 - [[creative-no-key-plan]] — 创造模式免钥匙开箱 实施计划
 - [[lookitem-info-panel-plan]] — 信息面板重排 实施计划
 - [[animops-facade-plan]] — 动画渲染门面 实施计划
 
-## Concepts（架构概念 — 16 个）
+## Concepts（架构概念 — 15 个）
 - [[multiloader-architecture]] — 9 平台矩阵 + common 约束
 - [[platform-mirror-discipline]] — 镜像纪律 + 定点合入
 - [[server-authoritative-rng]] — 服务端权威 RNG + 防双击
@@ -79,7 +78,6 @@ updated: 2026-08-10
 - [[entity-chinese-map-migration]] — EntityChineseMap B 类迁移
 - [[code-review-standards]] — 代码审查标准（CONSTRAINT-001/镜像/版本同步/AnimOps 漂移等必查面）
 - [[superpowers-testing]] — Superpowers UI 自动化测试体系（审美/全量/运行时）
-- [[arms-dealer-economy]] — 军火商经济（武库点数循环 GDD）
 - [[easing-library]] — Easing 公共缓动库（common 纯函数，CONSTRAINT-001 合规）
 
 ## Entities（代码组件 — 15 个）

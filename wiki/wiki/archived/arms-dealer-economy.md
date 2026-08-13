@@ -5,6 +5,8 @@ updated: 2026-08-10
 tags: [economy, balance, design, gdd]
 ---
 
+> ⚠️ **已归档（2026-08-13）**：军火商经济已废弃，本页移入 `wiki/wiki/archived/`，不再属于活跃知识库，仅作历史参考。
+
 # 军火商经济（武库点数循环）
 
 ## Overview

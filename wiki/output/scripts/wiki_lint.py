@@ -23,6 +23,8 @@ def collect():
     slugs = set()
     pages = {}  # slug -> {type, links:set, path}
     for root, _, files in os.walk(WIKI):
+        if "archived" in root.split(os.sep):
+            continue  # archived/ 不参与 lint 与索引
         for f in files:
             if not f.endswith(".md"):
                 continue

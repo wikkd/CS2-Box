@@ -1,7 +1,7 @@
 ---
 type: schema
 title: CS2-Box 知识库 Schema
-updated: 2026-08-03
+updated: 2026-08-13
 ---
 
 # CS2-Box 知识库 Schema
@@ -34,10 +34,11 @@ wiki/
 │   ├── guides/       #   上手与流程（readme/changelog/architecture/development/configuration/release/...）
 │   ├── updates/      #   版本与移植说明（update-*/port-*）
 │   ├── testing/      #   测试体系与规格（testing/manual-testing/superpowers-specs/...）
-│   └── features/     #   功能设计与 GDD（wear-durability/armory-points/arms-dealer-economy-design/...）
+│   └── features/     #   功能设计与 GDD（wear-durability/blur-mod-adaptation/...）
 │   ├── concepts/         # 架构概念文章
 │   ├── entities/         # 代码组件/文件条目
-│   └── comparisons/      # 跨平台对比分析
+│   ├── comparisons/      # 跨平台对比分析
+│   └── archived/         # 已归档（废弃）页面：不参与索引与 lint
 └── output/               # 第 3 层：查询产物
     ├── reports/
     ├── slides/           # Marp
@@ -107,6 +108,11 @@ updated: YYYY-MM-DD
 4. 每个显著组件 → 创建或更新 entities/
 5. 平台差异显著时 → comparisons/
 6. 更新 index.md / overview.md，追加 log.md
+
+## 归档规则
+
+- 废弃方向/功能 → 相关页面移入 `archived/`，从 index.md / overview.md 移除并刷新计数；`archived/` 不参与 lint 与索引
+- 计划文档归档至 `docs/superpowers/archived/`，文件顶部加 ARCHIVED 横幅（保留原路径）
 
 ## 平台矩阵速查
 

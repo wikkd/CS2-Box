@@ -1,3 +1,5 @@
+> ⚠️ **已归档（ARCHIVED · 2026-08-13）**：军火商经济方向已废弃，本文不再作为实现依据，仅作历史参考。原位置 `docs/superpowers/plans/2026-08-09-arms-dealer-economy.md`。
+
 # 军火商经济数值设计（武库点数循环）
 
 > **For agentic workers:** 本文件是数值设计 GDD，pure design，未含实现。所有未经 playtest 的数值标 `[PLACEHOLDER · 验证路径]`。

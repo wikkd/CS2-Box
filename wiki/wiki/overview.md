@@ -1,7 +1,7 @@
 ---
 type: overview
 title: 知识库总览
-updated: 2026-08-10
+updated: 2026-08-13
 ---
 
 # CS2-Box 知识库总览
@@ -14,15 +14,17 @@ CS2-Box 是 CS:GO 风格开箱玩法的 Minecraft NeoForge 模组，当前 **3 �
 - **common/ 约束**：无 MC/NeoForge 依赖，平台 → common 单向依赖
 - **镜像纪律**：非纯拷贝，先改基准模块再定点合入
 
-## 已收录（79 个页面）
+## 已收录（76 个页面）
 
 | 类别 | 数量 | 覆盖内容 |
 |---|---|---|
-| sources | 42 | 分四子目录：guides（上手/流程 15）+ updates（版本移植 3）+ testing（测试体系 10）+ features（功能设计/GDD 14） |
-| concepts | 16 | 架构 + 机制 + 渲染 + 设计系统 + 迁移 + 代码审查 + 测试体系 + 经济 + Easing |
+| sources | 40 | 分四子目录：guides（上手/流程 15）+ updates（版本移植 3）+ testing（测试体系 10）+ features（功能设计/GDD 12） |
+| concepts | 15 | 架构 + 机制 + 渲染 + 设计系统 + 迁移 + 代码审查 + 测试体系 + Easing |
 | entities | 15 | 入口 + 配置 + 数据包 + 加载器 + 工具类 + 按钮 + 字体 + 3D 预览 + 动画渲染门面 |
 | comparisons | 2 | 1.21.1 vs 26.1.2 GUI、v26_1_2 vs v26_2 差异 |
 | schema/nav | 4 | CLAUDE.md + index.md + overview.md + log.md |
+
+> 已归档：`archived/`（2026-08-13 军火商经济相关 3 页移出活跃索引；计划文档归档于 `docs/superpowers/archived/`）。
 
 ## 待办
 

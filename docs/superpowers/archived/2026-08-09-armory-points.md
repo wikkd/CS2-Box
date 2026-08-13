@@ -1,3 +1,5 @@
+> ⚠️ **已归档（ARCHIVED · 2026-08-13）**：军火商经济方向已废弃，本文不再作为实现依据，仅作历史参考。原位置 `docs/superpowers/plans/2026-08-09-armory-points.md`。
+
 # 武库点数 (Armory Point) 实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

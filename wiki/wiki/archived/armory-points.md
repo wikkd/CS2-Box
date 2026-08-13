@@ -8,6 +8,8 @@ key_concepts: [arms-dealer-economy-design, multiloader-architecture]
 key_entities: [csbox-config, csgo-box]
 ---
 
+> ⚠️ **已归档（2026-08-13）**：军火商经济已废弃，本页移入 `wiki/wiki/archived/`，不再属于活跃知识库，仅作历史参考。
+
 # 武库点数（Armory Point）实施计划
 
 > source: `docs/superpowers/plans/2026-08-09-armory-points.md`

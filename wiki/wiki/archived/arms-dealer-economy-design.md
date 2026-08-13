@@ -8,6 +8,8 @@ key_concepts: [arms-dealer-economy, server-authoritative-rng]
 key_entities: [csgo-box, csbox-config]
 ---
 
+> ⚠️ **已归档（2026-08-13）**：军火商经济已废弃，本页移入 `wiki/wiki/archived/`，不再属于活跃知识库，仅作历史参考。
+
 # 军火商经济数值设计（武库点数循环）— GDD
 
 > source: `docs/superpowers/plans/2026-08-09-arms-dealer-economy.md`
