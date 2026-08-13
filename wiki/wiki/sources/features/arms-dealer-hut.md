@@ -15,7 +15,7 @@ key_entities: [csbox-config, csgo-box]
 
 ## Key takeaways
 
-- **结构内容**：云杉木小屋（9×6×8）——内置武库拆解台（深板岩柜台展示）、军火商村民（`VillagerData.profession = csgobox:arms_dealer`，Lv.1，名字牌「军火商」）、商店宝箱（`LootTable = csgobox:chests/arms_dealer_hut`）、工作台、床、灯笼/火把；1 格门 + 四扇 2×2 铁栏杆窗。
+- **结构内容**：深板岩砖地基 + 红砖墙 + 深板岩石砖房顶小屋（9×6×8）——内置武库拆解台（深板岩柜台展示）、军火商村民（`VillagerData.profession = csgobox:arms_dealer`，Lv.1，名字牌「军火商」）、商店宝箱（`LootTable = csgobox:chests/arms_dealer_hut`）、工作台、床、灯笼/火把；1 格门 + 四扇 2×2 铁栏杆窗。
 - **世界生成**：`structure_set`（random_spread，spacing 30 / separation 10）+ jigsaw 结构（`size: 1`，单模板，`terrain_adaptation: beard_thin`，`WORLD_SURFACE_WG` 高度投影）；biome 覆盖陆地群系（森林/针叶林/草原/热带/恶地/丘陵 + 平原/草甸/樱花林等，自定义 tag `#csgobox:has_structure/arms_dealer_hut`）。
 - **宝箱战利品**：武库点数 3–8（weight 30）/ 基础箱（12）/ 绿宝石 2–6（20）/ 铁锭 2–5（20）/ 铁钥匙（5），单池 roll 2。
 - **村民刷新机制**：职业直接写进模板实体 NBT（`VillagerData` 字段 1.21.1 与 26.x 格式一致，已核验）；结构放置时游戏强制移除 UUID 重新生成（多座小屋无实体冲突）；`PersistenceRequired` 防消失；模板不带 `DataVersion`，两版本均按原样加载。

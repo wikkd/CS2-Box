@@ -4,7 +4,7 @@
 小屋是军火商（arms_dealer）的野外据点：
 - 内置武库拆解台（柜台展示）+ 军火商村民（arms_dealer 职业 Lv.1，带名字牌）
 - 商店宝箱（LootTable 指向 csgobox:chests/arms_dealer_hut）
-- 云杉木 + 深板岩柜台 + 铁栏杆窗 + 灯笼/火把 + 一张床（村民睡觉）
+- 深板岩砖地基 + 红砖墙 + 深板岩石砖房顶 + 深板岩柜台 + 铁栏杆窗 + 灯笼/火把 + 一张床（村民睡觉）
 
 模板格式与 1.21.1 / 26.x 原版一致（已在两版本 vanilla jar 中核验）：
 - 根复合标签名为空；size 为 List[Int]；blocks 覆盖全部坐标（含 air）
@@ -134,30 +134,30 @@ def build_hut() -> dict[tuple[int, int, int], str]:
                 for z in range(z0, z1 + 1):
                     cells[(x, y, z)] = spec
 
-    # 地板
-    set_box(0, X - 1, 0, 0, 0, Z - 1, "minecraft:spruce_planks")
-    # 屋顶：云杉板 + 深色橡木板两层
-    set_box(0, X - 1, 4, 4, 0, Z - 1, "minecraft:spruce_planks")
-    set_box(0, X - 1, 5, 5, 0, Z - 1, "minecraft:dark_oak_planks")
+    # 地板：深板岩砖
+    set_box(0, X - 1, 0, 0, 0, Z - 1, "minecraft:deepslate_bricks")
+    # 屋顶：深板岩石砖两层
+    set_box(0, X - 1, 4, 4, 0, Z - 1, "minecraft:deepslate_tiles")
+    set_box(0, X - 1, 5, 5, 0, Z - 1, "minecraft:deepslate_tiles")
 
-    # 墙体（y=1..3）：默认云杉板
+    # 墙体（y=1..3）：默认红砖
     for y in range(1, 4):
         for x in range(X):
-            cells.setdefault((x, y, 0), "minecraft:spruce_planks")  # 前墙 z=0
-            cells.setdefault((x, y, Z - 1), "minecraft:spruce_planks")  # 后墙
+            cells.setdefault((x, y, 0), "minecraft:bricks")  # 前墙 z=0
+            cells.setdefault((x, y, Z - 1), "minecraft:bricks")  # 后墙
         for z in range(Z):
-            cells.setdefault((0, y, z), "minecraft:spruce_planks")  # 左墙 x=0
-            cells.setdefault((X - 1, y, z), "minecraft:spruce_planks")  # 右墙 x=8
+            cells.setdefault((0, y, z), "minecraft:bricks")  # 左墙 x=0
+            cells.setdefault((X - 1, y, z), "minecraft:bricks")  # 右墙 x=8
 
-    # 四角 + 门柱：云杉原木（1 格门，两侧 2×2 铁栏杆窗）
+    # 四角 + 门柱：红砖柱（1 格门，两侧 2×2 铁栏杆窗）
     for x, z in ((0, 0), (X - 1, 0), (0, Z - 1), (X - 1, Z - 1)):
-        set_box(x, x, 1, 3, z, z, "minecraft:spruce_log[axis=y]")
-    set_box(3, 3, 1, 3, 0, 0, "minecraft:spruce_log[axis=y]")
-    set_box(5, 5, 1, 3, 0, 0, "minecraft:spruce_log[axis=y]")
+        set_box(x, x, 1, 3, z, z, "minecraft:bricks")
+    set_box(3, 3, 1, 3, 0, 0, "minecraft:bricks")
+    set_box(5, 5, 1, 3, 0, 0, "minecraft:bricks")
 
     # 门洞：x=4, y=1..2（空气）；门上方 y=3 恢复木板
     set_box(4, 4, 1, 2, 0, 0, AIR)
-    set_box(4, 4, 3, 3, 0, 0, "minecraft:spruce_planks")
+    set_box(4, 4, 3, 3, 0, 0, "minecraft:bricks")
 
     # 窗户（铁栏杆，连接状态由算法自动计算）
     window_cells = [
