@@ -65,13 +65,14 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `name` | 字符串 | 是 | 宝箱在界面显示的名称 |
-| `key` | 字符串 | 是 | 所需钥匙物品 ID;**`minecraft:air`(免钥匙)不代表终端机**——只有专用终端定义(`csgobox:terminal`)配合 air 钥匙才是终端机,不再有 `type` 字段 |
+| `type` | 字符串 | 否 | 箱子类型:**`csbox`**(默认,普通宝箱)/ `terminal`(终端机)。v1.0.8 起为唯一判定字段,决定物品注册为 `ItemCsgoBox` 还是 `ItemTerminal` |
+| `key` | 字符串 | 仅普通箱 | 所需钥匙物品 ID;`minecraft:air` 免钥匙。**终端机禁止使用 `key` 字段**(严格分离,出现即报 schema 错误) |
 | `drop` | 浮点数 | 否 | 默认实体掉落概率(0.0 到 1.0)。**当 `entity` 为纯实体 ID 列表时,本值是每个实体的掉落概率;若 `entity` 用 ID/概率交替数组,本值作为未显式指定概率实体的兜底** |
 | `random` | 浮点数组[5] | 否 | 5 个等级权重(grade1 到 grade5 顺序) |
 | `entity` | 数组 | 否 | 掉落该宝箱的实体 ID 列表(或 ID/概率 交替数组)。玩家自建 `terminal.json` 时可给终端机配置危险生物掉落 |
 | `grade1` ~ `grade5` | 数组 | 否 | 各等级物品清单(industry / consumer / mil_spec / restricted / classified) |
 
-> **箱子类型判定（v1.0.7 起）**：`type` 字段已移除。箱子类型由派生访问器 `type()` 判定——**仅当箱子 ID 为 `csgobox:terminal` 且 `key` 为 `minecraft:air` 时才返回 `terminal`**，其余一律为普通宝箱（`csbox`）。`key: "minecraft:air"` 单独出现不会把普通宝箱标记为终端机。该类型是派生标签，运行时打开哪个 UI 仍由物品决定（`csgobox:terminal` 物品 → 终端机 UI）。
+> **箱子类型判定（v1.0.8 起）**：`type` 字段是**唯一**判定机制——`"type": "terminal"` 注册为终端机物品（`ItemTerminal`，打开终端谈判屏），`"type": "csbox"` 或省略为普通宝箱。终端机与普通箱**字段严格分离**：终端机不持有 `key` 字段（旧版 v1.0.7 配置里的 `key: "minecraft:air"` 已在升级时自动迁移删除），普通箱的 `key: "minecraft:air"` 仅表示免钥匙、绝不会把宝箱变成终端机。`terminal.json` 缺少 `type` 会被拒绝加载并给出明确报错（防止静默退化成免费开箱）。
 
 ### 3.2 物品对象
 

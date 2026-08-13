@@ -14,6 +14,7 @@ import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -62,6 +63,16 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (!(box.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
+            // Strict separation (v1.0.8): terminals are only buyable through
+            // the terminal negotiation protocol — never through the classic
+            // crate pipeline, which would open them for free (no key, no
+            // Armory Points). A crafted packet holding a terminal is refused.
+            if (box.getItem() instanceof ItemTerminal) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(sp, message.requestId());
+                }
+                return;
+            }
 
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
                 sendRejected(sp, message.requestId());
@@ -77,6 +88,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
 var boxId = ItemCsgoBox.getBoxId(box);
             if (boxId == null) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(sp, message.requestId());
+                }
+                return;
+            }
+            // Same guard for a crafted box_id component pointing at a
+            // terminal definition from a plain ItemCsgoBox stack.
+            if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
                 }

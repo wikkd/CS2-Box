@@ -45,7 +45,8 @@ public final class TerminalSessionManager {
 
     private static final int DESTROYED_UID_CAP = 8192;
 
-    /** The running server — bound on start so every mutation persists immediately. */
+    /** The running server — bound on start; mutations are flushed by the
+     *  1 Hz tick and on server stop (see {@link #flush()}). */
     private static MinecraftServer SERVER;
 
     /** Set when a persisted structure changed; {@link #flush()} writes once per change. */
@@ -60,8 +61,16 @@ public final class TerminalSessionManager {
         TerminalStateStore.load(server);
     }
 
+    /** Drop the server reference and ALL in-memory session state. Called
+     *  after {@link #saveNow()} on server stop, so no data is lost: the
+     *  collections must not outlive the world — otherwise sessions and
+     *  destroyed uids from world A would be ticked against and persisted
+     *  into world B in single-player / LAN world switching. */
     public static void unbindServer() {
         SERVER = null;
+        SESSIONS.clear();
+        DESTROYED_UIDS.clear();
+        dirty = false;
     }
 
     /** The active session for the player's terminal, creating a fresh one when none exists. */
@@ -90,7 +99,6 @@ public final class TerminalSessionManager {
         ItemCsgoBox.stampTerminalOwner(terminalStack, player.getGameProfile().getName());
         SESSIONS.put(key, created);
         dirty = true;
-        flush();
         return created;
     }
 
@@ -142,12 +150,11 @@ public final class TerminalSessionManager {
         return SESSIONS.get(player.getStringUUID() + ":" + terminalUid);
     }
 
-    /** Drops a session immediately (buy self-destruct) and persists. */
+    /** Drops a session immediately (buy self-destruct); the next flush persists it. */
     public static void removeByUid(String playerUuid, String terminalUid) {
         if (terminalUid != null) {
             SESSIONS.remove(playerUuid + ":" + terminalUid);
             dirty = true;
-            flush();
         }
     }
 
@@ -166,7 +173,6 @@ public final class TerminalSessionManager {
         boolean removed = DESTROYED_UIDS.remove(uid);
         if (removed) {
             dirty = true;
-            flush();
         }
         return removed;
     }
@@ -256,11 +262,14 @@ public final class TerminalSessionManager {
         }
     }
 
-    /** Persist pending mutations; no-op when nothing changed. */
+    /** Persist pending mutations; no-op when nothing changed. The dirty flag
+     *  is only cleared after a successful write, so a failed save is retried
+     *  on the next flush instead of silently dropping the mutation. */
     public static void flush() {
         if (dirty && SERVER != null) {
-            dirty = false;
-            TerminalStateStore.save(SERVER);
+            if (TerminalStateStore.save(SERVER)) {
+                dirty = false;
+            }
         }
     }
 

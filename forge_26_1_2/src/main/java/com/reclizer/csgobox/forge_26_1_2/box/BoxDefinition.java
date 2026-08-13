@@ -25,6 +25,7 @@ import java.util.OptionalInt;
 public record BoxDefinition(
         Identifier id,
         Component name,
+        String type,
         Identifier keyItem,
         float dropRate,
         List<Identifier> dropEntities,
@@ -39,6 +40,7 @@ public record BoxDefinition(
     public static final Codec<BoxDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
             ComponentSerialization.CODEC.fieldOf("name").forGetter(BoxDefinition::name),
+            Codec.STRING.optionalFieldOf("type", "csbox").forGetter(BoxDefinition::type),
             Identifier.CODEC.fieldOf("key").forGetter(BoxDefinition::keyItem),
             Codec.FLOAT.fieldOf("drop_rate").forGetter(BoxDefinition::dropRate),
             Identifier.CODEC.listOf().fieldOf("drop_entities").forGetter(BoxDefinition::dropEntities),
@@ -58,6 +60,7 @@ public record BoxDefinition(
     public BoxDefinition {
         id = Objects.requireNonNull(id, "box id");
         name = Objects.requireNonNull(name, "box name");
+        type = (type == null || type.isBlank()) ? "csbox" : type;
         keyItem = keyItem == null ? NO_KEY : keyItem;
         dropRate = BoxGrades.clampDropRate(dropRate);
         dropEntities = dropEntities == null ? List.of() : List.copyOf(dropEntities);
@@ -70,6 +73,7 @@ public record BoxDefinition(
     private static void write(RegistryFriendlyByteBuf buf, BoxDefinition def) {
         Identifier.STREAM_CODEC.encode(buf, def.id());
         ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).encode(buf, def.name());
+        ByteBufCodecs.STRING_UTF8.encode(buf, def.type());
         Identifier.STREAM_CODEC.encode(buf, def.keyItem());
         buf.writeFloat(def.dropRate());
         Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
@@ -91,6 +95,7 @@ public record BoxDefinition(
     private static BoxDefinition read(RegistryFriendlyByteBuf buf) {
         Identifier id = Identifier.STREAM_CODEC.decode(buf);
         Component name = ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).decode(buf);
+        String type = ByteBufCodecs.STRING_UTF8.decode(buf);
         Identifier keyItem = Identifier.STREAM_CODEC.decode(buf);
         float dropRate = buf.readFloat();
         List<Identifier> dropEntities = Identifier.STREAM_CODEC
@@ -108,26 +113,24 @@ public record BoxDefinition(
             Identifier entityId = Identifier.STREAM_CODEC.decode(buf);
             entityDropRates.put(entityId, buf.readFloat());
         }
-        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
+        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
     }
 
     public static Builder builder(Identifier id, String name) {
         return new Builder(id, name);
     }
 
-    /** Box type: only the dedicated terminal definition ({@code csgobox:terminal}
-     *  with a keyless {@code minecraft:air} key) is a terminal machine; an air
-     *  key alone never makes a crate a terminal. */
-    /** Whether this definition is the dedicated terminal machine: only
-     *  {@code csgobox:terminal} with a keyless {@code minecraft:air} key is a
-     *  terminal; an air key alone never makes a crate a terminal. */
+    /** Whether this definition is a terminal machine: the JSON {@code type}
+     *  field is the single source of truth (v1.0.8 strict separation) — only
+     *  {@code "type": "terminal"} is a terminal, and terminals carry no
+     *  {@code key} field at all. */
     public boolean isTerminal() {
-        return "terminal".equals(id.getPath()) && keyItem.equals(NO_KEY);
+        return "terminal".equals(type);
     }
 
-    /** Box type: terminal machine or regular crate. See {@link #isTerminal()}. */
+    /** Box type: terminal machine or regular crate, straight from the JSON. */
     public String type() {
-        return isTerminal() ? "terminal" : "csbox";
+        return type;
     }
 
     public float getDropRateForEntity(Identifier entityType) {
@@ -160,13 +163,14 @@ public record BoxDefinition(
         for (GradeGroup grade : grades) {
             newGrades.add(grade.id().equals(gradeId) ? updatedGrade : grade);
         }
-        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
+        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
     }
 
     public static class Builder {
         private final Identifier id;
         private Component name;
         private OptionalInt nameColor = OptionalInt.empty();
+        private String type = "csbox";
         private Identifier keyItem = NO_KEY;
         private float dropRate = 0.12F;
         private final List<Identifier> dropEntities = new ArrayList<>();
@@ -182,6 +186,13 @@ public record BoxDefinition(
 
         public Builder name(Component name) {
             this.name = Objects.requireNonNull(name, "box name");
+            return this;
+        }
+
+        /** Box kind from the JSON {@code type} field; unknown values fall back
+         *  to {@code "csbox"} (the schema validator reports them separately). */
+        public Builder type(String type) {
+            this.type = (type == null || type.isBlank()) ? "csbox" : type;
             return this;
         }
 
@@ -236,7 +247,7 @@ public record BoxDefinition(
                 int argb = 0xFF000000 | nameColor.getAsInt();
                 finalName = name.copy().withStyle(s -> s.withColor(argb));
             }
-            return new BoxDefinition(id, finalName, keyItem, dropRate,
+            return new BoxDefinition(id, finalName, type, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates));
         }

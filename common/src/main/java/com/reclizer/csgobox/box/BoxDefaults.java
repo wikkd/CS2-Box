@@ -1,5 +1,8 @@
 package com.reclizer.csgobox.box;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -42,6 +46,8 @@ import java.util.regex.Pattern;
  */
 public final class BoxDefaults {
 
+    private static final Gson GSON = new Gson();
+
     /**
      * Filename pattern for mod-managed, version-stamped tutorials. Files
      * matching this pattern are candidates for deletion on a version
@@ -60,7 +66,6 @@ public final class BoxDefaults {
     private static final String TERMINAL_DEFAULT_JSON = """
             {
               "name": "#00E5FF CS2 终端机",
-              "key": "minecraft:air",
               "type": "terminal",
               "drop": 0.06,
               "random": [
@@ -395,6 +400,68 @@ public final class BoxDefaults {
         } catch (Exception e) {
             LOGGER.warn("Default terminal config skipped due to error: {}",
                     e.getMessage());
+        }
+    }
+
+    /**
+     * Upgrades a pre-v1.0.8 {@code terminal.json} to the type-driven format.
+     * Since v1.0.8 the JSON {@code type} field is the single source of truth
+     * for item registration, and the terminal machine no longer has a
+     * {@code key} field (strict separation from regular crates). Configs
+     * written against the v1.0.7 schema have neither: this one-time migration
+     * adds {@code "type": "terminal"} and drops a legacy {@code key} (e.g.
+     * {@code minecraft:air}) so existing servers keep their terminal without
+     * manual edits. Only the exact {@code terminal.json} file is touched;
+     * anything that already declares a {@code type} is left alone.
+     *
+     * <p>Unloadable files self-heal instead of silently degrading into a
+     * regular crate: an empty file is simply rewritten with the default;
+     * a non-empty corrupt file is backed up as
+     * {@code terminal.json.corrupt-<millis>} before the default is written,
+     * so the player's data is preserved for manual recovery while the
+     * terminal keeps registering as a terminal.</p>
+     */
+    public static void upgradeLegacyTerminalConfig(Path boxesDir) {
+        Path file = boxesDir.resolve("terminal.json");
+        if (!Files.exists(file)) {
+            return;
+        }
+        try {
+            if (Files.size(file) == 0L) {
+                Files.writeString(file, TERMINAL_DEFAULT_JSON);
+                LOGGER.info("Recovered empty terminal.json with the default config: {}", file);
+                return;
+            }
+            JsonObject json = GSON.fromJson(Files.readString(file), JsonObject.class);
+            if (json == null) {
+                recoverCorruptTerminal(file);
+                return;
+            }
+            if (json.has("type")) {
+                return;
+            }
+            json.addProperty("type", "terminal");
+            if (json.has("key")) {
+                json.remove("key");
+            }
+            Files.writeString(file, GSON.toJson(json));
+            LOGGER.info("Upgraded legacy terminal.json to type-driven format: added \"type\": \"terminal\", removed \"key\"");
+        } catch (JsonSyntaxException e) {
+            recoverCorruptTerminal(file);
+        } catch (Exception e) {
+            LOGGER.warn("Legacy terminal.json upgrade skipped due to error: {}", e.getMessage());
+        }
+    }
+
+    /** Backs up an unreadable terminal.json and writes the default in its place. */
+    private static void recoverCorruptTerminal(Path file) {
+        try {
+            Path backup = file.resolveSibling("terminal.json.corrupt-" + System.currentTimeMillis());
+            Files.move(file, backup, StandardCopyOption.REPLACE_EXISTING);
+            Files.writeString(file, TERMINAL_DEFAULT_JSON);
+            LOGGER.warn("Recovered corrupt terminal.json (backup kept at {}): {}", backup.getFileName(), file);
+        } catch (IOException e) {
+            LOGGER.warn("Terminal config recovery failed: {}", e.getMessage());
         }
     }
 

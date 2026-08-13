@@ -59,7 +59,7 @@ public final class TerminalActionBar {
         int midY = y0 + BAR_H / 2;
 
         // ---- counter (flip on text change) ----
-        NegotiationModel.CounterLabel label = model.counterLabel();
+        NegotiationModel.CounterLabel label = model.counterLabel(TerminalOfferItems.priceForRound(model.round()));
         Component counter = Component.translatable(label.key(), label.args());
         String counterStr = counter.getString();
         if (!counterStr.equals(lastCounterText)) {
@@ -105,7 +105,7 @@ public final class TerminalActionBar {
         String acceptLabel = Component.translatable("csgobox.terminal.accept",
                 "¥" + (model.pending() != null
                         ? String.valueOf(TerminalOfferItems.priceFor(model.pending()))
-                        : model.offerPrice())).getString();
+                        : TerminalOfferItems.priceForRound(model.round()))).getString();
         String rejectLabel = Component.translatable("csgobox.terminal.reject").getString();
         acceptW = pillWidth(font, acceptLabel) + 2 * pillPad;
         rejectW = pillWidth(font, rejectLabel) + 2 * pillPad;

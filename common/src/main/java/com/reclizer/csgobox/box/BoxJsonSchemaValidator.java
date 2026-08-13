@@ -34,6 +34,7 @@ public final class BoxJsonSchemaValidator {
      */
     public static List<SchemaIssue> validate(JsonObject json) {
         List<SchemaIssue> issues = new ArrayList<>();
+        validateType(json, issues);
         validateRandom(json, issues);
         validateDrop(json, issues);
         validateGrades(json, issues);
@@ -41,6 +42,37 @@ public final class BoxJsonSchemaValidator {
         validateNameColorPrefix(json, issues);
         validateItemPrices(json, issues);
         return issues;
+    }
+
+    /**
+     * The {@code type} field is the single source of truth for box kind
+     * (v1.0.8): {@code "terminal"} registers an {@code ItemTerminal},
+     * {@code "csbox"} (or absent) a regular crate. Fields are strictly
+     * separated between the two kinds — a terminal must NOT declare a
+     * {@code key} field (terminals have no key concept), so a leftover
+     * {@code "key": "minecraft:air"} from the pre-v1.0.8 format surfaces
+     * here instead of silently changing behavior.
+     */
+    private static void validateType(JsonObject json, List<SchemaIssue> issues) {
+        if (!json.has("type")) {
+            return;
+        }
+        JsonElement elem = json.get("type");
+        if (!elem.isJsonPrimitive() || !elem.getAsJsonPrimitive().isString()) {
+            issues.add(new SchemaIssue("type",
+                    "Expected 'csbox' or 'terminal', got " + typeOf(elem)));
+            return;
+        }
+        String type = elem.getAsString();
+        if (!"csbox".equals(type) && !"terminal".equals(type)) {
+            issues.add(new SchemaIssue("type",
+                    "Expected 'csbox' or 'terminal', got \"" + type + "\""));
+            return;
+        }
+        if ("terminal".equals(type) && json.has("key")) {
+            issues.add(new SchemaIssue("key",
+                    "Terminal machines have no key field (strict separation); remove \"key\""));
+        }
     }
 
     private static void validateRandom(JsonObject json, List<SchemaIssue> issues) {

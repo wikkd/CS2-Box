@@ -136,8 +136,10 @@ public final class CsboxCommand {
         BoxDefinition def = getBoxOrThrow(boxId);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.info.header",
                 def.id().toString(), def.name().getString()), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.info.key",
-                def.keyItem().toString()), false);
+        if (!def.isTerminal()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.key",
+                    def.keyItem().toString()), false);
+        }
         source.sendSuccess(() -> Component.translatable("commands.csgobox.info.drop_rate",
                 String.format("%.0f", def.dropRate() * 100)), false);
         if (!def.entityDropRates().isEmpty()) {

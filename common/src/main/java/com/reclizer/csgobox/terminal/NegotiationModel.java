@@ -122,6 +122,10 @@ public final class NegotiationModel {
     /** Countdown start: 3 hours. */
     public static final long COUNT_INITIAL_MS = 3L * 3600L * 1000L;
 
+    /** Chat history cap — a client spamming "insufficient points" must never
+     *  grow a session's history (and the world save with it) without bound. */
+    public static final int HISTORY_CAP = 256;
+
     // ---- cap ----
 
     public static final int[] CAPS = {30, 64, 200, 400, 800};
@@ -200,6 +204,9 @@ public final class NegotiationModel {
     public void restore(Snapshot snap, long nowMs) {
         history.clear();
         history.addAll(snap.history());
+        while (history.size() > HISTORY_CAP) {
+            history.remove(0);
+        }
         status = snap.status();
         round = snap.round();
         generation = snap.generation();
@@ -209,6 +216,14 @@ public final class NegotiationModel {
         roundStartMs = nowMs;
         statusSinceMs = nowMs;
         lastTickMs = nowMs;
+    }
+
+    /** Append a history entry, dropping the oldest when the cap is exceeded. */
+    private void appendHistory(Object entry) {
+        history.add(entry);
+        if (history.size() > HISTORY_CAP) {
+            history.remove(0);
+        }
     }
 
     /** Full state snapshot for server sessions / reopen transport. */
@@ -239,7 +254,7 @@ public final class NegotiationModel {
                     } else {
                         status = Status.FAILED;
                         statusSinceMs = nowMs;
-                        history.add(new SystemEntry("csgobox.terminal.sys.failed", true, nowMs));
+                        appendHistory(new SystemEntry("csgobox.terminal.sys.failed", true, nowMs));
                     }
                 }
             }
@@ -277,7 +292,7 @@ public final class NegotiationModel {
         statusSinceMs = nowMs;
         pending = null;
         ensureOfferEntry(nowMs);
-        history.add(new SystemEntry("csgobox.terminal.sys.timeout", true, nowMs));
+        appendHistory(new SystemEntry("csgobox.terminal.sys.timeout", true, nowMs));
     }
 
     /** Accept the current offer (only valid while PENDING — typing window lock). */
@@ -288,7 +303,7 @@ public final class NegotiationModel {
         status = Status.ACCEPT_BUSY;
         statusSinceMs = nowMs;
         markOfferStatus(OFFER_ACCEPTED);
-        history.add(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
+        appendHistory(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
     }
 
     /** Reject the current offer (only valid while PENDING). */
@@ -299,7 +314,7 @@ public final class NegotiationModel {
         status = Status.REJECT_BUSY;
         statusSinceMs = nowMs;
         markOfferStatus(OFFER_REJECTED);
-        history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
+        appendHistory(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
     }
 
     /**
@@ -313,13 +328,13 @@ public final class NegotiationModel {
         pending = null;
         ensureOfferEntry(nowMs);
         markOfferStatus(OFFER_REJECTED);
-        history.add(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
+        appendHistory(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
         if (round < MAX_ROUNDS) {
             presentRound(nowMs);
         } else {
             status = Status.FAILED;
             statusSinceMs = nowMs;
-            history.add(new SystemEntry("csgobox.terminal.sys.failed", true, nowMs));
+            appendHistory(new SystemEntry("csgobox.terminal.sys.failed", true, nowMs));
         }
     }
 
@@ -330,7 +345,7 @@ public final class NegotiationModel {
         pending = null;
         ensureOfferEntry(nowMs);
         markOfferStatus(OFFER_ACCEPTED);
-        history.add(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
+        appendHistory(new SystemEntry("csgobox.terminal.sys.accepted", false, nowMs));
     }
 
     /**
@@ -353,7 +368,7 @@ public final class NegotiationModel {
         roundStartMs = nowMs;
         statusSinceMs = nowMs;
         if (pendingVisible && this.pending != null && !hasOfferEntryFor(round)) {
-            history.add(new OfferEntry(this.pending, Math.max(0, pendingAtMs), OFFER_PENDING));
+            appendHistory(new OfferEntry(this.pending, Math.max(0, pendingAtMs), OFFER_PENDING));
         }
     }
 
@@ -368,12 +383,12 @@ public final class NegotiationModel {
 
     /** Dealer chat line: "think it over" — keeps the current offer pending. */
     public void dealerReconsider(long nowMs) {
-        history.add(new LineEntry(Math.max(1, round), LINE_RECONSIDER, nowMs));
+        appendHistory(new LineEntry(Math.max(1, round), LINE_RECONSIDER, nowMs));
     }
 
     /** Add a plain system bubble (e.g. insufficient Armory Points). */
     public void addSystem(String textKey, long nowMs) {
-        history.add(new SystemEntry(textKey, false, nowMs));
+        appendHistory(new SystemEntry(textKey, false, nowMs));
     }
 
     // ---- accessors ----
@@ -384,6 +399,16 @@ public final class NegotiationModel {
 
     public int round() {
         return round;
+    }
+
+    /** World-clock ms when the current round was presented (pacing gate). */
+    public long roundStartMs() {
+        return roundStartMs;
+    }
+
+    /** World-clock ms when the negotiation expires (buy/reject gate). */
+    public long countdownDeadlineMs() {
+        return countdownDeadlineMs;
     }
 
     public long generation() {
@@ -422,21 +447,15 @@ public final class NegotiationModel {
         return List.copyOf(history);
     }
 
-    /** Display price of the current offer (HTML price formatting, integers only). */
-    public String offerPrice() {
-        Offer off = pending;
-        return off == null ? "0" : SKIN_PRICE[off.skinIdx()];
-    }
-
     /** Counter label for region 6: lang key + translatable args. */
-    public CounterLabel counterLabel() {
+    public CounterLabel counterLabel(int price) {
         return switch (status) {
             case CLOSED -> new CounterLabel("csgobox.terminal.counter.done");
             case FAILED -> new CounterLabel("csgobox.terminal.counter.failed");
             case IDLE -> new CounterLabel("csgobox.terminal.counter.wait");
             default -> pending == null
                     ? new CounterLabel("csgobox.terminal.counter.preparing")
-                    : new CounterLabel("csgobox.terminal.counter.offer", round, "¥" + offerPrice());
+                    : new CounterLabel("csgobox.terminal.counter.offer", round, "¥" + price);
         };
     }
 
@@ -467,7 +486,7 @@ public final class NegotiationModel {
     /** The server's model never ticks, so an offer card may be missing — add it. */
     private void ensureOfferEntry(long nowMs) {
         if (!hasOfferEntryFor(round)) {
-            history.add(new OfferEntry(currentOffer(), nowMs, OFFER_PENDING));
+            appendHistory(new OfferEntry(currentOffer(), nowMs, OFFER_PENDING));
         }
     }
 
@@ -477,7 +496,7 @@ public final class NegotiationModel {
         roundStartMs = nowMs;
         statusSinceMs = nowMs;
         pending = null;
-        history.add(new LineEntry(round, LINES[ROUND_LINE[round - 1]], nowMs));
+        appendHistory(new LineEntry(round, LINES[ROUND_LINE[round - 1]], nowMs));
     }
 
     private void becomePending(long nowMs) {
@@ -485,7 +504,7 @@ public final class NegotiationModel {
         statusSinceMs = nowMs;
         Offer offer = currentOffer();
         pending = offer;
-        history.add(new OfferEntry(offer, nowMs, OFFER_PENDING));
+        appendHistory(new OfferEntry(offer, nowMs, OFFER_PENDING));
     }
 
     private Offer currentOffer() {

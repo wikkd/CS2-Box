@@ -247,7 +247,9 @@ public class CsgoBox {
         // terminal.json must exist before the scan or csgobox:terminal would
         // not be registered on a fresh install. BoxJsonLoader.loadAll() also
         // writes it, but that runs at server start, AFTER the item registry
-        // has frozen.
+        // has frozen. Pre-v1.0.8 terminal.json files (no "type" field) are
+        // upgraded to the type-driven format here, before the scan reads it.
+        BoxDefaults.upgradeLegacyTerminalConfig(configDir);
         BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
         int skipped = 0;
@@ -280,12 +282,13 @@ public class CsgoBox {
                 }
                 final Identifier boxId = itemId;
                 final ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, itemId);
-                // Boxes with "type": "terminal" in their JSON are registered as
-                // ItemTerminal so the client can dispatch to the terminal UI
-                // (ClickEvent / PacketTerminalBuy match instanceof
-                // ItemTerminal) without needing the box definition — remote
-                // clients never receive the type field. Everything else stays
-                // a plain ItemCsgoBox.
+                // The JSON "type" field is the single source of truth (v1.0.8
+                // strict separation): "terminal" registers an ItemTerminal so
+                // the client can dispatch to the terminal UI (ClickEvent /
+                // PacketTerminalBuy match instanceof ItemTerminal) without
+                // needing the box definition — remote clients never receive
+                // the type field. Terminals carry no key field; everything
+                // else stays a plain ItemCsgoBox.
                 //
                 // Reuse the base csgo_box item model so dynamic boxes
                 // (registered from config/csbox/*.json filenames) render

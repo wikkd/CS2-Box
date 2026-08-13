@@ -66,6 +66,11 @@ public final class TerminalOfferItems {
         return NegotiationModel.priceForGrade(gradeFor(offer));
     }
 
+    /** Whole Armory Point price of a round by its server-sampled grade. */
+    public static int priceForRound(int round) {
+        return NegotiationModel.priceForGrade(ROUND_GRADE.getOrDefault(round, 1));
+    }
+
     /** The server-sampled region-10 slot item. */
     public static ItemStack sessionItem() {
         return sessionItem;

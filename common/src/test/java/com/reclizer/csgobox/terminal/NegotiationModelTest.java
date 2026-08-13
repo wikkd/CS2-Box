@@ -307,13 +307,14 @@ final class NegotiationModelTest {
         m.setCap(64);
         assertEquals(64, m.cap());
         m.start(0);
-        assertEquals("csgobox.terminal.counter.preparing", m.counterLabel().key());
+        assertEquals("csgobox.terminal.counter.preparing", m.counterLabel(6).key());
         m.tick(2000);
-        assertEquals("csgobox.terminal.counter.offer", m.counterLabel().key());
-        assertEquals(1, m.counterLabel().args()[0]);
+        assertEquals("csgobox.terminal.counter.offer", m.counterLabel(6).key());
+        assertEquals(1, m.counterLabel(6).args()[0]);
+        assertEquals("¥6", m.counterLabel(6).args()[1]);
         m.acceptNow(2000);
         m.tick(3000);
-        assertEquals("csgobox.terminal.counter.done", m.counterLabel().key());
+        assertEquals("csgobox.terminal.counter.done", m.counterLabel(6).key());
     }
 
     @Test

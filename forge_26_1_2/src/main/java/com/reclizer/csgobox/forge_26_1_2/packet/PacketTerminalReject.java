@@ -3,6 +3,7 @@ package com.reclizer.csgobox.forge_26_1_2.packet;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
+import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSession;
 import com.reclizer.csgobox.forge_26_1_2.terminal.TerminalSessionManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -55,9 +56,15 @@ public record PacketTerminalReject(int round) implements CustomPacketPayload {
                     || session.model().round() != message.round()) {
                 return;
             }
-            // World clock (game ticks × 50): history timestamps must match the
-            // client's render clock, otherwise reopened cards stay invisible.
-            session.model().rejectForced(sp.level().getGameTime() * 50L);
+            // World clock (game ticks × 50): the typing window is
+            // server-authoritative — a crafted reject before the 1100ms
+            // reveal elapsed (or after the countdown expired) is refused.
+            long worldMs = sp.level().getGameTime() * 50L;
+            if (worldMs >= session.model().countdownDeadlineMs()
+                    || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
+                return;
+            }
+            session.model().rejectForced(worldMs);
             TerminalSessionManager.markDirty();
         });
     }

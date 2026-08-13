@@ -127,6 +127,9 @@ public final class BoxJsonLoader {
         // on first run, before scanning existing box JSON files.
         BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
+        // One-time migration for pre-v1.0.8 terminal.json (no "type" field,
+        // may carry a legacy "key"); must run before any parse.
+        BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 
@@ -182,15 +185,27 @@ public final class BoxJsonLoader {
      * {@code BoxFileWatcher} when JSON files change on disk.</p>
      *
      * <p>Does NOT call {@link BoxDefaults#writeTutorialIfMissing} so that
-     * auto-reload never resurrects the sample config the user deleted.</p>
+     * auto-reload never resurrects the sample config the user deleted.
+     * Default terminal/premium configs and the legacy terminal migration DO
+     * run, matching {@link #loadAll()} — a deleted or pre-v1.0.8
+     * {@code terminal.json} must not leave the terminal item registered but
+     * unloadable until the next restart.</p>
      */
     public static void reloadPreserving() {
         LAST_LOAD_ERRORS.clear();
 
         if (!Files.exists(BOXES_DIR)) {
-            CsgoBox.LOGGER.info("Reload preserving skipped: {} does not exist", BOXES_DIR);
-            return;
+            try {
+                Files.createDirectories(BOXES_DIR);
+            } catch (IOException e) {
+                CsgoBox.LOGGER.error("Failed to create boxes config directory: {}", BOXES_DIR, e);
+                return;
+            }
+            CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
+        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
+        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
+        BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         Set<Identifier> previousIds = new HashSet<>(BoxRegistry.getIds());
         Set<Identifier> seenIds = new HashSet<>();
@@ -312,7 +327,23 @@ public final class BoxJsonLoader {
 
         try {
             ParsedName parsedName = parseColoredName(getString(json, "name", boxIdStr));
-            Identifier keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
+            String type = getString(json, "type", "csbox");
+            if (!"csbox".equals(type) && !"terminal".equals(type)) {
+                type = "csbox";
+            }
+            // Strict separation (v1.0.8): the type field is the single source
+            // of truth, and the terminal machine has no key field at all. The
+            // file name "terminal.json" is reserved for the terminal: a legacy
+            // config that never gained "type" must not silently degrade into a
+            // keyless crate (the pre-migration free-loot hole), so refuse to
+            // load it instead.
+            if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
+                String msg = "terminal.json must declare \"type\": \"terminal\" "
+                        + "(v1.0.8+: type is the single registration source; terminals have no key field)";
+                CsgoBox.LOGGER.error("Skipping {}: {}", file, msg);
+                recordLoadError(file, fileName, msg);
+                return Optional.empty();
+            }
             float dropRate = getFloat(json, "drop", 0.12F);
             int[] weights = parseWeights(json, file, fileName);
 
@@ -351,7 +382,10 @@ public final class BoxJsonLoader {
             BoxDefinition.Builder builder = BoxDefinition.builder(
                     Identifier.parse("csgobox:" + boxIdStr), parsedName.text());
             parsedName.color().ifPresent(builder::nameColor);
-            builder.key(keyItem);
+            builder.type(type);
+            if (!"terminal".equals(type)) {
+                builder.key(parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key"));
+            }
             builder.dropRate(dropRate);
             for (Identifier entityId : dropEntityIds) {
                 Float rate = entityDropRates.get(entityId);

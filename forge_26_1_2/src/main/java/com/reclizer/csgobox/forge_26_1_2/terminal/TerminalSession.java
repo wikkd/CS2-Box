@@ -87,7 +87,9 @@ public final class TerminalSession {
         Identifier boxId = Identifier.parse(state.boxId());
         Map<Integer, TerminalRoundData> restored = new LinkedHashMap<>();
         for (PacketTerminalState.RoundItem ri : state.rounds()) {
-            restored.put(ri.round(), new TerminalRoundData(ri.round(), ri.offer(), ri.item(), ri.grade()));
+            if (ri.round() >= 1 && ri.round() <= NegotiationModel.MAX_ROUNDS) {
+                restored.put(ri.round(), new TerminalRoundData(ri.round(), ri.offer(), ri.item(), ri.grade()));
+            }
         }
         NegotiationModel model = new NegotiationModel();
         model.setOfferSource(r -> {
@@ -96,8 +98,11 @@ public final class TerminalSession {
         });
         NegotiationModel.Status status = NegotiationModel.Status.values()[
                 Math.max(0, Math.min(state.status(), NegotiationModel.Status.values().length - 1))];
+        // A corrupted persisted round must never index ROUND_SKIN[round-1]
+        // out of bounds (e.g. round 0 on the next reject).
+        int round = Math.max(1, Math.min(state.round(), NegotiationModel.MAX_ROUNDS));
         model.restore(new NegotiationModel.Snapshot(
-                state.round(), status, state.generation(), state.cap(),
+                round, status, state.generation(), state.cap(),
                 state.countdownDeadlineMs(), state.pending(), state.history()), nowMs);
         return new TerminalSession(playerUuid, state.terminalUid(), boxId, model, restored, state.sessionItem());
     }

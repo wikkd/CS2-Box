@@ -147,7 +147,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 }
 ```
 
-- 箱子类型由派生访问器 `type()` 判定：仅当箱子 ID 为 `csgobox:terminal` 且 `key` 为 `minecraft:air` 时是终端机，其余为普通宝箱；`key: "minecraft:air"` 单独出现不会成为终端机。不再有 `type` 字段。
+- 箱子类型由 JSON 的 `type` 字段判定（v1.0.8 起唯一机制）：`"type": "terminal"` 为终端机（注册为 `ItemTerminal`，打开终端谈判屏），`"type": "csbox"`（或省略，默认）为普通宝箱。**终端机与普通箱字段严格分离**：终端机不使用 `key` 字段（出现即报 schema 错误，v1.0.8 已从默认配置删除），普通箱用 `key` 指定所需钥匙（`minecraft:air` 免钥匙）。
 - `random` 为 5 档权重（grade1→grade5，越高越稀有）；`grade1`~`grade5` 各为一个物品数组，每档按 `random` 对应权重抽取。
 - `components` 使用 MC 1.21+ DataComponent 语法（同时兼容旧版 `tag` 字符串）。
 - `entity` 为「实体 ID + 掉落率」成对列表，全局 `drop` 为默认掉落率。

@@ -25,6 +25,20 @@
 
 ---
 
+## 0.5 v1.0.8 修订（2026-08-13）：type 字段回归为唯一判定
+
+本节之后的内容（第 2~12 节）记录的是 v1.0.7 演化；v1.0.8 按「严格分离」设计
+**反转了第 6 节的派生判定**，现状以本节为准：
+
+| 主题 | v1.0.8 状态 |
+|---|---|
+| 箱子类型判定 | JSON `type` 字段是**唯一**判定机制：`"type": "terminal"` → `ItemTerminal`；`"type": "csbox"`（或省略）→ `ItemCsgoBox`。`BoxDefinition` 重新持有 `type` 字段（record/CODEC/STREAM_CODEC/Builder），`isTerminal()` / `type()` 直接读它 |
+| 字段分离 | **终端机不再有 `key` 字段**：默认 `terminal.json` 删除 `key`；schema 验证器对「terminal + key」报错；`/csbox info` 不再显示终端机钥匙行。`BoxJsonLoader` 只在非终端机时解析 `key` |
+| 旧配置迁移 | `BoxDefaults.upgradeLegacyTerminalConfig` 在注册前把无 `type` 的 `terminal.json` 一次性补 `"type": "terminal"` 并删遗留 `key`；迁移未覆盖时该文件被拒绝加载并给 LoadError（杜绝静默退化成免钥匙免费开箱） |
+| 首次启动 | 恢复自动生成 `terminal.json`（af10870 起，含 `"type": "terminal"`） |
+
+---
+
 ## 1. 背景
 
 上一轮经济重平衡审计发现遗留问题：**终端机（Terminal）在创造模式物品栏中会强制绑定 `BoxRegistry` 第一个已注册箱子**（`ModItems` 中 `findFirst()`），导致终端机的 loot 池永远是"复制第一个箱子"，没有自己的独立掉落。

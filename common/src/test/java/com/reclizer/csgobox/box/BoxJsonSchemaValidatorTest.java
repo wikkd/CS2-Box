@@ -16,8 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Unit tests for {@link BoxJsonSchemaValidator}.
  *
- * <p>Covers the six structural rules added in v1.0.6:</p>
+ * <p>Covers the structural rules:</p>
  * <ol>
+ *   <li>type (v1.0.8): must be "csbox" or "terminal"; a terminal must not declare key</li>
  *   <li>random: array length must be 5; each element must be a number</li>
  *   <li>drop: must be a number</li>
  *   <li>grade1..grade5: must be arrays</li>
@@ -282,6 +283,62 @@ final class BoxJsonSchemaValidatorTest {
         @DisplayName("plain name with no # is fine")
         void noHash() {
             assertTrue(validate("{ \"name\": \"weapon_supply_box\" }").isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("type field (v1.0.8 strict separation)")
+    class Type {
+
+        @Test
+        @DisplayName("terminal without key is fine")
+        void terminalWithoutKey() {
+            String json = """
+                    {
+                      "name": "#00E5FF CS2 终端机",
+                      "type": "terminal",
+                      "random": [20, 40, 80, 160, 300]
+                    }
+                    """;
+            assertTrue(validate(json).isEmpty());
+        }
+
+        @Test
+        @DisplayName("terminal with leftover key reports key")
+        void terminalWithKey() {
+            String json = """
+                    {
+                      "name": "CS2 终端机",
+                      "type": "terminal",
+                      "key": "minecraft:air"
+                    }
+                    """;
+            assertSingleIssue(validate(json), "key");
+        }
+
+        @Test
+        @DisplayName("csbox with explicit type and key is fine")
+        void csboxWithKey() {
+            String json = """
+                    {
+                      "name": "普通宝箱",
+                      "type": "csbox",
+                      "key": "csgobox:csgo_key0"
+                    }
+                    """;
+            assertTrue(validate(json).isEmpty());
+        }
+
+        @Test
+        @DisplayName("unknown type value reports type")
+        void unknownType() {
+            assertSingleIssue(validate("{ \"type\": \"premium\" }"), "type");
+        }
+
+        @Test
+        @DisplayName("non-string type reports type")
+        void nonStringType() {
+            assertSingleIssue(validate("{ \"type\": 42 }"), "type");
         }
     }
 

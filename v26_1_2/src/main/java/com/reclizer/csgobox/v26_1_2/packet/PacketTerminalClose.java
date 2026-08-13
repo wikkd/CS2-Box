@@ -64,9 +64,11 @@ public record PacketTerminalClose(
             if (session == null) {
                 return;
             }
-            // A close sent during the 450 ms reject burst must never rewind a
-            // session the server already advanced (the rejected round replays).
-            if (message.round() < session.model().round()) {
+            // The client's close round must equal the server's current round
+            // (packets are FIFO, so a legit client can never be ahead or
+            // behind). Anything else — including a crafted fast-forward to
+            // round 5 — is ignored instead of rewriting the session state.
+            if (message.round() != session.model().round()) {
                 return;
             }
             // History timestamps live on the WORLD clock (game ticks × 50),

@@ -5,9 +5,12 @@ import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.forge_26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_1_2.box.BulkBoxContext;
 import com.reclizer.csgobox.forge_26_1_2.box.BulkOpenResult;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_1_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.logic.OddsCalculator;
@@ -65,6 +68,20 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (!(templateBox.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
+            // Strict separation (v1.0.8): terminals are only buyable through
+            // the terminal negotiation protocol — never through the classic
+            // crate pipeline, which would open them for free (no key, no
+            // Armory Points). A crafted packet holding a terminal is refused.
+            if (templateBox.getItem() instanceof ItemTerminal) {
+                PacketCsgoProgress.sendRejected(context, message.requestId());
+                return;
+            }
+            Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
+            BoxDefinition def = boxId == null ? null : BoxRegistry.get(boxId);
+            if (def != null && def.isTerminal()) {
+                PacketCsgoProgress.sendRejected(context, message.requestId());
+                return;
+            }
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
                 return;
             }
@@ -103,7 +120,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
             final int requestedK = K;
             final long requestId = message.requestId();
-            final Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
             BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMapCache.get(boxId.toString(), () -> GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy)));
 
             final Player playerFinal = player;

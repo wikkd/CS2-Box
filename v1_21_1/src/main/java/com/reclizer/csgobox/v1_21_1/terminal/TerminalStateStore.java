@@ -13,8 +13,10 @@ import net.minecraft.world.level.storage.LevelResource;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -27,8 +29,11 @@ import java.util.Set;
  * {@link RegistryFriendlyByteBuf} with the server's registry access).
  *
  * <p>File: {@code <world>/csgobox/terminal_state.bin}. Loaded on server start
- * after the box definitions are registered; saved after every mutation and on
- * server stop. A corrupt/unknown-version file is ignored (fresh state).</p>
+ * after the box definitions are registered; saved on the 1 Hz tick and on
+ * server stop. A corrupt/unknown-version file is ignored (fresh state); a
+ * single corrupt session entry is skipped instead of dropping the whole
+ * file. Writes go to a {@code .tmp} sibling first and are moved into place
+ * atomically, so a crash mid-save never leaves a truncated live file.</p>
  */
 public final class TerminalStateStore {
 
@@ -54,28 +59,46 @@ public final class TerminalStateStore {
             RegistryFriendlyByteBuf buf = wrap(payload, server);
             long worldMs = server.overworld().getGameTime() * 50L;
             int sessionCount = buf.readVarInt();
+            if (sessionCount < 0 || sessionCount > 65536) {
+                throw new IOException("implausible session count " + sessionCount);
+            }
             for (int i = 0; i < sessionCount; i++) {
-                String playerUuid = buf.readUtf();
-                int len = buf.readVarInt();
-                byte[] bytes = new byte[len];
-                buf.readBytes(bytes);
-                PacketTerminalState state = PacketTerminalState.STREAM_CODEC.decode(wrap(bytes, server));
-                // A session whose box definition no longer exists is dropped.
-                if (state.boxId() != null && !state.boxId().isEmpty()
-                        && BoxRegistry.get(ResourceLocation.parse(state.boxId())) != null) {
-                    TerminalSessionManager.restore(TerminalSession.fromState(playerUuid, state, worldMs));
+                try {
+                    String playerUuid = buf.readUtf();
+                    int len = buf.readVarInt();
+                    if (len < 0 || len > 1_048_576) {
+                        throw new IOException("implausible session length " + len);
+                    }
+                    byte[] bytes = new byte[len];
+                    buf.readBytes(bytes);
+                    PacketTerminalState state = PacketTerminalState.STREAM_CODEC.decode(wrap(bytes, server));
+                    // A session whose box definition no longer exists is dropped.
+                    if (state.boxId() != null && !state.boxId().isEmpty()
+                            && BoxRegistry.get(ResourceLocation.parse(state.boxId())) != null) {
+                        TerminalSessionManager.restore(TerminalSession.fromState(playerUuid, state, worldMs));
+                    }
+                } catch (IOException | RuntimeException e) {
+                    CsgoBox.LOGGER.warn("[csgo-terminal] failed to load session {} (skipped): {}", i, e.getMessage());
                 }
             }
             int destroyedCount = buf.readVarInt();
+            if (destroyedCount < 0 || destroyedCount > 65536) {
+                throw new IOException("implausible destroyed-uid count " + destroyedCount);
+            }
             for (int i = 0; i < destroyedCount; i++) {
-                TerminalSessionManager.restoreDestroyedUid(buf.readUtf());
+                try {
+                    TerminalSessionManager.restoreDestroyedUid(buf.readUtf());
+                } catch (RuntimeException e) {
+                    CsgoBox.LOGGER.warn("[csgo-terminal] failed to load destroyed uid {} (skipped): {}", i, e.getMessage());
+                }
             }
         } catch (IOException | RuntimeException e) {
             CsgoBox.LOGGER.warn("[csgo-terminal] failed to load terminal state: {}", e.getMessage());
         }
     }
 
-    public static void save(MinecraftServer server) {
+    /** Writes the session state to disk; false when the write failed. */
+    public static boolean save(MinecraftServer server) {
         try {
             Path file = path(server);
             Files.createDirectories(file.getParent());
@@ -96,13 +119,21 @@ public final class TerminalStateStore {
             }
             byte[] payload = new byte[buf.writerIndex()];
             buf.getBytes(0, payload);
-            try (DataOutputStream out = new DataOutputStream(Files.newOutputStream(file))) {
+            Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+            try (DataOutputStream out = new DataOutputStream(Files.newOutputStream(tmp))) {
                 out.write(MAGIC);
                 out.writeInt(VERSION);
                 out.write(payload);
             }
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
         } catch (IOException | RuntimeException e) {
             CsgoBox.LOGGER.warn("[csgo-terminal] failed to save terminal state: {}", e.getMessage());
+            return false;
         }
     }
 

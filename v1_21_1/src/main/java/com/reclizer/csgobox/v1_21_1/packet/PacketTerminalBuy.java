@@ -99,6 +99,16 @@ public record PacketTerminalBuy(
         if (session == null || session.isFinished() || session.model().round() != message.offerRound()) {
             return invalid;
         }
+        // World clock (game ticks × 50): the countdown and the typing window
+        // are server-authoritative. An expired negotiation must not be
+        // buyable in the ≤1s window before the 1 Hz tick destroys it, and a
+        // crafted buy before the 1100ms typing window elapsed would skip the
+        // reveal animation — both are refused here.
+        long worldMs = sp.level().getGameTime() * 50L;
+        if (worldMs >= session.model().countdownDeadlineMs()
+                || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
+            return invalid;
+        }
         ItemStack offerItem = message.offerItem();
         if (offerItem == null || offerItem.isEmpty()) {
             return invalid;
@@ -113,9 +123,6 @@ public record PacketTerminalBuy(
         }
         int price = NegotiationModel.priceForGrade(grade);
         boolean creative = sp.getAbilities().instabuild;
-        // World clock (game ticks × 50): history timestamps must match the
-        // client's render clock, otherwise reopened cards stay invisible.
-        long worldMs = sp.level().getGameTime() * 50L;
         if (!creative && countArmoryPoints(sp) < price) {
             session.model().dealerReconsider(worldMs);
             session.model().addSystem("csgobox.terminal.sys.poor", worldMs);
