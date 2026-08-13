@@ -53,8 +53,9 @@
 | 配置项 | 类型 | 默认值 | 范围 | 说明 |
 |---|---|---|---|---|
 | `backgroundStyle` | 枚举 | `TRANSLUCENT` | `OPAQUE` / `TRANSLUCENT` | 屏幕背景样式：`TRANSLUCENT`（默认）= 半透明主题灰（alpha 140），模糊的世界透过背景显示（原生模糊或 Blur 模组的动画模糊）；`OPAQUE` = 实心深色面板（旧观感） |
+| `blurRadius` | 整数 | `8` | 0-10 | 模组半透明屏打开期间使用的菜单模糊半径（原版默认 5）：`0` = 跟随原版 `menuBackgroundBlurriness` 选项不干预；打开任一模组屏时临时提升该选项、关闭后恢复原值。安装 Blur 模组时由其自身半径接管，此值不生效 |
 
-> 说明：该选项为软适配——未安装 Blur 模组（`blur`）时半透明背景遵循原版 `menuBackgroundBlurriness` 模糊选项（设为 0 则无模糊）；安装 Blur 后自动获得其淡入动画与可配置模糊半径/渐变。进度屏（开箱动画）始终为半透明背景，不受此开关影响。
+> 说明：该选项为软适配——未安装 Blur 模组（`blur`）时半透明背景遵循原版 `menuBackgroundBlurriness` 模糊选项（设为 0 则无模糊；`blurRadius` 可在此基础上增强）；安装 Blur 后自动获得其淡入动画与可配置模糊半径/渐变。进度屏（开箱动画）始终为半透明背景，不受 `backgroundStyle` 开关影响。
 
 ## 3. 宝箱数据配置(JSON schema)
 
