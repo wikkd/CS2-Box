@@ -39,3 +39,7 @@ title: 操作日志
 - 验收：`python3 -m unittest wiki/output/test_site.py -v` 9 项全过（52 页收录 / 230 wikilink 0 孤儿 / JSON 有效 / HTML 结构 0 错 / 渲染非空 / 反向链接镜像一致 / scheme 白名单 / script 转义 / 无残留 wikilink）
 - 安全加固（security_review 闭环）：SPA 插值统一 esc() 转义、href encodeURIComponent、非白名单链接 scheme 降级纯文本、内嵌 JSON 三重转义（`</` `<!--` `-->`）
 - 另：`output/tech-stack.html` 技术栈一页通（8-09 早前产物）
+
+## [2026-08-13] build | 武库商小屋结构
+- 创建 feature 页（1）：[[arms-dealer-hut]]（纯数据驱动世界生成结构：武库拆解台 + 军火商村民 + 商店宝箱）
+- 更新：index.md（features 12→13，基于 main 归档后的计数）

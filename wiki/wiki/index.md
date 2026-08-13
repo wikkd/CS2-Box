@@ -49,7 +49,7 @@ updated: 2026-08-13
 - [[animation-aesthetics-test-plan]] — 动画审美测试脚本 实施计划
 - [[clean-test-shots]] — 清理测试照片功能（clean 子命令）
 
-### 功能设计与 GDD（features — 12）
+### 功能设计与 GDD（features — 13）
 - [[wear-durability]] — 开箱物品按磨损值损耗耐久（服务端权威 RNG）
 - [[creative-no-key]] — 创造模式免钥匙开箱
 - [[toolbar-hover]] — CsLookItemScreen 工具栏悬停反馈（反白 + tooltip）
@@ -62,6 +62,7 @@ updated: 2026-08-13
 - [[creative-no-key-plan]] — 创造模式免钥匙开箱 实施计划
 - [[lookitem-info-panel-plan]] — 信息面板重排 实施计划
 - [[animops-facade-plan]] — 动画渲染门面 实施计划
+- [[arms-dealer-hut]] — 武库商小屋（世界生成结构，军火商野外据点）
 
 ## Concepts（架构概念 — 15 个）
 - [[multiloader-architecture]] — 9 平台矩阵 + common 约束
