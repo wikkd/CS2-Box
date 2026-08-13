@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.block.entity;
 
 import com.reclizer.csgobox.v26_2.block.ModBlocks;
+import com.reclizer.csgobox.v26_2.event.ArmoryRecycleEvent;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ModItems;
 import com.reclizer.csgobox.v26_2.menu.ArmoryRecyclerMenu;
@@ -16,6 +17,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Armory Recycler's block entity: a furnace-style converter that turns
@@ -68,6 +70,15 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         progress++;
         if (progress >= SMELT_TICKS) {
             progress = 0;
+            // Policy hook: scripts may veto recycling this item (e.g. blacklist
+            // farmed items from becoming Armory Points). Canceled → the input
+            // stays in the machine and nothing is consumed or produced.
+            ArmoryRecycleEvent recycle = new ArmoryRecycleEvent(this, in.copy(), grade, yield);
+            NeoForge.EVENT_BUS.post(recycle);
+            if (recycle.isCanceled()) {
+                setChanged();
+                return;
+            }
             in.shrink(1);
             addOutput(yield);
             level.playSound(null, worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,

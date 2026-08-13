@@ -8,6 +8,7 @@ import com.reclizer.csgobox.v1_21_1.box.BulkOpenResult;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
+import com.reclizer.csgobox.v1_21_1.event.BoxOpeningEvent;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
@@ -120,6 +121,18 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 K = Math.min(K, limit);
             }
             if (K <= 0) {
+                return;
+            }
+
+            // Policy hook (batch-level): scripts may veto the whole batch
+            // before any roll or consumption. count = K (the server-authorized
+            // batch size). Canceling aborts the batch without setting cooldown.
+            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, true, K);
+            NeoForge.EVENT_BUS.post(opening);
+            if (opening.isCanceled()) {
+                if (player instanceof ServerPlayer sp) {
+                    PacketCsgoProgress.sendRejected(sp, message.requestId());
+                }
                 return;
             }
 

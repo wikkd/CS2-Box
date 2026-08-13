@@ -4,6 +4,7 @@ import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.v26_2.capability.ModCapability;
+import com.reclizer.csgobox.v26_2.event.BoxOpeningEvent;
 import com.reclizer.csgobox.v26_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.box.BoxGrades;
@@ -94,6 +95,17 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             // Same guard for a crafted box_id component pointing at a
             // terminal definition from a plain ItemCsgoBox stack.
             if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
+                sendRejected(context, message.requestId());
+                return;
+            }
+
+            // Policy hook: server scripts / other mods may veto the open
+            // before anything is rolled or consumed. Fires after the built-in
+            // guards and before the RNG roll — canceling aborts cleanly with
+            // no rollback and no cooldown side effects.
+            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
+            NeoForge.EVENT_BUS.post(opening);
+            if (opening.isCanceled()) {
                 sendRejected(context, message.requestId());
                 return;
             }

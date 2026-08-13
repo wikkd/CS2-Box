@@ -3,6 +3,7 @@ package com.reclizer.csgobox.forge_26_1_2.packet;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
+import com.reclizer.csgobox.forge_26_1_2.event.TerminalBuyEvent;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.forge_26_1_2.item.ModItems;
@@ -165,6 +166,7 @@ public record PacketTerminalBuy(
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);
+        TerminalBuyEvent.BUS.fire(new TerminalBuyEvent(sp, grade, price, roundData.offer().wearVal(), toGive, message.offerRound()));
         return new PacketTerminalBuyResult(message.requestId(),
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
     }
