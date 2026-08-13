@@ -3,24 +3,43 @@ package com.reclizer.csgobox.v1_21_1.utils;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.logging.LogUtils;
 import com.reclizer.csgobox.utils.Quat;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
+import com.tacz.guns.client.model.BedrockGunModel;
+import com.tacz.guns.client.model.bedrock.BedrockCube;
+import com.tacz.guns.client.model.bedrock.BedrockCubeBox;
+import com.tacz.guns.client.model.bedrock.BedrockCubePerFace;
+import com.tacz.guns.client.model.bedrock.BedrockPart;
+import com.tacz.guns.client.resource.GunDisplayInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4fStack;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.slf4j.Logger;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
+import java.util.WeakHashMap;
 
 /**
  * Single per-platform adaptation point for animation rendering primitives.
@@ -29,7 +48,26 @@ import java.lang.reflect.Method;
  * era: legacy
  */
 public final class AnimRenderOps {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
+    /** Scratch quaternion for the drag rotation: {@code mulPose} copies the
+     *  value immediately, so a single static instance is safe on the render
+     *  thread and avoids one allocation per 3D item per frame. */
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    /** Sentinel cached for models without usable geometry (custom renderers
+     *  or degenerate bounds): distinguishes "not computed" from "nothing to
+     *  centre", so those models are not rescanned every frame. */
+    private static final Object NO_CENTER = new Object();
+    /** Cached model-space centre of each TACZ gun's default-pose bounding
+     *  box (block units). Gun displays are singletons per gun id and are
+     *  replaced on resource reload, so a WeakHashMap lets old models go. */
+    private static final Map<BedrockGunModel, Vector3f> GUN_MODEL_CENTERS = new WeakHashMap<>();
+
+    /** Cached centre (block units, in the drag-rotation space) of each baked
+     *  item model's geometry. Models are stable instances owned by the model
+     *  manager and are replaced on resource reload, so a WeakHashMap lets old
+     *  models go. */
+    private static final Map<BakedModel, Object> ITEM_MODEL_CENTERS = new WeakHashMap<>();
 
     /** Screen.renderBlurredBackground is protected in this MC version and
      *  depends on the screen's own {@code minecraft} instance, so the facade
@@ -162,22 +200,46 @@ public final class AnimRenderOps {
     /** 3D rotating item preview (drag-to-rotate). The rotation is the raw
      *  unit quaternion produced by {@link ItemDrag3D} — the drag-feel scheme
      *  (One-Euro + arcball + damped spring) works in quaternion space, so we
-     *  pass it through unchanged instead of projecting onto two euler angles. */
+     *  pass it through unchanged instead of projecting onto two euler angles.
+     *  TACZ guns bypass the vanilla ItemRenderer: TACZ's GUI branch only
+     *  draws the flat slot texture, so the bedrock gun model is rendered
+     *  directly (see {@link #renderGunModel3D}). */
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
-        if (item.getItem() instanceof IGun && TimelessAPI.getGunDisplay(item).isEmpty()) {
+        if (item.getItem() instanceof IGun) {
+            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(item);
+            // No loaded display -> nothing to draw (TACZ would fall back to the
+            // missing-texture slot icon, painting a magenta checkerboard).
+            if (display.isEmpty()) {
+                return;
+            }
+            BedrockGunModel gunModel = display.get().getGunModel();
+            if (gunModel == null) {
+                return;
+            }
+            renderGunModel3D(gg, item, cx, cy, rotation, scale, gunModel, display.get());
             return;
         }
+        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(new Quaternionf(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize());
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
         pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        // Rotate around the model's geometric centre, not the model origin:
+        // block-style models span 0..1 with the origin at a corner, so an
+        // origin pivot would swing the box around a point outside its body.
+        // Same convention as the TACZ gun branch (and the 26.x PIP renderer):
+        // translate(-centre) in block units AFTER the 16px scale.
+        Vector3f center = itemModelCenter(model);
+        if (center != null) {
+            pose.translate(-center.x, -center.y, -center.z);
+        }
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();
@@ -195,6 +257,237 @@ public final class AnimRenderOps {
         pose.popPose();
         modelViewStack.popMatrix();
         RenderSystem.applyModelViewMatrix();
+    }
+
+    /** Centre of the RENDERED geometry of a baked item model, in the space
+     *  the drag rotation is applied (block units), or {@code null} for models
+     *  without quads (custom renderers). Every quad vertex is pushed through
+     *  the exact chain {@code ItemRenderer.render} applies ({@code
+     *  ItemTransform.apply} then the {@code -0.5} shift) and the centre of
+     *  the resulting bounding box is taken — the same semantics as 26.x's
+     *  {@code getModelBoundingBox} centre, and more accurate than pushing
+     *  just the raw diagonal midpoint through the transform (rotation turns
+     *  the AABB into an OBB, so the two no longer coincide). Computed once
+     *  per model instance and cached. */
+    private static Vector3f itemModelCenter(BakedModel model) {
+        Object cached = ITEM_MODEL_CENTERS.get(model);
+        if (cached == NO_CENTER) {
+            return null;
+        }
+        if (cached != null) {
+            return (Vector3f) cached;
+        }
+        // Custom renderers (TACZ guns routed elsewhere, special items) have no
+        // quads to measure; cache the sentinel so they are not rescanned.
+        if (model.isCustomRenderer()) {
+            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
+            return null;
+        }
+        // Compose the renderer's model placement: ItemTransform.apply is
+        // translate(translation) -> rotationXYZ -> scale, then render() adds
+        // translate(-0.5, -0.5, -0.5) so 0..1 block geometry centres at origin.
+        ItemTransform gui = model.getTransforms().gui;
+        Matrix4f renderer = new Matrix4f();
+        if (gui != ItemTransform.NO_TRANSFORM) {
+            renderer.translate(gui.translation.x(), gui.translation.y(), gui.translation.z());
+            renderer.rotate(new Quaternionf().rotationXYZ(
+                    (float) Math.toRadians(gui.rotation.x()),
+                    (float) Math.toRadians(gui.rotation.y()),
+                    (float) Math.toRadians(gui.rotation.z())));
+            renderer.scale(gui.scale.x(), gui.scale.y(), gui.scale.z());
+        }
+        renderer.translate(-0.5F, -0.5F, -0.5F);
+        RandomSource random = RandomSource.create();
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
+        boolean any = false;
+        Vector3f p = new Vector3f();
+        for (Direction direction : Direction.values()) {
+            for (BakedQuad quad : model.getQuads(null, direction, random)) {
+                int[] vertices = quad.getVertices();
+                for (int i = 0; i < 4; i++) {
+                    p.set(Float.intBitsToFloat(vertices[i * 8]),
+                            Float.intBitsToFloat(vertices[i * 8 + 1]),
+                            Float.intBitsToFloat(vertices[i * 8 + 2]));
+                    renderer.transformPosition(p);
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    minZ = Math.min(minZ, p.z);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                    maxZ = Math.max(maxZ, p.z);
+                    any = true;
+                }
+            }
+        }
+        for (BakedQuad quad : model.getQuads(null, null, random)) {
+            int[] vertices = quad.getVertices();
+            for (int i = 0; i < 4; i++) {
+                p.set(Float.intBitsToFloat(vertices[i * 8]),
+                        Float.intBitsToFloat(vertices[i * 8 + 1]),
+                        Float.intBitsToFloat(vertices[i * 8 + 2]));
+                renderer.transformPosition(p);
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                minZ = Math.min(minZ, p.z);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+                maxZ = Math.max(maxZ, p.z);
+                any = true;
+            }
+        }
+        if (!any || !(minX < maxX && minY < maxY && minZ < maxZ)) {
+            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
+            return null;
+        }
+        // Midpoint of the rendered bounding box (block units).
+        Vector3f center = new Vector3f(
+                (minX + maxX) * 0.5F,
+                (minY + maxY) * 0.5F,
+                (minZ + maxZ) * 0.5F);
+        ITEM_MODEL_CENTERS.put(model, center);
+        return center;
+    }
+
+    /** TACZ gun 3D render: same outer pose convention as the vanilla branch
+     *  (anchor = top-left of the preview square, Y-flip, drag quaternion,
+     *  16px per block unit) but the model is a {@link BedrockGunModel} drawn
+     *  on an identity stack with the placement in RenderSystem's model-view
+     *  matrix — TACZ's GUI item rendering draws only the flat slot texture,
+     *  so the vanilla ItemRenderer path cannot carry the drag rotation. */
+    private static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
+                                         Quat rotation, float scale,
+                                         BedrockGunModel gunModel, GunDisplayInstance display) {
+        PoseStack pose = gg.pose();
+        pose.pushPose();
+        pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
+        pose.scale(1.0F, -1.0F, 1.0F);
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
+        pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        // Rotate around the model's geometric centre, not the model origin:
+        // the gun's root node sits far from its geometry, so a pivot at the
+        // origin would swing the gun around a point outside the model.
+        Vector3f center = gunModelCenter(gunModel);
+        pose.translate(-center.x, -center.y, -center.z);
+        Lighting.setupForEntityInInventory();
+        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.mul(pose.last().pose());
+        RenderSystem.applyModelViewMatrix();
+        REUSABLE_POSE_STACK.setIdentity();
+        RenderType renderType = display.enablesTransparency()
+                ? RenderType.entityTranslucent(display.getModelTexture())
+                : RenderType.entityCutout(display.getModelTexture());
+        try {
+            gunModel.render(REUSABLE_POSE_STACK, item, ItemDisplayContext.GUI, renderType,
+                    0xF000F0, OverlayTexture.NO_OVERLAY);
+            gunModel.cleanAnimationTransform();
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ gun model render failed in 3D preview", t);
+        } finally {
+            modelViewStack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
+            pose.popPose();
+        }
+    }
+
+    /** Model-space centre of the gun's default-pose bounding box (block
+     *  units), computed once per model instance by walking the part tree with
+     *  the base bone rotations ({@code xRot/yRot/zRot} are the static bedrock
+     *  pose — {@code cleanAnimationTransform} resets offsets/quaternions/scales,
+     *  not these). */
+    public static Vector3f gunModelCenter(BedrockGunModel model) {
+        Vector3f cached = GUN_MODEL_CENTERS.get(model);
+        if (cached != null) {
+            return cached;
+        }
+        float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+        float[] max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        BedrockPart root = model.getRootNode();
+        if (root != null) {
+            collectPartBounds(root, new Matrix4f(), min, max);
+        }
+        Vector3f center;
+        if (min[0] == Float.MAX_VALUE) {
+            center = new Vector3f();
+        } else {
+            center = new Vector3f((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
+        }
+        GUN_MODEL_CENTERS.put(model, center);
+        return center;
+    }
+
+    private static void collectPartBounds(BedrockPart part, Matrix4f parent, float[] min, float[] max) {
+        if (!part.visible) {
+            return;
+        }
+        // Mirrors BedrockPart.translateAndRotateAndScale with the animation
+        // state cleared (offset/quaternion/scales are identity by default).
+        Matrix4f m = new Matrix4f(parent);
+        // Two consecutive translates compose into one; /16 is exact (power of
+        // two), so pre-division is lossless.
+        m.translate(part.offsetX + part.x / 16.0F,
+                part.offsetY + part.y / 16.0F,
+                part.offsetZ + part.z / 16.0F);
+        if (part.zRot != 0.0F) {
+            m.rotateZ(part.zRot);
+        }
+        if (part.yRot != 0.0F) {
+            m.rotateY(part.yRot);
+        }
+        if (part.xRot != 0.0F) {
+            m.rotateX(part.xRot);
+        }
+        // JOML 1.10.5 Matrix4f.rotate has no identity short-circuit and always
+        // builds a quat->matrix product; the quaternion is identity in every
+        // default-pose model (constructor and cleanAnimationTransform reset
+        // it), so skip the full multiply when it is.
+        if (part.additionalQuaternion.w != 1.0F || part.additionalQuaternion.x != 0.0F
+                || part.additionalQuaternion.y != 0.0F || part.additionalQuaternion.z != 0.0F) {
+            m.rotate(part.additionalQuaternion);
+        }
+        m.scale(part.xScale, part.yScale, part.zScale);
+        for (BedrockCube cube : part.cubes) {
+            // Cube coordinates are in 1/16-block pixels; all 8 corners are
+            // needed because the base bone rotations turn boxes into OBBs.
+            if (cube instanceof BedrockCubeBox box) {
+                addBoxCorners(m, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, min, max);
+            } else if (cube instanceof BedrockCubePerFace face) {
+                addBoxCorners(m, face.minX, face.minY, face.minZ, face.maxX, face.maxY, face.maxZ, min, max);
+            }
+        }
+        for (BedrockPart child : part.children) {
+            collectPartBounds(child, m, min, max);
+        }
+    }
+
+    private static void addBoxCorners(Matrix4f m, float minX, float minY, float minZ,
+                                      float maxX, float maxY, float maxZ, float[] min, float[] max) {
+        float mnX = minX / 16.0F, mnY = minY / 16.0F, mnZ = minZ / 16.0F;
+        float mxX = maxX / 16.0F, mxY = maxY / 16.0F, mxZ = maxZ / 16.0F;
+        Vector4f v = new Vector4f();
+        addCorner(m, mnX, mnY, mnZ, v, min, max);
+        addCorner(m, mnX, mnY, mxZ, v, min, max);
+        addCorner(m, mnX, mxY, mnZ, v, min, max);
+        addCorner(m, mnX, mxY, mxZ, v, min, max);
+        addCorner(m, mxX, mnY, mnZ, v, min, max);
+        addCorner(m, mxX, mnY, mxZ, v, min, max);
+        addCorner(m, mxX, mxY, mnZ, v, min, max);
+        addCorner(m, mxX, mxY, mxZ, v, min, max);
+    }
+
+    private static void addCorner(Matrix4f m, float x, float y, float z, Vector4f v, float[] min, float[] max) {
+        v.set(x, y, z, 1.0F);
+        m.transform(v);
+        if (v.x < min[0]) min[0] = v.x;
+        if (v.y < min[1]) min[1] = v.y;
+        if (v.z < min[2]) min[2] = v.z;
+        if (v.x > max[0]) max[0] = v.x;
+        if (v.y > max[1]) max[1] = v.y;
+        if (v.z > max[2]) max[2] = v.z;
     }
 
     public static boolean supports3D() {

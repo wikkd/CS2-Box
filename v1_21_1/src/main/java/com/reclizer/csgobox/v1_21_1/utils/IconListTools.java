@@ -12,6 +12,10 @@ public final class IconListTools {
     private static final ResourceLocation GOLD_ITEM_TEXTURE =
             ResourceLocation.parse("csgobox:textures/screens/gold_item.png");
 
+    // Real pixel dimensions of gold_item.png.
+    private static final int GOLD_ITEM_TEX_WIDTH = 32;
+    private static final int GOLD_ITEM_TEX_HEIGHT = 24;
+
     /**
      * Peak magnification of the card sitting at the golden line during the
      * opening animation (1.0 = no magnification). The card whose left edge is
@@ -24,6 +28,36 @@ public final class IconListTools {
     public static final float FOCUS_FALLOFF_SPACING = 1.0F;
 
     private IconListTools() {
+    }
+
+    // Letterbox the 32x24 gold_item icon into an arbitrary destination
+    // rectangle while preserving its native 4:3 aspect ratio. The grade-5
+    // slot is slightly more square than the source on a 16:9 screen, so a
+    // plain scale-to-fit stretches the gem vertically and squashes the
+    // chain links. The padding that falls out of letterboxing is left as
+    // background gradient (drawn by the caller) rather than retinted, so
+    // the gold bar at the slot edges stays visible.
+    private static void blitGoldItemAspect(GuiGraphics guiGraphics,
+                                           int x, int y, int availW, int availH, int alpha) {
+        int drawW;
+        int drawH;
+        if ((long) availW * GOLD_ITEM_TEX_HEIGHT < (long) availH * GOLD_ITEM_TEX_WIDTH) {
+            drawW = availW;
+            drawH = Math.round((float) availW * GOLD_ITEM_TEX_HEIGHT / GOLD_ITEM_TEX_WIDTH);
+        } else {
+            drawH = availH;
+            drawW = Math.round((float) availH * GOLD_ITEM_TEX_WIDTH / GOLD_ITEM_TEX_HEIGHT);
+        }
+        int drawX = x + (availW - drawW) / 2;
+        int drawY = y + (availH - drawH) / 2;
+        // Tint variant (full UV window) so the gold gem fades with the frame.
+        AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE,
+                drawX, drawY,
+                drawW, drawH,
+                0, 0,
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
+                ColorTools.withAlpha(0xFFFFFFFF, alpha));
     }
 
     private static void renderRarity(GuiGraphics guiGraphics, int pX0, int pY0, int toX, int toY, int color, int alpha) {
@@ -49,10 +83,8 @@ public final class IconListTools {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY,
                     ColorTools.withAlpha(0xFF533c00, alpha), ColorTools.withAlpha(0xFFb69008, alpha));
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, ColorTools.withAlpha(color, alpha));
-            // Tint variant (full UV window) so the gold gem fades with the frame.
-            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, pX + 2, pY + 2,
-                    frameWidth - 4, frameHeight - 4, 0, 0, 32, 24, 32, 24,
-                    ColorTools.withAlpha(0xFFFFFFFF, alpha));
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
+                    frameWidth - 4, frameHeight - 4, alpha);
         } else {
             renderRarity(guiGraphics, pX, pY, toX, toY, color, alpha);
             renderGuiItem(entity, entity.level(), guiGraphics, itemStack, itemX, itemY, scale);
@@ -69,8 +101,8 @@ public final class IconListTools {
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
-            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, pX + 2, pY + 2,
-                    width - 4, height - 4);
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
+                    width - 4, height - 4, 255);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
             AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
@@ -93,8 +125,8 @@ public final class IconListTools {
         float itemY = pY + frameHeight * 10 / 100;
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, (int) toX, (int) toY, 0xFF533c00, 0xFFb69008);
-            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2),
-                    (int) (frameWidth - 4), (int) (frameHeight - 4));
+            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2),
+                    (int) (frameWidth - 4), (int) (frameHeight - 4), 255);
             AnimRenderOps.fill(guiGraphics, (int) pX, (int) toY, (int) toX, (int) (toY + 2), color);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, (int) toX, (int) toY, 0xFF696969, 0xFFA9A9A9);
@@ -128,8 +160,8 @@ public final class IconListTools {
 
         if (grade == 5) {
             AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
-            AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE, (int) (pX + 2F), (int) (pY + 2),
-                    (int) (frameWidth - 4), (int) (frameHeight - 4));
+            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2),
+                    (int) (frameWidth - 4), (int) (frameHeight - 4), 255);
             AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
         } else {
             AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);

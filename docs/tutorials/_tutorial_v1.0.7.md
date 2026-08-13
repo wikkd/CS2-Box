@@ -193,8 +193,11 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
 - **No key required** — the default terminal config uses `"key": "minecraft:air"`.
 - **Offers are priced in Armory Points**, fixed per rarity grade: grade1 = 6,
   grade2 = 10, grade3 = 16, grade4 = 22, grade5 = 30. Pay the price to accept;
-  accepted items carry a wear value (durability is reduced by the wear
-  percentage when `damageItemByWear` is on).
+  accepted items carry a **random wear value** (rolled like box openings,
+  uniform 0..1; durability is reduced by the wear percentage when
+  `damageItemByWear` is on). Items **without a durability bar** take a wear
+  penalty instead: every 5% of wear adds 1 Armory Point (up to +20 at
+  Battle-Scarred), so the more worn the item, the more it costs.
 - Each session runs a 5-round negotiation; every offer carries a ~3-day
   countdown, and the offered item is sampled from the terminal box's grade
   pools.

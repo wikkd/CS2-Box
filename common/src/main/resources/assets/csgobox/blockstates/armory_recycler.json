@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "csgobox:block/armory_recycler" }
+    "facing=north": { "model": "csgobox:block/armory_recycler" },
+    "facing=east": { "model": "csgobox:block/armory_recycler", "y": 90 },
+    "facing=south": { "model": "csgobox:block/armory_recycler", "y": 180 },
+    "facing=west": { "model": "csgobox:block/armory_recycler", "y": 270 }
   }
 }

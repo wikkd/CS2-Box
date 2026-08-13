@@ -17,6 +17,7 @@ import com.tacz.guns.client.sound.SoundPlayManager;
 import com.tacz.guns.resource.pojo.data.gun.Bolt;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 import com.reclizer.csgobox.v1_21_1.gui.CsLookItemScreen;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -29,6 +30,8 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.slf4j.Logger;
 import org.joml.Matrix4fStack;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 
@@ -51,12 +54,9 @@ public final class TaczInspectViewportImpl {
     /** Fixed display pose of the gun in the viewport (degrees). */
     private static final float DISPLAY_YAW = -35F;
     private static final float DISPLAY_PITCH = 10F;
-    /**
-     * Vertical model-space offset so the gun's bounding box sits centered in
-     * the display area. Calibrated for mk23-like gun bounds (y -3.58..20
-     * block units) under the viewport transform below.
-     */
-    private static final float MODEL_Y_OFFSET = -0.47F;
+    /** Precomputed viewport pose rotations (constant angles). */
+    private static final Quaternionf VIEWPORT_PITCH = Axis.XP.rotationDegrees(DISPLAY_PITCH);
+    private static final Quaternionf VIEWPORT_YAW = Axis.YP.rotationDegrees(DISPLAY_YAW);
     /** Identity render stack: the viewport pose is applied via RenderSystem's
      * model-view stack (matching AnimRenderOps.renderItem3D), so the model's
      * bone transforms accumulate on an identity stack while the outer
@@ -269,15 +269,16 @@ public final class TaczInspectViewportImpl {
         // Vanilla GUI item frame: center in display area, flip Y, 16px per block unit.
         pose.translate(centerX, centerY, 150.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(Axis.XP.rotationDegrees(DISPLAY_PITCH));
-        pose.mulPose(Axis.YP.rotationDegrees(DISPLAY_YAW));
+        pose.mulPose(VIEWPORT_PITCH);
+        pose.mulPose(VIEWPORT_YAW);
         float pixelsPerUnit = 16.0F * scale;
         pose.scale(pixelsPerUnit, pixelsPerUnit, pixelsPerUnit);
-        // Vertical centering only: BedrockGunModel.render applies no internal
-        // frame transform of its own, so the pose above fully controls the
-        // model placement (the GUI frame's Y flip already orients the model
-        // upright; a ZP 180 inside would double-flip and push it off-screen).
-        pose.translate(0.0F, MODEL_Y_OFFSET, 0.0F);
+        // Pivot on the model's geometric centre instead of the root-node
+        // origin (which sits far outside the gun's geometry), and keep the
+        // pose above as the only placement control: BedrockGunModel.render
+        // applies no internal frame transform of its own.
+        Vector3f center = AnimRenderOps.gunModelCenter(model);
+        pose.translate(-center.x, -center.y, -center.z);
 
         // Apply the viewport pose to RenderSystem's model-view stack and render
         // the bedrock model through an identity stack: cube vertices are
@@ -299,19 +300,17 @@ public final class TaczInspectViewportImpl {
             model.render(RENDER_STACK, stack, ItemDisplayContext.GUI,
                     RenderType.entityCutout(renderer.getTextureLocation(stack)),
                     0xF000F0, OverlayTexture.NO_OVERLAY);
+            model.cleanAnimationTransform();
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         } catch (Throwable t) {
             LOGGER.warn("TACZ inspect viewport model.render failed", t);
+            return false;
+        } finally {
             modelViewStack.popMatrix();
             RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
             pose.popPose();
-            return false;
         }
-        model.cleanAnimationTransform();
-        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
-        RenderSystem.enableDepthTest();
-        pose.popPose();
         return true;
     }
 

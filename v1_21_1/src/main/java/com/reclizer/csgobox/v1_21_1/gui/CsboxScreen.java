@@ -52,6 +52,13 @@ public class CsboxScreen extends Screen {
 
     private List<ItemStack> itemsList;
     private List<Integer> gradeList;
+    /** Pre-laid-out item name sequences (translation + bidi reordering),
+     *  rebuilt on each sync; grid positions still compute per frame. */
+    private List<FormattedCharSequence> itemLabels = List.of();
+    private FormattedCharSequence goldLabel = FormattedCharSequence.EMPTY;
+    /** Dirty-marked page counts: computed lazily, invalidated on sync. */
+    private int cachedRenderableCount = -1;
+    private int cachedPageCount = -1;
 
     private ResourceLocation keyRl;
     private final long syncRequestId;
@@ -160,17 +167,31 @@ public class CsboxScreen extends Screen {
     }
 
     private int renderableCount() {
-        int count = 0;
-        for (int i = 0; i < itemsList.size(); i++) {
-            if (gradeList.get(i) > 4) break;
-            count++;
+        if (cachedRenderableCount < 0) {
+            int count = 0;
+            for (int i = 0; i < itemsList.size(); i++) {
+                if (gradeList.get(i) > 4) break;
+                count++;
+            }
+            cachedRenderableCount = count;
         }
-        return count;
+        return cachedRenderableCount;
     }
 
     private int pageCount() {
-        int n = renderableCount();
-        return Math.max(1, (n + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE);
+        if (cachedPageCount < 0) {
+            int n = renderableCount();
+            cachedPageCount = Math.max(1, (n + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE);
+        }
+        return cachedPageCount;
+    }
+
+    private static List<FormattedCharSequence> buildItemLabels(List<ItemStack> stacks) {
+        List<FormattedCharSequence> labels = new ArrayList<>(stacks.size());
+        for (ItemStack stack : stacks) {
+            labels.add(stack.getItem().getName(stack).getVisualOrderText());
+        }
+        return labels;
     }
 
     private int boxKeyCount;
@@ -451,6 +472,7 @@ public class CsboxScreen extends Screen {
     }
 
     private void renderPageLabels(GuiGraphics guiGraphics, int page, int offsetY, int alpha, boolean showNames) {
+        if (!showNames) return;
         int x = 0;
         int y = 0;
         int startIdx = page * ITEMS_PER_PAGE;
@@ -461,24 +483,17 @@ public class CsboxScreen extends Screen {
                 py = 85;
                 px -= 10;
             }
-            ItemStack itemStack1 = itemsList.get(i);
             int grade = gradeList.get(i);
             x = px;
             y = py;
             if (grade > 4) break;
-            if (showNames) {
-                Component component = itemStack1.getItem().getName(itemStack1);
-                FormattedCharSequence pText = component.getVisualOrderText();
-                renderText(guiGraphics, pText,
-                        this.width * 4F / 100 + px * this.width * 9F / 100,
-                        this.height * py / 100F + offsetY, 0.6F, alpha);
-            }
+            renderText(guiGraphics, itemLabels.get(i),
+                    this.width * 4F / 100 + px * this.width * 9F / 100,
+                    this.height * py / 100F + offsetY, 0.6F, alpha);
         }
-        if (showNames) {
-            renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
-                    this.width * 4 / 100F + x * this.width * 9 / 100F,
-                    this.height * y / 100F + offsetY, 0.6F, alpha);
-        }
+        renderText(guiGraphics, goldLabel,
+                this.width * 4 / 100F + x * this.width * 9 / 100F,
+                this.height * y / 100F + offsetY, 0.6F, alpha);
     }
 
     private void renderCenteredText(GuiGraphics guiGraphics, FormattedCharSequence text,
@@ -513,6 +528,10 @@ public class CsboxScreen extends Screen {
             this.itemGroup = buildItemGroup(data);
             this.itemsList = itemsListProgress(this.itemGroup);
             this.gradeList = gradeListProgress(this.itemGroup);
+            this.itemLabels = buildItemLabels(this.itemsList);
+            this.goldLabel = Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText();
+            this.cachedRenderableCount = -1;
+            this.cachedPageCount = -1;
             this.itemKey = data.keyItem();
             if (data.keyItem() != null && !data.keyItem().isEmpty()) {
                 this.keyRl = BuiltInRegistries.ITEM.getKey(data.keyItem().getItem());

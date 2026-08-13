@@ -17,15 +17,22 @@ norm() {
   # Keep "public static" method signatures (multi-line safe), keep only the
   # param TYPES (names may legitimately differ), map GUI type families,
   # strip generics, collapse whitespace; output sorted lines.
+  # Note: return/param type regexes include digits (e.g. Vector3f).
   perl -0pe 's/\s+/ /g' "$1" \
-    | grep -oE 'public static [A-Za-z<>?]* [A-Za-z0-9_]+\([A-Za-z0-9_, <>?]*\)' \
-    | perl -pe 's/(\(|, )([A-Za-z<>?]+) [A-Za-z0-9_]+/$1$2/g; s/\([A-Za-z0-9_, <>?]*\)/()/ if /renderBlurredBackground/' \
+    | grep -oE 'public static [A-Za-z0-9<>?]* [A-Za-z0-9_]+\([A-Za-z0-9_, <>?]*\)' \
+    | grep -v ' gunModelCenter(' \
+    | perl -pe 's/(\(|, )([A-Za-z0-9<>?]+) [A-Za-z0-9_]+/$1$2/g; s/\([A-Za-z0-9_, <>?]*\)/()/ if /renderBlurredBackground/' \
     | sed -E 's/<[^>]*>//g' \
     | sed -E 's/GuiGraphicsExtractor/GuiGraphics/g' \
     | sed -E 's/Identifier/ResourceLocation/g' \
     | sed -E 's/[[:space:]]+/ /g' \
     | sort
 }
+
+# gunModelCenter is a v1_21_1-only TACZ op (compileOnly dependency; the
+# decoupled platforms have no TACZ integration and cannot implement the same
+# signature), so it is explicitly exempted from the cross-platform shape
+# contract above. Any other op added to one platform must exist on all three.
 
 fail=0
 REF="$(norm v1_21_1/src/main/java/com/reclizer/csgobox/v1_21_1/utils/AnimRenderOps.java)"

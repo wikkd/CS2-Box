@@ -40,6 +40,11 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int openableCount;
     private long lastRecountTick = -1;
 
+    /** Resolved once at construction: the box/key labels never change for
+     *  this screen's lifetime. */
+    private String cachedKeyName;
+    private Component cachedBoxName;
+
     private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     public CsboxBulkOverviewScreen() {
@@ -52,6 +57,8 @@ public class CsboxBulkOverviewScreen extends Screen {
             resolvedKey = ItemCsgoBox.getKey(this.templateBox);
         }
         this.keyId = resolvedKey;
+        this.cachedKeyName = resolvedKey == null ? null : keyName(resolvedKey);
+        this.cachedBoxName = this.templateBox.getItem().getName(this.templateBox);
         recount();
     }
 
@@ -147,13 +154,17 @@ public class CsboxBulkOverviewScreen extends Screen {
         int centerY = this.height * 42 / 100;
         float frameWidth = this.width * 22 / 100F;
         float scale = frameWidth / 16F;
+        int half = (int) (frameWidth / 2F);
 
         AnimRenderOps.fillGradient(guiGraphics, centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
                 centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
+        // renderItem3D takes the TOP-LEFT of the preview square (matches
+        // v26_1_2's centerX - textureSize / 2): the square is frameWidth px
+        // wide, so back out half to keep the model centred on the panel.
         AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
-                centerX, centerY, this.itemDrag.rotation(), scale);
+                centerX - half, centerY - half, this.itemDrag.rotation(), scale);
     }
 
     @Override
@@ -184,7 +195,7 @@ public class CsboxBulkOverviewScreen extends Screen {
 
         int rowY = this.height * 28 / 100;
         int rowSpacing = this.font.lineHeight + 6;
-        Component boxName = this.templateBox.getItem().getName(this.templateBox);
+        Component boxName = this.cachedBoxName;
         Style row = Style.EMPTY;
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_name", boxName.getString()).withStyle(row),
                 rowY, 0xFFEFEFEF);
@@ -192,7 +203,7 @@ public class CsboxBulkOverviewScreen extends Screen {
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_count", this.boxCount).withStyle(row),
                 rowY, 0xFF55FF55);
         rowY += rowSpacing;
-        String keyDisplay = (this.keyId == null) ? "—" : keyName(this.keyId);
+        String keyDisplay = (this.keyId == null) ? "—" : this.cachedKeyName;
         if (this.keyId != null && this.player.getAbilities().instabuild) {
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_infinite").withStyle(row),
                     rowY, 0xFF55FF55);

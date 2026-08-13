@@ -82,6 +82,20 @@ public class CsLookItemScreen extends Screen {
     private float toolbarGlow = 0F;
     private int screenTicks = 0;
 
+    /** Info panel label keys (translated once per screen). */
+    private static final String[] INFO_LABEL_KEYS = {
+            "gui.csgobox.csgo_box.info.skin_style",
+            "gui.csgobox.csgo_box.info.skin_id",
+            "gui.csgobox.csgo_box.info.pattern",
+            "gui.csgobox.csgo_box.info.wear_rating",
+            "gui.csgobox.csgo_box.info.exterior"
+    };
+    /** Lazily laid-out info panel rows: skin/pattern/wear are fixed for the
+     *  screen's lifetime, so translate + measure them once. */
+    private FormattedCharSequence[] infoLabelTexts;
+    private FormattedCharSequence[] infoValueTexts;
+    private int infoMaxRowW = -1;
+
     /** Decorative finish styles, mirrored in lang (style.custom_paint etc). */
     private static final String[] SKIN_STYLES = {
             "custom_paint", "gunsmith", "patina", "hydrographic", "spray_paint", "anodized"
@@ -349,31 +363,35 @@ public class CsLookItemScreen extends Screen {
         int cardAlpha = (int) (0xE0 * anim) & 0xFF;
         float scale = 0.7F;
         int rowH = 13;
-        String[] labelKeys = {
-                "gui.csgobox.csgo_box.info.skin_style",
-                "gui.csgobox.csgo_box.info.skin_id",
-                "gui.csgobox.csgo_box.info.pattern",
-                "gui.csgobox.csgo_box.info.wear_rating",
-                "gui.csgobox.csgo_box.info.exterior"
-        };
-        Component[] valueTexts = {
-                Component.translatable("gui.csgobox.csgo_box.style." + SKIN_STYLES[this.skinStyleIndex]),
-                Component.literal(String.valueOf(this.skinId)),
-                Component.literal(String.valueOf(this.patternSeed)),
-                Component.literal(formatWear()),
-                Component.translatable(wearTierKey())
-        };
-        int gap = 8;
+        if (this.infoLabelTexts == null) {
+            Component[] labels = new Component[INFO_LABEL_KEYS.length];
+            for (int i = 0; i < INFO_LABEL_KEYS.length; i++) {
+                labels[i] = Component.translatable(INFO_LABEL_KEYS[i]);
+            }
+            Component[] values = {
+                    Component.translatable("gui.csgobox.csgo_box.style." + SKIN_STYLES[this.skinStyleIndex]),
+                    Component.literal(String.valueOf(this.skinId)),
+                    Component.literal(String.valueOf(this.patternSeed)),
+                    Component.literal(formatWear()),
+                    Component.translatable(wearTierKey())
+            };
+            int gap = 8;
+            this.infoLabelTexts = new FormattedCharSequence[labels.length];
+            this.infoValueTexts = new FormattedCharSequence[values.length];
+            int maxRowW = 0;
+            for (int i = 0; i < labels.length; i++) {
+                this.infoLabelTexts[i] = labels[i].getVisualOrderText();
+                this.infoValueTexts[i] = values[i].getVisualOrderText();
+                maxRowW = Math.max(maxRowW,
+                        (int) (this.font.width(this.infoLabelTexts[i]) * scale)
+                                + gap + (int) (this.font.width(this.infoValueTexts[i]) * scale));
+            }
+            this.infoMaxRowW = maxRowW;
+        }
         int padX = 8;
         int padY = 6;
-        int maxRowW = 0;
-        for (int i = 0; i < labelKeys.length; i++) {
-            maxRowW = Math.max(maxRowW,
-                    (int) (this.font.width(Component.translatable(labelKeys[i]).getVisualOrderText()) * scale)
-                            + gap + (int) (this.font.width(valueTexts[i].getVisualOrderText()) * scale));
-        }
-        int cardW = maxRowW + padX * 2;
-        int cardH = labelKeys.length * rowH + padY * 2;
+        int cardW = this.infoMaxRowW + padX * 2;
+        int cardH = INFO_LABEL_KEYS.length * rowH + padY * 2;
         int anchorX = toolbarButtonX(3) + toolbarButtonSize() / 2;
         int cardX = anchorX - cardW / 2;
         cardX = Math.max(2, Math.min(cardX, this.width - cardW - 2));
@@ -381,9 +399,9 @@ public class CsLookItemScreen extends Screen {
         int cardY = cardBottom - cardH + Math.round(8F * (1F - anim));
         renderRoundedRect(guiGraphics, cardX, cardY, cardW, cardH, 4, (cardAlpha << 24) | 0x101014);
         int textY = cardY + padY;
-        for (int i = 0; i < labelKeys.length; i++) {
+        for (int i = 0; i < INFO_LABEL_KEYS.length; i++) {
             drawInfoRow(guiGraphics, cardX + padX, cardX + cardW - padX, textY + i * rowH, scale,
-                    labelKeys[i], valueTexts[i], textAlpha);
+                    this.infoLabelTexts[i], this.infoValueTexts[i], textAlpha);
         }
     }
 
@@ -401,11 +419,11 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void drawInfoRow(GuiGraphics guiGraphics, int labelX, int valueRight, int y, float scale,
-                             String labelKey, Component value, int textAlpha) {
-        renderText(guiGraphics, Component.translatable(labelKey).getVisualOrderText(), labelX, y, scale,
+                             FormattedCharSequence labelText, FormattedCharSequence valueText, int textAlpha) {
+        renderText(guiGraphics, labelText, labelX, y, scale,
                 (textAlpha << 24) | 0x9A9A9A);
-        float valueWidth = this.font.width(value.getVisualOrderText()) * scale;
-        RenderFontTool.drawString(guiGraphics, this.font, value.getVisualOrderText(),
+        float valueWidth = this.font.width(valueText) * scale;
+        RenderFontTool.drawString(guiGraphics, this.font, valueText,
                 valueRight - valueWidth, y, 0, 0, scale, (textAlpha << 24) | 0xFFFFFF);
     }
 
