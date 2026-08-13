@@ -136,23 +136,13 @@ GUI 渲染、动画、音效、CS:GO 风格的滚动体验等无法用 GameTest 
 
 ## CI 集成
 
-本项目未配置 CI/CD 流水线。如需将游戏测试添加到 CI,在 `.github/workflows/gametest.yml` 创建:
+CI 已配置三个 workflow（见 `.github/workflows/`）：
 
-```yaml
-name: Game Tests
-on: [push, pull_request]
+- `build.yml` — 3 平台编译 + 打包矩阵（`1.21.1` / `26.1.2` / `26.2`）+ `common-test` job（版本同步、AnimRenderOps 漂移、CONSTRAINT-001、common 单测）
+- `gametest.yml` — GameTest 集成测试（1.21.1 + 26.1.2，当前无用例时跳过）
+- `pr-checks.yml` — PR 描述模板与自查勾选校验
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          java-version: 21
-      - name: Run GameTest Server
-        run: ./gradlew gameTestServer
-```
+GameTest 用例加入后自动被 `gametest.yml` 的矩阵执行，无需修改 CI 配置。
 
 ## 测试命名规范
 

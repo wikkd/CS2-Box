@@ -1,3 +1,5 @@
+> ⚠️ 已归档（历史快照）：本文档记录 forge_26_1_2 1.0.6 测试报告（2026-08-11）的当时状态，不再随项目更新；当前信息以 README.md 与 docs/ 为准。
+
 # forge_26_1_2 · 1.0.6 测试报告（2026-08-11）
 
 > 依据 mc_tools 最新文档（`~/Desktop/mc_tools/docs/cli.md` / `docs/scripts.md`）重启的

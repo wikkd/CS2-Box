@@ -9,8 +9,8 @@
 
 1. 安装 **Java 21**(v1_21_1 工作)+ **Java 25**(v26_1_2 / v26_2,需要 `--enable-preview`)
 2. 克隆仓库:`git clone https://github.com/wikkd/CS2-Box.git && cd CS2-Box`
-3. 配置活动版本(默认 `26.1.2`):编辑 `gradle.properties` 中的 `active_versions`,可选值 `1.21.1` / `26.1.2` / `26.2`
-4. 验证构建:`./gradlew :v26_1_2:build` 或 `./gradlew :v1_21_1:build`(v26_2 当前因 NeoForge 26.2 占位版本号无法 build,等用户提供真实 release coordinate)
+3. 配置活动版本(默认 `26.1.2`):编辑 `gradle.properties` 中的 `active_versions`,可选值 `1.21.1` / `26.1.2` / `26.2` / `forge-26.1.2`
+4. 验证构建:`./gradlew :v26_1_2:build` 或 `./gradlew :v1_21_1:build`(v26_2 已用 NeoForge 26.2.0.59 正常构建)
 5. 启动开发客户端:`./gradlew :v26_1_2:runClient`(或 `:v1_21_1:runClient` / `:v26_2:runClient`)
 
 ### 构建矩阵
@@ -20,8 +20,9 @@
 | `1.21.1` | `:v1_21_1` | `./gradlew :v1_21_1:compileJava` | `./gradlew :v1_21_1:runClient` |
 | `26.1.2`(默认) | `:v26_1_2` | `./gradlew :v26_1_2:compileJava` | `./gradlew :v26_1_2:runClient` |
 | `26.2` | `:v26_2` | `./gradlew :v26_2:compileJava` | `./gradlew :v26_2:runClient` |
+| `forge-26.1.2` | `:forge_26_1_2` | `./gradlew :forge_26_1_2:compileJava` | `./gradlew :forge_26_1_2:runClient` |
 
-由于 NeoGradle 7.x 在同一 Gradle invocation 中只能加载一个版本(参考 `settings.gradle` 第 56 行注释),每次构建只启用一个 `active_versions`。CI / 手工 build 需要串行切换三个版本。
+由于 NeoGradle 7.x 在同一 Gradle invocation 中只能加载一个版本(参考 `settings.gradle` 注释),每次构建只启用一个 `active_versions`。CI / 手工 build 需要串行切换各版本。
 
 ### 项目结构
 
@@ -29,14 +30,16 @@
 
 ```
 CS2-Box/
-├── common/                          # 跨版本业务逻辑 + 共享资源 + platform 接口
+├── common/                          # 跨版本业务逻辑 + 共享资源
 │   └── src/main/
 │       ├── java/com/reclizer/csgobox/
-│       │   ├── platform/             # Platform 接口(由各版本模块实现)
-│       │   ├── utils/                # 当前仅 ColorTools + OverlayColor(A 类已迁)
-│       │   └── ...                   # box / config / capability / command / packet / advancement 等子包待迁移
+│       │   ├── box/                  # BoxDefaults / BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验
+│       │   ├── logic/                # GradeMap / OddsCalculator / OpenBlockGuard
+│       │   ├── config/               # CsboxConfigDefaults(四平台配置默认值唯一来源)
+│       │   ├── terminal/             # NegotiationModel / TerminalAnims / WearBands / WearPenalty(平台无关)
+│       │   └── utils/                # ColorTools / OverlayColor / GuiRegion / EntityChineseMap / Easing 等
 │       └── resources/                # 共享资源(纹理、音效、配方、advancement)
-├── v1_21_1/                         # MC 1.21.1 / NeoForge 21.1.115 / Java 21
+├── v1_21_1/                         # MC 1.21.1 / NeoForge 21.1.248 / Java 21
 │   └── src/main/java/com/reclizer/csgobox/v1_21_1/
 │       ├── CsgoBox.java              # 模组入口
 │       ├── advancement/              # 自定义进度触发器
@@ -50,16 +53,18 @@ CS2-Box/
 │       ├── packet/                   # 网络协议接线
 │       ├── sounds/                   # 音效事件定义
 │       └── utils/                    # EntityChineseMap / GuiItemMove / IconListTools / RandomItem / RenderFontTool
-├── v26_1_2/                         # MC 26.1.2 / NeoForge 26.1.2.76 / Java 25
+├── v26_1_2/                         # MC 26.1.2 / NeoForge 26.1.2.95 / Java 25
 │   └── src/main/java/com/reclizer/csgobox/v26_1_2/
 │       ├── (同 v1_21_1 结构,外加 26.x 特有适配)
 │       ├── gui/pip/                  # 独有:Icon3DRenderer + Icon3DRenderState (PIP 3D 管线)
-│       ├── platform/                 # 独有:Platform26 (注入 Platform 接口)
 │       └── utils/                    # 独有:ButtonPalette + 26.x 适配的 RenderFontTool
-├── v26_2/                           # MC 26.2 / NeoForge 26.2.x / Java 25 (待真实版本号落地)
+├── v26_2/                           # MC 26.2 / NeoForge 26.2.0.59 / Java 25
 │   └── src/main/java/com/reclizer/csgobox/v26_2/
 │       ├── (与 v26_1_2 镜像结构,当前代码为 v26_1_2 复制 + 包名替换)
-│       └── platform/Platform26V2.java  # 独立 IPlatform 实现,mcVersion() 返回 "26.2"
+│       └── (含 26.2 decoupled API 适配:setScreenAndShow / HudVisibility 等)
+├── forge_26_1_2/                    # MC 26.1.2 / MinecraftForge 26.1.2-64.1.0 / Java 25(实验模块)
+│   └── src/main/java/com/reclizer/csgobox/forge_26_1_2/
+│       └── (与 v26_1_2 特性同步,loader 为 MinecraftForge;经 scripts/port-forge-2612.py + 手工适配)
 ├── settings.gradle                  # 模块注册 + active_versions 动态 include
 ├── gradle.properties                # mod_version / pack_format / active_versions / 26.2 占位块
 ├── settings.gradle                  # 模块注册 + active_versions 切换
@@ -90,8 +95,7 @@ CS2-Box/
 
 ## 分支约定
 
-- `main` — 稳定发布分支(1.21.1 主分支)
-- `multiloader-refactor` — v26.1.2 迁移分支(当前活跃)
+- `main` — 稳定发布分支
 - 功能分支命名:`feat/描述`、`fix/描述`、`docs/描述`、`refactor/描述`
 - 所有 PR 应指向 `main`(或活跃开发分支)
 
@@ -119,9 +123,9 @@ CS2-Box/
 
 报告 bug 时请包含:
 
-- Minecraft 版本(1.21.1 或 26.1.2)
-- NeoForge 版本(21.1.115 或 26.1.2.76)
-- 模组版本(`1.0.5` 或 `1.0.5-26.1.2`)
+- Minecraft 版本(1.21.1 或 26.1.2 / 26.2)
+- NeoForge 版本(21.1.248 或 26.1.2.95 / 26.2.0.59)
+- 模组版本(`1.0.6` 等)
 - 重现步骤
 - 预期与实际行为
 - 相关日志文件(来自 `.minecraft/logs/latest.log` 或 `runs/client/logs/latest.log`)

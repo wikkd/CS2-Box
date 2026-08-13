@@ -14,7 +14,7 @@
 
 ## 2. 配置项总览
 
-`CsboxConfig.java` 在 v1_21_1 与 v26_1_2 两个 loader 中定义一致(11 个字段,4 个 TOML 分组):
+`CsboxConfig.java` 在四个平台 loader 中定义一致(17 个字段,5 个 TOML 分组):
 
 ### 2.1 `[general]` 通用设置
 
@@ -30,6 +30,9 @@
 | `loadDefaultBoxes` | 布尔 | `true` | 启动时自动从 `config/csbox/*.json` 加载默认宝箱 |
 | `enableDebugLogging` | 布尔 | `false` | 启用控制台详细调试日志 |
 | `enableAchievements` | 布尔 | `true` | 启用成就系统;关闭时仍累积统计(保留进度) |
+| `enableHotReload` | 布尔 | `true` | 监听 `config/csbox/*.json` 文件变化并自动热重载(300ms 防抖) |
+| `bulkOpenCount` | 整数 | `0` | 单次批量开箱上限(0 = 无上限),服务端权威截断 |
+| `jsonErrorAudience` | 枚举 | `OP_ONLY` | JSON 加载错误提示受众:`OP_ONLY`(仅 OP)/ `ALL` |
 | `damageItemByWear` | 布尔 | `true` | 抽出的物品若有耐久,按磨损值百分比损耗耐久(不会碎裂) |
 
 ### 2.3 `[sound]` 音效设置
@@ -98,11 +101,11 @@
 
 首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
 
-- **不再自动写入 `terminal.json`**：终端机与普通宝箱一样是空箱子——首次启动不生成任何终端配置，配置文件夹内不出现 `terminal.json`；玩家创建 `terminal.json` 后，终端机才会与 `csbox` 一样按新箱子逻辑出现在创造物品栏（ID `csgobox:terminal` + `key: minecraft:air` → 终端机 UI）。
-- **不再自动写入 `premium_supply_box.json`**：军火商高级箱与终端机/普通箱一致，首次启动不生成配置；玩家创建 `premium_supply_box.json` 后，高级箱才会出现在创造物品栏（军火商村民售卖的仍是该 ID 的高级箱，未配置时无法开启，需服主创建）。
+- **自动生成 `terminal.json`**（v1.0.8 起恢复）：内置默认配置且含 `"type": "terminal"`，终端机开箱即用；用户已存在的 `terminal.json` 不会被覆盖，旧版（无 `type` 且带遗留 `key`）配置会自动迁移。
+- **自动生成 `premium_supply_box.json`**：军火商高级箱内置默认配置，开箱即用；用户文件不会被覆盖。
 - 异步下载 `_tutorial_v<版本>.md` 教程文档（联网时）。
 
-**箱子没有内置默认配置**：`weapon_supply_box.json`、`premium_supply_box.json`、`terminal.json` 等文件需要由玩家/服主自行创建，或从教程文档中复制示例。
+**普通箱子没有内置默认配置**：`weapon_supply_box.json` 等普通箱文件需要由玩家/服主自行创建（或从教程文档中复制示例），创建后才会出现在创造物品栏。
 
 ### 3.4 五个等级命名
 
@@ -123,8 +126,8 @@
 
 **箱子 JSON(`config/csbox/*.json`)重载**:
 
-- `BoxJsonLoader.loadAll()` **只在 `ServerStartingEvent` 触发**
-- 必须重启游戏或专用服务端才能生效
+- `/csbox reload` 立即重新加载（`/csbox reload tutorial` 同时刷新教程文档）
+- `enableHotReload`（默认开启）开启时，`config/csbox/*.json` 文件变化会自动热重载（300ms 防抖）
 - 现有 JSON 文件**不会被覆盖**(只读)
 
 ## 5. 运行时一致性
@@ -140,4 +143,4 @@
 - `enableAchievements=false` 关闭成就弹窗与 toast,但 `Stats.CUSTOM` 仍累积,重新开启后即恢复触发
 - `loadDefaultBoxes=false` 可阻止自动加载 `config/csbox/*.json`,适合纯数据包驱动的服务端
 
-修改这些开关并 `/reload` 即可生效;JSON 改动则需重启。
+修改这些开关并 `/reload` 即可生效;JSON 改动执行 `/csbox reload`（或热重载）即可生效。

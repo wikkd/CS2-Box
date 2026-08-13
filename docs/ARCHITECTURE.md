@@ -9,7 +9,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 
 **关键事实**:
 
-- 模组 ID:`csgobox`,当前版本 `1.0.6`(开发线 1.0.7)
+- 模组 ID:`csgobox`,当前版本 `1.0.6`(开发线 1.0.8)
 - Java toolchain:`v1_21_1` 用 Java 21,`v26_1_2` 用 Java 25 + `--enable-preview`(NeoForm 重编译要求)
 - 共享资源:`common/src/main/resources/` 由四个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(平台侧 `duplicatesStrategy = EXCLUDE`,平台 srcDir 在前、同名文件平台副本优先)
 - 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*` / `net.minecraftforge.*`**(由 `:common:checkCommonArchitecture` Gradle task 自动拦截)
@@ -20,7 +20,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 +----------------------+        +----------------------+        +----------------------+
 |      v1_21_1/        |        |      v26_1_2/        |        |        common/       |
 |----------------------|        |----------------------|        |----------------------|
-| @Mod 入口 (v1.21.1)  |        | @Mod 入口 (v26.1.2)  |        | platform/* 接口      |
+| @Mod 入口 (v1.21.1)  |        | @Mod 入口 (v26.1.2)  |        | 平台薄壳 + 业务逻辑    |
 | DeferredRegister     |        | DeferredRegister     |        | 共享业务逻辑          |
 | AttachmentType       |  <-->  | AttachmentType       |  <-->  | BoxDefinition        |
 | Screen 实现          |        | Screen (extractRender|        | BoxJsonLoader        |
@@ -42,7 +42,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 - **`BoxGrades`** — 5 档等级名→等级号映射、默认权重 `{625,125,25,6,4}`、drop rate 夹取与各 schema 上限常量（2026-08 重构下沉）
 - **`BoxRegistryStore<K,V>`** — 泛型注册表容器（register/remove 无条件触发变更回调、clear 触发清空回调）；平台 `BoxRegistry` 是提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调的薄壳
 - **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items/grades/winningIndex，经 `GradeMap.isValid` 定位中奖位）；平台传 `ItemStack.EMPTY` 作空值
-- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动只保证目录存在并异步下载教程 md(`BoxDefaults`),**不写入任何默认箱子配置**(终端机/高级箱/普通箱一律由玩家自建 JSON,建好后才会进入创造物品栏);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` / `premium_supply_box.json` 默认配置**(v1.0.8 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 
@@ -53,7 +53,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 
 ### 3.2 配置
 
-- **`CsboxConfig`**（平台） — NeoForge `ModConfigSpec`/Forge `ForgeConfigSpec`,16 个配置项,5 个 TOML 分组(general / advanced / sound / animation / ui)；默认值与范围统一引 common `CsboxConfigDefaults`
+- **`CsboxConfig`**（平台） — NeoForge `ModConfigSpec`/Forge `ForgeConfigSpec`,17 个配置项,5 个 TOML 分组(general / advanced / sound / animation / ui，UI 组含 `backgroundStyle` 与 `blurRadius`)；默认值与范围统一引 common `CsboxConfigDefaults`
 - 注册为 `ModConfig.Type.COMMON`,TOML 路径 `config/csgobox.toml`
 - `CONFIG` 是 `public static final`,在 `static {}` 块中通过 `ModConfigSpec.Builder().configure(CsboxConfig::new)` 初始化(不用 `init()`,那是一个 v1.0.5 修复的 bug)
 - 监听 `ModConfigEvent.Reloading` 记录日志
@@ -64,10 +64,10 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 - 4 把钥匙:`csgo_key0`(铁)、`csgo_key1`(金)、`csgo_key2`(钻石)、`csgo_key3`(下界合金,仅锻造台配方)
 - **`ItemTerminal`**(终端机,继承 `ItemCsgoBox`,覆写 `openScreen` 打开终端谈判屏)/ **`ItemPremiumBox`**(军火商高级箱)
 
-### 3.4 平台接口
+### 3.4 平台薄壳与适配
 
-- `common/src/main/java/platform/` — 10 个接口,由 `Platform26.java` 等 platform 实现注入
-- 解耦:平台代码不直接 new 业务对象,而是通过 `Platform26.boxRegistry()` 之类的接口方法取
+- common 无 `platform/` 接口层（2026-08 重构中移除）;平台模块直接承载注册、网络、GUI 等版本敏感工作
+- 典型薄壳：平台 `BoxRegistry` 提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调,业务逻辑在 common `BoxRegistryStore` / `BoxGrades` / `BoxStripGenerator` 中
 
 ## 4. 开箱数据流
 
@@ -105,11 +105,9 @@ sequenceDiagram
 - **`gui/pip/Icon3DRenderState`** — 携带 ItemStackRenderState、rotX/rotY/rotZ 度数
 - **`utils/ButtonPalette`** — `OPEN` / `DANGER` 常量 + `drawButton(...)` + `isInside(...)` 统一按钮系统
 - **`utils/RenderFontTool`** — `drawString(...)` + `drawStringClamped(...)`(二分截断 + `"…"` 后缀)
-- **`platform/Platform26`** — v26_1_2 平台接口实现,注入到 `common/` 的 Platform 接口
-
 ## 6. 网络包
 
-5 个自定义数据包,通过 NeoForge `CustomPacketPayload` 注册:
+14 个自定义数据包,通过 NeoForge `CustomPacketPayload` 注册（含 §11.4 的 6 个终端机包）:
 
 | 包 | 方向 | 内容 |
 |---|---|---|
@@ -118,6 +116,9 @@ sequenceDiagram
 | `PacketSyncBoxItems` | S → C | 预览数据(右键箱子时拉取 50 个 item) |
 | `PacketRequestBoxItems` | C → S | 客户端拉取预览请求 |
 | `PacketValidation` | S → C | 客户端请求校验(防过期响应匹配) |
+| `PacketCsgoBulkProgress` | C → S | 批量开箱请求（`bulkOpenCount` 上限由服务端权威截断） |
+| `PacketBoxBulkResult` | S → C | 批量开箱 boxes 2..K 的简洁结果（分块聚合） |
+| `PacketSyncBoxDefinitions` | S → C | 盒定义全量同步（入服 / reload / 热重载后广播,驱动 JEI 配方刷新） |
 
 每个包都有 `Codec`(持久化)和 `StreamCodec`(网络流)。开箱防双击冷却由 common `OpenBlockGuard` 统一提供（`isBlocked`/`block`/`tick`，10 tick 窗口），packet record 本体与 StreamCodec 保留在平台。
 
@@ -148,7 +149,7 @@ common/src/main/resources/         ← 跨版本资源(纹理、音效、lang、
   └── data/csgobox/advancement/
 
 v26_1_2/src/main/resources/         ← 平台特化资源(独立运行时类路径)
-  └── assets/csgobox/items/         (csgo_box / csgo_key0-3 items)
+  └── assets/csgobox/items/         (csgo_box / csgo_key0-3 / armory_point / armory_recycler / premium_supply_box / terminal items)
 
 runs/client/                        ← 运行时测试数据(csgobox.toml、csbox/*.json)
 runs/server/
@@ -223,7 +224,7 @@ runs/server/
 | 组件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 |
 |---|---|---|---|---|
 | Minecraft | 1.21.1 | 26.1.2 | 26.2 | 26.1.2 |
-| Loader | NeoForge 21.1.115 | NeoForge 26.1.2.94 | NeoForge 26.2.0.7-beta | MinecraftForge 26.1.2-64.1.0 |
+| Loader | NeoForge 21.1.248 | NeoForge 26.1.2.95 | NeoForge 26.2.0.59 | MinecraftForge 26.1.2-64.1.0 |
 | NeoGradle / ForgeGradle | 7.1.38 | 7.1.38 | 7.1.38 | ForgeGradle 7.0.31 |
 | Gradle | 9.5.1 | 9.5.1 | 9.5.1 | 9.5.1 |
 | Java toolchain | 21 | 25 `--enable-preview` | 25 `--enable-preview` | 25 `--enable-preview` |

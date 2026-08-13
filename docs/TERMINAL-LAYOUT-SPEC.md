@@ -14,13 +14,13 @@ MC 默认字体字形 8px（1.0F scale = 8px 字形高）。换算公式：`scal
 
 | HTML 字号 | 用途（CSS 选择器） | 目标 scale | 现状（代码） | 差距 |
 |---|---|---|---|---|
-| 9px | `.r8-wear-tab`（磨损角标） | 1.125F | 0.95F（OfferRegion:140） | 偏小 |
-| 10px | `.info`（ⓘ 圆点） | 1.25F | 1.0F（ActionBar:67） | 偏小 |
-| 11px | `.sys-reject`（系统消息）、tooltip、hint | 1.375F | 1.3F（ChatRegion:195）、1.1F（ActionBar:189） | 偏小 |
+| 9px | `.r8-wear-tab`（磨损角标） | 1.125F | 0.95F（OfferRegion） | 偏小 |
+| 10px | `.info`（ⓘ 圆点） | 1.25F | 1.0F（ActionBar） | 偏小 |
+| 11px | `.sys-reject`（系统消息）、tooltip、hint | 1.375F | 1.3F（ChatRegion）、1.1F（ActionBar） | 偏小 |
 | 12px | `.title-strip`、`.offer-info`、`.action-top`、`.cap-label/.opt`、`.r8-inspect`、`.r8-meta` | 1.5F | 1.2F~1.45F 散落 | 偏小 |
-| 13px | `.bubble`、`.pill`、`.r8-rarity`、`.r8-wear` | 1.625F | 1.45F（ChatRegion:124）、1.1F（ActionBar:152） | 偏小 |
-| 15px | `.r8-name`、`.r8-wearval`、`.xp-name` | 1.875F | 1.35F（OfferRegion:117）、1.6F（OfferRegion:163） | 偏小 |
-| 21px | `.digits`（倒计时） | 2.625F | 1.8F（BottomRow:69） | 偏小 |
+| 13px | `.bubble`、`.pill`、`.r8-rarity`、`.r8-wear` | 1.625F | 1.45F（ChatRegion）、1.1F（ActionBar） | 偏小 |
+| 15px | `.r8-name`、`.r8-wearval`、`.xp-name` | 1.875F | 1.35F（OfferRegion）、1.6F（OfferRegion） | 偏小 |
+| 21px | `.digits`（倒计时） | 2.625F | 1.8F（BottomRow） | 偏小 |
 
 > 注：现状值普遍偏小约 20~40%——这就是「布局/视觉还原度」迭代要修正的
 > 核心差距。改字号 scale 后同步检查 §4 容器尺寸（padding 容纳）。
@@ -48,7 +48,7 @@ HTML 五档字距。`drawSpacedText` 逐字符绘制：字符间插入间距
 | 报价卡 offer-info | `line-height: 1.55` @12px | 12×1.55 ≈ 19px |
 | tooltip | `line-height: 1.5` @11px | 11×1.5 ≈ 17px |
 
-Java 现状（错误）：ChatRegion:133 `(textW > bw-20 ? 26 : 13) + 14` 硬编码；
+Java 现状（错误）：ChatRegion `(textW > bw-20 ? 26 : 13) + 14` 硬编码；
 OfferRegion 行距 `ROW_H = 15`。目标：气泡行高 20px（单行），双行 40px + padding；
 报价卡 4 行行距 19px。
 

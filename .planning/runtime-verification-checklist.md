@@ -1,3 +1,5 @@
+> ⚠️ 已归档（历史规划快照）：本文档为过去的重构/审计规划产物，不再维护；当前进度与状态以 CHANGELOG.md 与 README.md 为准。
+
 # Runtime Verification Checklist — v26_1_2 3D Animation & Rendering Audit
 
 This checklist records the visual verification items for the M.1–M.3 fixes
@@ -276,4 +278,3 @@ Expected post-fix:
 - Open a box to trigger `OpenedBoxTrigger`; the achievements page should
   now show the CS:GO Box tab WITH the background tile and the "first box"
   entry marked completed.
-

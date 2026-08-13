@@ -5,11 +5,12 @@
 
 ## 前置要求
 
-| 平台 | Java | Minecraft | NeoForge | Gradle | NeoGradle |
+| 平台 | Java | Minecraft | NeoForge / Forge | Gradle | NeoGradle / ForgeGradle |
 |---|---|---|---|---|---|
-| `v1_21_1/` | 21 | 1.21.1 | 21.1.115 | 9.5.1 | 7.1.38 |
-| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.94 | 9.5.1 | 7.1.38 |
-| `v26_2/` | 25 `--enable-preview` | 26.2 | 26.2.0.7-beta | 9.5.1 | 7.1.38 |
+| `v1_21_1/` | 21 | 1.21.1 | 21.1.248 | 9.5.1 | 7.1.38 |
+| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.95 | 9.5.1 | 7.1.38 |
+| `v26_2/` | 25 `--enable-preview` | 26.2 | 26.2.0.59 | 9.5.1 | 7.1.38 |
+| `forge_26_1_2/` | 25 `--enable-preview` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 9.5.1 | ForgeGradle 7.0.31 |
 
 Gradle Wrapper 自带,无需系统安装。
 
@@ -27,7 +28,7 @@ cd CS2-Box
 `gradle.properties`:
 
 ```properties
-active_versions=26.1.2  # 或 1.21.1
+active_versions=26.1.2  # 可选：1.21.1 / 26.2 / forge-26.1.2
 ```
 
 ### 3. 构建项目
@@ -99,7 +100,7 @@ active_versions=26.1.2  # 或 1.21.1
 - **镜像纪律**：跨平台改动先改基准 `v26_1_2`，再定点合入其余平台；**禁止整文件覆盖** `v26_2` 与 `forge_26_1_2`（有 API 适配差异），纯新增文件用 `scripts/mirror.sh new <rel-path>`，forge 同步用 `scripts/port-forge-2612.py`（仅机械转换）+ 手工适配
 - `CONFIG` 是 `public static final`,**不要写 `null` 守卫**
 
-### 双平台 API 差异
+### 多平台 API 差异
 
 | 维度 | v1_21_1 | v26_1_2 |
 |---|---|---|
@@ -109,12 +110,11 @@ active_versions=26.1.2  # 或 1.21.1
 | 3D 物品预览 | `BakedModel` 管线 | `Icon3DRenderer`(PIP 3D) |
 | Blit 签名 | 9-arg overload | `guiGraphics.blit(RenderPipeline,...)` |
 
-GUI 代码先在 v1_21_1 落地,再迁移到 v26_1_2。
+GUI 代码先以 v26_1_2 为基准落地,再定点合入其余平台。
 
 ## 分支约定
 
-- `main` — 稳定发布分支(1.21.1 主分支)
-- `multiloader-refactor` — v26.1.2 迁移分支(当前活跃)
+- `main` — 稳定发布分支
 - 功能分支命名:`feat/描述`、`fix/描述`、`docs/描述`、`refactor/描述`
 - 所有 PR 指向目标开发分支
 
@@ -130,9 +130,8 @@ GUI 代码先在 v1_21_1 落地,再迁移到 v26_1_2。
 
 ```
 CS2-Box/
-├── common/                              # 跨版本业务逻辑 + 共享资源 + platform 接口
+├── common/                              # 跨版本业务逻辑 + 共享资源
 │   ├── src/main/java/com/reclizer/csgobox/
-│   │   ├── platform/                    # Platform 接口(由各平台实现)
 │   │   ├── box/                         # BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验 / 教程下载
 │   │   ├── logic/                       # GradeMap / OddsCalculator / OpenBlockGuard / 终端谈判模型
 │   │   ├── config/                      # CsboxConfigDefaults（四平台配置默认值唯一来源）
@@ -141,7 +140,7 @@ CS2-Box/
 │   ├── src/test/java/                   # JUnit 5 单测
 │   └── src/main/resources/              # 共享资源(纹理、配方、advancement、lang、音效)
 │
-├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.115 / Java 21
+├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.248 / Java 21
 │   └── src/main/java/com/reclizer/csgobox/v1_21_1/
 │       ├── CsgoBox.java                 # 模组入口
 │       ├── advancement/                 # OpenedBoxTrigger / ModLoadedTrigger
@@ -154,12 +153,16 @@ CS2-Box/
 │       ├── packet/                      # 网络协议接线
 │       └── utils/                       # 共享工具类
 │
-├── v26_1_2/                             # MC 26.1.2 / NeoForge 26.1.2.76 / Java 25
+├── v26_1_2/                             # MC 26.1.2 / NeoForge 26.1.2.95 / Java 25
 │   └── src/main/java/com/reclizer/csgobox/v26_1_2/
 │       ├── (同 v1_21_1 结构)
 │       ├── gui/pip/                     # 独有:Icon3DRenderer / Icon3DRenderState
-│       ├── platform/                    # 独有:Platform26 (实现 common 的 Platform 接口)
 │       └── utils/                       # 独有:ButtonPalette / RenderFontTool
+│
+├── forge_26_1_2/                        # MC 26.1.2 / MinecraftForge 64.1.0 / Java 25（实验模块）
+│   └── src/main/java/com/reclizer/csgobox/forge_26_1_2/
+│       ├── (与 v26_1_2 特性同步,loader 为 MinecraftForge)
+│       └── 手工适配:入口 / Networking / ModItems / GUI / AnimRenderOps 等
 │
 ├── settings.gradle                       # 模块注册 + active_versions 切换
 ├── gradle.properties                     # mod_version / pack_format / active_versions
@@ -208,7 +211,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 ### 资源缺失
 
-`common/src/main/resources/` 由两个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
+`common/src/main/resources/` 由四个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
 
 ## 相关文档
 

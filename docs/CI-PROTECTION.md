@@ -98,4 +98,4 @@ gh api -X DELETE repos/wikkd/CS2-Box/branches/main/protection
 
 ## 5. 建议的后续演进（非阻塞）
 - 把 `gameTestServer` 用例补起来后，可把 `GameTest 26.2` 加入矩阵（改 `gametest.yml` 的 include）。
-- 需要更严格时：开启 `enforce_admins`，或给 `multiloader-refactor` 分支加同样的规则。
+- 需要更严格时：开启 `enforce_admins`。

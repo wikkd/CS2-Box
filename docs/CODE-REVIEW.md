@@ -9,7 +9,7 @@
 
 - 统一三个活跃平台（`v1_21_1` / `v26_1_2` / `v26_2`）+ `common` 共享层的改动验收口径。
 - 把项目固有风险（跨版本镜像、架构约束、并发权威、渲染状态）变成**显式、可勾选**的审查项，而不是靠个人经验兜底。
-- 适用于所有进入 `main` / `multiloader-refactor` 的 Pull Request，以及发布前的质量门复核。
+- 适用于所有进入 `main` 的 Pull Request，以及发布前的质量门复核。
 - 不适用于：`forge_26_1_2` 实验模块的本地 WIP（见 §4.9）。
 
 ---
@@ -48,8 +48,8 @@
 `common/` **不得** `import net.minecraft.*` 或 `net.neoforged.*`（编译环境无 MC classpath，违反即编译失败）。
 
 - 审查点：
-  - 改动是否新增了 `common/` 对 MC/NeoForge 类的引用？若有 → **Blocker**，必须下沉到平台模块或 `common/platform/` 接口。
-  - `common/platform/` 接口是否仅声明、由平台模块实现？平台专属逻辑是否真的留在了平台侧？
+  - 改动是否新增了 `common/` 对 MC/NeoForge 类的引用？若有 → **Blocker**，版本敏感代码必须下沉到平台模块（common 无 MC 依赖，2026-08 已移除 platform 接口层）。
+  - 版本敏感代码是否真的下沉到了平台侧？平台专属逻辑是否留在了平台模块、common 只保留纯逻辑与共享资源？
   - 新共享资源（纹理/音效/lang/配方/advancement）是否放在 `common/src/main/resources/`？
 - 自动化：`scripts/checkCommonArchitecture` 已挂载在 `compileJava`。若 CI 的 `common-test` 过了，该项基本可信，但 Review 时仍需**肉眼确认**有没有"为了编译通过把逻辑硬塞进平台、common 却留下隐式依赖"的取巧。
 
@@ -219,7 +219,7 @@ import net.minecraft.world.item.Item;  ← 违反 CONSTRAINT-001。
 
 **Why:** common 编译环境无 MC classpath，CI 的 checkCommonArchitecture 会失败，且破坏「平台→common」依赖方向。
 
-**Suggestion:** 把 Item 类型下沉到平台模块的注册代码；common 侧仅保留平台接口（参考 common/platform/）。
+**Suggestion:** 把 Item 类型下沉到平台模块的注册代码；common 侧不引入任何 MC 类型（2026-08 已移除 platform 接口层，版本敏感代码一律下沉平台模块）。
 ```
 
 ```

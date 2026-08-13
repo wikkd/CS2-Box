@@ -1,4 +1,6 @@
 <!-- generated-by: gsd-doc-writer -->
+> ⚠️ 已归档（历史快照）：本文档记录 v1.0.5 手动测试用例的当时状态，不再随项目更新；当前信息以 README.md 与 docs/ 为准。
+
 # v1.0.5 手动测试用例
 
 本文档针对 CS2-Box 模组 **v1.0.5**（对应 git tag `v1.0.5`，commit `d2122c4`，构建产物 `csgobox-1.0.5.jar`）的手动测试用例。

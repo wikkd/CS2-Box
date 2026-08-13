@@ -1,3 +1,5 @@
+> ⚠️ 已归档（历史规划快照）：本文档为过去的重构/审计规划产物，不再维护；当前进度与状态以 CHANGELOG.md 与 README.md 为准。
+
 # STATE.md
 
 > ⚠️ **STALENESS NOTICE (2026-08-07)**: The snapshot below was written on 2026-07-01 and is partially outdated. Verified current facts as of 2026-08-07:

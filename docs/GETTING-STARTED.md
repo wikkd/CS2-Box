@@ -9,7 +9,7 @@
 |---|---|---|
 | Java JDK | 21 | 25(`--enable-preview`) |
 | Minecraft | 1.21.1 | 26.1.2 / 26.2 |
-| NeoForge | 21.1.115+ | 26.1.2.94 / 26.2.0.7-beta(loader 11+) |
+| NeoForge | 21.1.248+ | 26.1.2.95 / 26.2.0.59(loader 11+) |
 | Gradle | 9.5.1(wrapper 自动下载) | 9.5.1(wrapper 自动下载) |
 | NeoGradle | 7.1.38 | 7.1.38 |
 
@@ -137,5 +137,5 @@ org.gradle.daemon=false
 - 阅读 [docs/ARCHITECTURE.md](./ARCHITECTURE.md) 了解模块拓扑与渲染管线
 - 阅读 [docs/CONFIGURATION.md](./CONFIGURATION.md) 查看完整配置选项
 - 阅读 [docs/TESTING.md](./TESTING.md) 了解如何运行集成测试
-- 查看 `config/csbox/weapon_supply_box.json` 学习箱子数据格式
-- 在 `.planning/ROADMAP.md` 查看多加载器重构进度
+- 查看 [docs/CONFIGURATION.md](./CONFIGURATION.md) §3 学习箱子数据格式（普通箱需自行创建 JSON）
+- 在 [CHANGELOG.md](../CHANGELOG.md) 查看版本进度
