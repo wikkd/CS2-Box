@@ -157,6 +157,7 @@
   "csgobox.terminal.confirm.accept": "Confirm",
   "csgobox.terminal.confirm.cancel": "Cancel",
   "csgobox.terminal.confirm.price": "Price: %s Armory Points",
+  "csgobox.terminal.confirm.price.penalty": "Price: %s Armory Points (incl. wear penalty +%s)",
   "csgobox.terminal.confirm.wear": "Wear: %s · %s",
   "csgobox.terminal.confirm.waiting": "Trading…",
   "csgobox.terminal.sys.poor": "Not enough Armory Points - trade cancelled.",

@@ -207,7 +207,7 @@ runs/server/
 | `PacketTerminalOpen` | C → S | 开屏取锁(主手为权威);回 `PacketTerminalState` |
 | `PacketTerminalState` | S → C | 全量快照:轮次/状态/历史/倒计时/上限/5 轮报价+物品/槽位物品;`locked()` 带物主名 |
 | `PacketTerminalReject` | C → S | 拒绝报价,服务端 `rejectForced` 无条件推进 |
-| `PacketTerminalBuy` | C → S | 按服务端当轮实际物品逐字段校验 + 扣军械库点数;成功销毁终端机 |
+| `PacketTerminalBuy` | C → S | 按服务端当轮实际物品逐字段校验 + 扣军械库点数(无耐久条物品按磨损加价,见 `WearPenalty`);成功销毁终端机 |
 | `PacketTerminalBuyResult` | S → C | 购买结果展示 |
 | `PacketTerminalClose` | C → S | 关屏钉住轮次/状态/倒计时(倒计时服务端权威,不上报) |
 

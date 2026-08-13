@@ -80,12 +80,6 @@ public final class NegotiationModel {
             "csgobox.terminal.skin.1",
             "csgobox.terminal.skin.2",
     };
-    public static final String[] SKIN_WEAR_KEYS = {
-            "gui.csgobox.csgo_box.wear_mw",
-            "gui.csgobox.csgo_box.wear_ww",
-            "gui.csgobox.csgo_box.wear_ft",
-    };
-    public static final float[] SKIN_WEAR_VAL = {0.11383486F, 0.40218743F, 0.30740085F};
     /** Offer price in whole Armory Points (no decimals — the mod's currency). */
     public static final String[] SKIN_PRICE = {"22", "16", "16"};
     /** Whole Armory Point price per box grade (1..5, index 0 unused). */
@@ -518,7 +512,10 @@ public final class NegotiationModel {
             }
         }
         int skinIdx = ROUND_SKIN[round - 1];
-        float wearVal = SKIN_WEAR_VAL[skinIdx];
+        // Wear is rolled the same way as box opening: uniform 0..1, server
+        // authoritative in real sessions (this fallback only guards paths
+        // without an offer source).
+        float wearVal = rnd.nextFloat();
         boolean finalRound = round == MAX_ROUNDS;
         return new Offer(round, skinIdx, wearVal,
                 rnd.nextInt(5),                    // style 0..4 (style.* keys)

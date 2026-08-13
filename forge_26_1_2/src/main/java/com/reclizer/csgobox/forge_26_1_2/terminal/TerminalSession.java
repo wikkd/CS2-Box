@@ -58,7 +58,7 @@ public final class TerminalSession {
         for (int r = 1; r <= NegotiationModel.MAX_ROUNDS; r++) {
             int skinIdx = NegotiationModel.ROUND_SKIN[r - 1];
             NegotiationModel.Offer offer = new NegotiationModel.Offer(
-                    r, skinIdx, NegotiationModel.SKIN_WEAR_VAL[skinIdx],
+                    r, skinIdx, rnd.nextFloat(),
                     rnd.nextInt(5),                    // style 0..4 (style.* keys)
                     1000 + rnd.nextInt(900),           // serial no
                     rnd.nextInt(1000),                 // pattern
