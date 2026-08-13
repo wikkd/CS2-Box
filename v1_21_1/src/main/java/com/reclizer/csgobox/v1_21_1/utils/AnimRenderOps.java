@@ -50,6 +50,14 @@ import java.util.WeakHashMap;
 public final class AnimRenderOps {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
+    /** Scratch quaternion for the drag rotation: {@code mulPose} copies the
+     *  value immediately, so a single static instance is safe on the render
+     *  thread and avoids one allocation per 3D item per frame. */
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    /** Sentinel cached for models without usable geometry (custom renderers
+     *  or degenerate bounds): distinguishes "not computed" from "nothing to
+     *  centre", so those models are not rescanned every frame. */
+    private static final Object NO_CENTER = new Object();
     /** Cached model-space centre of each TACZ gun's default-pose bounding
      *  box (block units). Gun displays are singletons per gun id and are
      *  replaced on resource reload, so a WeakHashMap lets old models go. */
@@ -59,7 +67,7 @@ public final class AnimRenderOps {
      *  item model's geometry. Models are stable instances owned by the model
      *  manager and are replaced on resource reload, so a WeakHashMap lets old
      *  models go. */
-    private static final Map<BakedModel, Vector3f> ITEM_MODEL_CENTERS = new WeakHashMap<>();
+    private static final Map<BakedModel, Object> ITEM_MODEL_CENTERS = new WeakHashMap<>();
 
     /** Screen.renderBlurredBackground is protected in this MC version and
      *  depends on the screen's own {@code minecraft} instance, so the facade
@@ -219,7 +227,8 @@ public final class AnimRenderOps {
         pose.translate(cx, cy, 100.0F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(new Quaternionf(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize());
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
         pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
         // Rotate around the model's geometric centre, not the model origin:
@@ -261,9 +270,18 @@ public final class AnimRenderOps {
      *  the AABB into an OBB, so the two no longer coincide). Computed once
      *  per model instance and cached. */
     private static Vector3f itemModelCenter(BakedModel model) {
-        Vector3f cached = ITEM_MODEL_CENTERS.get(model);
+        Object cached = ITEM_MODEL_CENTERS.get(model);
+        if (cached == NO_CENTER) {
+            return null;
+        }
         if (cached != null) {
-            return cached;
+            return (Vector3f) cached;
+        }
+        // Custom renderers (TACZ guns routed elsewhere, special items) have no
+        // quads to measure; cache the sentinel so they are not rescanned.
+        if (model.isCustomRenderer()) {
+            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
+            return null;
         }
         // Compose the renderer's model placement: ItemTransform.apply is
         // translate(translation) -> rotationXYZ -> scale, then render() adds
@@ -319,6 +337,7 @@ public final class AnimRenderOps {
             }
         }
         if (!any || !(minX < maxX && minY < maxY && minZ < maxZ)) {
+            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
             return null;
         }
         // Midpoint of the rendered bounding box (block units).
@@ -343,7 +362,8 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(new Quaternionf(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize());
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
         pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
         // Rotate around the model's geometric centre, not the model origin:
         // the gun's root node sits far from its geometry, so a pivot at the
@@ -407,8 +427,11 @@ public final class AnimRenderOps {
         // Mirrors BedrockPart.translateAndRotateAndScale with the animation
         // state cleared (offset/quaternion/scales are identity by default).
         Matrix4f m = new Matrix4f(parent);
-        m.translate(part.offsetX, part.offsetY, part.offsetZ);
-        m.translate(part.x / 16.0F, part.y / 16.0F, part.z / 16.0F);
+        // Two consecutive translates compose into one; /16 is exact (power of
+        // two), so pre-division is lossless.
+        m.translate(part.offsetX + part.x / 16.0F,
+                part.offsetY + part.y / 16.0F,
+                part.offsetZ + part.z / 16.0F);
         if (part.zRot != 0.0F) {
             m.rotateZ(part.zRot);
         }
@@ -418,8 +441,14 @@ public final class AnimRenderOps {
         if (part.xRot != 0.0F) {
             m.rotateX(part.xRot);
         }
-        // Identity quaternion is a harmless no-op; JOML 1.10.5 has no isIdentity().
-        m.rotate(part.additionalQuaternion);
+        // JOML 1.10.5 Matrix4f.rotate has no identity short-circuit and always
+        // builds a quat->matrix product; the quaternion is identity in every
+        // default-pose model (constructor and cleanAnimationTransform reset
+        // it), so skip the full multiply when it is.
+        if (part.additionalQuaternion.w != 1.0F || part.additionalQuaternion.x != 0.0F
+                || part.additionalQuaternion.y != 0.0F || part.additionalQuaternion.z != 0.0F) {
+            m.rotate(part.additionalQuaternion);
+        }
         m.scale(part.xScale, part.yScale, part.zScale);
         for (BedrockCube cube : part.cubes) {
             // Cube coordinates are in 1/16-block pixels; all 8 corners are
@@ -437,18 +466,22 @@ public final class AnimRenderOps {
 
     private static void addBoxCorners(Matrix4f m, float minX, float minY, float minZ,
                                       float maxX, float maxY, float maxZ, float[] min, float[] max) {
-        addCorner(m, minX / 16.0F, minY / 16.0F, minZ / 16.0F, min, max);
-        addCorner(m, minX / 16.0F, minY / 16.0F, maxZ / 16.0F, min, max);
-        addCorner(m, minX / 16.0F, maxY / 16.0F, minZ / 16.0F, min, max);
-        addCorner(m, minX / 16.0F, maxY / 16.0F, maxZ / 16.0F, min, max);
-        addCorner(m, maxX / 16.0F, minY / 16.0F, minZ / 16.0F, min, max);
-        addCorner(m, maxX / 16.0F, minY / 16.0F, maxZ / 16.0F, min, max);
-        addCorner(m, maxX / 16.0F, maxY / 16.0F, minZ / 16.0F, min, max);
-        addCorner(m, maxX / 16.0F, maxY / 16.0F, maxZ / 16.0F, min, max);
+        float mnX = minX / 16.0F, mnY = minY / 16.0F, mnZ = minZ / 16.0F;
+        float mxX = maxX / 16.0F, mxY = maxY / 16.0F, mxZ = maxZ / 16.0F;
+        Vector4f v = new Vector4f();
+        addCorner(m, mnX, mnY, mnZ, v, min, max);
+        addCorner(m, mnX, mnY, mxZ, v, min, max);
+        addCorner(m, mnX, mxY, mnZ, v, min, max);
+        addCorner(m, mnX, mxY, mxZ, v, min, max);
+        addCorner(m, mxX, mnY, mnZ, v, min, max);
+        addCorner(m, mxX, mnY, mxZ, v, min, max);
+        addCorner(m, mxX, mxY, mnZ, v, min, max);
+        addCorner(m, mxX, mxY, mxZ, v, min, max);
     }
 
-    private static void addCorner(Matrix4f m, float x, float y, float z, float[] min, float[] max) {
-        Vector4f v = m.transform(new Vector4f(x, y, z, 1.0F));
+    private static void addCorner(Matrix4f m, float x, float y, float z, Vector4f v, float[] min, float[] max) {
+        v.set(x, y, z, 1.0F);
+        m.transform(v);
         if (v.x < min[0]) min[0] = v.x;
         if (v.y < min[1]) min[1] = v.y;
         if (v.z < min[2]) min[2] = v.z;
