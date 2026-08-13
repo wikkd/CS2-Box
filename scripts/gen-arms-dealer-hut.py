@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """生成「武库商小屋」结构模板 NBT（纯标准库，无第三方依赖）。
 
+!!! 注意：本脚本已由玩家手建版取代 !!!
+当前结构模板 `arms_dealer_hut.nbt` 为游戏内手工建造 + 结构方块导出，
+经 `scripts/import-arms-dealer-hut.py` 规范化导入（见该脚本头部说明）。
+**不要直接运行本脚本**，否则会把玩家手建版覆盖回脚本旧版布局。
+本脚本仅保留作为历史布局参考。
+
 小屋是军火商（arms_dealer）的野外据点：
 - 内置武库拆解台（柜台展示）+ 军火商村民（arms_dealer 职业 Lv.1，带名字牌）
 - 商店宝箱（LootTable 指向 csgobox:chests/arms_dealer_hut）
