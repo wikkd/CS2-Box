@@ -30,6 +30,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.slf4j.Logger;
 import org.joml.Matrix4fStack;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
@@ -53,6 +54,9 @@ public final class TaczInspectViewportImpl {
     /** Fixed display pose of the gun in the viewport (degrees). */
     private static final float DISPLAY_YAW = -35F;
     private static final float DISPLAY_PITCH = 10F;
+    /** Precomputed viewport pose rotations (constant angles). */
+    private static final Quaternionf VIEWPORT_PITCH = Axis.XP.rotationDegrees(DISPLAY_PITCH);
+    private static final Quaternionf VIEWPORT_YAW = Axis.YP.rotationDegrees(DISPLAY_YAW);
     /** Identity render stack: the viewport pose is applied via RenderSystem's
      * model-view stack (matching AnimRenderOps.renderItem3D), so the model's
      * bone transforms accumulate on an identity stack while the outer
@@ -265,8 +269,8 @@ public final class TaczInspectViewportImpl {
         // Vanilla GUI item frame: center in display area, flip Y, 16px per block unit.
         pose.translate(centerX, centerY, 150.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        pose.mulPose(Axis.XP.rotationDegrees(DISPLAY_PITCH));
-        pose.mulPose(Axis.YP.rotationDegrees(DISPLAY_YAW));
+        pose.mulPose(VIEWPORT_PITCH);
+        pose.mulPose(VIEWPORT_YAW);
         float pixelsPerUnit = 16.0F * scale;
         pose.scale(pixelsPerUnit, pixelsPerUnit, pixelsPerUnit);
         // Pivot on the model's geometric centre instead of the root-node
@@ -296,19 +300,17 @@ public final class TaczInspectViewportImpl {
             model.render(RENDER_STACK, stack, ItemDisplayContext.GUI,
                     RenderType.entityCutout(renderer.getTextureLocation(stack)),
                     0xF000F0, OverlayTexture.NO_OVERLAY);
+            model.cleanAnimationTransform();
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
         } catch (Throwable t) {
             LOGGER.warn("TACZ inspect viewport model.render failed", t);
+            return false;
+        } finally {
             modelViewStack.popMatrix();
             RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
             pose.popPose();
-            return false;
         }
-        model.cleanAnimationTransform();
-        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
-        RenderSystem.enableDepthTest();
-        pose.popPose();
         return true;
     }
 

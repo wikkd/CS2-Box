@@ -158,10 +158,24 @@ public final class AnimRenderOps {
         ItemModelResolver resolver = mc.getItemModelResolver();
         resolver.updateForLiving(trackedState, item, ItemDisplayContext.GUI, player);
         AABB bounds = trackedState.getModelBoundingBox();
-        float modelSpan = (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()));
-        float modelCenterX = (float) ((bounds.minX + bounds.maxX) * 0.5D);
-        float modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
-        float modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
+        float modelSpan;
+        float modelCenterX;
+        float modelCenterY;
+        float modelCenterZ;
+        if (bounds != null) {
+            modelSpan = (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()));
+            modelCenterX = (float) ((bounds.minX + bounds.maxX) * 0.5D);
+            modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
+            modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
+        } else {
+            // Some flat items (armour leggings etc.) report no bounds; fall
+            // back to a unit model so the PIP renderer still centres it
+            // (mirrors renderItem2D's null-bounds handling).
+            modelSpan = 1.0F;
+            modelCenterX = 0.0F;
+            modelCenterY = 0.0F;
+            modelCenterZ = 0.0F;
+        }
 
         // (cx, cy) is the TOP-LEFT of the preview square, matching the
         // 1.21.1 reference renderItem3D and every 26.x caller (CsboxScreen /
