@@ -65,14 +65,21 @@ public final class NegotiationModel {
     // ---- script (HTML LINES / SKINS / ROUNDS) ----
 
     public static final int MAX_ROUNDS = 5;
+    /** Dealer line pool: 5 classic script lines plus the arms-dealer quips. */
     public static final String[] LINES = {
             "csgobox.terminal.line.0",
             "csgobox.terminal.line.1",
             "csgobox.terminal.line.2",
             "csgobox.terminal.line.3",
             "csgobox.terminal.line.4",
+            "csgobox.terminal.line.5",
+            "csgobox.terminal.line.6",
+            "csgobox.terminal.line.7",
+            "csgobox.terminal.line.8",
+            "csgobox.terminal.line.9",
+            "csgobox.terminal.line.10",
+            "csgobox.terminal.line.11",
     };
-    public static final int[] ROUND_LINE = {0, 1, 2, 3, 4};
     public static final int[] ROUND_SKIN = {0, 2, 1, 2, 0};
 
     public static final String[] SKIN_NAME_KEYS = {
@@ -184,11 +191,19 @@ public final class NegotiationModel {
     private long countdownDeadlineMs = COUNT_INITIAL_MS;
     private long lastTickMs;
     private Offer pending;
+    /** Dealer lines for this session's rounds: 5 unique picks from {@link #LINES}. */
+    private final int[] roundLine = new int[MAX_ROUNDS];
 
     // ---- lifecycle ----
 
+    public NegotiationModel() {
+        // Restore-only instances (reopen resume) still get a valid per-session line order.
+        shuffleRoundLine();
+    }
+
     /** Start a fresh negotiation (generation token invalidates stale state). */
     public void start(long nowMs) {
+        shuffleRoundLine();
         generation++;
         history.clear();
         status = Status.IDLE;
@@ -198,6 +213,21 @@ public final class NegotiationModel {
         countdownDeadlineMs = nowMs + COUNT_INITIAL_MS;
         lastTickMs = nowMs;
         presentRound(nowMs);
+    }
+
+    /** Draw MAX_ROUNDS unique line indices from {@link #LINES} (Fisher-Yates partial shuffle). */
+    private void shuffleRoundLine() {
+        int[] idx = new int[LINES.length];
+        for (int i = 0; i < idx.length; i++) {
+            idx[i] = i;
+        }
+        for (int i = idx.length - 1; i > 0; i--) {
+            int j = rnd.nextInt(i + 1);
+            int t = idx[i];
+            idx[i] = idx[j];
+            idx[j] = t;
+        }
+        System.arraycopy(idx, 0, roundLine, 0, MAX_ROUNDS);
     }
 
     /** Replace the whole state with a server-provided snapshot (reopen resume). */
@@ -496,7 +526,7 @@ public final class NegotiationModel {
         roundStartMs = nowMs;
         statusSinceMs = nowMs;
         pending = null;
-        appendHistory(new LineEntry(round, LINES[ROUND_LINE[round - 1]], nowMs));
+        appendHistory(new LineEntry(round, LINES[roundLine[round - 1]], nowMs));
     }
 
     private void becomePending(long nowMs) {
