@@ -147,13 +147,17 @@ public class CsboxBulkOverviewScreen extends Screen {
         int centerY = this.height * 42 / 100;
         float frameWidth = this.width * 22 / 100F;
         float scale = frameWidth / 16F;
+        int half = (int) (frameWidth / 2F);
 
         AnimRenderOps.fillGradient(guiGraphics, centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
                 centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
+        // renderItem3D takes the TOP-LEFT of the preview square (matches
+        // v26_1_2's centerX - textureSize / 2): the square is frameWidth px
+        // wide, so back out half to keep the model centred on the panel.
         AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
-                centerX, centerY, this.itemDrag.rotation(), scale);
+                centerX - half, centerY - half, this.itemDrag.rotation(), scale);
     }
 
     @Override

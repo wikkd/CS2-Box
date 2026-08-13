@@ -17,6 +17,7 @@ import com.tacz.guns.client.sound.SoundPlayManager;
 import com.tacz.guns.resource.pojo.data.gun.Bolt;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 import com.reclizer.csgobox.v1_21_1.gui.CsLookItemScreen;
+import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -29,6 +30,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.slf4j.Logger;
 import org.joml.Matrix4fStack;
+import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 
@@ -51,12 +53,6 @@ public final class TaczInspectViewportImpl {
     /** Fixed display pose of the gun in the viewport (degrees). */
     private static final float DISPLAY_YAW = -35F;
     private static final float DISPLAY_PITCH = 10F;
-    /**
-     * Vertical model-space offset so the gun's bounding box sits centered in
-     * the display area. Calibrated for mk23-like gun bounds (y -3.58..20
-     * block units) under the viewport transform below.
-     */
-    private static final float MODEL_Y_OFFSET = -0.47F;
     /** Identity render stack: the viewport pose is applied via RenderSystem's
      * model-view stack (matching AnimRenderOps.renderItem3D), so the model's
      * bone transforms accumulate on an identity stack while the outer
@@ -273,11 +269,12 @@ public final class TaczInspectViewportImpl {
         pose.mulPose(Axis.YP.rotationDegrees(DISPLAY_YAW));
         float pixelsPerUnit = 16.0F * scale;
         pose.scale(pixelsPerUnit, pixelsPerUnit, pixelsPerUnit);
-        // Vertical centering only: BedrockGunModel.render applies no internal
-        // frame transform of its own, so the pose above fully controls the
-        // model placement (the GUI frame's Y flip already orients the model
-        // upright; a ZP 180 inside would double-flip and push it off-screen).
-        pose.translate(0.0F, MODEL_Y_OFFSET, 0.0F);
+        // Pivot on the model's geometric centre instead of the root-node
+        // origin (which sits far outside the gun's geometry), and keep the
+        // pose above as the only placement control: BedrockGunModel.render
+        // applies no internal frame transform of its own.
+        Vector3f center = AnimRenderOps.gunModelCenter(model);
+        pose.translate(-center.x, -center.y, -center.z);
 
         // Apply the viewport pose to RenderSystem's model-view stack and render
         // the bedrock model through an identity stack: cube vertices are
