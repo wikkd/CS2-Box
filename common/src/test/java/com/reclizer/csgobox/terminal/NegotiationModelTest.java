@@ -3,6 +3,10 @@ package com.reclizer.csgobox.terminal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -32,7 +36,7 @@ final class NegotiationModelTest {
         assertNull(m.pending());
         NegotiationModel.LineEntry line = assertInstanceOf(
                 NegotiationModel.LineEntry.class, m.history().get(0));
-        assertEquals("csgobox.terminal.line.0", line.textKey());
+        assertTrue(Arrays.asList(NegotiationModel.LINES).contains(line.textKey()));
         m.tick(100_000L + NegotiationModel.TYPING_MS);
         assertEquals(NegotiationModel.Status.PENDING, m.status());
         assertNotNull(m.pending());
@@ -109,8 +113,8 @@ final class NegotiationModelTest {
         m.tick(200_000L + NegotiationModel.REJECT_BUSY_MS);
         assertSame(NegotiationModel.Status.TYPING, m.status());
         assertEquals(2, m.round());
-        assertEquals("csgobox.terminal.line.1",
-                ((NegotiationModel.LineEntry) m.history().get(m.history().size() - 1)).textKey());
+        assertTrue(Arrays.asList(NegotiationModel.LINES).contains(
+                ((NegotiationModel.LineEntry) m.history().get(m.history().size() - 1)).textKey()));
         m.tick(200_000L + NegotiationModel.REJECT_BUSY_MS + NegotiationModel.TYPING_MS);
         assertSame(NegotiationModel.Status.PENDING, m.status());
         assertEquals(2, m.pending().skinIdx()); // round 2 -> skin 2 (ROUND_SKIN)
@@ -320,18 +324,37 @@ final class NegotiationModelTest {
     @Test
     @DisplayName("script data is coherent")
     void scriptData() {
-        assertEquals(5, NegotiationModel.LINES.length);
-        assertEquals(5, NegotiationModel.ROUND_LINE.length);
+        assertEquals(12, NegotiationModel.LINES.length);
         assertEquals(5, NegotiationModel.ROUND_SKIN.length);
         assertEquals(3, NegotiationModel.SKIN_NAME_KEYS.length);
         for (int r : NegotiationModel.ROUND_SKIN) {
             assertTrue(r >= 0 && r < 3);
         }
-        for (int r : NegotiationModel.ROUND_LINE) {
-            assertTrue(r >= 0 && r < 5);
-        }
         assertEquals(5, NegotiationModel.CAPS.length);
         assertFalse(NegotiationModel.SKIN_PRICE[0].isEmpty());
+    }
+
+    @Test
+    @DisplayName("session line draw: 5 unique lines from the pool")
+    void sessionLinesUnique() {
+        NegotiationModel m = fresh();
+        Set<String> seen = new HashSet<>();
+        for (int r = 1; r <= 5; r++) {
+            m.tick(100_000L + r * 500_000L + NegotiationModel.TYPING_MS);
+            NegotiationModel.LineEntry line = null;
+            for (int i = m.history().size() - 1; i >= 0; i--) {
+                if (m.history().get(i) instanceof NegotiationModel.LineEntry le
+                        && le.round() == r) {
+                    line = le;
+                    break;
+                }
+            }
+            assertNotNull(line, "round " + r + " must have a dealer line");
+            assertTrue(Arrays.asList(NegotiationModel.LINES).contains(line.textKey()));
+            assertTrue(seen.add(line.textKey()), "round " + r + " repeats a dealer line");
+            m.rejectNow(100_000L + r * 500_000L + 1L);
+            m.tick(100_000L + r * 500_000L + 1L + NegotiationModel.REJECT_BUSY_MS);
+        }
     }
 
     private static NegotiationModel.OfferEntry lastOfferEntry(NegotiationModel m) {
