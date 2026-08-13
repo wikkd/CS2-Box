@@ -64,6 +64,10 @@ public final class CsboxConfigDefaults {
 
     /** TRANSLUCENT = blurred world shows through; OPAQUE = solid dark panels. */
     public static final String BACKGROUND_STYLE = "TRANSLUCENT";
+    /** Menu-blur radius used while csgobox translucent screens are open; 0 = follow vanilla option. */
+    public static final int BLUR_RADIUS = 8;
+    public static final int BLUR_RADIUS_MIN = 0;
+    public static final int BLUR_RADIUS_MAX = 10;
 
     private CsboxConfigDefaults() {
     }

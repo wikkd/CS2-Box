@@ -24,6 +24,7 @@ public class CsboxConfig {
     private final ForgeConfigSpec.EnumValue<ErrorChatAudience> jsonErrorAudienceValue;
     private final ForgeConfigSpec.BooleanValue damageItemByWearValue;
     private final ForgeConfigSpec.EnumValue<BackgroundStyle> backgroundStyleValue;
+    private final ForgeConfigSpec.IntValue blurRadiusValue;
 
     public CsboxConfig(ForgeConfigSpec.Builder builder) {
         builder.comment("General settings").push("general");
@@ -94,6 +95,10 @@ public class CsboxConfig {
         this.backgroundStyleValue = builder
                 .comment("Screen background style: TRANSLUCENT = blurred world shows through (default), OPAQUE = solid dark panels")
                 .defineEnum("backgroundStyle", BackgroundStyle.valueOf(CsboxConfigDefaults.BACKGROUND_STYLE));
+        this.blurRadiusValue = builder
+                .comment("Menu-blur radius while csgobox screens are open (0 = follow vanilla menuBackgroundBlurriness, default 8)")
+                .defineInRange("blurRadius", CsboxConfigDefaults.BLUR_RADIUS,
+                        CsboxConfigDefaults.BLUR_RADIUS_MIN, CsboxConfigDefaults.BLUR_RADIUS_MAX);
         builder.pop();
     }
 
@@ -159,6 +164,10 @@ public class CsboxConfig {
 
     public BackgroundStyle backgroundStyle() {
         return backgroundStyleValue.get();
+    }
+
+    public int blurRadius() {
+        return blurRadiusValue.get();
     }
 
     public enum AnimationSpeed {
