@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_2.packet;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.v26_2.CsgoBox;
+import com.reclizer.csgobox.v26_2.event.TerminalBuyEvent;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ItemTerminal;
 import com.reclizer.csgobox.v26_2.item.ModItems;
@@ -17,6 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -165,6 +167,7 @@ public record PacketTerminalBuy(
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);
+        NeoForge.EVENT_BUS.post(new TerminalBuyEvent(sp, grade, price, roundData.offer().wearVal(), toGive, message.offerRound()));
         return new PacketTerminalBuyResult(message.requestId(),
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
     }

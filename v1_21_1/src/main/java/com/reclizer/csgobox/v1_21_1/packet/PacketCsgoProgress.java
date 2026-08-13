@@ -9,6 +9,7 @@ import com.reclizer.csgobox.v1_21_1.capability.ModCapability;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.box.GradeGroup;
+import com.reclizer.csgobox.v1_21_1.event.BoxOpeningEvent;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
 import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.GradeMapCache;
@@ -96,6 +97,19 @@ var boxId = ItemCsgoBox.getBoxId(box);
             // Same guard for a crafted box_id component pointing at a
             // terminal definition from a plain ItemCsgoBox stack.
             if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(sp, message.requestId());
+                }
+                return;
+            }
+
+            // Policy hook: server scripts / other mods may veto the open
+            // before anything is rolled or consumed. Fires after the built-in
+            // guards and before the RNG roll — canceling aborts cleanly with
+            // no rollback and no cooldown side effects.
+            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
+            NeoForge.EVENT_BUS.post(opening);
+            if (opening.isCanceled()) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
                 }
