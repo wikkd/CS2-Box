@@ -119,6 +119,9 @@ gradle-app.setting
 run/
 runs/
 
+# Unit-test JVM log output (Bootstrap boots logging relative to module dir)
+v1_21_1/logs/
+
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
 

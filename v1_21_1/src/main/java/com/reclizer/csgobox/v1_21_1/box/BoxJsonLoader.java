@@ -284,6 +284,14 @@ public final class BoxJsonLoader {
         recordLoadError(file, fileName, reason, -1, -1);
     }
 
+    /** Records a non-fatal warning (yellow in chat) with no JSON position. */
+    private static void recordLoadWarning(Path file, String fileName, String reason) {
+        String boxId = fileName.endsWith(".json")
+                ? fileName.substring(0, fileName.length() - 5)
+                : fileName;
+        LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, -1, -1, true));
+    }
+
     /**
      * Extracts the {@code at line N column M} tuple from a Gson error message.
      * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
@@ -361,6 +369,9 @@ public final class BoxJsonLoader {
                     for (JsonElement elem : itemsArr) {
                         BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
                         if (outcome.isSuccess()) {
+                            for (String warning : outcome.warnings()) {
+                                recordLoadWarning(file, fileName, "Item: " + warning);
+                            }
                             items.add(outcome.stack());
                         } else {
                             recordLoadError(file, fileName,

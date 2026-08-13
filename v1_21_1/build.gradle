@@ -126,6 +126,22 @@ dependencies {
     // runtimeOnly so dev runs actually ship the JEI jar.
     compileOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
     runtimeOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // TACZ stays compileOnly (tests never touch TACZ classes: pure functions +
+    // injected fake validator), but must be on the test runtime classpath for
+    // JVM lazy-resolution safety when BoxItemCodec is loaded in the test JVM.
+    testRuntimeOnly 'com.tacz:tacz:1.1.8-hotfix-r6'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = false
+    }
 }
 
 def removeStaleBuildResources = { task ->
