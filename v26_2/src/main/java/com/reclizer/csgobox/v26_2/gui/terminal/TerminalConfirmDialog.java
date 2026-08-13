@@ -33,6 +33,7 @@ public final class TerminalConfirmDialog {
     private State state = State.CLOSED;
     private ItemStack itemStack = ItemStack.EMPTY;
     private int price;
+    private int basePrice;
     private float wearVal;
 
     // button rects (updated each render)
@@ -47,9 +48,10 @@ public final class TerminalConfirmDialog {
         return state == State.WAITING;
     }
 
-    public void open(NegotiationModel.Offer offer, ItemStack stack, int price, float wearVal) {
+    public void open(ItemStack stack, int price, int basePrice, float wearVal) {
         this.itemStack = stack.copy();
         this.price = price;
+        this.basePrice = basePrice;
         this.wearVal = wearVal;
         this.state = State.OPEN;
     }
@@ -104,7 +106,10 @@ public final class TerminalConfirmDialog {
                 0, 0, 0.45F, w - 36, TerminalPalette.META_TEXT);
 
         // price
-        String priceText = Component.translatable("csgobox.terminal.confirm.price", price).getString();
+        int penalty = Math.max(0, price - basePrice);
+        String priceText = penalty > 0
+                ? Component.translatable("csgobox.terminal.confirm.price.penalty", price, penalty).getString()
+                : Component.translatable("csgobox.terminal.confirm.price", price).getString();
         RenderFontTool.drawStringClamped(gg, font, priceText, x + 9, y + 32,
                 0, 0, 0.5F, w - 18, TerminalPalette.WHITE);
 

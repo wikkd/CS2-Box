@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_1_2.gui.terminal;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
+import com.reclizer.csgobox.terminal.WearBands;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -227,7 +228,10 @@ public final class TerminalChatRegion {
             head += Component.translatable("csgobox.terminal.card.accepted").getString();
         }
         String name = TerminalOfferItems.nameFor(offer);
-        String wear = Component.translatable(NegotiationModel.SKIN_WEAR_KEYS[offer.skinIdx()]).getString();
+        // Wear is rolled per offer (same uniform 0..1 as box opening), so the
+        // card shows the ACTUAL tier of this offer's wear value.
+        String wear = Component.translatable(
+                WearBands.tierNameKey(WearBands.tierIndex(offer.wearVal()))).getString();
         String price = finalRound
                 ? Component.translatable("csgobox.terminal.offer.price.green", offerPrice(offer)).getString()
                 : Component.translatable("csgobox.terminal.offer.price", offerPrice(offer)).getString();

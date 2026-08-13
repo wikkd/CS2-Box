@@ -164,6 +164,7 @@
   "csgobox.terminal.confirm.accept": "确认交易",
   "csgobox.terminal.confirm.cancel": "取消",
   "csgobox.terminal.confirm.price": "价格：%s 武库点数",
+  "csgobox.terminal.confirm.price.penalty": "价格：%s 武库点数（含磨损惩罚 +%s）",
   "csgobox.terminal.confirm.wear": "磨损：%s · %s",
   "csgobox.terminal.confirm.waiting": "交易中…",
   "csgobox.terminal.sys.poor": "等你拿了足够的钱再来谈吧",

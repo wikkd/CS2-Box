@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.packet;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ItemTerminal;
@@ -120,7 +121,14 @@ public record PacketTerminalBuy(
         if (grade < 1 || grade > 5) {
             return invalid;
         }
-        int price = NegotiationModel.priceForGrade(grade);
+        int basePrice = NegotiationModel.priceForGrade(grade);
+        int price = basePrice;
+        // Items without a durability bar can't take wear damage, so the
+        // offered wear becomes an Armory Point penalty — the more worn the
+        // item, the more points it costs. Durable items pay the base price.
+        if (!roundData.item().isDamageableItem()) {
+            price += WearPenalty.surcharge(roundData.offer().wearVal());
+        }
         boolean creative = sp.getAbilities().instabuild;
         if (!creative && countArmoryPoints(sp) < price) {
             session.model().dealerReconsider(worldMs);

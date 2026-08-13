@@ -122,7 +122,7 @@ public class TerminalScreen extends Screen {
         Map<Integer, NegotiationModel.Offer> offers = new HashMap<>();
         for (PacketTerminalState.RoundItem ri : state.rounds()) {
             offers.put(ri.round(), ri.offer());
-            TerminalOfferItems.setRoundItem(ri.round(), ri.item(), ri.grade());
+            TerminalOfferItems.setRoundItem(ri.round(), ri.item(), ri.grade(), ri.offer().wearVal());
         }
         TerminalOfferItems.setSessionItem(state.sessionItem());
         model.setOfferSource(offers::get);
@@ -332,8 +332,9 @@ public class TerminalScreen extends Screen {
         if (fired == TerminalActionBar.Fired.ACCEPT) {
             NegotiationModel.Offer offer = model.pending();
             if (offer != null) {
-                confirmDialog.open(offer, TerminalOfferItems.itemFor(offer),
-                        TerminalOfferItems.priceFor(offer), offer.wearVal());
+                confirmDialog.open(TerminalOfferItems.itemFor(offer),
+                        TerminalOfferItems.priceFor(offer),
+                        TerminalOfferItems.basePriceFor(offer), offer.wearVal());
             }
         } else if (fired == TerminalActionBar.Fired.REJECT) {
             model.rejectNow(now);
