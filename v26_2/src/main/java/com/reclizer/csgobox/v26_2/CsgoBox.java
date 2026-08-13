@@ -27,6 +27,7 @@ import com.reclizer.csgobox.v26_2.packet.PacketTerminalClose;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalOpen;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalReject;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalState;
+import com.reclizer.csgobox.v26_2.packet.PacketSyncBoxDefinitions;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -57,7 +58,9 @@ import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEven
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.registries.RegisterEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -180,6 +183,7 @@ public class CsgoBox {
         registrar.playToClient(PacketTerminalState.TYPE, PacketTerminalState.STREAM_CODEC, PacketTerminalState::handle);
         registrar.playToServer(PacketTerminalReject.TYPE, PacketTerminalReject.STREAM_CODEC, PacketTerminalReject::handleServer);
         registrar.playToServer(PacketTerminalClose.TYPE, PacketTerminalClose.STREAM_CODEC, PacketTerminalClose::handleServer);
+        registrar.playToClient(PacketSyncBoxDefinitions.TYPE, PacketSyncBoxDefinitions.STREAM_CODEC, PacketSyncBoxDefinitions::handle);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -196,9 +200,31 @@ public class CsgoBox {
         Path boxesDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
         boxWatcher = BoxFileWatcher.start(
                 boxesDir,
-                BoxJsonLoader::reloadPreserving,
+                () -> {
+                    BoxJsonLoader.reloadPreserving();
+                    var server = ServerLifecycleHooks.getCurrentServer();
+                    if (server != null) {
+                        server.execute(CsgoBox::broadcastBoxDefinitions);
+                    }
+                },
                 msg -> LOGGER.info("[BoxFileWatcher] {}", msg),
                 (msg, err) -> LOGGER.error("[BoxFileWatcher] {}", msg, err));
+    }
+
+    /**
+     * Broadcasts the current box registry to every connected player so client
+     * registries (and the JEI probability category) follow server state after
+     * reloads. No-op on the client or without a server.
+     */
+    public static void broadcastBoxDefinitions() {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return;
+        }
+        PacketSyncBoxDefinitions packet = PacketSyncBoxDefinitions.ofAll();
+        for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+            PacketDistributor.sendToPlayer(player, packet);
+        }
     }
 
     private void resolveOpenedBoxesStat(final FMLCommonSetupEvent event) {

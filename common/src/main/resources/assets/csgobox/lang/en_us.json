@@ -190,5 +190,13 @@
   "csgobox.terminal.rarity.classified": "Classified",
   "csgobox.terminal.rarity.covert": "Covert",
   "csgobox.terminal.rarity.contraband": "Contraband",
-  "gui.csgobox.terminal.boot_title": "CS Terminal"
+  "gui.csgobox.terminal.boot_title": "CS Terminal",
+  "jei.csgobox.category.box_open": "Box Drop Chances",
+  "jei.csgobox.recipe.drop_rate": "Drop rate: %s%%",
+  "jei.csgobox.recipe.grade_line": "%s %s%%",
+  "jei.csgobox.recipe.more_grades": "…%s more tiers",
+  "jei.csgobox.recipe.more_items": "…%s more items",
+  "jei.csgobox.recipe.entity_rate": "%s drops %s%%",
+  "jei.csgobox.tooltip.grade_weight": "[%s] weight %s/%s",
+  "jei.csgobox.tooltip.item_chance": "Per-item chance %s%%"
 }

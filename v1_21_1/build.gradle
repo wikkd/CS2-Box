@@ -121,6 +121,11 @@ dependencies {
     // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer; extracted
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.1-neoforge+mc1.21.1'
+
+    // JEI integration (optional client mod). compileOnly for the plugin API,
+    // runtimeOnly so dev runs actually ship the JEI jar.
+    compileOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
+    runtimeOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
 }
 
 def removeStaleBuildResources = { task ->

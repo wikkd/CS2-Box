@@ -190,5 +190,13 @@
   "csgobox.terminal.rarity.classified": "保密级",
   "csgobox.terminal.rarity.covert": "隐秘级",
   "csgobox.terminal.rarity.contraband": "违禁",
-  "gui.csgobox.terminal.boot_title": "CS 终端机"
+  "gui.csgobox.terminal.boot_title": "CS 终端机",
+  "jei.csgobox.category.box_open": "开箱概率",
+  "jei.csgobox.recipe.drop_rate": "掉落率: %s%%",
+  "jei.csgobox.recipe.grade_line": "%s %s%%",
+  "jei.csgobox.recipe.more_grades": "…共 %s 级",
+  "jei.csgobox.recipe.more_items": "…共 %s 件",
+  "jei.csgobox.recipe.entity_rate": "%s 掉落 %s%%",
+  "jei.csgobox.tooltip.grade_weight": "[%s] 权重 %s/%s",
+  "jei.csgobox.tooltip.item_chance": "单件概率 %s%%"
 }

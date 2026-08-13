@@ -97,6 +97,11 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation "net.neoforged:neoforge:${neo_version_26_2}"
+
+    // JEI integration (optional client mod). compileOnly for the plugin API,
+    // runtimeOnly so dev runs actually ship the JEI jar.
+    compileOnly "mezz.jei:jei-${mc_version_26_2}-neoforge:${jei_version_26_2}"
+    runtimeOnly "mezz.jei:jei-${mc_version_26_2}-neoforge:${jei_version_26_2}"
 }
 
 def removeStaleBuildResources = { task ->

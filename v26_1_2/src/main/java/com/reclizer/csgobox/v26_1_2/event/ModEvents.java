@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ModItems;
+import com.reclizer.csgobox.v26_1_2.packet.PacketSyncBoxDefinitions;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -20,6 +21,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Random;
 
@@ -75,9 +77,12 @@ public final class ModEvents {
     /** Fires ModLoadedTrigger so csgobox:root criteria is satisfied on world join. */
     @SubscribeEvent
     public static void playerLoggedIn(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
-        if (CsgoBox.CONFIG.enableAchievements()
-                && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
-            com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // Bring the joining client's box registry (and JEI category) in sync.
+            PacketDistributor.sendToPlayer(sp, PacketSyncBoxDefinitions.ofAll());
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+            }
         }
     }
 
