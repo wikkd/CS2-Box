@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.item;
 
 import com.reclizer.csgobox.v1_21_1.gui.BoxScreenOpener;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -17,6 +18,18 @@ public class ItemTerminal extends ItemCsgoBox {
 
     public ItemTerminal() {
         super(1);
+    }
+
+    /**
+     * Hard guarantee that terminals are unstackable no matter how the stack
+     * was created: every default instance is stamped MAX_STACK_SIZE=1, so a
+     * terminal can never group up (one uid/lock per terminal).
+     */
+    @Override
+    public ItemStack getDefaultInstance() {
+        ItemStack stack = super.getDefaultInstance();
+        stack.set(DataComponents.MAX_STACK_SIZE, 1);
+        return stack;
     }
 
     /** The terminal opens its boot screen instead of the classic crate UI. */

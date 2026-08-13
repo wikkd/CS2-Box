@@ -94,6 +94,12 @@ public record PacketTerminalBuy(
         if (heldBox == null || !heldBox.equals(sentBox)) {
             return invalid;
         }
+        // The purchase must belong to the terminal whose screen is open — a
+        // hotbar switch mid-screen would otherwise buy from (and destroy) a
+        // different terminal the player is not looking at.
+        if (!TerminalSessionManager.isOpenBinding(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held))) {
+            return invalid;
+        }
         // The offer must come from the locked session's current round.
         TerminalSession session = TerminalSessionManager.getByUid(sp, ItemCsgoBox.getTerminalUid(held));
         if (session == null || session.isFinished() || session.model().round() != message.offerRound()) {
@@ -150,6 +156,7 @@ public record PacketTerminalBuy(
         // A purchase consumes the terminal machine: the item and its uid are
         // destroyed, and the session lock is released immediately.
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+        TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);
         return new PacketTerminalBuyResult(message.requestId(),
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);

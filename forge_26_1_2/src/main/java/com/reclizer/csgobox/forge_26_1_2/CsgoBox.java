@@ -271,7 +271,13 @@ public class CsgoBox {
                 event.register(Registries.ITEM, itemId, () -> {
                     ItemCsgoBox item;
                     if (isTerminal) {
-                        item = new ItemTerminal(new Item.Properties().stacksTo(16).setId(itemKey)) {
+                        // No stacksTo() here: in 26.x Properties.stacksTo() writes a
+                        // MAX_STACK_SIZE component into the initializer chain, and a
+                        // value added EARLIER runs LATER (andThen order), so a
+                        // stacksTo(16) on this Properties would override the
+                        // stacksTo(1) inside ItemTerminal — terminals must stay
+                        // unstackable (one uid/lock per terminal).
+                        item = new ItemTerminal(new Item.Properties().setId(itemKey)) {
                             @Override
                             public ItemStack getDefaultInstance() {
                                 ItemStack stack = super.getDefaultInstance();

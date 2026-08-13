@@ -426,3 +426,35 @@ v26_1_2 `PlatformSmokeTest` 与 forge L0-L3 门禁 7/7 PASS；
 
 - `SystemEntry.atMs` 在 4 个一次性 FAILED 快照工厂（destroyed / empty / locked /
   unreachable）里仍是墙钟，但该字段渲染层不使用，无行为影响。
+
+---
+
+## 13. 变更（2026-08-13）：谈崩自毁终端机——5 轮拒绝也销毁物品
+
+需求：谈判破裂（第 5 轮全部拒绝）与超时一致，终端机**物品本身**消失，而不是
+留在玩家手里可以「重开一局」。
+
+### 实现
+
+- `PacketTerminalReject` 服务端强制推进后检查模型状态：`rejectForced` 变
+  `FAILED`（第 5 轮拒绝）时，主手终端机 `setCount(0)` + `removeByUid` 立即释放
+  会话锁 + 系统消息「谈判破裂，军火商已离开。」
+  （`csgobox.terminal.sys.broke`，新增中英键）。未满 5 轮仍只 `markDirty()`。
+- 玩家发 reject 时必然在线、终端机必然在主手（reject 以主手 `held` 定位会话），
+  当场销毁即可，不需要超时路径的「已销毁 uid 集合」兜底（那是给离线 / 容器 /
+  转手场景准备的）。
+- 销毁后客户端关屏发的 `PacketTerminalClose` 查表得 null → 安全 no-op，与超时
+  自毁后的行为一致。
+
+### 终态语义（现行线统一）
+
+| 终态 | 触发 | 物品 | 锁 |
+|---|---|---|---|
+| `CLOSED` | 购买成交 | 销毁（buy 路径 `setCount(0)`） | 立即释放 |
+| `FAILED` | 第 5 轮拒绝 | 销毁（reject 路径 `setCount(0)`） | 立即释放 |
+| `FAILED` | 3 小时超时 | 销毁（背包 sweep / 已销毁 uid 兜底） | tick 释放 |
+
+### 验证
+
+4 平台 `clean compileJava` 通过；`:common:test` 通过（common 未改动）；
+`check-animops-drift.sh` 未涉及（未改渲染门面）。

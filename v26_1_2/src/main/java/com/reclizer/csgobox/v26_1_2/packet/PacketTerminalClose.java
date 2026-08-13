@@ -64,6 +64,12 @@ public record PacketTerminalClose(
             if (session == null) {
                 return;
             }
+            // The closed screen must be the one currently open for this
+            // player — a crafted close for any other uid (e.g. a second
+            // terminal) is ignored instead of rewriting its session state.
+            if (!TerminalSessionManager.isOpenBinding(sp.getStringUUID(), message.terminalUid())) {
+                return;
+            }
             // The client's close round must equal the server's current round
             // (packets are FIFO, so a legit client can never be ahead or
             // behind). Anything else — including a crafted fast-forward to
@@ -81,6 +87,7 @@ public record PacketTerminalClose(
             session.model().syncClose(message.round(), message.pending(), message.pendingAtMs(),
                     cap, sp.level().getGameTime() * 50L);
             TerminalSessionManager.markDirty();
+            TerminalSessionManager.clearOpenIf(sp.getStringUUID(), message.terminalUid());
         });
     }
 }

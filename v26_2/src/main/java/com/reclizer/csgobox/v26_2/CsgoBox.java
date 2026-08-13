@@ -311,6 +311,12 @@ public class CsgoBox {
                 event.register(Registries.ITEM, itemId, () -> {
                     ItemCsgoBox item;
                     if (isTerminal) {
+                        // No stacksTo() here: in 26.x Properties.stacksTo() writes a
+                        // MAX_STACK_SIZE component into the initializer chain, and a
+                        // value added EARLIER runs LATER (andThen order), so a
+                        // stacksTo(16) on this Properties would override the
+                        // stacksTo(1) inside ItemTerminal — terminals must stay
+                        // unstackable (one uid/lock per terminal).
                         item = new ItemTerminal(new Item.Properties().setId(itemKey)) {
                             @Override
                             public ItemStack getDefaultInstance() {
@@ -329,9 +335,15 @@ public class CsgoBox {
                             }
                         };
                     }
-                    BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.add(itemKey, (components, context, key) ->
-                            components.set(DataComponents.ITEM_MODEL,
-                                    Identifier.parse(MODID + ":" + (isTerminal ? "terminal" : "csgo_box"))));
+                    BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.add(itemKey, (components, context, key) -> {
+                        components.set(DataComponents.ITEM_MODEL,
+                                Identifier.parse(MODID + ":" + (isTerminal ? "terminal" : "csgo_box")));
+                        // Registry-level enforcement: terminals are stamped
+                        // MAX_STACK_SIZE=1 regardless of any Properties value.
+                        if (isTerminal) {
+                            components.set(DataComponents.MAX_STACK_SIZE, 1);
+                        }
+                    });
                     return item;
                 });
                 registered++;

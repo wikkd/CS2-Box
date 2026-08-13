@@ -365,10 +365,23 @@ public final class NegotiationModel {
         // The countdown is server-authoritative (tickServer) — never overwritten
         // from the client, otherwise a reopen would resurrect expired time.
         this.cap = cap;
-        roundStartMs = nowMs;
+        // A PENDING close means the typing window already elapsed on the
+        // client (1100ms animation), so the server's round-start must stay
+        // untouched — resetting it would make a reopen+instant buy/reject
+        // bounce off the TYPING_MS gate for another 1.1s. A TYPING close
+        // (pendingVisible=false) resets it because the client replays the
+        // typing animation on reopen. A crafted close(pending=true) inside
+        // the window cannot cheat: the deadline and buy/reject gates keep
+        // using the ORIGINAL roundStartMs, so the 1100ms still applies.
+        if (!pendingVisible) {
+            roundStartMs = nowMs;
+        }
         statusSinceMs = nowMs;
         if (pendingVisible && this.pending != null && !hasOfferEntryFor(round)) {
-            appendHistory(new OfferEntry(this.pending, Math.max(0, pendingAtMs), OFFER_PENDING));
+            // The client-reported offer timestamp is display-only; clamp it
+            // into [0, nowMs] so a crafted huge value never poisons history.
+            long atMs = Math.max(0L, Math.min(pendingAtMs, nowMs));
+            appendHistory(new OfferEntry(this.pending, atMs, OFFER_PENDING));
         }
     }
 

@@ -136,6 +136,7 @@
   "csgobox.terminal.meta_no_pattern": "Style %s · No. %s",
   "csgobox.terminal.sys.failed": "Session invalidated - reopen the terminal",
   "csgobox.terminal.sys.timeout": "The deal timed out - the dealer left.",
+  "csgobox.terminal.sys.broke": "The deal broke down - the dealer left.",
   "csgobox.terminal.sys.destroyed": "The terminal self-destructed after the timer ran out.",
   "csgobox.terminal.sys.empty": "The terminal has no configured loot pool.",
   "csgobox.terminal.sys.locked": "Go ask %1$s.",

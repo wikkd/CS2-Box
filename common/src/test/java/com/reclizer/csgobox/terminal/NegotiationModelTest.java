@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -248,6 +249,39 @@ final class NegotiationModelTest {
         assertSame(NegotiationModel.Status.TYPING, m2.status());
         assertNull(m2.pending());
         assertEquals(NegotiationModel.COUNT_INITIAL_MS, m2.countdownRemainingMs());
+    }
+
+    @Test
+    @DisplayName("syncClose PENDING keeps the original round start (reopen may act at once), TYPING resets it")
+    void syncCloseRoundStart() {
+        NegotiationModel m = fresh(); // start at 100_000 -> roundStart = 100_000
+        m.tick(100_000L + NegotiationModel.TYPING_MS); // PENDING round 1
+        long originalStart = m.roundStartMs();
+        m.syncClose(1, true, 150_000L, 64, 200_000L);
+        assertEquals(originalStart, m.roundStartMs(),
+                "a PENDING close proves the typing window elapsed — the server gate must keep the original start");
+        // a reopen right after this close sees PENDING and the TYPING_MS gate
+        // (now - roundStart) passes immediately instead of bouncing 1.1s
+
+        NegotiationModel m2 = fresh();
+        m2.syncClose(1, false, 0, NegotiationModel.CAP_UNLIMITED, 200_000L);
+        assertEquals(200_000L, m2.roundStartMs(),
+                "a TYPING close resets the start because the client replays the typing animation");
+        assertNotEquals(100_000L, m2.roundStartMs());
+    }
+
+    @Test
+    @DisplayName("syncClose clamps a crafted pendingAtMs into [0, now]")
+    void syncCloseClampsPendingAtMs() {
+        NegotiationModel huge = fresh(); // TYPING, no offer card yet
+        huge.syncClose(1, true, Long.MAX_VALUE, NegotiationModel.CAP_UNLIMITED, 200_000L);
+        assertEquals(200_000L, lastOfferEntry(huge).atMs(),
+                "a huge pendingAtMs must be clamped to nowMs");
+
+        NegotiationModel negative = fresh();
+        negative.syncClose(1, true, -5L, NegotiationModel.CAP_UNLIMITED, 200_000L);
+        assertEquals(0L, lastOfferEntry(negative).atMs(),
+                "a negative pendingAtMs must be clamped to 0");
     }
 
     @Test

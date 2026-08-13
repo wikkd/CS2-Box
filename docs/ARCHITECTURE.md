@@ -177,6 +177,9 @@ runs/server/
   强制推进;`isFinished()`(`CLOSED` 成交 / `FAILED` 第 5 轮拒绝或超时)后释放锁,
   下次开启为全新谈判。
 - 未满 5 轮拒绝 / 未成交前重开终端机,对话、报价、物品与上次离开完全一致。
+- 终态即「消耗」:成交(`CLOSED`)与谈崩(`FAILED`,第 5 轮拒绝)都会**销毁终端机
+  物品本身**——`PacketTerminalBuy` 成功路径与 `PacketTerminalReject` 第 5 轮
+  路径各自 `setCount(0)` + 立即释放锁(见 §11.2)。
 
 ### 11.2 计时与自毁
 
@@ -188,6 +191,10 @@ runs/server/
   并释放锁。超时同时**销毁终端机物品本身**——服务端按 `terminal_uid`
   (`DataComponentType<String>`,首开时写入物品)在背包(主栏+护甲+副手)精确销毁;
   离线/在容器时 uid 进「已销毁 uid 集合」,下次持有者打开当场销毁(FAILED 快照)。
+- 5 轮拒绝(谈崩)同样销毁物品:`PacketTerminalReject` 服务端强制推进到第 5 轮
+  变 `FAILED` 时,主手终端机当场 `setCount(0)` + `removeByUid` 释放锁 + 系统消息
+  「谈判破裂,军火商已离开。」(`csgobox.terminal.sys.broke`)。玩家必然在线且
+  终端机就在主手(reject 以主手定位会话),无需 uid 集合兜底。
 
 ### 11.3 持久化与转手
 

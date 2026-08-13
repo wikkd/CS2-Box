@@ -71,8 +71,11 @@ public class TerminalScreen extends Screen {
     private String terminalUid;
     /** Nonce echoed by the server so a stale reply for another terminal is dropped. */
     private final long requestId = System.nanoTime();
-    /** When this open was requested — the server must answer within 5s. */
-    private final long openSentAtMs = System.currentTimeMillis();
+    /** When this open was requested — the server must answer within 5s
+     *  (world clock, so a server lag-spike that stalls the world never
+     *  triggers a false "unreachable"; a genuinely lost packet surfaces as
+     *  the world still ticking past the deadline). */
+    private final long openSentAtMs = worldNowMs();
     /** Terminal item stack (copy) — box_id travels with the buy request. */
     private final ItemStack terminalStack;
     /** Terminal item display name (config name or anvil rename). */
@@ -133,10 +136,10 @@ public class TerminalScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        long wallNow = System.currentTimeMillis();
+        long worldNow = worldNowMs();
         // The server never answered (held item changed mid-open, death, or an
         // unexpected server error): fail visibly instead of hanging forever.
-        if (!stateReceived && wallNow - openSentAtMs > 5_000L) {
+        if (!stateReceived && worldNow - openSentAtMs > 5_000L) {
             if (this.minecraft != null && this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(
                         Component.translatable("csgobox.terminal.sys.unreachable"));
@@ -146,8 +149,7 @@ public class TerminalScreen extends Screen {
         }
         // A buy reply that never arrives must not trap the confirm dialog in
         // its input-consuming waiting state forever — bail out after 6 s.
-        if (confirmDialog.isWaiting() && wallNow - buySentAtMs > 6_000L) {
-            long worldNow = worldNowMs();
+        if (confirmDialog.isWaiting() && worldNow - buySentAtMs > 6_000L) {
             confirmDialog.close();
             model.dealerReconsider(worldNow);
             model.addSystem("csgobox.terminal.sys.unreachable", worldNow);
@@ -372,7 +374,7 @@ public class TerminalScreen extends Screen {
             return;
         }
         this.buyRequestId = System.nanoTime();
-        this.buySentAtMs = System.currentTimeMillis();
+        this.buySentAtMs = now;
         confirmDialog.setWaiting();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {

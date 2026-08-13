@@ -9,6 +9,7 @@ import com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -51,6 +52,12 @@ public record PacketTerminalReject(int round) implements CustomPacketPayload {
             if (!(held.getItem() instanceof ItemTerminal)) {
                 return;
             }
+            // The rejected negotiation must be the one whose screen is open:
+            // a hotbar switch mid-screen would otherwise reject (and on round
+            // 5, destroy) a DIFFERENT terminal the player is not looking at.
+            if (!TerminalSessionManager.isOpenBinding(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held))) {
+                return;
+            }
             TerminalSession session = TerminalSessionManager.getByUid(sp, ItemCsgoBox.getTerminalUid(held));
             if (session == null || session.isFinished()
                     || session.model().round() != message.round()) {
@@ -65,7 +72,15 @@ public record PacketTerminalReject(int round) implements CustomPacketPayload {
                 return;
             }
             session.model().rejectForced(worldMs);
-            TerminalSessionManager.markDirty();
+            if (session.model().status() == NegotiationModel.Status.FAILED) {
+                // 谈崩（第 5 轮拒绝）与超时一致：终端机物品本身销毁并立即释放锁。
+                TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+                TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+                held.setCount(0);
+                sp.sendSystemMessage(Component.translatable("csgobox.terminal.sys.broke"));
+            } else {
+                TerminalSessionManager.markDirty();
+            }
         });
     }
 }

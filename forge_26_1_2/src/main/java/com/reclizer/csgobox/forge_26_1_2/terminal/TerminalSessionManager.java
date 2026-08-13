@@ -9,6 +9,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,8 +42,24 @@ public final class TerminalSessionManager {
      * it is destroyed on the spot. Persisted with the world save. A uid is
      * removed again once the terminal is confirmed destroyed (inventory sweep
      * at timeout or open-time consume).
+     *
+     * <p>Ordered (FIFO) so the capacity eviction below always drops the
+     * OLDEST entry — a random eviction could resurrect a terminal whose
+     * destruction was never confirmed.</p>
      */
-    private static final Set<String> DESTROYED_UIDS = ConcurrentHashMap.newKeySet();
+    private static final Set<String> DESTROYED_UIDS = Collections.synchronizedSet(new LinkedHashSet<>());
+
+    /**
+     * Runtime-only binding of the terminal uid whose negotiation screen is
+     * currently open for each player (server-authoritative). Set on a
+     * successful open, cleared on close / buy / reject-destroy / timeout /
+     * logout / server unbind. buy and reject are only accepted while the
+     * main-hand uid matches this binding — otherwise a player who switched
+     * hotbar slots mid-screen would operate (or destroy) a DIFFERENT
+     * terminal's negotiation. Never persisted: it is screen state, not world
+     * state.
+     */
+    private static final Map<String, String> OPEN_UID = new ConcurrentHashMap<>();
 
     private static final int DESTROYED_UID_CAP = 8192;
 
@@ -70,6 +88,7 @@ public final class TerminalSessionManager {
         SERVER = null;
         SESSIONS.clear();
         DESTROYED_UIDS.clear();
+        OPEN_UID.clear();
         dirty = false;
     }
 
@@ -100,6 +119,34 @@ public final class TerminalSessionManager {
         SESSIONS.put(key, created);
         dirty = true;
         return created;
+    }
+
+    /** Record that the player's open terminal screen is bound to this uid. */
+    public static void bindOpen(String playerUuid, String terminalUid) {
+        if (terminalUid != null) {
+            OPEN_UID.put(playerUuid, terminalUid);
+        }
+    }
+
+    /** Clear the player's open binding when it still points at this uid. */
+    public static void clearOpenIf(String playerUuid, String terminalUid) {
+        if (terminalUid != null && terminalUid.equals(OPEN_UID.get(playerUuid))) {
+            OPEN_UID.remove(playerUuid);
+        }
+    }
+
+    /** Clear the player's open binding on logout (the session itself stays). */
+    public static void clearOpen(String playerUuid) {
+        OPEN_UID.remove(playerUuid);
+    }
+
+    /**
+     * True when the player's open screen is bound to exactly this terminal
+     * uid — the gate buy/reject/close must pass so a hotbar switch mid-screen
+     * can never operate a different terminal.
+     */
+    public static boolean isOpenBinding(String playerUuid, String terminalUid) {
+        return terminalUid != null && terminalUid.equals(OPEN_UID.get(playerUuid));
     }
 
     /**
@@ -216,23 +263,33 @@ public final class TerminalSessionManager {
             player = null;
         }
         if (player != null) {
+            boolean destroyedAny = false;
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                 ItemStack stack = player.getInventory().getItem(i);
                 if (!stack.isEmpty() && session.uid().equals(ItemCsgoBox.getTerminalUid(stack))) {
                     stack.setCount(0);
-                    player.sendSystemMessage(Component.translatable("csgobox.terminal.sys.destroyed"));
-                    DESTROYED_UIDS.remove(session.uid()); // confirmed gone — clean the expired uid
-                    dirty = true;
-                    return;
+                    destroyedAny = true;
                 }
+            }
+            if (destroyedAny) {
+                // Confirmed gone (all copies the inventory sweep can see) —
+                // clean the expired uid so the next open starts fresh.
+                player.sendSystemMessage(Component.translatable("csgobox.terminal.sys.destroyed"));
+                DESTROYED_UIDS.remove(session.uid());
+                OPEN_UID.remove(session.playerUuid());
+                dirty = true;
+                return;
             }
         }
         // Not confirmed (offline / stored away / handed off) — keep the uid so
         // the next open destroys the terminal wherever it is.
         DESTROYED_UIDS.add(session.uid());
+        OPEN_UID.remove(session.playerUuid());
         if (DESTROYED_UIDS.size() > DESTROYED_UID_CAP) {
-            // Evict one entry at a time — wiping the whole set would let a
-            // flood of timeouts resurrect every older expired terminal.
+            // FIFO eviction: the ordered set's head is the oldest entry, so
+            // a flood of timeouts can only push out terminals whose expired
+            // uid was recorded longest ago — never a random one whose
+            // destruction is still unconfirmed.
             DESTROYED_UIDS.remove(DESTROYED_UIDS.iterator().next());
         }
         dirty = true;

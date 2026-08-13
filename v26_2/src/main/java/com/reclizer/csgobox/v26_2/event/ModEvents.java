@@ -80,6 +80,15 @@ public final class ModEvents {
             com.reclizer.csgobox.v26_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
         }
     }
+
+    /** Drop the player's open-terminal binding on logout (sessions stay). */
+    @SubscribeEvent
+    public static void playerLoggedOut(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.reclizer.csgobox.v26_2.terminal.TerminalSessionManager.clearOpen(sp.getStringUUID());
+        }
+    }
+
     /**
      * Periodically prunes expired open-cooldown entries from
      * {@link com.reclizer.csgobox.logic.OpenBlockGuard#tick(long)} so the map stays bounded.

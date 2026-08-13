@@ -82,6 +82,9 @@ public record PacketTerminalOpen(ItemStack terminalStack, long requestId) implem
             }
             TerminalSession session = TerminalSessionManager.getOrCreate(sp, held);
             if (session != null) {
+                // Pin this open to the terminal's uid: buy/reject/close are
+                // only accepted while the main-hand uid matches this binding.
+                TerminalSessionManager.bindOpen(sp.getStringUUID(), session.uid());
                 Networking.INSTANCE.reply(PacketTerminalState.fromSession(session, message.requestId()), context);
             } else {
                 // No definition (e.g. the terminal is still an unconfigured

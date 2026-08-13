@@ -136,6 +136,7 @@
   "csgobox.terminal.meta_no_pattern": "风格 %s · 编号 %s",
   "csgobox.terminal.sys.failed": "会话已失效，请重新打开终端",
   "csgobox.terminal.sys.timeout": "交易超时，军火商已离开。",
+  "csgobox.terminal.sys.broke": "谈判破裂，军火商已离开。",
   "csgobox.terminal.sys.destroyed": "终端机已超时自毁。",
   "csgobox.terminal.sys.empty": "终端机尚未配置物品池。",
   "csgobox.terminal.sys.locked": "去问问%1$s吧。",
