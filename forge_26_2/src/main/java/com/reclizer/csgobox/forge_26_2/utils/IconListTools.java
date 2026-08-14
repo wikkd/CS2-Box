@@ -57,10 +57,15 @@ public final class IconListTools {
         }
         int drawX = x + (availW - drawW) / 2;
         int drawY = y + (availH - drawH) / 2;
+        // 26.x blit 的 10 参重载会把 srcWidth/srcHeight 取作 width/height，
+        // 放大绘制（gold_item.png 32x24 画到 ~169x127）时 UV 会被推到
+        // 1.0 以外造成 wrap 平铺（正是"9 个合成图"的来源）。改用 12 参重载
+        // 显式传源窗口 = 整个纹理像素尺寸，使 UV 保持 [0,1] 只画一次。
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GOLD_ITEM_TEXTURE,
                 drawX, drawY,
                 0F, 0F,
                 drawW, drawH,
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
                 GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT);
     }
 

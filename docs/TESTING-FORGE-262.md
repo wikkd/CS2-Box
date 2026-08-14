@@ -72,15 +72,19 @@ forge-26.2 构建目标（当前仅 forge-26.1.2，见 TESTING-FORGE-2612.md §5
 
 ## 6. 发布门禁对照
 
-- [ ] L0-L3 全绿（`./scripts/test-forge-262.sh`）
-- [ ] L4 关键路径 F1-F4
-- [ ] 版本四同步
-- [ ] `mods.toml` 区间：forge `[65,)`、MC `[26.2,26.3)`、pack_format 81
+- [x] L0-L3 全绿（`./scripts/test-forge-262.sh`，PASS 7 / FAIL 0 / WARN 0，2026-08-14）
+- [ ] L4 关键路径 F1-F4（待人工）
+- [x] 版本四同步（`scripts/check-version.sh` 通过）
+- [x] `mods.toml` 区间：forge `[65,)`、MC `[26.2,26.3)`、pack_format 81
 
 > 状态（2026-08-14）：模块首建完成并**回退到 1.0.6 发行基线**（删 1.0.7/1.0.8
 > 专属文件 39 项、恢复 1.0.6 才有的 3 文件、33 同名文件回退 1.0.6 内容、
-> build.gradle 加回排除清单 + 7 项 26.2 编译适配），L0-L3 门禁待首次跑通记录；
-> L4 待人工。已提交 git（源码，build/`run/` 不入库）。
+> build.gradle 加回排除清单 + 7 项 26.2 编译适配）；并完成等级 5 卡带渲染修复
+> （`IconListTools.blitGoldItemAspect` UV 越界平铺 → 12 参显式源窗口）与 1.0.8
+> 资源排除补全（`data/{loot_table,structure,worldgen,tags}`、
+> `data/minecraft/worldgen/template_pool/village/**`、`textures/gui/armory_recycler.png`）。
+> L0-L3 门禁全绿、`runClient` 启动正常；L4 待人工。已提交 git（源码，build/`run/`
+> 不入库）。jar 产物 `csgobox-forge-26.2-1.0.6.jar`。
 
 ## 7. 已知差异与注意
 
