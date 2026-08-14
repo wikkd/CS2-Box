@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.forge_26_2.packet;
 
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
-import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -19,11 +18,6 @@ import java.util.Queue;
  * Server-to-client consolidated bulk result. Carries the per-box reward for
  * boxes 2..K of a bulk open (box 1's result travels in {@link PacketBoxOpenResult}
  * because it carries the full animation strip).
- *
- * <p>Large batches are sent as several packets (chunks) of up to
- * {@value #BULK_PER_PACKET} entries so a single payload cannot grow
- * unbounded with heavy-NBT items; the client aggregates chunks sharing the
- * same request id.</p>
  */
 public record PacketBoxBulkResult(
         long requestId,
@@ -32,9 +26,7 @@ public record PacketBoxBulkResult(
 ) implements CustomPacketPayload {
 
     private static final int MAX_BULK_RESULTS = 1024;
-    private static final int MAX_PENDING_BULK = 64;
-    /** Number of entries the server puts into one bulk payload. */
-    public static final int BULK_PER_PACKET = 32;
+    private static final int MAX_PENDING_BULK = 4;
 
     public static final Type<PacketBoxBulkResult> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(CsgoBox.MODID, "box_bulk_result"));
@@ -70,7 +62,7 @@ public record PacketBoxBulkResult(
         long requestId = buf.readLong();
         int size = buf.readVarInt();
         if (size < 0 || size > MAX_BULK_RESULTS) {
-            throw new DecoderException("Invalid bulk result size: " + size);
+            throw new IllegalArgumentException("Invalid bulk result size: " + size);
         }
         List<ItemStack> items = new ArrayList<>(size);
         List<Integer> grades = new ArrayList<>(size);

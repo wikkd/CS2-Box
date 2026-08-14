@@ -1,53 +1,50 @@
 package com.reclizer.csgobox.forge_26_2.box;
 
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
-import com.reclizer.csgobox.box.BoxRegistryStore;
 import com.reclizer.csgobox.logic.GradeMapCache;
 import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
-/**
- * Platform shell over the common {@link BoxRegistryStore}: supplies the
- * {@link Identifier} key type, the {@link GradeMapCache} invalidation
- * callbacks, and platform logging.
- */
 public final class BoxRegistry {
-
-    private static final BoxRegistryStore<Identifier, BoxDefinition> STORE = new BoxRegistryStore<>(
-            id -> GradeMapCache.invalidate(id.toString()),
-            GradeMapCache::invalidateAll);
-
     private BoxRegistry() {
     }
 
+    private static final Map<Identifier, BoxDefinition> BOX_REGISTRY = new LinkedHashMap<>();
+
     public static void register(BoxDefinition definition) {
-        STORE.register(definition.id(), definition);
+        BOX_REGISTRY.put(definition.id(), definition);
+        GradeMapCache.invalidate(definition.id().toString());
         CsgoBox.LOGGER.debug("Registered box: {}", definition.id());
     }
 
     public static BoxDefinition get(Identifier id) {
-        return STORE.get(id);
+        return BOX_REGISTRY.get(id);
     }
 
     public static Collection<BoxDefinition> getAll() {
-        return STORE.getAll();
+        return Collections.unmodifiableCollection(BOX_REGISTRY.values());
     }
 
     public static Set<Identifier> getIds() {
-        return STORE.getIds();
+        return Collections.unmodifiableSet(BOX_REGISTRY.keySet());
     }
 
     public static int size() {
-        return STORE.size();
+        return BOX_REGISTRY.size();
     }
 
     public static void clear() {
-        STORE.clear();
+        BOX_REGISTRY.clear();
+        GradeMapCache.invalidateAll();
     }
 
     public static void remove(Identifier id) {
-        STORE.remove(id);
+        BOX_REGISTRY.remove(id);
+        GradeMapCache.invalidate(id.toString());
     }
 }

@@ -7,13 +7,12 @@ import com.reclizer.csgobox.forge_26_2.packet.PacketCsgoProgress;
 import com.reclizer.csgobox.forge_26_2.packet.PacketRequestBoxItems;
 import com.reclizer.csgobox.forge_26_2.packet.PacketSyncBoxItems;
 import com.reclizer.csgobox.forge_26_2.utils.ButtonPalette;
-import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;
-import com.reclizer.csgobox.forge_26_2.utils.HudVisibility;
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.forge_26_2.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_26_2.utils.IconListTools;
 import com.reclizer.csgobox.forge_26_2.utils.RenderFontTool;
+import com.reclizer.csgobox.forge_26_2.utils.HudVisibility;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -27,7 +26,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -176,20 +174,21 @@ public class CsboxScreen extends Screen {
         }
         if (keyRl != null && this.entity != null) {
             for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
-                if (isKey(stack, keyRl)) {
-                    total += stack.getCount();
-                }
-            }
-            for (EquipmentSlot slot : new EquipmentSlot[]{
-                    EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                    EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
-                ItemStack stack = entity.getItemBySlot(slot);
-                if (isKey(stack, keyRl)) {
+                if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                     total += stack.getCount();
                 }
             }
         }
         return total;
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+        if (this.minecraft != null && this.minecraft.level != null) {
+            pGuiGraphics.fillGradient(0, 0, this.width, this.height, OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
+        } else {
+            super.extractBackground(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+        }
     }
 
     @Override
@@ -220,14 +219,10 @@ public class CsboxScreen extends Screen {
     }
 
     protected void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks, int gx, int gy) {
-        if (this.minecraft != null && this.minecraft.level != null) {
-            int fill = UiBackdrop.fill();
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
-        }
         GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
-        AnimRenderOps.fill(guiGraphics, listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
+        guiGraphics.fill(listArea.x(), listArea.y(), listArea.right(), listArea.y() + 1, OverlayColor.divider());
         GuiRegion.Region footer = GuiRegion.fullWidthRow(this.width, this.height, 92, 1);
-        AnimRenderOps.fill(guiGraphics, footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
+        guiGraphics.fill(footer.x(), footer.y(), footer.right(), footer.bottom(), OverlayColor.divider());
 
         float scale = previewTextureSize() / 16F;
         // Skip the 3D crate when the box has no configured items — the empty
@@ -258,13 +253,13 @@ public class CsboxScreen extends Screen {
                 if (grade > 4) break;
                 IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
                         listArea.x() + px * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, py), this.width, this.height, grade, 255);
+                        GuiRegion.pctH(this.height, py), this.width, this.height, grade);
             }
             if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
                     && this.page == pageCount() - 1) {
                 IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
                         listArea.x() + x * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, y), this.width, this.height, 5, 255);
+                        GuiRegion.pctH(this.height, y), this.width, this.height, 5);
             }
         }
 
@@ -523,7 +518,12 @@ public class CsboxScreen extends Screen {
                             if (entity.getAbilities().instabuild) {
                                 canOpen = true;
                             } else {
-                                canOpen = hasKeyAnywhere(entity, keyRl);
+                                for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
+                                    if (keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                                        canOpen = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
                         if (canOpen) {
@@ -554,34 +554,6 @@ public class CsboxScreen extends Screen {
             }
         }
         return super.mouseClicked(event, doubleClick);
-    }
-
-    /**
-     * Client-side key availability check mirroring the server's
-     * {@code tryConsumeKeys} slot coverage (main inventory + armor + offhand)
-     * so keys stashed in armor/offhand are not wrongly reported as missing.
-     * Box instances are never keys, matching the server's consumption rule.
-     */
-    private static boolean hasKeyAnywhere(Player player, Identifier keyRl) {
-        for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
-            if (isKey(stack, keyRl)) {
-                return true;
-            }
-        }
-        for (EquipmentSlot slot : new EquipmentSlot[]{
-                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
-            if (isKey(player.getItemBySlot(slot), keyRl)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isKey(ItemStack stack, Identifier keyRl) {
-        return !stack.isEmpty()
-                && !(stack.getItem() instanceof ItemCsgoBox)
-                && keyRl.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     @Override

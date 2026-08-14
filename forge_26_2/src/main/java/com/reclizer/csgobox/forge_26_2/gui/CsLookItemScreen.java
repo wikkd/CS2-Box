@@ -4,12 +4,10 @@ import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_2.sounds.ModSounds;
 import com.reclizer.csgobox.forge_26_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
-import com.reclizer.csgobox.utils.Easing;
-import com.reclizer.csgobox.utils.ItemDrag3D;
-import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_26_2.utils.GuiItemMove;
-import com.reclizer.csgobox.forge_26_2.utils.HudVisibility;
+import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.forge_26_2.utils.RenderFontTool;
+import com.reclizer.csgobox.forge_26_2.utils.HudVisibility;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -30,7 +28,8 @@ public class CsLookItemScreen extends Screen {
     private final Player player;
     private final ItemStack openItem;
     private final int grade;
-    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
+    private float rotX = 0;
+    private float rotY = 0;
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
@@ -136,11 +135,6 @@ public class CsLookItemScreen extends Screen {
         return (int) (8F * (1F - toolbarEnterEase(index)));
     }
 
-    /** Enter transition progress: 0 at screen open, 1 after 300ms (6 ticks). */
-    private float enterE() {
-        return Easing.easeOutCubic(Math.min(1F, this.screenTicks / 6F));
-    }
-
     private String wearTierKey() {
         float w = this.wearValue;
         if (w < 0.07F) return "gui.csgobox.csgo_box.wear_fn";
@@ -187,7 +181,6 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
-        this.itemDrag.tick();
         renderLookBackground(guiGraphics);
         // renderBg before renderLabels: button rectangle must be drawn first,
         // then the centered button text on top. Reversed order (the previous
@@ -200,35 +193,29 @@ public class CsLookItemScreen extends Screen {
 
     private void renderLookBackground(GuiGraphicsExtractor guiGraphics) {
         if (this.minecraft != null && this.minecraft.level != null) {
-            int fill = UiBackdrop.fill();
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+            guiGraphics.fillGradient(0, 0, this.width, this.height,
+                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        HudVisibility.hide();
+        if (this.minecraft != null) {
+            HudVisibility.hide();
+        }
         if (openItem.isEmpty()) return;
 
-        // Enter transition: the strip screen's dark backdrop fades out while
-        // the item scales up from 0.9 to 1.0 over 300ms (6 ticks).
-        int fadeAlpha = (int) (0xFF * (1F - enterE())) & 0xFF;
-        if (fadeAlpha > 0) {
-            AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height,
-                    (fadeAlpha << 24) | 0x000000);
-        }
-
-        float scale = (previewTextureSize() / 16F) * (0.9F + 0.1F * enterE());
+        float scale = previewTextureSize() / 16F;
         int dividerY = this.height - 18 - toolbarButtonSize();
-        AnimRenderOps.fill(guiGraphics, this.width * 25 / 100, dividerY,
+        guiGraphics.fill(this.width * 25 / 100, dividerY,
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
-        AnimRenderOps.fill(guiGraphics, this.width * 33 / 100, this.height * 17 / 100,
+        guiGraphics.fill(this.width * 33 / 100, this.height * 17 / 100,
                 this.width * 67 / 100, this.height * 17 / 100 + 4, ColorTools.colorItems(grade));
         // Centre the result preview in the available band; mouseDragged below
         // uses the same previewPixelX/Y/size so drag-detection matches what
         // the user sees.
         GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
                 previewPixelX(), previewPixelY(),
-                this.itemDrag.rotation(), openItem, this.player, scale);
+                this.rotX, this.rotY, openItem, this.player, scale);
 
         int btnX = backButtonX();
         int btnY = backButtonY();
@@ -454,7 +441,8 @@ public class CsLookItemScreen extends Screen {
         boolean isInRange = mouseX >= x && mouseX <= x + size
                 && mouseY >= y && mouseY <= y + size;
         if (event.button() == 0 && isInRange) {
-            this.itemDrag.accumulate(dragX, dragY);
+            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
+            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
         }
         return super.mouseDragged(event, dragX, dragY);
     }
@@ -490,16 +478,20 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public void onClose() {
-        HudVisibility.show();
+        if (this.minecraft != null) {
+            HudVisibility.show();
+        }
         super.onClose();
     }
 
     @Override
     public void removed() {
         // Same protection as onClose(): death/respawn replaces this screen via
-        // setScreen() -> Screen.removed(), which would otherwise leave the HUD
-        // hidden permanently.
-        HudVisibility.show();
+        // setScreen() -> Screen.removed(), which would otherwise leave
+        // hideGui=true and hide the HUD permanently.
+        if (this.minecraft != null) {
+            HudVisibility.show();
+        }
         super.removed();
     }
 

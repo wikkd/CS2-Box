@@ -5,15 +5,10 @@ import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.forge_26_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_2.box.BulkBoxContext;
 import com.reclizer.csgobox.forge_26_2.box.BulkOpenResult;
-import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
-import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
-import com.reclizer.csgobox.forge_26_2.event.BoxOpeningEvent;
 import com.reclizer.csgobox.forge_26_2.event.BoxOpenedEvent;
-import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_26_2.item.ItemTerminal;
+import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.logic.GradeMap;
-import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.forge_26_2.item.ModItems;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -25,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 
 import java.util.ArrayList;
@@ -45,6 +41,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayload {
 
+    private static final boolean BULK_OPEN_ENABLED = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
+
     public static final Type<PacketCsgoBulkProgress> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(CsgoBox.MODID, "csgo_bulk_progress"));
 
@@ -59,8 +57,15 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
     }
 
     public static void handleServer(final PacketCsgoBulkProgress message, final CustomPayloadEvent.Context context) {
+        // 1.0.6 屏蔽批量开箱（1.0.7 恢复）：服务端忽略所有批量开箱请求
+        if (!BULK_OPEN_ENABLED) {
+            return;
+        }
         context.enqueueWork(() -> {
             Player player = context.getSender();
+            if (player == null) {
+                return;
+            }
             if (player == null) {
                 return;
             }
@@ -68,25 +73,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (!(templateBox.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
-            // Strict separation (v1.0.8): terminals are only buyable through
-            // the terminal negotiation protocol — never through the classic
-            // crate pipeline, which would open them for free (no key, no
-            // Armory Points). A crafted packet holding a terminal is refused.
-            if (templateBox.getItem() instanceof ItemTerminal) {
-                PacketCsgoProgress.sendRejected(context, message.requestId());
-                return;
-            }
-            Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
-            BoxDefinition def = boxId == null ? null : BoxRegistry.get(boxId);
-            if (def != null && def.isTerminal()) {
-                PacketCsgoProgress.sendRejected(context, message.requestId());
-                return;
-            }
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
                 return;
             }
-            if (OpenBlockGuard.isBlocked(player.getUUID(), player.level().getGameTime())) {
-                PacketCsgoProgress.sendRejected(context, message.requestId());
+            if (PacketCsgoProgress.isOpenBlockedStatic(player)) {
                 return;
             }
 
@@ -117,19 +107,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
 
-            // Policy hook (batch-level): scripts may veto the whole batch
-            // before any roll or consumption. count = K (the server-authorized
-            // batch size). Canceling aborts the batch without setting cooldown.
-            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, true, K);
-            BoxOpeningEvent.BUS.fire(opening);
-            if (opening.isCanceled()) {
-                PacketCsgoProgress.sendRejected(context, message.requestId());
-                return;
-            }
-
-            OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
+            PacketCsgoProgress.blockFurtherOpensStatic(player);
             final int requestedK = K;
             final long requestId = message.requestId();
+            final Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
             BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMapCache.get(boxId.toString(), () -> GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy)));
 
             final Player playerFinal = player;
@@ -204,32 +185,47 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
             if (i == 0) {
-                var strip = BoxStripGenerator.generate(snapshot.gradeMap(), snapshot.weights(), rng, ItemStack.EMPTY);
-                int winningIndex = Math.max(0, strip.winningIndex());
-                ItemStack giveItem = strip.items().get(winningIndex);
-                int finalGrade = strip.grades().get(winningIndex);
-                boolean fallback = giveItem.isEmpty();
-                if (fallback) {
+                List<ItemStack> animItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+                List<Integer> animGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+                for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
+                    int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                    ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
+                    if (s == null) {
+                        s = snapshot.gradeMap().findFallback(g);
+                    }
+                    if (s == null) {
+                        s = ItemStack.EMPTY;
+                    }
+                    animItems.add(s);
+                    animGrades.add(Mth.clamp(g, 1, 5));
+                }
+                int winningIndex = AnimationStrip.randomWinningIndex(rng, animItems.size());
+                winningIndex = AnimationStrip.findNearestValid(animItems, winningIndex, stack -> !stack.isEmpty());
+                if (winningIndex < 0) {
+                    winningIndex = 0;
+                }
+                ItemStack giveItem = animItems.get(winningIndex);
+                int finalGrade = animGrades.get(winningIndex);
+                if (giveItem.isEmpty()) {
                     ItemStack fb = snapshot.gradeMap().findFallback(1);
                     if (fb != null && !fb.isEmpty()) {
                         giveItem = fb;
                         finalGrade = 1;
-                        strip.items().set(winningIndex, giveItem.copy());
-                        strip.grades().set(winningIndex, finalGrade);
+                        animItems.set(winningIndex, giveItem.copy());
+                        animGrades.set(winningIndex, finalGrade);
                     }
                 }
-                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), rng.nextFloat(), fallback));
+                out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, animItems, animGrades, rng.nextFloat()));
             } else {
                 int g = OddsCalculator.pickGrade(rng, snapshot.weights());
                 ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
-                boolean fallback = s == null;
                 if (s == null) {
                     s = snapshot.gradeMap().findFallback(g);
                 }
                 if (s == null) {
                     s = ItemStack.EMPTY;
                 }
-                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), rng.nextFloat(), fallback));
+                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), rng.nextFloat()));
             }
         }
         return out;
@@ -256,10 +252,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         int recheckBoxes = avail.boxes();
         int recheckKeys = avail.keys();
         int actualK = Math.min(recheckBoxes, recheckKeys);
-        // Clamp to the results actually computed: if inventory grew during the
-        // async compute we can only open the K boxes already rolled (the rest
-        // are reopened on the player's next request).
-        actualK = Math.min(actualK, results.size());
         if (actualK < K) {
             CsgoBox.LOGGER.warn("[csgo-bulk] player {} availability changed during compute: requested={} available={}",
                     sp.getName().getString(), K, actualK);
@@ -271,37 +263,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
 
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
         List<BulkOpenResult> truncated = results.subList(0, actualK);
-
-        // A fully-broken definition (every grade pool empty even after
-        // fallback) rolls empty winners for the whole batch. Abort before
-        // consuming anything: a bad config must not eat boxes + keys.
-        if (truncated.stream().allMatch(r -> r.resultItem().isEmpty())) {
-            CsgoBox.LOGGER.warn("[csgo-bulk] all {} rolls empty for box={}; aborting without consumption",
-                    truncated.size(), snapshot.boxId());
-            return;
-        }
-
-        // Resolve the true grade for fallback items (parity with the single-open
-        // path, which resolves the fallback winner against BoxDefinition). A
-        // fallback item drawn from another grade pool must not keep the picked
-        // grade, or its GRADE component and UI colour are wrong. Box 1's
-        // animation strip shows the same winner, so patch that slot too.
-        for (int i = 0; i < truncated.size(); i++) {
-            BulkOpenResult r = truncated.get(i);
-            if (!r.fallback() || r.resultItem().isEmpty()) {
-                continue;
-            }
-            int realGrade = PacketCsgoProgress.resolveGrade(r.resultItem(), snapshot.boxId(), r.resultGrade());
-            if (realGrade == r.resultGrade()) {
-                continue;
-            }
-            BulkOpenResult fixed = new BulkOpenResult(r.resultItem(), realGrade, r.serverSeed(),
-                    r.winningIndex(), r.animationItems(), r.animationGrades(), r.wear(), true);
-            truncated.set(i, fixed);
-            if (i == 0 && fixed.winningIndex() >= 0 && fixed.winningIndex() < fixed.animationGrades().size()) {
-                fixed.animationGrades().set(fixed.winningIndex(), realGrade);
-            }
-        }
 
         // Wear-based durability damage, applied on the main thread. The first
         // box's animation strip shares the winner stack, so damage it too for a
@@ -356,17 +317,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 restGrades.add(r.resultGrade());
             }
             if (!restItems.isEmpty()) {
-                // Chunked: a single payload must stay small even when every
-                // item carries heavy NBT. The client aggregates chunks.
-                int chunkSize = PacketBoxBulkResult.BULK_PER_PACKET;
-                for (int from = 0; from < restItems.size(); from += chunkSize) {
-                    int to = Math.min(from + chunkSize, restItems.size());
-                    Networking.sendToPlayer(new PacketBoxBulkResult(
-                            requestId,
-                            restItems.subList(from, to),
-                            restGrades.subList(from, to)
-                    ), sp);
-                }
+                Networking.sendToPlayer(new PacketBoxBulkResult(requestId, restItems, restGrades), sp);
             }
         }
 
@@ -375,7 +326,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 continue;
             }
             ItemStack toGive = r.resultItem().copy();
-            toGive.set(ItemCsgoBox.GRADE.get(), r.resultGrade());
             if (!sp.getInventory().add(toGive) && !toGive.isEmpty()) {
                 sp.drop(toGive, false);
             }
@@ -388,11 +338,6 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 OpenedBoxTrigger.INSTANCE.trigger(sp);
             }
         }
-
-        // Renew the open cooldown: the block placed at request time (10 ticks)
-        // can expire while the async compute is still running, letting a
-        // concurrent bulk request slip in against the same inventory.
-        OpenBlockGuard.block(sp.getUUID(), sp.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
 
         if (CsgoBox.debug()) {
             CsgoBox.LOGGER.info("[csgo-bulk] player={} K={} (re-validated from {}) -> {} items granted",

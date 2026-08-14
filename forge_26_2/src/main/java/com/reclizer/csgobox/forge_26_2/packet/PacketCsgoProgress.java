@@ -1,21 +1,14 @@
 package com.reclizer.csgobox.forge_26_2.packet;
 
-import com.reclizer.csgobox.box.BoxGrades;
-import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_2.capability.CsboxPlayerData;
 import com.reclizer.csgobox.forge_26_2.capability.ModCapability;
-import com.reclizer.csgobox.forge_26_2.event.BoxOpeningEvent;
 import com.reclizer.csgobox.forge_26_2.event.BoxOpenedEvent;
-import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
-import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
-import com.reclizer.csgobox.forge_26_2.box.GradeGroup;
+import com.reclizer.csgobox.logic.AnimationStrip;
 import com.reclizer.csgobox.logic.GradeMap;
-import com.reclizer.csgobox.logic.GradeMapCache;
-import com.reclizer.csgobox.logic.OpenBlockGuard;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_26_2.item.ItemTerminal;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -27,17 +20,27 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/** Client-to-server request to open the currently held box. The request id
- *  only matches the later client animation result; never trusted by the server. */
+/**
+ * Client-to-server request to open the currently held box.
+ *
+ * <p>The request id is for matching the later client animation result only. The
+ * server never trusts it for authorization.</p>
+ */
 public record PacketCsgoProgress(long requestId) implements CustomPacketPayload {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final Map<UUID, Long> OPEN_BLOCKED_UNTIL_TICK = new ConcurrentHashMap<>();
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));
@@ -62,43 +65,24 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (!(box.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
-            // Terminals are only buyable via the negotiation protocol; the
-            // classic crate pipeline would open them for free. Refuse crafted packets.
-            if (box.getItem() instanceof ItemTerminal) {
-                sendRejected(context, message.requestId());
-                return;
-            }
 
             if (player instanceof ServerPlayer sp && (sp.isRemoved() || !sp.isAlive())) {
                 sendRejected(context, message.requestId());
                 return;
             }
 
-            if (OpenBlockGuard.isBlocked(player.getUUID(), player.level().getGameTime())) {
+            if (isOpenBlockedStatic(player)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
                 return;
             }
 
-            var boxId = ItemCsgoBox.getBoxId(box);
-            if (boxId == null) {
+            var itemList = ItemCsgoBox.getItemGroup(box);
+            if (itemList.isEmpty()) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
-                return;
-            }
-            // Same guard for a box_id pointing at a terminal from a plain box stack.
-            if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
-                sendRejected(context, message.requestId());
-                return;
-            }
-
-            // Mods may veto the open before any roll or consumption.
-            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
-            BoxOpeningEvent.BUS.fire(opening);
-            if (opening.isCanceled()) {
-                sendRejected(context, message.requestId());
                 return;
             }
 
@@ -110,23 +94,34 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            long serverSeed = SECURE_RANDOM.nextLong();
-            var rng = new Random(serverSeed);
-
-            // Grade pool is immutable per box id (shared cache with the bulk
-            // path, invalidated on reload). pickRandom returns copies, so
-            // callers may mutate freely.
-            var gradeMap = GradeMapCache.get(boxId.toString(),
-                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
-            if (gradeMap.isEmpty()) {
+            if (!tryConsumeKeys(player, box, 1)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
                 return;
             }
 
-            var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
-            int winningIndex = strip.winningIndex();
+            long serverSeed = SECURE_RANDOM.nextLong();
+            var rng = new Random(serverSeed);
+            var gradeMap = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy);
+
+            List<ItemStack> animationItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+            List<Integer> animationGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+            for (int i = 0; i < AnimationStrip.ITEM_COUNT; i++) {
+                int grade = OddsCalculator.pickGrade(rng, weights);
+                ItemStack itemStack = gradeMap.pickRandom(rng, grade);
+                if (itemStack == null) {
+                    itemStack = gradeMap.findFallback(grade);
+                }
+                if (itemStack == null) {
+                    itemStack = ItemStack.EMPTY;
+                }
+                animationGrades.add(Mth.clamp(grade, 1, 5));
+                animationItems.add(itemStack);
+            }
+
+            int winningIndex = AnimationStrip.randomWinningIndex(SECURE_RANDOM, animationItems.size());
+            winningIndex = AnimationStrip.findNearestValid(animationItems, winningIndex, stack -> !stack.isEmpty());
             if (winningIndex < 0) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
@@ -134,11 +129,11 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            ItemStack giveItem = strip.items().get(winningIndex);
-            int finalGrade = strip.grades().get(winningIndex);
+            ItemStack giveItem = animationItems.get(winningIndex);
+            int finalGrade = animationGrades.get(winningIndex);
 
             if (giveItem.isEmpty()) {
-                giveItem = gradeMap.findFallback(1);
+                giveItem = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy).findFallback(1);
                 if (giveItem == null) giveItem = ItemStack.EMPTY;
                 if (giveItem.isEmpty()) {
                     if (player instanceof ServerPlayer sp) {
@@ -146,18 +141,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                     }
                     return;
                 }
-                finalGrade = resolveGrade(giveItem, boxId, 1);
-                strip.items().set(winningIndex, giveItem.copy());
-                strip.grades().set(winningIndex, finalGrade);
-            }
-
-            // Consume keys only after the whole roll is validated — a broken
-            // definition must never eat a key.
-            if (!tryConsumeKeys(player, box, 1)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
-                return;
+                finalGrade = resolveGrade(giveItem, itemList, 1);
+                animationItems.set(winningIndex, giveItem.copy());
+                animationGrades.set(winningIndex, finalGrade);
             }
 
             float wear = 0F;
@@ -166,7 +152,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 applyWearDamage(giveItem, wear);
             }
 
-            OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
+            blockFurtherOpensStatic(player);
 
             final ItemStack capturedGiveItem = giveItem.copy();
             final int capturedGrade = finalGrade;
@@ -179,8 +165,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                     winningIndex,
                     serverSeed,
                     message.requestId(),
-                    strip.items(),
-                    strip.grades()
+                    animationItems,
+                    animationGrades
             ), context);
 
             ItemStack toGive = giveItem.copy();
@@ -188,10 +174,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
             }
-            // Creative mode is fully free (parity with tryConsumeKeys).
-            if (!player.getAbilities().instabuild) {
-                box.shrink(1);
-            }
+            box.shrink(1);
 
             if (player instanceof ServerPlayer sp) {
                 sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
@@ -200,12 +183,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 }
             }
 
+            Identifier boxId = ItemCsgoBox.getBoxId(box);
             BoxOpenedEvent.BUS.fire(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));
         });
     }
 
 
-    static void sendRejected(CustomPayloadEvent.Context context, long requestId) {
+    private static void sendRejected(CustomPayloadEvent.Context context, long requestId) {
         Networking.INSTANCE.reply(new PacketBoxOpenResult(
                 ItemStack.EMPTY,
                 1,
@@ -217,7 +201,38 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         ), context);
     }
 
-    /** Damages a stack by wear (0..1) × max durability; clamped to never break. */
+    static boolean isOpenBlockedStatic(Player player) {
+        long now = player.level().getGameTime();
+        Long blockedUntil = OPEN_BLOCKED_UNTIL_TICK.get(player.getUUID());
+        if (blockedUntil == null || now >= blockedUntil) {
+            OPEN_BLOCKED_UNTIL_TICK.remove(player.getUUID());
+            return false;
+        }
+        return true;
+    }
+
+    static void blockFurtherOpensStatic(Player player) {
+        long now = player.level().getGameTime();
+        OPEN_BLOCKED_UNTIL_TICK.put(player.getUUID(), now + serverOpenCooldownTicks());
+    }
+
+    /**
+     * Removes expired cooldown entries so the map does not grow without bound.
+     * Invoked periodically from the server tick loop ({@code ModEvents#serverTick}).
+     */
+    public static void tickOpenBlockMap(long nowGameTime) {
+        OPEN_BLOCKED_UNTIL_TICK.entrySet().removeIf(entry -> nowGameTime >= entry.getValue());
+    }
+
+    private static int serverOpenCooldownTicks() {
+        return 10;
+    }
+
+    /**
+     * Damages a durable item stack by a fraction of its max durability
+     * proportional to the wear value (0..1). Clamped so the item never breaks
+     * (damage is at most maxDamage - 1) and never goes negative.
+     */
     static void applyWearDamage(ItemStack stack, float wear) {
         int maxDamage = stack.getMaxDamage();
         if (maxDamage <= 0) {
@@ -227,27 +242,29 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    /** Resolves the grade (1..5) of a fallback item against the box definition. */
-    static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def != null) {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
-                for (ItemStack candidate : grade.items()) {
-                    if (ItemStack.isSameItemSameComponents(item, candidate)) {
-                        return Mth.clamp(gradeLevel, 1, 5);
-                    }
-                }
+    private static int resolveGrade(ItemStack item, Map<ItemStack, Integer> itemList, int fallback) {
+        for (Map.Entry<ItemStack, Integer> entry : itemList.entrySet()) {
+            if (ItemStack.isSameItemSameComponents(item, entry.getKey())) {
+                return Mth.clamp(entry.getValue(), 1, 5);
             }
         }
         return Mth.clamp(fallback, 1, 5);
     }
 
     /**
-     * Consume up to {@code count} keys from anywhere (items, armor, offhand);
-     * true only when fully consumed (or no key required). 26.x has no public
-     * armor/offhand list — they are walked via {@code getItemBySlot}.
+     * Consume up to {@code count} keys matching the box's key id from anywhere
+     * in the player's inventory (items, armor, offhand). If the box has no key
+     * requirement, returns true without touching inventory. Returns true only
+     * when the requested count was fully consumed (or none was required).
+     *
+     * <p>26.x has no public {@code inventory.armor/offhand} list; armor is
+     * reached via {@code Player.getItemBySlot(EquipmentSlot.*)} and offhand
+     * similarly. The previous implementation only walked
+     * {@code getNonEquipmentItems()} (36 hotbar + main slots), so a player
+     * holding the key in offhand or wearing a key-as-armor would be silently
+     * under-deducted. The bulk path would then crash with a "missing keys"
+     * assertion and refund the boxes; the operator-facing log only saw the
+     * refund, never the under-count cause.</p>
      */
     static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
         Identifier keyId = ItemCsgoBox.getKey(box);
@@ -270,12 +287,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return remaining == 0;
     }
 
-    /** Consume up to {@code count} boxes matching the template from anywhere; true when fully consumed. */
+    /**
+     * Consume up to {@code count} boxes matching the template (same item,
+     * same components) from anywhere in the player's inventory (items, armor,
+     * offhand). Returns true only when the full count was consumed.
+     */
     static boolean tryConsumeBoxes(Player entity, ItemStack box, int count) {
         if (count <= 0) {
-            return true;
-        }
-        if (entity.getAbilities().instabuild) {
             return true;
         }
         int remaining = count;
@@ -288,7 +306,11 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return remaining == 0;
     }
 
-    /** Shrinks matching stacks until the count is satisfied or the slice exhausted; returns what's left. */
+    /**
+     * Shrinks matching stacks from the given inventory slice until either the
+     * requested count is satisfied or the slice is exhausted. Returns the
+     * remaining (un-fulfilled) count.
+     */
     private static int consumeFromList(java.util.List<ItemStack> stacks,
                                        Identifier keyId,
                                        ItemStack boxTemplate,
@@ -299,9 +321,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
             boolean matches;
             if (keyId != null) {
-                // Never consume boxes as keys: ItemCsgoBox.getKey(box) returns
-                // the box's own key id, so a plain id match would shrink boxes
-                // too (a past double-count bug).
+                // CRITICAL: skip box instances. ItemCsgoBox.getKey(box) returns
+                // the box's own configured key id (via getBoxId → ITEM.getKey
+                // fallback), so a naive "keyId equals getKey(stack.item)"
+                // check would match boxes that the player also happens to own
+                // and would shrink them under the guise of "key consumption".
+                // In the bulk path this led to boxes being double-counted
+                // (once as boxes, once as keys) — 5 boxes + 5 keys opened
+                // 5 times would drain 5 boxes + 5 boxes = 10 boxes total.
                 if (stack.getItem() instanceof ItemCsgoBox) {
                     continue;
                 }
@@ -322,7 +349,12 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
     private static int consumeKeyFromSlot(Player entity, EquipmentSlot slot, Identifier keyId, int remaining) {
         ItemStack stack = entity.getItemBySlot(slot);
-        // Same as consumeFromList: boxes must never match as keys.
+        // Skip box instances on armor/offhand for the same reason as
+        // consumeFromList above — ItemCsgoBox.getKey(box) returns the box's
+        // own key id, so a keyId match would otherwise shrink armor/offhand
+        // boxes that happen to share a registry id with the targeted key
+        // (modded boxes whose registry id is the same as a default key, e.g.
+        // csgobox:csgo_key3, would be misclassified as keys).
         if (stack.isEmpty()
                 || stack.getItem() instanceof ItemCsgoBox
                 || !keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {

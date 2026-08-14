@@ -2,7 +2,6 @@ package com.reclizer.csgobox.forge_26_2.gui;
 
 import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.OverlayColor;
-import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_26_2.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -21,8 +20,12 @@ import net.minecraft.world.item.ItemStack;
 
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_26_2.packet.PacketCsgoBulkProgress;
 
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Total overview for a bulk box open. Shift+right-click the held box to
@@ -93,6 +96,12 @@ public class CsboxBulkOverviewScreen extends Screen {
         }
     }
 
+    private static ItemStack keySample(Identifier keyId) {
+        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
+        if (ref == null) return ItemStack.EMPTY;
+        return ref.value().getDefaultInstance();
+    }
+
     @Override
     public boolean isPauseScreen() {
         return false;
@@ -120,8 +129,8 @@ public class CsboxBulkOverviewScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            int fill = UiBackdrop.fill();
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+            guiGraphics.fillGradient(0, 0, this.width, this.height,
+                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         render3DBox(guiGraphics, mouseX, mouseY);
         renderLabels(guiGraphics);

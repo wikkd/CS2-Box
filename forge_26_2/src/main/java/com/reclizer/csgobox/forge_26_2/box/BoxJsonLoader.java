@@ -7,7 +7,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.reclizer.csgobox.box.BoxDefaults;
-import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.BoxJsonSchemaValidator;
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import net.minecraft.resources.Identifier;
@@ -33,9 +32,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Reads and writes box definitions under config/csbox. Item parsing is in
- *  {@link BoxItemCodec}, default config generation in {@link BoxDefaults};
- *  this class owns directory I/O, top-level JSON shape and registration. */
+/**
+ * Reads and writes box definitions under config/csbox.
+ *
+ * <p>Per-item parsing and serialization is delegated to {@link BoxItemCodec};
+ * default-config generation is delegated to {@link BoxDefaults}. This class
+ * focuses on directory I/O, top-level JSON shape, and registration.</p>
+ */
 public final class BoxJsonLoader {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -55,29 +58,13 @@ public final class BoxJsonLoader {
     private BoxJsonLoader() {
     }
 
-    /**
-     * Lightweight read of a box JSON's {@code type} field without parsing the
-     * full definition (registry lookups, DataComponent decode). Used by dynamic
-     * item registration to pick {@code ItemTerminal} for terminal-type boxes
-     * before definitions are loaded into {@link BoxRegistry}. Defaults to
-     * {@code "csbox"} so a malformed file degrades to a regular box item.
-     */
-    public static String readType(Path file) {
-        try (Reader reader = Files.newBufferedReader(file)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
-                return json.get("type").getAsString();
-            }
-        } catch (Exception e) {
-            CsgoBox.LOGGER.warn("Failed to read type from {}: {}", file, e.getMessage());
-        }
-        return "csbox";
-    }
-
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
-    /** Strips an optional {@code "#RRGGBB "} prefix; returns text + color, or the raw string without color. */
+    /** Strips an optional {@code "#RRGGBB "} prefix from a name and returns the
+     *  bare text + 0xRRGGBB color. If the prefix is absent, malformed, or the
+     *  remaining text is empty, the original string is returned as the text
+     *  and no color is set (matches the pre-color behavior). */
     private static ParsedName parseColoredName(String raw) {
         if (raw == null) return new ParsedName("", OptionalInt.empty());
         Matcher m = NAME_COLOR_PREFIX.matcher(raw);
@@ -91,7 +78,9 @@ public final class BoxJsonLoader {
         return new ParsedName(text, OptionalInt.of(rgb));
     }
 
-    /** Inverse of {@link #parseColoredName}: Component -> "name" string with hex color prefix. */
+    /** Inverse of {@link #parseColoredName}: serializes a styled Component back
+     *  to a "name" string, prepending the color as a hex prefix when the
+     *  Component carries one. */
     private static String serializeColoredName(net.minecraft.network.chat.Component name) {
         if (name == null) return "";
         String text = name.getString();
@@ -113,12 +102,6 @@ public final class BoxJsonLoader {
             }
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
-
-        // First-run defaults, before scanning existing configs.
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
-        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
-        // Pre-v1.0.8 terminal.json migration (no "type" field); must run before parsing.
-        BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 
@@ -158,29 +141,31 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * Re-scan the box directory and update {@link BoxRegistry} in place
-     * without {@code clear()}: failed files keep their previous definition,
-     * successful ones overwrite by id, files gone from disk are removed.
-     * Used by {@code /csbox reload} and {@code BoxFileWatcher}. Never
-     * resurrects the deleted sample tutorial, but re-runs terminal/premium
-     * defaults and the legacy migration so a deleted terminal.json stays
-     * loadable.
+     * Re-scan the box directory and update {@link BoxRegistry} in place.
+     *
+     * <p>Unlike {@link #loadAll()} this does NOT call {@code BoxRegistry.clear()}:
+     * <ul>
+     *   <li>Files that fail to parse leave the previous {@link BoxDefinition}
+     *       in place (no wholesale data loss from one bad JSON).</li>
+     *   <li>Files that parse successfully {@code put}-overwrite the entry with
+     *       the same id.</li>
+     *   <li>Files that disappeared since the previous load are explicitly
+     *       {@link BoxRegistry#remove removed} so the registry mirrors disk.</li>
+     * </ul>
+     *
+     * <p>Used by the {@code /csbox reload} command and by the common
+     * {@code BoxFileWatcher} when JSON files change on disk.</p>
+     *
+     * <p>Does NOT call {@link BoxDefaults#writeTutorialIfMissing} so that
+     * auto-reload never resurrects the sample config the user deleted.</p>
      */
     public static void reloadPreserving() {
         LAST_LOAD_ERRORS.clear();
 
         if (!Files.exists(BOXES_DIR)) {
-            try {
-                Files.createDirectories(BOXES_DIR);
-            } catch (IOException e) {
-                CsgoBox.LOGGER.error("Failed to create boxes config directory: {}", BOXES_DIR, e);
-                return;
-            }
-            CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
+            CsgoBox.LOGGER.info("Reload preserving skipped: {} does not exist", BOXES_DIR);
+            return;
         }
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
-        BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
-        BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         Set<Identifier> previousIds = new HashSet<>(BoxRegistry.getIds());
         Set<Identifier> seenIds = new HashSet<>();
@@ -254,13 +239,17 @@ public final class BoxJsonLoader {
         LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, line, column));
     }
 
-    /** No-JSON-position convenience overload. */
+    /** Overload for the common case where the error has no JSON position. */
     private static void recordLoadError(Path file, String fileName, String reason) {
         recordLoadError(file, fileName, reason, -1, -1);
     }
 
-    /** Extracts {@code at line N column M} from a Gson error message (Gson 2.13+
-     *  removed {@code getLocation()}); {@code {-1,-1}} when not found. */
+    /**
+     * Extracts the {@code at line N column M} tuple from a Gson error message.
+     * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
+     * to fish the numbers out of the formatted message. Returns {@code {-1,-1}}
+     * when the pattern is not found.
+     */
     private static final java.util.regex.Pattern GSON_LOCATION_PATTERN =
             java.util.regex.Pattern.compile("at line (\\d+) column (\\d+)");
 
@@ -298,20 +287,7 @@ public final class BoxJsonLoader {
 
         try {
             ParsedName parsedName = parseColoredName(getString(json, "name", boxIdStr));
-            String type = getString(json, "type", "csbox");
-            if (!"csbox".equals(type) && !"terminal".equals(type)) {
-                type = "csbox";
-            }
-            // v1.0.8: "type" is the single source of truth; a terminal.json
-            // without "type":"terminal" would silently become a keyless
-            // crate, so refuse to load it.
-            if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
-                String msg = "terminal.json must declare \"type\": \"terminal\" "
-                        + "(v1.0.8+: type is the single registration source; terminals have no key field)";
-                CsgoBox.LOGGER.error("Skipping {}: {}", file, msg);
-                recordLoadError(file, fileName, msg);
-                return Optional.empty();
-            }
+            Identifier keyItem = parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key");
             float dropRate = getFloat(json, "drop", 0.12F);
             int[] weights = parseWeights(json, file, fileName);
 
@@ -350,10 +326,7 @@ public final class BoxJsonLoader {
             BoxDefinition.Builder builder = BoxDefinition.builder(
                     Identifier.parse("csgobox:" + boxIdStr), parsedName.text());
             parsedName.color().ifPresent(builder::nameColor);
-            builder.type(type);
-            if (!"terminal".equals(type)) {
-                builder.key(parseIdentifierSafe(getString(json, "key", "csgobox:csgo_key0"), "key"));
-            }
+            builder.key(keyItem);
             builder.dropRate(dropRate);
             for (Identifier entityId : dropEntityIds) {
                 Float rate = entityDropRates.get(entityId);
@@ -375,8 +348,13 @@ public final class BoxJsonLoader {
         }
     }
 
-    /** Parses an {@link Identifier}, normalizing any exception to
-     *  {@link IllegalArgumentException} (the MC exception type varies by version). */
+    /**
+     * Parses an {@link Identifier} while normalizing any thrown exception to
+     * {@link IllegalArgumentException}. MC's {@code Identifier.parse} throws
+     * a Mojang-specific {@code ResourceLocationException} whose concrete type
+     * changes between versions; the rest of this loader only relies on the
+     * IAE contract.
+     */
     private static Identifier parseIdentifierSafe(String value, String fieldName) {
         try {
             return Identifier.parse(value);
@@ -390,7 +368,7 @@ public final class BoxJsonLoader {
      * JSON "random" is ordered grade1 -> grade5.
      */
     private static int[] parseWeights(JsonObject json, Path file, String fileName) {
-        int[] weights = BoxGrades.DEFAULT_WEIGHTS.clone();
+        int[] weights = BoxDefinition.DEFAULT_WEIGHTS.clone();
         if (json.has("random")) {
             JsonArray randomArr = json.getAsJsonArray("random");
             for (int i = 0; i < Math.min(randomArr.size(), 5); i++) {
@@ -402,12 +380,12 @@ public final class BoxJsonLoader {
             if (weights[i] <= 0) {
                 if (weights[i] < 0) {
                     CsgoBox.LOGGER.warn("Negative weight {} for {} in box config, using default: {}",
-                            weights[i], gradeKey, BoxGrades.DEFAULT_WEIGHTS[i]);
+                            weights[i], gradeKey, BoxDefinition.DEFAULT_WEIGHTS[i]);
                     recordLoadError(file, fileName,
                             "Random[" + (i + 1) + "]: negative weight " + weights[i]
-                                    + ", using default " + BoxGrades.DEFAULT_WEIGHTS[i]);
+                                    + ", using default " + BoxDefinition.DEFAULT_WEIGHTS[i]);
                 }
-                weights[i] = BoxGrades.DEFAULT_WEIGHTS[i];
+                weights[i] = BoxDefinition.DEFAULT_WEIGHTS[i];
             } else if (weights[i] > 10000) {
                 CsgoBox.LOGGER.warn("Weight {} for {} exceeds maximum, clamping to 10000", weights[i], gradeKey);
                 recordLoadError(file, fileName,

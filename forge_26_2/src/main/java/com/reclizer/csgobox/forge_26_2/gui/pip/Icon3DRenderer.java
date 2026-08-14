@@ -10,17 +10,9 @@ import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 
 /**
- * Renders an {@link Icon3DRenderState} into the GUI's per-PIP render target
- * using a full 3D PoseStack. Restores the 1.21.1 "drag-to-rotate" GUI
- * affordance for the held-box preview and the won-item preview.
- *
- * <p>Mirrors the 26.2 vanilla {@code OversizedItemRenderer} shape: the
- * parent {@link PictureInPictureRenderer} is now annotation-only (no
- * constructor) and drives {@code featureRenderDispatcher.renderAllFeatures}
- * itself, so we just submit into the supplied {@link SubmitNodeCollector}
- * and let the parent flush. {@code getTranslateY} override keeps the
- * pose origin at the texture centre (matching the 1.21.1 reference
- * path where the slot centre is the rotation anchor).</p>
+ * Renders an Icon3DRenderState into the GUI's per-PIP render target using a
+ * full 3D PoseStack. Restores the 1.21.1 "drag-to-rotate" GUI affordance for
+ * the held-box preview and the won-item preview.
  *
  * <p>The PoseStack pipeline matches the 1.21.1 reference path:
  * {@code translate(8*scale, 8*scale)} -&gt; {@code scale(1, -1, 1)} -&gt;
@@ -30,11 +22,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
  * and the preview is centred from the model's measured bounding box rather
  * than a fixed magic offset.</p>
  *
- * <p>Omits the {@code @OnlyIn(Dist.CLIENT)} annotation; see
- * {@link Icon3DRenderState} for the rationale. The parent class
- * re-added the annotation in 26.2 but our subclass only runs through
- * a client-side registration guard so the runtime warning would be
- * noise.</p>
+ * <p>Note: deliberately omits the {@code @OnlyIn(Dist.CLIENT)} annotation;
+ * see {@link Icon3DRenderState} for the rationale.</p>
  */
 public class Icon3DRenderer extends PictureInPictureRenderer<Icon3DRenderState> {
 

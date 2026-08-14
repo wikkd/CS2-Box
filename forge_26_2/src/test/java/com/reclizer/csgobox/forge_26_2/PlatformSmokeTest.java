@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Minimal platform-layer test harness (JUnit 5), mirroring the v26_1_2 module.
@@ -16,10 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * renames, and version-drift that silently break the module while
  * compileJava still passes.</p>
  *
- * <p>Sync note: the module tracks the v26_1_2 baseline as of the 1.0.7 dev
- * line (terminal / premium box / armory-point items are now expected). The
- * declared-field assertions below guard against accidental field removal or
- * mirror overwrites that drop the synced registrations.</p>
+ * <p>Baseline note: the module is pinned to release 1.0.6. Terminal /
+ * armory-point items belong to the 1.0.7 line and must NOT leak back into the
+ * forge module — the absent-field assertions below are the regression guard.</p>
  */
 class PlatformSmokeTest {
 
@@ -56,8 +56,8 @@ class PlatformSmokeTest {
     }
 
     @Test
-    void v107PremiumAndArmoryItemsAreDeclared() throws NoSuchFieldException {
-        assertNotNull(ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
-        assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
+    void v107TerminalItemsDoNotLeakIntoV106Baseline() {
+        assertThrows(NoSuchFieldException.class, () -> ModItems.class.getDeclaredField("ITEM_TERMINAL"));
+        assertThrows(NoSuchFieldException.class, () -> ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
     }
 }

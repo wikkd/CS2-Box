@@ -54,10 +54,35 @@ sourceSets.main.resources {
     srcDir 'src/generated/resources'
     srcDir 'src/main/resources'
     srcDir project(':common').file('src/main/resources')
+    // forge 模块保持 1.0.6 特性基线：排除 1.0.7 线专属文件（终端机/军械商/回收机/
+    // 高级箱/军械点及其数据包引用）。lang/命令等已同步内容保留现行版本。
+    // forge 追平 1.0.7 时删除此排除清单。
+    exclude 'data/csgobox/recipe/armory_recycler.json'
+    exclude 'data/csgobox/recipe/armory_point_exchange.json'
+    exclude 'data/csgobox/trade_set/**'
+    exclude 'data/csgobox/villager_trade/**'
+    exclude 'data/minecraft/tags/point_of_interest_type/'
+    exclude 'assets/csgobox/blockstates/armory_recycler.json'
+    exclude 'assets/csgobox/models/block/**'
+    exclude 'assets/csgobox/models/item/armory_point.json'
+    exclude 'assets/csgobox/models/item/armory_recycler.json'
+    exclude 'assets/csgobox/models/item/premium_supply_box.json'
+    exclude 'assets/csgobox/models/item/terminal.json'
+    exclude 'assets/csgobox/items/armory_point.json'
+    exclude 'assets/csgobox/items/premium_supply_box.json'
+    exclude 'assets/csgobox/items/terminal.json'
+    exclude 'assets/csgobox/textures/block/**'
+    exclude 'assets/csgobox/textures/entity/**'
+    exclude 'assets/csgobox/textures/gui/terminal/**'
+    exclude 'assets/csgobox/textures/item/armory_point.png'
+    exclude 'assets/csgobox/textures/item/premium_supply_box.png'
+    exclude 'assets/csgobox/textures/item/terminal_palette.png'
 }
 
 sourceSets.main.java {
     srcDir project(':common').file('src/main/java')
+    // 1.0.7 专属纯 Java 包（终端机状态机），forge 不引用。
+    exclude 'com/reclizer/csgobox/terminal/**'
 }
 
 // Multiple srcDirs can collide on files like META-INF/mods.toml.
@@ -134,69 +159,4 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    if (project.hasProperty('slim')) {
-        options.debugOptions.debugLevel = 'lines,source'
-    }
-}
-
-// ProGuard minify task — produces a smaller jar alongside the unminified
-// one (shrink-only: no obfuscation, no optimization). Invoked via:
-// ./gradlew :forge_26_2:minifyJar -Pactive_versions=forge-26.2
-configurations {
-    proguardTool
-}
-dependencies {
-    proguardTool 'com.guardsquare:proguard-base:7.9.1'
-}
-
-tasks.register('minifyJar', JavaExec) {
-    description = 'Minify the forge_26_2 mod jar with ProGuard (see proguard-rules.pro).'
-    group = 'build'
-
-    classpath = configurations.proguardTool
-    mainClass = 'proguard.ProGuard'
-
-    // Rebuild the unminified jar first: the minified output must always be
-    // derived from the current source state (and the -Pslim debugLevel flag).
-    dependsOn tasks.named('jar')
-
-    def rules = rootProject.file('proguard-rules.pro')
-    def unminified = tasks.named('jar').get().outputs.files.singleFile
-    def minified = file("build/libs/${unminified.name.replace('.jar', '-minified.jar')}")
-
-    inputs.file unminified
-    inputs.file rules
-    outputs.file minified
-
-    doFirst {
-        def config = file("build/proguard-config.pro")
-        config.parentFile.mkdirs()
-        def libs = configurations.runtimeClasspath.findAll { it.exists() }*.absolutePath
-        StringBuilder sb = new StringBuilder()
-        sb.append("-injars '").append(unminified.absolutePath).append("'\n")
-        sb.append("-outjars '").append(minified.absolutePath).append("'\n")
-        libs.each { path -> sb.append("-libraryjars '").append(path).append("'\n") }
-        ['java.base.jmod', 'java.net.http.jmod'].each { name ->
-            def jmod = new File(System.getProperty('java.home'), "jmods/${name}")
-            if (jmod.exists()) {
-                sb.append("-libraryjars '").append(jmod.absolutePath).append("'\n")
-            }
-        }
-        sb.append("-include '").append(rules.absolutePath).append("'\n")
-        sb.append("-dontoptimize\n-dontobfuscate\n-dontpreverify\n")
-        sb.append("-dontskipnonpubliclibraryclasses\n-dontusemixedcaseclassnames\n")
-        sb.append("-flattenpackagehierarchy ''\n-mergeinterfacesaggressively\n")
-        sb.append("-keepattributes SourceFile\n")
-        sb.append("-keepattributes LineNumberTable\n")
-        sb.append("-keepattributes '*Annotation*'\n")
-        sb.append("-keepattributes Signature\n")
-        sb.append("-keepattributes InnerClasses\n")
-        sb.append("-keepattributes EnclosingMethod\n")
-        // No -ignorewarnings / -dontwarn ** here: missing classes must fail
-        // the build instead of being silently swallowed. Any library that is
-        // legitimately absent from the offline runtime classpath gets an
-        // explicit -dontwarn entry in proguard-rules.pro.
-        config.text = sb.toString()
-        args '@' + config.absolutePath
-    }
 }

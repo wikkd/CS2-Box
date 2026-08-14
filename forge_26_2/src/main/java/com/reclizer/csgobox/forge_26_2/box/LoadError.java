@@ -2,8 +2,6 @@ package com.reclizer.csgobox.forge_26_2.box;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.HoverEvent;
 
 import java.nio.file.Path;
 
@@ -22,24 +20,15 @@ public record LoadError(
         int column
 ) {
     public Component toChatMessage() {
-        String label = boxId != null && !boxId.isBlank() ? boxId : file.getFileName().toString();
-        Component text;
+        String text;
         if (line > 0) {
-            text = Component.translatable(
-                    "commands.csgobox.errors.entry", label, line, column, reason);
+            text = String.format(
+                    "[CS2-Box] 箱子加载失败: %s — 第 %d 行第 %d 列: %s",
+                    boxId, line, column, reason);
         } else {
-            text = Component.translatable(
-                    "commands.csgobox.errors.entry_plain", label, reason);
+            text = String.format(
+                    "[CS2-Box] 箱子加载失败: %s — %s", boxId, reason);
         }
-        Component hover = Component.translatable("commands.csgobox.errors.file", file.toString())
-                .append("\n")
-                .append(Component.translatable("commands.csgobox.errors.click_copy"));
-        String copyText = "[CS2-Box] " + file + " — "
-                + (line > 0 ? "line " + line + " col " + column + ": " : "")
-                + reason;
-        return text.copy().withStyle(s -> s
-                .withColor(ChatFormatting.RED)
-                .withClickEvent(new ClickEvent.CopyToClipboard(copyText))
-                .withHoverEvent(new HoverEvent.ShowText(hover)));
+        return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.RED));
     }
 }

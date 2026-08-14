@@ -59,16 +59,6 @@ public final class ButtonPalette {
             0xFFFFFFFF
     );
 
-    /** Neutral dismiss — close, cancel. Slate-gray panel. */
-    public static final Style CLOSE = new Style(
-            0xFF3A4148,
-            0xFF4A535C,
-            0xFF6C7680,
-            0xFF8B96A0,
-            0xFFE6EAEE,
-            0xFFFFFFFF
-    );
-
     /** Disabled action — cannot be triggered (e.g. zero openable boxes). */
     public static final Style DISABLED = new Style(
             0xFF2A2A33,

@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_2.gui;
 
-import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;
+import com.reclizer.csgobox.forge_26_2.CsgoBox;
+import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.forge_26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -11,9 +12,11 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
+import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_2.packet.Networking;
 import com.reclizer.csgobox.forge_26_2.packet.PacketCsgoBulkProgress;
 
@@ -62,8 +65,8 @@ public class CsboxConfirmScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.minecraft != null && this.minecraft.level != null) {
-            int fill = UiBackdrop.fill();
-            AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
+            guiGraphics.fillGradient(0, 0, this.width, this.height,
+                    OverlayColor.getBackgroundColor(), OverlayColor.getBackgroundColor());
         }
         renderLabels(guiGraphics);
         renderButtons(guiGraphics, mouseX, mouseY);

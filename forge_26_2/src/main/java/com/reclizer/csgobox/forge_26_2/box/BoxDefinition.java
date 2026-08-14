@@ -2,7 +2,6 @@ package com.reclizer.csgobox.forge_26_2.box;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.reclizer.csgobox.box.BoxGrades;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -25,7 +24,6 @@ import java.util.OptionalInt;
 public record BoxDefinition(
         Identifier id,
         Component name,
-        String type,
         Identifier keyItem,
         float dropRate,
         List<Identifier> dropEntities,
@@ -35,12 +33,17 @@ public record BoxDefinition(
         Map<Identifier, Float> entityDropRates
 ) {
 
+    public static final int GRADE_COUNT = 5;
+    public static final int[] DEFAULT_WEIGHTS = new int[]{625, 125, 25, 5, 2};
+
     private static final Identifier NO_KEY = Identifier.parse("minecraft:air");
+    private static final int MAX_DROP_ENTITIES = 256;
+    private static final int MAX_GRADES = 16;
+    private static final int MAX_ENTITY_DROP_RATES = 256;
 
     public static final Codec<BoxDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
             ComponentSerialization.CODEC.fieldOf("name").forGetter(BoxDefinition::name),
-            Codec.STRING.optionalFieldOf("type", "csbox").forGetter(BoxDefinition::type),
             Identifier.CODEC.fieldOf("key").forGetter(BoxDefinition::keyItem),
             Codec.FLOAT.fieldOf("drop_rate").forGetter(BoxDefinition::dropRate),
             Identifier.CODEC.listOf().fieldOf("drop_entities").forGetter(BoxDefinition::dropEntities),
@@ -60,9 +63,8 @@ public record BoxDefinition(
     public BoxDefinition {
         id = Objects.requireNonNull(id, "box id");
         name = Objects.requireNonNull(name, "box name");
-        type = (type == null || type.isBlank()) ? "csbox" : type;
         keyItem = keyItem == null ? NO_KEY : keyItem;
-        dropRate = BoxGrades.clampDropRate(dropRate);
+        dropRate = Math.clamp(dropRate, 0.0F, 1.0F);
         dropEntities = dropEntities == null ? List.of() : List.copyOf(dropEntities);
         grades = grades == null ? List.of() : List.copyOf(grades);
         texture = texture == null ? Optional.empty() : texture;
@@ -73,16 +75,15 @@ public record BoxDefinition(
     private static void write(RegistryFriendlyByteBuf buf, BoxDefinition def) {
         Identifier.STREAM_CODEC.encode(buf, def.id());
         ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).encode(buf, def.name());
-        ByteBufCodecs.STRING_UTF8.encode(buf, def.type());
         Identifier.STREAM_CODEC.encode(buf, def.keyItem());
         buf.writeFloat(def.dropRate());
-        Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
-        GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_GRADES)).encode(buf, def.grades());
+        Identifier.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).encode(buf, def.dropEntities());
+        GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).encode(buf, def.grades());
         ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.texture());
         ByteBufCodecs.optional(Identifier.STREAM_CODEC).encode(buf, def.sound());
 
         Map<Identifier, Float> entityRates = def.entityDropRates();
-        if (entityRates.size() > BoxGrades.MAX_ENTITY_DROP_RATES) {
+        if (entityRates.size() > MAX_ENTITY_DROP_RATES) {
             throw new IllegalArgumentException("Too many entity drop rates: " + entityRates.size());
         }
         buf.writeVarInt(entityRates.size());
@@ -95,17 +96,16 @@ public record BoxDefinition(
     private static BoxDefinition read(RegistryFriendlyByteBuf buf) {
         Identifier id = Identifier.STREAM_CODEC.decode(buf);
         Component name = ByteBufCodecs.fromCodec(ComponentSerialization.CODEC).decode(buf);
-        String type = ByteBufCodecs.STRING_UTF8.decode(buf);
         Identifier keyItem = Identifier.STREAM_CODEC.decode(buf);
         float dropRate = buf.readFloat();
         List<Identifier> dropEntities = Identifier.STREAM_CODEC
-                .apply(ByteBufCodecs.list(BoxGrades.MAX_DROP_ENTITIES)).decode(buf);
-        List<GradeGroup> grades = GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(BoxGrades.MAX_GRADES)).decode(buf);
+                .apply(ByteBufCodecs.list(MAX_DROP_ENTITIES)).decode(buf);
+        List<GradeGroup> grades = GradeGroup.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_GRADES)).decode(buf);
         Optional<Identifier> texture = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
         Optional<Identifier> sound = ByteBufCodecs.optional(Identifier.STREAM_CODEC).decode(buf);
 
         int entityRatesSize = buf.readVarInt();
-        if (entityRatesSize < 0 || entityRatesSize > BoxGrades.MAX_ENTITY_DROP_RATES) {
+        if (entityRatesSize < 0 || entityRatesSize > MAX_ENTITY_DROP_RATES) {
             throw new DecoderException("Invalid entity drop rate count: " + entityRatesSize);
         }
         Map<Identifier, Float> entityDropRates = new HashMap<>();
@@ -113,24 +113,11 @@ public record BoxDefinition(
             Identifier entityId = Identifier.STREAM_CODEC.decode(buf);
             entityDropRates.put(entityId, buf.readFloat());
         }
-        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
+        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
     }
 
     public static Builder builder(Identifier id, String name) {
         return new Builder(id, name);
-    }
-
-    /** Whether this definition is a terminal machine: the JSON {@code type}
-     *  field is the single source of truth (v1.0.8 strict separation) — only
-     *  {@code "type": "terminal"} is a terminal, and terminals carry no
-     *  {@code key} field at all. */
-    public boolean isTerminal() {
-        return "terminal".equals(type);
-    }
-
-    /** Box type: terminal machine or regular crate, straight from the JSON. */
-    public String type() {
-        return type;
     }
 
     public float getDropRateForEntity(Identifier entityType) {
@@ -139,9 +126,9 @@ public record BoxDefinition(
     }
 
     public int[] getWeightArray() {
-        int[] weights = new int[BoxGrades.GRADE_COUNT];
+        int[] weights = new int[GRADE_COUNT];
         for (GradeGroup grade : grades) {
-            int gradeLevel = BoxGrades.gradeLevel(grade.id());
+            int gradeLevel = gradeLevel(grade.id());
             if (gradeLevel > 0) {
                 weights[gradeLevel - 1] = Math.max(0, grade.weight());
             }
@@ -163,14 +150,24 @@ public record BoxDefinition(
         for (GradeGroup grade : grades) {
             newGrades.add(grade.id().equals(gradeId) ? updatedGrade : grade);
         }
-        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
+        return new BoxDefinition(id, name, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
+    }
+
+    public static int gradeLevel(String id) {
+        return switch (id) {
+            case "consumer" -> 1;
+            case "industrial" -> 2;
+            case "mil_spec" -> 3;
+            case "restricted" -> 4;
+            case "classified" -> 5;
+            default -> 0;
+        };
     }
 
     public static class Builder {
         private final Identifier id;
         private Component name;
         private OptionalInt nameColor = OptionalInt.empty();
-        private String type = "csbox";
         private Identifier keyItem = NO_KEY;
         private float dropRate = 0.12F;
         private final List<Identifier> dropEntities = new ArrayList<>();
@@ -186,13 +183,6 @@ public record BoxDefinition(
 
         public Builder name(Component name) {
             this.name = Objects.requireNonNull(name, "box name");
-            return this;
-        }
-
-        /** Box kind from the JSON {@code type} field; unknown values fall back
-         *  to {@code "csbox"} (the schema validator reports them separately). */
-        public Builder type(String type) {
-            this.type = (type == null || type.isBlank()) ? "csbox" : type;
             return this;
         }
 
@@ -222,7 +212,7 @@ public record BoxDefinition(
         }
 
         public Builder entityDropRate(String entityId, float rate) {
-            this.entityDropRates.put(Identifier.parse(entityId), BoxGrades.clampDropRate(rate));
+            this.entityDropRates.put(Identifier.parse(entityId), Math.clamp(rate, 0.0F, 1.0F));
             return this;
         }
 
@@ -247,7 +237,7 @@ public record BoxDefinition(
                 int argb = 0xFF000000 | nameColor.getAsInt();
                 finalName = name.copy().withStyle(s -> s.withColor(argb));
             }
-            return new BoxDefinition(id, finalName, type, keyItem, dropRate,
+            return new BoxDefinition(id, finalName, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates));
         }
