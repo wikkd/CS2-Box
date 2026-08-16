@@ -280,3 +280,10 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 - AnimationStripTest 补 randomWinningIndex itemCount<MIN 精确边界（itemCount=5->4、2->1）。
 - GradeMapCacheTest 补 invalidateAll 全清断言（invalidateAll 后所有 key 重建）。
 - ItemDrag3DTest 补负向拖拽反向旋转（+200 vs -200 的 y 分量符号相反）。
+
+
+## 终端格式化评估（第 107 轮）
+
+`TerminalOfferRegion` 每帧 `String.format("%.8f", offer.wearVal())`（终端 offer 卡），
+理论上可缓存（offer 不变时 wearVal 稳定）。但：收益小（单次格式化，微秒级）、
+文件脏（需 stash）+ 需缓存管理（offer 变化失效）→ 审慎不做，与倒计时缓存判断一致。
