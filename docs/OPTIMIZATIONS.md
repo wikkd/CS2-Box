@@ -204,3 +204,10 @@ v26_1_2 `CsboxBulkResultScreen`：renderEntries 原本每帧每可见 entry 重�
 字符串 + Component + getVisualOrderText()。改为在不可变 Entry 构造时预渲染 labelSeq，
 渲染循环复用 —— 视觉等价（同 label 文本）、消除每帧分配。已覆盖 4 平台
 （v26_1_2/v26_2/forge_26_1_2/forge_26_2，Entry+label 一致）；v1_21_1 脏暂不同步。
+
+
+## renderAllItemsGrid 评估（第 71 轮）
+
+show-all 网格的 `countText = Component.literal("x"+count)` 每帧每 cell 创建（count 值有限
+可预构建缓存），但：show-all 是用户主动打开查看的视图（非持续高频）、且同一文件
+renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，不单独优化。
