@@ -102,6 +102,27 @@ final class OddsCalculatorTest {
     }
 
     @Test
+    @DisplayName("Precomputed.pickGrade matches one-shot under large weights (long accumulation)")
+    void precomputedMatchesOneShotLargeWeights() {
+        // B1/B3 accumulate weights in a long; verify the precomputed path stays
+        // identical to the one-shot roll even when the total approaches
+        // Long.MAX_VALUE (three Integer.MAX_VALUE weights sum to ~6.4e9, well
+        // above any int-based total).
+        int[] weights = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE};
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
+        assertEquals(3L * Integer.MAX_VALUE, pre.total());
+
+        Random a = new Random(7);
+        Random b = new Random(7);
+        for (int i = 0; i < 2000; i++) {
+            int oneShot = OddsCalculator.pickGrade(a, weights);
+            int cached = pre.pickGrade(b);
+            assertEquals(oneShot, cached,
+                    "large-weight mismatch at roll " + i + ": oneShot=" + oneShot + " cached=" + cached);
+        }
+    }
+
+    @Test
     @DisplayName("Precomputed.pickGrade is sequence-identical to pickGrade(int[])")
     void precomputedMatchesOneShotSequence() {
         // The B1/B3 path precomputes the weight table once and reuses it for
