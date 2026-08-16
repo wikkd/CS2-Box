@@ -183,3 +183,12 @@ forge_26_2 单开路径每次 `GradeMap.build`（未用 GradeMapCache），但�
 - forge_26_2 为实验模块（不在 CI 矩阵）
 - 单开频率低（非批量）
 → 判定不值得引入 GradeMapCache（收益低、改动大、风险高），保持现状。
+
+
+## 渲染缓存评估（第 64 轮）
+
+`CsboxBulkResultScreen.renderEntries` 每帧每可见 item 重建 hover-name 字符串 +
+Component + getVisualOrderText（label 对不变 Entry 是稳定的，可缓存）。
+但：entry 可见数有限（MAX_VISIBLE=8 或 show-all 网格）、界面查看非持续高频、
+需跨平台改 Entry+渲染（部分平台脏）、视觉敏感 → 判定收益中等、成本/风险较高，
+保持现状（批量路径主要热点已在构建侧 B5 优化）。
