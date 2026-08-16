@@ -85,3 +85,13 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 | 用户工作区保护：stash 隔离 | ✅ 完整保留 |
 | 交付：docs/OPTIMIZATIONS.md + .planning/OPTIMIZE-BOTTOM-LAYER.md | ✅ |
 | 未做（低价值）：C2（resolveGrade 查表）、D2（枚举化） | 记录理由，不建议 |
+
+
+## 架构约束确认（第 34 轮）
+
+- 平台方法 `resolveGrade`/`tryConsumeKeys`/`tryConsumeBoxes`/`applyWearDamage` 在
+  三个正式平台重复实现，但涉及 MC 类型（ItemStack/Player/Identifier），受
+  CONSTRAINT-001（common 不得 import MC）约束无法下沉到 common——这是架构强制的
+  重复，非可优化浪费。
+- `computeKResults` 每条结果 `new Random(seed)`（独立种子）是**必要**的（保证
+  每条结果可复现/独立），非浪费。
