@@ -75,6 +75,13 @@
 ## 参考
 
 - 详细计划与分轮进度：`.planning/OPTIMIZE-BOTTOM-LAYER.md`
+- 后续维护注意：
+  - 触碰已有未提交改动的文件时，用 `git stash push -- <file>` 隔离，只提交优化本身，
+    再 `git stash pop` 恢复用户改动（本会话验证可行）。
+  - 镜像纪律：common 不得 import MC（CONSTRA-001）；平台改动先改 v26_1_2 再定点合入
+    v26_2 / forge；v1_21_1 为 legacy 不同 API。
+  - 后续可选：`BoxJsonLoader` 纯逻辑方法（parseColoredName 等）可下沉 common（需适配
+    平台 logger），待用户清理该文件后进行。
 
 
 ## 最终验收清单（第 31 轮）
