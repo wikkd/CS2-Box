@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,7 +50,12 @@ public final class BoxJsonLoader {
     private static final String[] GRADE_NAMES = {"保密", "受限", "军规级", "工业级", "消费级"};
     private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF5E98D9, 0xFFB0C3D9};
 
-    private static final List<LoadError> LAST_LOAD_ERRORS = new ArrayList<>();
+    /**
+     * Load diagnostics collected during loadAll/reloadPreserving. Written by
+     * the file watcher thread (reload) and the server thread (/csbox reload),
+     * so a CopyOnWriteArrayList keeps it safe under that cross-thread access.
+     */
+    private static final List<LoadError> LAST_LOAD_ERRORS = new CopyOnWriteArrayList<>();
 
     /** Matches an optional leading hex color in the box "name" field, e.g.
      *  {@code "#FF5555 高级补给箱"}. Group 1 = 6 hex digits, group 2 = display text. */
