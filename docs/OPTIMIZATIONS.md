@@ -15,7 +15,7 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 | 项 | 文件 | 说明 | 验证 |
 |---|---|---|---|
 | **B1 权重预计算** | `logic/OddsCalculator.java` | 新增 `precomputeWeights()` + `Precomputed`（不可变权重累计表），`pickGrade(int[])` 内部复用；保留原签名兼容 | `OddsCalculatorTest`（含新增 2 个等价/边界测试） |
-| **B2 strip 预计算** | `box/BoxStripGenerator.java` | 50 槽 strip 只预计算一次权重表，不再每槽重复扫描 | `BoxStripGeneratorTest` |
+| **B2 strip 预计算** | `box/BoxStripGenerator.java` | 50 槽 strip 只预计算一次权重表，不再每槽重复扫描；无正权重时回退 grade 1 | `BoxStripGeneratorTest`（含 null/空/全非正边界） |
 | **D1 倒计时** | `terminal/TerminalAnims.java` | `countdownText` 去 `String.format` 改 StringBuilder（渲染每帧调用） | `TerminalAnimsTest` |
 | **D3 贝塞尔 LUT** | `utils/Easing.java` | `cubicBezierCurve` 预计算 256 段 LUT + 插值，替代每帧 20 次二分；最大误差 1.4e-5 | `EasingTest`/`TerminalAnimsTest` |
 | **D4 fallback 缓存** | `logic/GradeMap.java` | `findFallback` 惰性 per-grade 缓存（`ConcurrentHashMap` + noFallback Set），线程安全 | `GradeMapTest` + 新增 `GradeMapFallbackConcurrencyTest` |
