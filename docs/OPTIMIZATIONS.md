@@ -238,4 +238,6 @@ renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，
 - 用户工作区通过 stash 隔离完整保留。
 - 后续建议（BoxJsonLoader 纯逻辑下沉）已记录，待用户清理后可行。
 - 第 79 轮：OddsCalculatorTest 补"单等级权重"边界（total 校验 + 单发/Precomputed 均回 grade 1）。
+- 第 81 轮：BoxGradesTest 锁定 clampDropRate(NaN) 返回 NaN（Java 21 Math.clamp 语义）。
+
 
