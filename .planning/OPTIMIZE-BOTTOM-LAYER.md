@@ -28,7 +28,10 @@
 ### C. 中等 — 平台层纯机械
 - [x] C1 `new EquipmentSlot[]` 提为常量（CsboxScreen countKeys/hasKeyAnywhere）
       → v26_1_2 / v26_2 / forge_26_1_2（三处有该数组；v1_21_1/forge_26_2 无此实现，不改）
-- [ ] C2 `resolveGrade` 全表扫描 → 一次性展开 `Map<ItemStack,Integer>` 查表
+- [x] C2a（forge_26_2 参考）：单开 fallback 路径复用已构建的 gradeMap，
+      替代每次 fallback 重新 GradeMap.build 深拷贝整张 ItemStack map
+      （其他平台 PacketCsgoProgress 文件脏，待同步）
+- [ ] C2（完整）`resolveGrade` 全表扫描 → 查表（待同步到脏平台）
 
 ### D. 低 — common 微优化/健壮性
 - [x] D1 `TerminalAnims.countdownText` String.format → StringBuilder（渲染每帧调用）
