@@ -202,4 +202,5 @@ Component + getVisualOrderText（label 对不变 Entry 是稳定的，可缓存�
 
 v26_1_2 `CsboxBulkResultScreen`：renderEntries 原本每帧每可见 entry 重建 hover-name
 字符串 + Component + getVisualOrderText()。改为在不可变 Entry 构造时预渲染 labelSeq，
-渲染循环复用 —— 视觉等价（同 label 文本）、消除每帧分配。其他平台因差异/脏暂不同步。
+渲染循环复用 —— 视觉等价（同 label 文本）、消除每帧分配。已覆盖 4 平台
+（v26_1_2/v26_2/forge_26_1_2/forge_26_2，Entry+label 一致）；v1_21_1 脏暂不同步。
