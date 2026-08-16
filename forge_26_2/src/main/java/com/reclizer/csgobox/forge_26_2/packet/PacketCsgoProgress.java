@@ -133,7 +133,9 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             int finalGrade = animationGrades.get(winningIndex);
 
             if (giveItem.isEmpty()) {
-                giveItem = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy).findFallback(1);
+                // Reuse the gradeMap built above instead of rebuilding the
+                // whole ItemStack map just for one fallback lookup.
+                giveItem = gradeMap.findFallback(1);
                 if (giveItem == null) giveItem = ItemStack.EMPTY;
                 if (giveItem.isEmpty()) {
                     if (player instanceof ServerPlayer sp) {
