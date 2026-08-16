@@ -39,6 +39,8 @@
 | **C2a fallback 复用** | `PacketCsgoProgress.java` | forge_26_2 | fallback 复用已构建 gradeMap 而非重复 `GradeMap.build`（其余平台本已复用，天然成立） |
 | **单开预计算** | `PacketCsgoProgress.java` | forge_26_2 | 唯一内联 strip 单开路径预计算权重 |
 | **B5 延迟深拷贝** | `PacketCsgoBulkProgress.java` | **全 5 平台** | 先取缓存 GradeMap 用 isEmpty() 判空，`getItemGroup` 深拷贝仅 cache miss 时执行 | 各平台 compileJava |
+| **渲染 DRY** | `IconListTools.java` | v26_1_2 | 抽取 `renderProgressFrame`，消除 `renderItemProgress`/`Focus` 约 30 行重复（视觉等价） | 各平台 compileJava |
+| **label 预渲染** | `CsboxBulkResultScreen.java` | **全 5 平台** | 不可变 Entry 构造时预渲染 labelSeq，消除每帧字符串/Component/排版分配（视觉等价） | 各平台 compileJava |
 
 ## 验证
 
