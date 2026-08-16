@@ -158,6 +158,10 @@ public class CsboxScreen extends Screen {
     private int page;
 
     private static final int ENTER_TICKS = 6;
+    /** Armor + offhand slots walked when counting/consuming keys, all locations. */
+    private static final EquipmentSlot[] LOCATION_SLOTS = new EquipmentSlot[]{
+            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
+            EquipmentSlot.FEET, EquipmentSlot.OFFHAND};
     /** Grid fade-in on first server sync; 6 = settled (no enter anim). */
     private int enterTicks = ENTER_TICKS;
 
@@ -188,9 +192,7 @@ public class CsboxScreen extends Screen {
                     total += stack.getCount();
                 }
             }
-            for (EquipmentSlot slot : new EquipmentSlot[]{
-                    EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                    EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
+            for (EquipmentSlot slot : LOCATION_SLOTS) {
                 ItemStack stack = entity.getItemBySlot(slot);
                 if (isKey(stack, keyRl)) {
                     total += stack.getCount();
@@ -602,9 +604,7 @@ public class CsboxScreen extends Screen {
                 return true;
             }
         }
-        for (EquipmentSlot slot : new EquipmentSlot[]{
-                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
+        for (EquipmentSlot slot : LOCATION_SLOTS) {
             if (isKey(player.getItemBySlot(slot), keyRl)) {
                 return true;
             }
