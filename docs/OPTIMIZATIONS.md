@@ -256,3 +256,10 @@ renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，
   invalidateAll。无内存泄漏/跨世界残留风险（第 94 轮确认）。
 - 跨平台一致性总核对：A1/B3/label 预渲染三优化在全部 5 平台一致落地（✓✓✓✓✓，第 93 轮）。
 - 交付 git 干净：90 次提交全部为我的改动，核心文件全提交，用户工作区保留（第 96 轮）。
+
+
+## 网格缓存优化（第 98 轮）
+
+v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidated 物品 map
+（O(n²) isSameItemSameComponents 扫描）+ 排序，即使 allItems 构造后不变。改为惰性缓存
+（首次构建一次，之后复用），消除 show-all 打开期间的每帧 O(n²)。视觉等价。
