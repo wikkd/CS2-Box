@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link BoxGrades}: the grade-id → level mapping and the
@@ -45,5 +46,9 @@ final class BoxGradesTest {
         assertEquals(0.12F, BoxGrades.clampDropRate(0.12F));
         assertEquals(1.0F, BoxGrades.clampDropRate(1.0F));
         assertEquals(1.0F, BoxGrades.clampDropRate(42.0F));
+        // Math.clamp propagates NaN (verified on Java 21); pin that behaviour so
+        // a bad config value doesn't silently change.
+        assertTrue(Float.isNaN(BoxGrades.clampDropRate(Float.NaN)),
+                "clampDropRate(NaN) must stay NaN");
     }
 }
