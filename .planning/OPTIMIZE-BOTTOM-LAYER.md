@@ -27,6 +27,11 @@
       → 已覆盖全部 5 平台（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2 / forge_26_2），
         各平台均编译通过；forge_26_1_2 通过 stash 隔离同步并保留用户改动。
 
+### B5 批量路径延迟深拷贝（全 5 平台）
+- [x] `PacketCsgoBulkProgress` 改为先取缓存的 GradeMap，用其 isEmpty() 判断空池，
+      `ItemCsgoBox.getItemGroup`（每次深拷贝整张 ItemStack map）仅在 cache miss 时才执行。
+      → v26_1_2/v26_2/v1_21_1/forge_26_2（干净）+ forge_26_1_2（stash 隔离）全部落地并编译通过。
+
 ### C. 中等 — 平台层纯机械
 - [x] C1 `new EquipmentSlot[]` 提为常量（CsboxScreen countKeys/hasKeyAnywhere）
       → v26_1_2 / v26_2 / forge_26_1_2（三处有该数组；v1_21_1/forge_26_2 无此实现，不改）

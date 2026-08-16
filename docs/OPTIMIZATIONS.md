@@ -34,6 +34,7 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 | **C1 GUI 常量** | `CsboxScreen.java` | v26_1_2/v26_2/forge_26_1_2 | `EquipmentSlot[]` → `LOCATION_SLOTS` 常量 |
 | **C2a fallback 复用** | `PacketCsgoProgress.java` | forge_26_2 | fallback 复用已构建 gradeMap 而非重复 `GradeMap.build`（其余平台本已复用，天然成立） |
 | **单开预计算** | `PacketCsgoProgress.java` | forge_26_2 | 唯一内联 strip 单开路径预计算权重 |
+| **B5 延迟深拷贝** | `PacketCsgoBulkProgress.java` | **全 5 平台** | 先取缓存 GradeMap 用 isEmpty() 判空，`getItemGroup` 深拷贝仅 cache miss 时执行 | 各平台 compileJava |
 
 ## 验证
 
