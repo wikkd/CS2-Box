@@ -202,6 +202,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
      */
     private static List<BulkOpenResult> computeKResults(BulkBoxContext snapshot, int K) {
         List<BulkOpenResult> out = new ArrayList<>(K);
+        // Precompute the weight table once for the whole batch so the K-1
+        // follow-up rolls don't each rebuild it (pickGrade(int[]) re-scans).
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(snapshot.weights());
         for (int i = 0; i < K; i++) {
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
@@ -222,7 +225,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 }
                 out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), rng.nextFloat(), fallback));
             } else {
-                int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                int g = (pre != null) ? pre.pickGrade(rng) : 1;
                 ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
                 boolean fallback = s == null;
                 if (s == null) {
