@@ -104,11 +104,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
             var gradeMap = GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy);
+            // Precompute the weight table once for the 50-slot strip instead of
+            // rebuilding it on every slot (pickGrade(int[]) re-scans).
+            OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
 
             List<ItemStack> animationItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
             List<Integer> animationGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
             for (int i = 0; i < AnimationStrip.ITEM_COUNT; i++) {
-                int grade = OddsCalculator.pickGrade(rng, weights);
+                int grade = (pre != null) ? pre.pickGrade(rng) : 1;
                 ItemStack itemStack = gradeMap.pickRandom(rng, grade);
                 if (itemStack == null) {
                     itemStack = gradeMap.findFallback(grade);
