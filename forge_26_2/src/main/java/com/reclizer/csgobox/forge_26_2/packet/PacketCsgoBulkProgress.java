@@ -181,6 +181,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
      */
     private static List<BulkOpenResult> computeKResults(BulkBoxContext snapshot, int K) {
         List<BulkOpenResult> out = new ArrayList<>(K);
+        // Precompute the weight table once for the whole batch instead of
+        // rebuilding it on every roll (each pickGrade(int[]) call re-scans).
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(snapshot.weights());
         for (int i = 0; i < K; i++) {
             long seed = ThreadLocalRandom.current().nextLong();
             Random rng = new Random(seed);
@@ -188,7 +191,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 List<ItemStack> animItems = new ArrayList<>(AnimationStrip.ITEM_COUNT);
                 List<Integer> animGrades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
                 for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
-                    int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                    int g = (pre != null) ? pre.pickGrade(rng) : 1;
                     ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
                     if (s == null) {
                         s = snapshot.gradeMap().findFallback(g);
@@ -217,7 +220,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 }
                 out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, animItems, animGrades, rng.nextFloat()));
             } else {
-                int g = OddsCalculator.pickGrade(rng, snapshot.weights());
+                int g = (pre != null) ? pre.pickGrade(rng) : 1;
                 ItemStack s = snapshot.gradeMap().pickRandom(rng, g);
                 if (s == null) {
                     s = snapshot.gradeMap().findFallback(g);
