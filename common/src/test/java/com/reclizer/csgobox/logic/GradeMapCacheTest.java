@@ -69,6 +69,20 @@ final class GradeMapCacheTest {
         GradeMapCache.invalidateAll();
     }
 
+    @Test
+    @DisplayName("invalidateAll clears every key (all rebuilt on next get)")
+    void invalidateAllClearsEverything() {
+        GradeMap<String> a = GradeMapCache.get("box_a", () -> build("sword"));
+        GradeMap<String> b = GradeMapCache.get("box_b", () -> build("shield"));
+        GradeMapCache.invalidateAll();
+        GradeMap<String> rebuiltA = GradeMapCache.get("box_a", () -> build("dagger"));
+        GradeMap<String> rebuiltB = GradeMapCache.get("box_b", () -> build("axe"));
+        // Both must be rebuilt (new instances) after invalidateAll.
+        org.junit.jupiter.api.Assertions.assertNotSame(a, rebuiltA, "box_a must rebuild after invalidateAll");
+        org.junit.jupiter.api.Assertions.assertNotSame(b, rebuiltB, "box_b must rebuild after invalidateAll");
+        GradeMapCache.invalidateAll();
+    }
+
     private static java.util.Random nullSafeRandom() {
         return new java.util.Random(42);
     }
