@@ -146,3 +146,11 @@ Quat（第 43 轮，10 用例四元数）、GuiRegion（第 44 轮，10 用例�
 v26_1_2 `IconListTools` 抽取 `renderProgressFrame`，消除 `renderItemProgress`/
 `renderItemProgressFocus` 约 30 行重复；逐行等价（视觉不变）。v26_2 因
 `renderItemProgressFocus` 有自身结构差异，未合入（镜像纪律允许平台差异）。
+
+
+## 渲染 DRY 复核（第 52 轮）
+
+- `IconListTools` 其余渲染方法（renderItemFrame / renderRewardCell）虽也有
+  grade5/else 分支，但 alpha、尺寸计算（pad/iconW）、scale 系数、颜色均不同，
+  差异大 → 不 DRY（避免为消除低度重复而引入视觉风险）。
+- 扫描确认无其他"逐行重复"的渲染方法对，上轮 renderProgressFrame 已覆盖最有价值处。
