@@ -280,6 +280,7 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 - AnimationStripTest 补 randomWinningIndex itemCount<MIN 精确边界（itemCount=5->4、2->1）。
 - GradeMapCacheTest 补 invalidateAll 全清断言（invalidateAll 后所有 key 重建）。
 - ItemDrag3DTest 补负向拖拽反向旋转（+200 vs -200 的 y 分量符号相反）。
+- BoxJsonSchemaValidatorTest 补 item price 校验（有效/负/小数/非数字/缺失跳过 5 用例）。
 
 
 ## 终端格式化评估（第 107 轮）
