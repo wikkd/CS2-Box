@@ -216,6 +216,8 @@ renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，
 ## 下沉建议（第 72 轮）
 
 `BoxJsonLoader` 的 `parseColoredName`/`parseLocationFromMessage`/`parseWeights`/`getFloat`
-是纯逻辑（无 MC 类型）且在 5 平台重复，可下沉 common 统一。但因 `BoxJsonLoader` 全平台
-脏（用户进行中工作）+ 涉及建新 common 类 + 5 平台改造，收益中等、风险高 → 本轮不做，
-作为用户清理后的后续建议。
+是纯逻辑（无 MC 类型）且在 5 平台重复，理论上可下沉 common 统一。但深入分析发现：
+`parseColoredName` 依赖平台 logger（common 不能依赖平台，需适配），各方法类型/依赖
+不同，且 `BoxJsonLoader` 全平台脏 → 非简单机械下沉。保持现状，作为用户清理后的
+后续建议（不主动构建辅助类，避免为未来过度设计）。
+
