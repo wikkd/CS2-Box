@@ -69,3 +69,19 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 ## 参考
 
 - 详细计划与分轮进度：`.planning/OPTIMIZE-BOTTOM-LAYER.md`
+
+
+## 最终验收清单（第 31 轮）
+
+| 维度 | 状态 |
+|---|---|
+| 性能：common 权重预计算（B1）、strip 预计算（B2）、倒计时（D1）、贝塞尔 LUT（D3）、fallback 缓存（D4） | ✅ 全部落地 + 测试 |
+| 性能：批量权重预计算（B3）、批量延迟深拷贝（B5）、GUI 常量（C1）、单开预计算等 | ✅ 覆盖适用平台 |
+| 并发：BoxJsonLoader（A1）、OpenBlockGuard ABA（D10） | ✅ 全平台 / common |
+| 一致性：BoxOdds DRY（D5）、WearBands clamp（D8） | ✅ |
+| 死代码：easeOutQuad（D9）+ 全面审查 | ✅ |
+| 测试：并发、语义等价、大小权重边界、无正权重边界 | ✅ 全部通过 |
+| 验证：5 平台 compileJava + common test | ✅ 全绿 |
+| 用户工作区保护：stash 隔离 | ✅ 完整保留 |
+| 交付：docs/OPTIMIZATIONS.md + .planning/OPTIMIZE-BOTTOM-LAYER.md | ✅ |
+| 未做（低价值）：C2（resolveGrade 查表）、D2（枚举化） | 记录理由，不建议 |
