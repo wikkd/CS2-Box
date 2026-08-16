@@ -48,11 +48,6 @@ public final class Easing {
         return 1F - u * u * u;
     }
 
-    public static float easeOutQuad(float t) {
-        float p = clamp01(t);
-        return 1F - (1F - p) * (1F - p);
-    }
-
     /** easeOutBack — flip-in overshoot (c1/c3 standard constants). */
     public static float easeOutBack(float t) {
         float p = clamp01(t);
