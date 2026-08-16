@@ -276,5 +276,6 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 无其他遗留的渲染每帧热点。
 
 
-## 测试增强（第 103 轮）
+## 测试增强（第 103-104 轮）
 - AnimationStripTest 补 randomWinningIndex itemCount<MIN 精确边界（itemCount=5->4、2->1）。
+- GradeMapCacheTest 补 invalidateAll 全清断言（invalidateAll 后所有 key 重建）。
