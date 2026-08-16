@@ -92,8 +92,12 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
 
-            var itemList = ItemCsgoBox.getItemGroup(templateBox);
-            if (itemList.isEmpty()) {
+            // Fetch the cached grade pool; the costly per-item deep-copy build
+            // (ItemCsgoBox.getItemGroup) only runs on a cache miss, not on every
+            // bulk request.
+            var gradeMap = GradeMapCache.get(boxId.toString(),
+                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(templateBox), stack -> !stack.isEmpty(), ItemStack::copy));
+            if (gradeMap.isEmpty()) {
                 return;
             }
             int[] weights = ItemCsgoBox.getRandom(templateBox);
@@ -132,7 +136,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
             final int requestedK = K;
             final long requestId = message.requestId();
-            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, GradeMapCache.get(boxId.toString(), () -> GradeMap.build(itemList, stack -> !stack.isEmpty(), ItemStack::copy)));
+            BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, gradeMap);
 
             final Player playerFinal = player;
             CompletableFuture
