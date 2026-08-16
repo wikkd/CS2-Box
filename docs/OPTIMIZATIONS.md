@@ -47,6 +47,13 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 如 A1 各 +7/-1、B3 各 +4/-1），随后 `git stash pop` 恢复原文件上的用户
 未提交改动。经核对，用户在各脏文件上的进行中工作完整保留、未被污染。
 
+## 反模式审查结论（第 25 轮）
+
+- 批量开箱原「无条件构建整张 ItemStack map 只为判空」的反模式已由 B5 修复，全 5 平台消除。
+- 确认正式平台单开+批量路径均已用 GradeMapCache（cache miss 才构建），无此类浪费。
+- `PacketRequestBoxItems` 的 `getItemGroup` 构建是**必要的**（需遍历发送预览），非反模式。
+- B5 语义基础（空 itemList ↔ 空 GradeMap）由 `GradeMapTest.buildNull/buildEmpty` 保障。
+
 ## 死代码审查结论（第 20 轮）
 
 - 已删除：`Easing.easeOutQuad`（孤立方法，6 模块 + 测试 0 引用）
