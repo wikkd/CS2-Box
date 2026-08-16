@@ -121,5 +121,5 @@ BoxOdds / BoxStripGenerator / BoxGrades / AnimationStrip / GradeMap / GradeMapCa
 OpenBlockGuard / OddsCalculator / Easing / WearBands / WearPenalty / TerminalAnims /
 Quat（第 43 轮，10 用例四元数）、GuiRegion（第 44 轮，10 用例布局）、ColorTools
 （第 44 轮，5 用例颜色）、EntityChineseMap（第 45 轮，5 用例中文名/回退）、OverlayColor
-（第 45 轮，5 用例暗色主题层级）。
+（第 45 轮，5 用例暗色主题层级）、TerminalPalette（第 46 轮，4 用例稀有度颜色映射/边界）。
 ```
