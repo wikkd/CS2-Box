@@ -90,6 +90,7 @@
 |---|---|
 | 性能：common 权重预计算（B1）、strip 预计算（B2）、倒计时（D1）、贝塞尔 LUT（D3）、fallback 缓存（D4） | ✅ 全部落地 + 测试 |
 | 性能：批量权重预计算（B3）、批量延迟深拷贝（B5）、GUI 常量（C1）、单开预计算等 | ✅ 覆盖适用平台 |
+| 性能-渲染：贝塞尔 LUT（D3）、label 预渲染（5 平台）、show-all 网格缓存（5 平台） | ✅ 消除每帧分配/O(n²) |
 | 并发：BoxJsonLoader（A1）、OpenBlockGuard ABA（D10） | ✅ 全平台 / common |
 | 一致性：BoxOdds DRY（D5）、WearBands clamp（D8） | ✅ |
 | 死代码：easeOutQuad（D9）+ 全面审查 | ✅ |
