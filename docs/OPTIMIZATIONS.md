@@ -167,3 +167,10 @@ v26_1_2 `IconListTools` 抽取 `renderProgressFrame`，消除 `renderItemProgres
 B3（批量 precomputeWeights）、B5（延迟深拷贝 gradeMap.isEmpty）、A1（CopyOnWriteArrayList）
 三项关键优化，在全部 5 平台（v26_1_2/v26_2/v1_21_1/forge_26_1_2/forge_26_2）逐一核对
 均完整存在且一致 —— 无遗漏平台。
+
+
+## C1 覆盖核对（第 59 轮）
+
+C1（LOCATION_SLOTS 常量）仅应用于有 EquipmentSlot 数组遍历的平台（v26_1_2/v26_2/
+forge_26_1_2）；v1_21_1/forge_26_2 的 CsboxScreen.countKeys 不遍历 armor/offhand，
+经确认无需此常量 → 覆盖准确、无遗漏、无过度。
