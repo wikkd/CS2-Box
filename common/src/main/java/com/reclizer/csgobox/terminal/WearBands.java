@@ -45,19 +45,24 @@ public final class WearBands {
         return BAND_STOPS.length - 1;
     }
 
+    /** Clamps a band index into [0, COUNT-1]. */
+    private static int clampIdx(int idx) {
+        return Math.max(0, Math.min(idx, COUNT - 1));
+    }
+
     /** Band colour for a tier index. */
     public static int tierColor(int idx) {
-        return BAND_COLORS[Math.max(0, Math.min(idx, COUNT - 1))];
+        return BAND_COLORS[clampIdx(idx)];
     }
 
     /** Band abbreviation for a tier index ("FN".."BS"). */
     public static String tierAbbr(int idx) {
-        return ABBR[Math.max(0, Math.min(idx, COUNT - 1))];
+        return ABBR[clampIdx(idx)];
     }
 
     /** Lang key of the tier display name. */
     public static String tierNameKey(int idx) {
-        return NAME_KEYS[Math.max(0, Math.min(idx, COUNT - 1))];
+        return NAME_KEYS[clampIdx(idx)];
     }
 
     /** Lower bound (inclusive) of a tier as a fraction of the wear bar. */
@@ -67,6 +72,6 @@ public final class WearBands {
 
     /** Upper bound (exclusive) of a tier as a fraction of the wear bar. */
     public static float tierHi(int idx) {
-        return BAND_STOPS[Math.max(0, Math.min(idx, COUNT - 1))];
+        return BAND_STOPS[clampIdx(idx)];
     }
 }
