@@ -57,6 +57,18 @@ final class AnimationStripTest {
     }
 
     @Test
+    @DisplayName("randomWinningIndex for itemCount below MIN returns the last index")
+    void winningIndexBelowMinReturnsLast() {
+        // itemCount=5 (< MIN_WINNING_INDEX=35): max <= min so it returns maxIndex = 4.
+        Random rng = new Random(42);
+        for (int i = 0; i < 10; i++) {
+            assertEquals(4, AnimationStrip.randomWinningIndex(rng, 5));
+        }
+        // itemCount=2 -> maxIndex=1
+        assertEquals(1, AnimationStrip.randomWinningIndex(rng, 2));
+    }
+
+    @Test
     @DisplayName("findNearestValid returns startingIndex when valid")
     void nearestValidDirect() {
         List<String> items = Arrays.asList("a", "b", "c", "d", "e");
