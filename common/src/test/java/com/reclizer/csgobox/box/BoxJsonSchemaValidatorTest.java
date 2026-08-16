@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.box;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.DisplayName;
@@ -375,6 +374,50 @@ final class BoxJsonSchemaValidatorTest {
                     """;
             List<BoxJsonSchemaValidator.SchemaIssue> issues = validate(malformed);
             assertFalse(issues.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("item price field")
+    class ItemPrice {
+        @Test
+        @DisplayName("non-negative integer price is fine")
+        void validPrice() {
+            assertTrue(validate("""
+                    { "grade1": [ { "id": "x", "price": 12 } ] }
+                    """).isEmpty(), "valid price must produce no issues");
+        }
+
+        @Test
+        @DisplayName("negative price reports price")
+        void negativePrice() {
+            assertSingleIssue(validate("""
+                    { "grade1": [ { "id": "x", "price": -3 } ] }
+                    """), "grade1[0].price");
+        }
+
+        @Test
+        @DisplayName("non-integer price reports price")
+        void fractionalPrice() {
+            assertSingleIssue(validate("""
+                    { "grade1": [ { "id": "x", "price": 2.5 } ] }
+                    """), "grade1[0].price");
+        }
+
+        @Test
+        @DisplayName("non-numeric price reports price")
+        void nonNumericPrice() {
+            assertSingleIssue(validate("""
+                    { "grade1": [ { "id": "x", "price": "abc" } ] }
+                    """), "grade1[0].price");
+        }
+
+        @Test
+        @DisplayName("missing price is skipped (no issue)")
+        void missingPriceSkipped() {
+            assertTrue(validate("""
+                    { "grade1": [ { "id": "x" } ] }
+                    """).isEmpty(), "item without price must be skipped");
         }
     }
 }
