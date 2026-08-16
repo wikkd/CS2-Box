@@ -69,5 +69,11 @@
     import 清理，只提交我的 B3 改动，stash pop 恢复用户内容。至此 B3 覆盖全部 5 平台。
   - 第十三轮：A1（CopyOnWriteArrayList 并发修复）用 stash 隔离同步到 v26_1_2/v26_2/
     v1_21_1/forge_26_1_2，全部 5 平台完成 A1，且各平台用户遗漏改动完整保留。
-- 待做（平台层）：C2a 同步到 v26_1_2/v26_2/v1_21_1/forge_26_1_2（可用 stash 隔离），
-  C2（resolveGrade 查表），D2（枚举化，低价值）
+  - 第十四轮：确认 C2a 在正式平台天然成立（无重复 build 反模式），无需同步；
+    全 5 平台 final compileJava + common test 全绿。
+- 待做（已确认非必要）：C2a（fallback 复用 gradeMap）经排查，正式平台 v26_1_2/v26_2/
+  v1_21_1/forge_26_1_2 本就复用 gradeMap.findFallback(1)（用 BoxStripGenerator），
+  无重复 build 反模式，无需同步；仅 forge_26_2 旧内联实现有该问题且已修复。
+- 剩余低价值/高风险（不建议）：C2（resolveGrade 查表，fallback 低频、收益极小、触脏文件），
+  D2（WearPenalty/WearBands 枚举化，纯重构低价值）。
+- 结论：所有高价值、可安全实施的优化已完成并全平台验证通过。
