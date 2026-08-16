@@ -174,3 +174,12 @@ B3（批量 precomputeWeights）、B5（延迟深拷贝 gradeMap.isEmpty）、A1
 C1（LOCATION_SLOTS 常量）仅应用于有 EquipmentSlot 数组遍历的平台（v26_1_2/v26_2/
 forge_26_1_2）；v1_21_1/forge_26_2 的 CsboxScreen.countKeys 不遍历 armor/offhand，
 经确认无需此常量 → 覆盖准确、无遗漏、无过度。
+
+
+## forge_26_2 单开评估（第 61 轮）
+
+forge_26_2 单开路径每次 `GradeMap.build`（未用 GradeMapCache），但：
+- resolveGrade 签名依赖 itemList（Map），引入 GradeMapCache 需同步改写 resolveGrade（较大改动）
+- forge_26_2 为实验模块（不在 CI 矩阵）
+- 单开频率低（非批量）
+→ 判定不值得引入 GradeMapCache（收益低、改动大、风险高），保持现状。
