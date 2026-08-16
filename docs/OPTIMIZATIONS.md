@@ -160,3 +160,10 @@ v26_1_2 `IconListTools` 抽取 `renderProgressFrame`，消除 `renderItemProgres
 
 - ItemDrag3DTest 补 MAX_DELTA 钳制 + DEAD_ZONE 死区边界（现 7 用例）。诊断确认
   `accumulate(10000)` 与 `accumulate(80)` 的 rotation 分量完全相同，残差仅浮点展开。
+
+
+## 跨平台一致性核对（第 56 轮）
+
+B3（批量 precomputeWeights）、B5（延迟深拷贝 gradeMap.isEmpty）、A1（CopyOnWriteArrayList）
+三项关键优化，在全部 5 平台（v26_1_2/v26_2/v1_21_1/forge_26_1_2/forge_26_2）逐一核对
+均完整存在且一致 —— 无遗漏平台。
