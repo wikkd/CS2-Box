@@ -196,3 +196,10 @@ Component + getVisualOrderText（label 对不变 Entry 是稳定的，可缓存�
 但：entry 可见数有限（MAX_VISIBLE=8 或 show-all 网格）、界面查看非持续高频、
 需跨平台改 Entry+渲染（部分平台脏）、视觉敏感 → 判定收益中等、成本/风险较高，
 保持现状（批量路径主要热点已在构建侧 B5 优化）。
+
+
+## 渲染分配优化（第 68 轮）
+
+v26_1_2 `CsboxBulkResultScreen`：renderEntries 原本每帧每可见 entry 重建 hover-name
+字符串 + Component + getVisualOrderText()。改为在不可变 Entry 构造时预渲染 labelSeq，
+渲染循环复用 —— 视觉等价（同 label 文本）、消除每帧分配。其他平台因差异/脏暂不同步。
