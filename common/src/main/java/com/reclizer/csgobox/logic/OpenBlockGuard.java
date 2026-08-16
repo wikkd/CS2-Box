@@ -31,11 +31,21 @@ public final class OpenBlockGuard {
      * Returns {@code true} while {@code id} is inside its cooldown window at
      * {@code now}. Expired entries are removed lazily on lookup, matching the
      * original platform behaviour.
+     *
+     * <p>The expiry removal is conditional ({@code remove(key, value)}) so a
+     * concurrent {@link #block} that updates the deadline between our read and
+     * remove is never clobbered — an unconditional remove could wipe a just-set
+     * newer deadline and let a player open immediately (ABA race).</p>
      */
     public static boolean isBlocked(UUID id, long now) {
         Long blockedUntil = BLOCKED_UNTIL_TICK.get(id);
-        if (blockedUntil == null || now >= blockedUntil) {
-            BLOCKED_UNTIL_TICK.remove(id);
+        if (blockedUntil == null) {
+            return false;
+        }
+        if (now >= blockedUntil) {
+            // Remove only if the value is still the one we read; if another
+            // thread wrote a new deadline meanwhile, leave it untouched.
+            BLOCKED_UNTIL_TICK.remove(id, blockedUntil);
             return false;
         }
         return true;
