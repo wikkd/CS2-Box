@@ -56,9 +56,14 @@
 - `scripts/check-animops-drift.sh`（仅当动渲染原语；本计划不涉及，跳过）
 
 ## 当前进度
-- 已完成：B1、B2、D1、D3、C1、D4 + 并发测试
+- 已完成：B1、B2、D1、D3、C1、D4 + 并发测试 + A1（forge_26_2）+ C2a（forge_26_2）+ B3（四平台）
   - 第二轮新增 D3：Easing.cubicBezierCurve LUT 缓存（渲染热路径，common）
   - 第三轮新增 C1：CsboxScreen EquipmentSlot[] 提为 LOCATION_SLOTS 常量
     （v26_1_2 / v26_2 / forge_26_1_2，三平台编译通过；v1_21_1/forge_26_2 无此数组）
-  - 第四轮新增 D4：GradeMap.findFallback 惰性缓存（common）
-- 待做（平台层，需谨慎跨平台同步）：A1、B3、C1、C2、D2
+  - 第四轮新增 D4：GradeMap.findFallback 惰性缓存（common）+ 并发测试
+  - 第六轮新增 A1（forge_26_2 LAST_LOAD_ERRORS 线程安全）+ C2a（fallback 复用 gradeMap）
+  - 第七轮新增 B3（forge_26_2 批量权重预计算）
+  - 第八轮 B3 同步到 v26_1_2 / v26_2 / v1_21_1（正式三平台，diff 对称）
+  - 第九轮 forge_26_2 单开路径（唯一内联 strip）也预计算权重一次，对齐 B1/B3
+- 待做（平台层，需用户清理脏文件后同步）：A1→v26_1_2/v26_2/v1_21_1/forge_26_1_2，
+  C2a→v26_1_2/v26_2/v1_21_1/forge_26_1_2，B3→forge_26_1_2，C2（resolveGrade 查表），D2
