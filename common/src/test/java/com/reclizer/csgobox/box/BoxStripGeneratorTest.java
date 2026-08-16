@@ -102,4 +102,21 @@ final class BoxStripGeneratorTest {
         assertTrue(strip.items().stream().allMatch("only"::equals));
         assertTrue(strip.winningIndex() >= 0);
     }
+
+    @Test
+    @DisplayName("null/empty/all-non-positive weights degrade to grade 1 without throwing")
+    void nonPositiveWeightsDegradeToGrade1() {
+        // B2 precomputes the weight table once and falls back to grade 1 when
+        // there is no positive weight; verify the strip still builds and lands
+        // on a valid item in grade 1 (the "only" pool entry).
+        GradeMap<String> pool = poolOf(Map.of("only", 1));
+        for (int[] bad : new int[][]{null, new int[0], new int[]{0, -3, 0, -1, 0}}) {
+            BoxStripGenerator.Strip<String> strip =
+                    BoxStripGenerator.generate(pool, bad, new Random(42L), EMPTY);
+            assertEquals(AnimationStrip.ITEM_COUNT, strip.items().size());
+            assertTrue(strip.items().stream().allMatch("only"::equals),
+                    "all slots must resolve to grade-1 pool item");
+            assertTrue(strip.winningIndex() >= 0);
+        }
+    }
 }
