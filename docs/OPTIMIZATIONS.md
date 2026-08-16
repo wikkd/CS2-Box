@@ -114,9 +114,10 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 - 5 平台 compileJava + common test — ✅ 全绿
 
 
-## 测试覆盖核对（第 41 轮）
+## 测试覆盖核对（第 41-43 轮）
 
-全部 12 个关键 common 类均有对应单元测试，且历轮增强覆盖边界/并发/语义等价：
+全部关键 common 类均有对应单元测试，且历轮增强覆盖边界/并发/语义等价：
 BoxOdds / BoxStripGenerator / BoxGrades / AnimationStrip / GradeMap / GradeMapCache /
-OpenBlockGuard / OddsCalculator / Easing / WearBands / WearPenalty / TerminalAnims。
+OpenBlockGuard / OddsCalculator / Easing / WearBands / WearPenalty / TerminalAnims /
+Quat（第 43 轮新增，10 个用例覆盖四元数数学，填补渲染数学测试缺口）。
 ```
