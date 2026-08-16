@@ -170,4 +170,36 @@ class ItemDrag3DTest {
                 "horizontal drag should stay a pure Y-axis rotation, got " + q);
         assertTrue(q.w() < 1 - 1e-3F, "rotation must have moved off identity");
     }
+
+    @Test
+    void maxDeltaClampsHugeInput() {
+        // Input deltas above MAX_DELTA (80 px) are clamped; a 10000px flick must
+        // produce (effectively) the same final rotation as an 80px one. The
+        // two rotations' float components are identical; the ~3e-4 residual is
+        // only double-precision expansion noise in angleBetween, hence 1e-3.
+        ItemDrag3D huge = new ItemDrag3D(0, 0);
+        ItemDrag3D capped = new ItemDrag3D(0, 0);
+        huge.accumulate(10000, 0);
+        capped.accumulate(80, 0);
+        for (int i = 0; i < 30; i++) {
+            huge.tickAt(FRAME);
+            capped.tickAt(FRAME);
+        }
+        assertEquals(0, angleBetween(huge.rotation(), capped.rotation()), 1e-3,
+                "huge input must be clamped to the same rotation as MAX_DELTA");
+    }
+
+    @Test
+    void deadZoneFiltersTinyInput() {
+        // Sub-DEAD_ZONE (0.8px) deltas are filtered out: orientation stays at
+        // identity and angular speed stays ~0.
+        ItemDrag3D drag = new ItemDrag3D(0, 0);
+        drag.accumulate(0.1, 0);
+        for (int i = 0; i < 5; i++) {
+            drag.tickAt(FRAME);
+        }
+        assertEquals(0, angleBetween(Quat.IDENTITY, drag.rotation()), 1e-4,
+                "sub-dead-zone input must not rotate");
+        assertEquals(0, drag.omega(), 1e-4);
+    }
 }
