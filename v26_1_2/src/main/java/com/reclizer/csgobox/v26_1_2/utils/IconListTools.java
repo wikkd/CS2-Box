@@ -122,50 +122,51 @@ public final class IconListTools {
         AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, pX, pY, scale);
     }
 
-    public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
-        int color = ColorTools.colorItems(grade);
-        float frameWidth = width * 18 / 100F;
-        float frameHeight = height * 25 / 100F;
-        float scale = frameWidth * 60F / 100F / 16F;
-        int toX = (int)(pX + frameWidth);
-        int toY = (int)(pY + frameHeight);
-        float itemX = pX + frameWidth / 2F;
-        float itemY = pY + frameHeight / 2F;
+    /**
+     * Shared frame rendering for the progress item card (grade 5 gold gem or
+     * rarity bar + item). Extracted so {@link #renderItemProgress} and
+     * {@link #renderItemProgressFocus} don't duplicate the same rendering.
+     * All parameters must match the callers' per-frame math exactly so the
+     * visuals are byte-for-byte identical to the pre-DRY versions.
+     */
+    private static void renderProgressFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics,
+                                            ItemStack itemStack, int pX, int pY,
+                                            float frameWidth, float frameHeight,
+                                            float itemX, float itemY, float scale, int grade, int color) {
+        int toX = (int) (pX + frameWidth);
+        int toY = (int) (pY + frameHeight);
         if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
                     (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
+            AnimRenderOps.fill(guiGraphics, pX, toY, toX, toY + 2, color);
         } else {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
             AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
+            AnimRenderOps.fill(guiGraphics, pX, toY, toX, toY + 2, color);
         }
     }
 
-public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade, float focusScale) {
+    public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
+        float frameWidth = width * 18 / 100F;
+        float frameHeight = height * 25 / 100F;
+        float scale = frameWidth * 60F / 100F / 16F;
         int color = ColorTools.colorItems(grade);
+        renderProgressFrame(entity, guiGraphics, itemStack, (int) pX, (int) pY,
+                frameWidth, frameHeight,
+                pX + frameWidth / 2F, pY + frameHeight / 2F, scale, grade, color);
+    }
+
+    public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade, float focusScale) {
         float frameWidth = width * 18 / 100F * focusScale;
         float frameHeight = height * 25 / 100F * focusScale;
         float scale = frameWidth * 92F / 100F / 16F;
-        int toX = (int)(pX + frameWidth);
-        int toY = (int)(pY + frameHeight);
-        float itemX = pX + frameWidth / 2F;
-        float itemY = pY + frameHeight / 2F;
-        if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
-        } else {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
-                    ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
-        }
+        int color = ColorTools.colorItems(grade);
+        renderProgressFrame(entity, guiGraphics, itemStack, (int) pX, (int) pY,
+                frameWidth, frameHeight,
+                pX + frameWidth / 2F, pY + frameHeight / 2F, scale, grade, color);
         int bx0 = (int) pX;
         int by0 = (int) pY;
         // Focus tint: periwinkle/blue gradient lit up inside the focused card
@@ -174,6 +175,6 @@ public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtra
         int tintA = (int) (70F * (0.4F + 0.6F * focus));
         int tintTop = ColorTools.argbColor(tintA, 176, 140, 255);
         int tintBottom = ColorTools.argbColor(tintA - 12, 48, 80, 255);
-        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
+        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, (int) (pX + frameWidth) - 4, (int) (pY + frameHeight) - 4, tintTop, tintBottom);
     }
 }
