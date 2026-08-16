@@ -265,3 +265,12 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 （首次构建一次，之后复用），消除 show-all 打开期间的每帧 O(n²)。视觉等价。
 已覆盖 **全部 5 平台**：v26_1_2/v26_2/v1_21_1（有排序版）+ forge_26_1_2/forge_26_2
 （无排序版，仅缓存 consolidated/gradeMap）。
+
+
+## 渲染热点复核（第 101 轮）
+
+系统扫描各屏幕渲染循环的每帧 Component/String 重建：
+- show-all 网格（CsboxBulkResultScreen）已缓存（5 平台）、renderEntries label 已预渲染。
+- CsLookItemScreen.formatWear 在组件数组初始化时调用（非每帧）+ 文件脏 → 不改。
+- CsboxConfirmScreen 文件脏、模式少 → 不改。
+无其他遗留的渲染每帧热点。
