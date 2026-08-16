@@ -41,6 +41,7 @@
       （端到端最大偏差 1.4e-5，cubicBezierCurve(0.5)=0.88378 vs 参考 0.884，测试全过）
 - [x] D4 `GradeMap.findFallback` 惰性 per-grade 缓存（ConcurrentHashMap + noFallback Set）
       → 批量/空池高频 fallback 只扫描一次；copier 每次仍应用，行为不变
+- [x] D5 `BoxOdds.totalWeight` 委托给 `OddsCalculator.precomputeWeights`（DRY 统一正权重求和来源）
 - [ ] D2 `WearPenalty`/`WearBands` 枚举化（低价值，可选）
 
 ## 执行纪律
