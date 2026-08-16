@@ -33,6 +33,8 @@
 - [x] D1 `TerminalAnims.countdownText` String.format → StringBuilder（渲染每帧调用）
 - [x] D3 `Easing.cubicBezierCurve` 预计算 LUT + 线性插值，替代每帧 20 次二分迭代
       （端到端最大偏差 1.4e-5，cubicBezierCurve(0.5)=0.88378 vs 参考 0.884，测试全过）
+- [x] D4 `GradeMap.findFallback` 惰性 per-grade 缓存（ConcurrentHashMap + noFallback Set）
+      → 批量/空池高频 fallback 只扫描一次；copier 每次仍应用，行为不变
 - [ ] D2 `WearPenalty`/`WearBands` 枚举化（低价值，可选）
 
 ## 执行纪律
@@ -52,4 +54,5 @@
   - 第二轮新增 D3：Easing.cubicBezierCurve LUT 缓存（渲染热路径，common）
   - 第三轮新增 C1：CsboxScreen EquipmentSlot[] 提为 LOCATION_SLOTS 常量
     （v26_1_2 / v26_2 / forge_26_1_2，三平台编译通过；v1_21_1/forge_26_2 无此数组）
+  - 第四轮新增 D4：GradeMap.findFallback 惰性缓存（common）
 - 待做（平台层，需谨慎跨平台同步）：A1、B3、C1、C2、D2

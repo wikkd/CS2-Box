@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -25,6 +27,16 @@ public final class GradeMap<T> {
     private final Map<Integer, List<T>> map;
     private final Predicate<T> valid;
     private final Function<T, T> copier;
+
+    /**
+     * Lazy per-target-grade fallback cache. {@code fallbackCache} stores the
+     * cached source item (never a copy); {@code noFallback} marks grades that
+     * resolve to nothing. Since the map is immutable this is safe to share
+     * across threads — concurrent misses just compute the same value and
+     * publish one winner, matching {@code GradeMapCache} semantics.
+     */
+    private final Map<Integer, T> fallbackCache = new ConcurrentHashMap<>();
+    private final Set<Integer> noFallback = ConcurrentHashMap.newKeySet();
 
     /**
      * @param map    grade → items (defensively copied)
@@ -87,23 +99,42 @@ public final class GradeMap<T> {
      * {@code RandomItem.findFallbackFromGradeMap}.
      */
     public T findFallback(int targetGrade) {
+        // Cached miss (this grade resolves to nothing) — cheap check.
+        if (noFallback.contains(targetGrade)) {
+            return null;
+        }
+        T cached = fallbackCache.get(targetGrade);
+        if (cached != null) {
+            return copier.apply(cached);
+        }
+        T source = computeFallback(targetGrade);
+        if (source != null) {
+            fallbackCache.put(targetGrade, source);
+            return copier.apply(source);
+        }
+        noFallback.add(targetGrade);
+        return null;
+    }
+
+    /** Un-cached fallback search; returns the source item (not a copy). */
+    private T computeFallback(int targetGrade) {
         List<T> sameGrade = map.get(targetGrade);
         if (sameGrade != null) {
             for (T item : sameGrade) {
-                if (valid.test(item)) return copier.apply(item);
+                if (valid.test(item)) return item;
             }
         }
         for (int g = targetGrade - 1; g >= 1; g--) {
             List<T> lower = map.get(g);
             if (lower != null) {
                 for (T item : lower) {
-                    if (valid.test(item)) return copier.apply(item);
+                    if (valid.test(item)) return item;
                 }
             }
         }
         for (List<T> list : map.values()) {
             for (T item : list) {
-                if (valid.test(item)) return copier.apply(item);
+                if (valid.test(item)) return item;
             }
         }
         return null;
