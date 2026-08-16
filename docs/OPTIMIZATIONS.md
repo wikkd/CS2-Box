@@ -95,3 +95,12 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
   重复，非可优化浪费。
 - `computeKResults` 每条结果 `new Random(seed)`（独立种子）是**必要**的（保证
   每条结果可复现/独立），非浪费。
+
+
+## 提交统计（第 38 轮，会话内新增）
+
+共 45 次提交，按类型：21 docs、11 perf、6 fix（含并发）、4 test、3 refactor。
+- perf（性能）：权重预计算、贝塞尔 LUT、fallback 缓存、批量/单开预计算、延迟深拷贝、EquipmentSlot 常量
+- fix（并发/健壮性）：A1 BoxJsonLoader（全 5 平台）、D10 OpenBlockGuard ABA、单开 fallback 复用
+- refactor（一致性/DRY/死代码）：D5 BoxOdds、D8 WearBands、D9 easeOutQuad
+- test：GradeMapFallbackConcurrency、Precomputed 等价（含大权重）、BoxStripGenerator 边界
