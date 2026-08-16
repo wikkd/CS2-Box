@@ -66,12 +66,19 @@ public class CsboxBulkResultScreen extends Screen {
         final int grade;
         final long appearTick;
         final int index;
+        /** Pre-rendered label sequence; stable per entry (stack/index never
+         *  change), so it's built once at construction instead of per frame. */
+        final FormattedCharSequence labelSeq;
 
         Entry(ItemStack stack, int grade, long appearTick, int index) {
             this.stack = stack.copy();
             this.grade = grade;
             this.appearTick = appearTick;
             this.index = index;
+            String label = this.stack.isEmpty()
+                    ? "(" + this.index + ")"
+                    : this.stack.getHoverName().getString() + "  ×" + this.stack.getCount() + "   #" + this.index;
+            this.labelSeq = Component.literal(label).getVisualOrderText();
         }
     }
 
@@ -201,11 +208,9 @@ public class CsboxBulkResultScreen extends Screen {
                     IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
                 }
             }
-            String label = e.stack.isEmpty()
-                    ? "(" + e.index + ")"
-                    : e.stack.getHoverName().getString() + "  ×" + e.stack.getCount() + "   #" + e.index;
-            FormattedCharSequence seq = Component.literal(label).getVisualOrderText();
-            RenderFontTool.drawString(guiGraphics, this.font, seq,
+            // Reuse the per-entry pre-rendered label (stable) instead of
+            // rebuilding the string + Component + visual-order sequence per frame.
+            RenderFontTool.drawString(guiGraphics, this.font, e.labelSeq,
                     itemX + itemSize + 12, y - this.font.lineHeight * 0.5F, 0, 0, 0.9F, labelColor);
             index++;
         }
