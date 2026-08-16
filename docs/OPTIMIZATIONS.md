@@ -131,3 +131,11 @@ Quat（第 43 轮，10 用例四元数）、GuiRegion（第 44 轮，10 用例�
 - 几乎覆盖所有含逻辑的 common 类（含历轮为每个优化补充的边界/并发/语义等价测试）。
 - 未覆盖：BoxFileWatcher（并发文件监听，测试需真实 WatchService/线程时序，成本高、
   CI 脆弱、价值低）、纯数据类（常量，无需测）——明确判定不测。
+
+
+## 死代码复核（第 48 轮）
+
+系统重扫 common 全部公共静态方法（排除 build/测试，仅生产代码），确认：
+- **无新的孤立死代码**（类似 easeOutQuad 的零引用方法不存在）。
+- 保留项复核：actions/centered/getDisplayNameFull/panelPressed 为有意 API 体系成员
+  （第 20 轮已决定保留）；slotIndex/swapPop/tierAbbr 有测试引用，为有效公共 API。
