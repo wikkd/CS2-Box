@@ -172,6 +172,30 @@ class ItemDrag3DTest {
     }
 
     @Test
+    void negativeDragRotatesOppositeDirection() {
+        // With init (0,0), a negative horizontal drag should rotate about -Y
+        // (opposite sign of y component) vs a positive +200 drag, both
+        // staying a pure Y-axis rotation.
+        ItemDrag3D positive = new ItemDrag3D(0, 0);
+        ItemDrag3D negative = new ItemDrag3D(0, 0);
+        positive.accumulate(200, 0);
+        negative.accumulate(-200, 0);
+        for (int i = 0; i < 30; i++) {
+            positive.tickAt(FRAME);
+            negative.tickAt(FRAME);
+        }
+        Quat qp = positive.rotation();
+        Quat qn = negative.rotation();
+        // Both are pure Y rotations.
+        assertTrue(Math.abs(qp.x()) < 0.02F && Math.abs(qp.z()) < 0.02F, "positive must be pure Y");
+        assertTrue(Math.abs(qn.x()) < 0.02F && Math.abs(qn.z()) < 0.02F, "negative must be pure Y");
+        // Opposite directions: y component opposite sign.
+        assertTrue(qp.y() * qn.y() < 0F, "positive and negative drag must rotate oppositely, got "
+                + qp.y() + " vs " + qn.y());
+        assertTrue(Math.abs(qp.y()) > 0.01F && Math.abs(qn.y()) > 0.01F, "both must rotate off identity");
+    }
+
+    @Test
     void maxDeltaClampsHugeInput() {
         // Input deltas above MAX_DELTA (80 px) are clamped; a 10000px flick must
         // produce (effectively) the same final rotation as an 80px one. The
