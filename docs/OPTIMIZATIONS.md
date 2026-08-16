@@ -251,4 +251,8 @@ renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，
 - 第 86 轮：QuatTest 补 slerp 相同输入（nlerp 分支）返回原四元数。
 
 
-
+## 收尾确认（第 94-96 轮）
+- GradeMapCache 清理机制完整：单 box 变化→invalidate(id)；reload/登录/world 变化→
+  invalidateAll。无内存泄漏/跨世界残留风险（第 94 轮确认）。
+- 跨平台一致性总核对：A1/B3/label 预渲染三优化在全部 5 平台一致落地（✓✓✓✓✓，第 93 轮）。
+- 交付 git 干净：90 次提交全部为我的改动，核心文件全提交，用户工作区保留（第 96 轮）。
