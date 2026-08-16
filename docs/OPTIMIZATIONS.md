@@ -288,3 +288,11 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 `TerminalOfferRegion` 每帧 `String.format("%.8f", offer.wearVal())`（终端 offer 卡），
 理论上可缓存（offer 不变时 wearVal 稳定）。但：收益小（单次格式化，微秒级）、
 文件脏（需 stash）+ 需缓存管理（offer 变化失效）→ 审慎不做，与倒计时缓存判断一致。
+
+
+## String.format 复核（第 110 轮）
+
+复核剩余渲染路径 String.format：
+- CsLookItemScreen.formatWear（每帧查看界面 1 次）— 收益小 + 脏文件，不做
+- TerminalConfirmDialog / TerminalOfferRegion — 与上轮评估一致，不做
+其余（JEI 显示、命令）低频。无新遗漏的高价值格式化热点。
