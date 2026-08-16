@@ -93,6 +93,17 @@ final class QuatTest {
     }
 
     @Test
+    void slerpWithSameInputReturnsOriginal() {
+        // Two identical quaternions have dot(a,a)=1, which takes the
+        // nlerp branch (d > 0.9995F); interpolation must yield the original
+        // at any t (same-axis, same angle, so nlerp is exact).
+        Quat a = Quat.fromAxisAngle(0, 1, 0, 0.7F);
+        assertQuat(a, Quat.slerp(a, a, 0F));
+        assertQuat(a, Quat.slerp(a, a, 0.5F));
+        assertQuat(a, Quat.slerp(a, a, 1F));
+    }
+
+    @Test
     void slerpInterpolatesSmoothly() {
         Quat a = Quat.fromAxisAngle(0, 1, 0, 0F);
         Quat b = Quat.fromAxisAngle(0, 1, 0, 1F);
