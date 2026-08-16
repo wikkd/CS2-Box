@@ -40,15 +40,6 @@ public final class BoxStripGenerator {
     }
 
     /**
-     * Precomputes the weight table for a {@code weights} array, or returns
-     * {@code null} when no positive weight exists (callers keep the default
-     * grade-1 behaviour).
-     */
-    private static OddsCalculator.Precomputed precompute(int[] weights) {
-        return OddsCalculator.precomputeWeights(weights);
-    }
-
-    /**
      * @param gradeMap  grade pool to draw items from
      * @param weights   per-grade weights (grade1 → grade5 order)
      * @param rng       roll source (server-authoritative on callers)
@@ -61,7 +52,8 @@ public final class BoxStripGenerator {
 
         // Precompute the positive-weight cumulative table once: the 50-slot
         // strip would otherwise re-scan the weight array on every roll.
-        OddsCalculator.Precomputed pre = precompute(weights);
+        // null (all-non-positive weights) -> grade 1 fallback below.
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
         for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
             int g = (pre != null)
                     ? pre.pickGrade(rng)
