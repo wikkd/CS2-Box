@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -98,5 +99,32 @@ final class OddsCalculatorTest {
             assertTrue(grade >= 1 && grade <= 3,
                     "Grade out of bounds with large weights: " + grade);
         }
+    }
+
+    @Test
+    @DisplayName("Precomputed.pickGrade is sequence-identical to pickGrade(int[])")
+    void precomputedMatchesOneShotSequence() {
+        // The B1/B3 path precomputes the weight table once and reuses it for
+        // many rolls; it must produce the exact same grades as the original
+        // per-roll pickGrade(int[]) for the same RNG seed.
+        int[] weights = {625, 125, 25, 5, 2};
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
+
+        Random a = new Random(2024);
+        Random b = new Random(2024);
+        for (int i = 0; i < 2000; i++) {
+            int oneShot = OddsCalculator.pickGrade(a, weights);
+            int cached = pre.pickGrade(b);
+            assertEquals(oneShot, cached,
+                    "mismatch at roll " + i + ": oneShot=" + oneShot + " cached=" + cached);
+        }
+    }
+
+    @Test
+    @DisplayName("precomputeWeights returns null when there is no positive weight")
+    void precomputeNullForNoPositiveWeight() {
+        assertNull(OddsCalculator.precomputeWeights(null));
+        assertNull(OddsCalculator.precomputeWeights(new int[0]));
+        assertNull(OddsCalculator.precomputeWeights(new int[]{0, -1, -3, 0}));
     }
 }
