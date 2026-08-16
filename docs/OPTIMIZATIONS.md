@@ -154,3 +154,9 @@ v26_1_2 `IconListTools` 抽取 `renderProgressFrame`，消除 `renderItemProgres
   grade5/else 分支，但 alpha、尺寸计算（pad/iconW）、scale 系数、颜色均不同，
   差异大 → 不 DRY（避免为消除低度重复而引入视觉风险）。
 - 扫描确认无其他"逐行重复"的渲染方法对，上轮 renderProgressFrame 已覆盖最有价值处。
+
+
+## 测试覆盖（第 54 轮）
+
+- ItemDrag3DTest 补 MAX_DELTA 钳制 + DEAD_ZONE 死区边界（现 7 用例）。诊断确认
+  `accumulate(10000)` 与 `accumulate(80)` 的 rotation 分量完全相同，残差仅浮点展开。
