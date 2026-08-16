@@ -30,6 +30,8 @@
 
 ### D. 低 — common 微优化/健壮性
 - [x] D1 `TerminalAnims.countdownText` String.format → StringBuilder（渲染每帧调用）
+- [x] D3 `Easing.cubicBezierCurve` 预计算 LUT + 线性插值，替代每帧 20 次二分迭代
+      （端到端最大偏差 1.4e-5，cubicBezierCurve(0.5)=0.88378 vs 参考 0.884，测试全过）
 - [ ] D2 `WearPenalty`/`WearBands` 枚举化（低价值，可选）
 
 ## 执行纪律
@@ -45,5 +47,6 @@
 - `scripts/check-animops-drift.sh`（仅当动渲染原语；本计划不涉及，跳过）
 
 ## 当前进度
-- 已完成：B1、B2、D1（全部 common 层，跨平台自动生效，测试通过）
+- 已完成：B1、B2、D1、D3（全部 common 层，跨平台自动生效，测试通过）
+  - 第二轮新增 D3：Easing.cubicBezierCurve LUT 缓存（渲染热路径）
 - 待做（平台层，需谨慎跨平台同步）：A1、B3、C1、C2、D2

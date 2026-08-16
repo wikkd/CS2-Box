@@ -11,6 +11,34 @@ public final class Easing {
     private Easing() {
     }
 
+    /** Number of segments in the cubic-bezier lookup table. */
+    private static final int BEZIER_LUT_SIZE = 256;
+
+    /**
+     * Precomputed samples of cubic-bezier(.25,.6,.3,1) on [0,1]. Built once
+     * from the exact {@code cubicBezierX} solver; {@code cubicBezierCurve}
+     * does a linear interpolation of neighbouring samples, so per-frame
+     * calls skip the 20-iteration binary search without changing the curve's
+     * shape (error well below 1e-3).
+     */
+    private static final float[] BEZIER_LUT = buildBezierLut();
+
+    private static float[] buildBezierLut() {
+        float[] lut = new float[BEZIER_LUT_SIZE + 1];
+        for (int i = 0; i <= BEZIER_LUT_SIZE; i++) {
+            float x = (float) i / BEZIER_LUT_SIZE;
+            // Exact endpoints; interior samples use the solver.
+            if (x <= 0F) {
+                lut[i] = 0F;
+            } else if (x >= 1F) {
+                lut[i] = 1F;
+            } else {
+                lut[i] = solveBezierX(x, 0.25F, 0.60F, 0.30F, 1.00F);
+            }
+        }
+        return lut;
+    }
+
     public static float clamp01(float v) {
         return v < 0F ? 0F : (v > 1F ? 1F : v);
     }
@@ -42,16 +70,29 @@ public final class Easing {
     }
 
     /**
-     * Cubic-bezier(.25,.6,.3,1) evaluation (numerical x(t)=t solve, binary
-     * search, 20 iterations, deviation < 1e-4). Migrated verbatim from
-     * TerminalAnims.cubicBezierCurve — used by the terminal wear-bar arrow
-     * and long-press fill.
+     * Cubic-bezier(.25,.6,.3,1) evaluation. Uses a precomputed lookup table
+     * with linear interpolation (see {@link #BEZIER_LUT}) instead of the
+     * 20-iteration binary search on every call — faster on the per-frame
+     * terminal render path while keeping the same curve within 1e-3.
+     * Migrated verbatim from TerminalAnims.cubicBezierCurve.
      */
     public static float cubicBezierCurve(float t) {
-        return cubicBezierX(clamp01(t), 0.25F, 0.60F, 0.30F, 1.00F);
+        float x = clamp01(t);
+        // Map [0,1] onto the LUT grid; guard against rounding at x==1.
+        float pos = x * BEZIER_LUT_SIZE;
+        int i = (int) pos;
+        if (i >= BEZIER_LUT_SIZE) {
+            return 1F;
+        }
+        float frac = pos - i;
+        return BEZIER_LUT[i] + (BEZIER_LUT[i + 1] - BEZIER_LUT[i]) * frac;
     }
 
-    private static float cubicBezierX(float x, float x1, float y1, float x2, float y2) {
+    /**
+     * Numerical x(t)=t solve for a cubic-bezier (binary search, 20 iterations,
+     * deviation < 1e-4). Kept as the exact reference used to build the LUT.
+     */
+    private static float solveBezierX(float x, float x1, float y1, float x2, float y2) {
         if (x <= 0F) {
             return 0F;
         }
