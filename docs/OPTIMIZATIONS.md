@@ -104,3 +104,11 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 - fix（并发/健壮性）：A1 BoxJsonLoader（全 5 平台）、D10 OpenBlockGuard ABA、单开 fallback 复用
 - refactor（一致性/DRY/死代码）：D5 BoxOdds、D8 WearBands、D9 easeOutQuad
 - test：GradeMapFallbackConcurrency、Precomputed 等价（含大权重）、BoxStripGenerator 边界
+
+
+## 门禁验证（第 40 轮）
+
+- `:common:checkCommonArchitecture` — common 无 MC import，✅ 通过
+- `scripts/check-animops-drift.sh` — AnimRenderOps 三平台签名/era 一致（13 ops），✅ 通过
+- `scripts/check-version.sh` — CHANGELOG/README/5 manifest 版本 ${mod_version} 一致，✅ 通过
+- 5 平台 compileJava + common test — ✅ 全绿
