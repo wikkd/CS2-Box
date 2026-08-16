@@ -12,9 +12,9 @@
 
 ### A. 高优先级 — 并发正确性（平台层，涉及多平台同步）
 - [x] A1 `BoxJsonLoader.LAST_LOAD_ERRORS` 非线程安全（ArrayList 跨线程 clear/add）
-      → forge_26_2 已修复（CopyOnWriteArrayList + import），编译通过。
-      → v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2 待同步（文件脏，留待用户清理后按
-        forge_26_2 的 diff 定点合入；forge_26_2 为唯一干净平台，已作为参考实现）。
+      → 已用 CopyOnWriteArrayList 修复并覆盖全部 5 平台（v26_1_2 / v26_2 / v1_21_1 /
+        forge_26_1_2 / forge_26_2），各平台均编译通过；通过 stash 隔离只提交修复、
+        完整保留各文件上的用户进行中改动。
 
 ### B. 高收益 — common 纯性能热点（无平台差异，一改全生效）✅ 已落地
 - [x] B1 `OddsCalculator.pickGrade` 预计算正权重/累计和，避免每槽重复求和
@@ -24,8 +24,8 @@
       → 单开 + 批量第一条 strip 路径的绝对热点。
 - [x] B3 批量路径 `computeKResults` 开头一次性 `precomputeWeights`，K 次
       follow-up roll 共用同一 Precomputed；null 回退 grade 1。
-      → 已在 v26_1_2 / v26_2 / v1_21_1（正式三平台，干净）+ forge_26_2 落地并编译通过；
-        forge_26_1_2 待同步（文件脏）。
+      → 已覆盖全部 5 平台（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2 / forge_26_2），
+        各平台均编译通过；forge_26_1_2 通过 stash 隔离同步并保留用户改动。
 
 ### C. 中等 — 平台层纯机械
 - [x] C1 `new EquipmentSlot[]` 提为常量（CsboxScreen countKeys/hasKeyAnywhere）
@@ -67,5 +67,7 @@
   - 第九轮 forge_26_2 单开路径（唯一内联 strip）也预计算权重一次，对齐 B1/B3
   - 第十二轮：B3 同步到 forge_26_1_2——用 git stash 隔离用户对同文件的进行中
     import 清理，只提交我的 B3 改动，stash pop 恢复用户内容。至此 B3 覆盖全部 5 平台。
-- 待做（平台层，需用户清理脏文件后同步）：A1→v26_1_2/v26_2/v1_21_1/forge_26_1_2，
-  C2a→v26_1_2/v26_2/v1_21_1/forge_26_1_2，C2（resolveGrade 查表），D2
+  - 第十三轮：A1（CopyOnWriteArrayList 并发修复）用 stash 隔离同步到 v26_1_2/v26_2/
+    v1_21_1/forge_26_1_2，全部 5 平台完成 A1，且各平台用户遗漏改动完整保留。
+- 待做（平台层）：C2a 同步到 v26_1_2/v26_2/v1_21_1/forge_26_1_2（可用 stash 隔离），
+  C2（resolveGrade 查表），D2（枚举化，低价值）
