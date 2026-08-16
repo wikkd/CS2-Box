@@ -119,5 +119,6 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 全部关键 common 类均有对应单元测试，且历轮增强覆盖边界/并发/语义等价：
 BoxOdds / BoxStripGenerator / BoxGrades / AnimationStrip / GradeMap / GradeMapCache /
 OpenBlockGuard / OddsCalculator / Easing / WearBands / WearPenalty / TerminalAnims /
-Quat（第 43 轮新增，10 个用例覆盖四元数数学，填补渲染数学测试缺口）。
+Quat（第 43 轮新增，10 个用例覆盖四元数数学）、GuiRegion（第 44 轮，10 用例布局
+几何）、ColorTools（第 44 轮，5 用例颜色位运算）。
 ```
