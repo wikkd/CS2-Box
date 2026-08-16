@@ -274,3 +274,7 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 - CsLookItemScreen.formatWear 在组件数组初始化时调用（非每帧）+ 文件脏 → 不改。
 - CsboxConfirmScreen 文件脏、模式少 → 不改。
 无其他遗留的渲染每帧热点。
+
+
+## 测试增强（第 103 轮）
+- AnimationStripTest 补 randomWinningIndex itemCount<MIN 精确边界（itemCount=5->4、2->1）。
