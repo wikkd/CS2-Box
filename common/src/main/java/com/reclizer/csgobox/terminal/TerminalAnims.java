@@ -149,6 +149,10 @@ public final class TerminalAnims {
 
     // ---- countdown ----
 
+    // Zero-padded digits without allocation-heavy String.format (this runs on
+    // the render path every frame for the terminal countdown).
+    private static final char[] DIGITS = "0123456789".toCharArray();
+
     /** DD:HH:MM:SS rendering (region 9). */
     public static String countdownText(long remainMs) {
         long total = Math.max(0L, remainMs / 1000L);
@@ -156,6 +160,17 @@ public final class TerminalAnims {
         long h = (total % 86400L) / 3600L;
         long m = (total % 3600L) / 60L;
         long s = total % 60L;
-        return String.format("%02d:%02d:%02d:%02d", d, h, m, s);
+        return new StringBuilder(11)
+                .append(twoDigits(d)).append(':')
+                .append(twoDigits(h)).append(':')
+                .append(twoDigits(m)).append(':')
+                .append(twoDigits(s))
+                .toString();
+    }
+
+    /** Two zero-padded digits (always in [0, 99]). */
+    private static String twoDigits(long v) {
+        int n = (int) Math.min(99L, Math.max(0L, v));
+        return new String(new char[]{DIGITS[n / 10], DIGITS[n % 10]});
     }
 }

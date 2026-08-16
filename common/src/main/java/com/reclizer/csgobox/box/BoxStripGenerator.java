@@ -21,6 +21,11 @@ import java.util.Random;
  * <p>Generic over the item type so every platform shares one implementation:
  * platforms pass their own empty sentinel ({@code ItemStack.EMPTY}) and the
  * pool's validity predicate lives in the {@link GradeMap} itself.</p>
+ *
+ * <p>The per-grade weights are precomputed once per strip via
+ * {@link OddsCalculator#precomputeWeights} so the repeated per-slot rolls
+ * don't re-scan the weight array (important: strips have
+ * {@link AnimationStrip#ITEM_COUNT} slots).</p>
  */
 public final class BoxStripGenerator {
 
@@ -35,6 +40,15 @@ public final class BoxStripGenerator {
     }
 
     /**
+     * Precomputes the weight table for a {@code weights} array, or returns
+     * {@code null} when no positive weight exists (callers keep the default
+     * grade-1 behaviour).
+     */
+    private static OddsCalculator.Precomputed precompute(int[] weights) {
+        return OddsCalculator.precomputeWeights(weights);
+    }
+
+    /**
      * @param gradeMap  grade pool to draw items from
      * @param weights   per-grade weights (grade1 → grade5 order)
      * @param rng       roll source (server-authoritative on callers)
@@ -44,8 +58,14 @@ public final class BoxStripGenerator {
     public static <T> Strip<T> generate(GradeMap<T> gradeMap, int[] weights, Random rng, T emptyValue) {
         List<T> items = new ArrayList<>(AnimationStrip.ITEM_COUNT);
         List<Integer> grades = new ArrayList<>(AnimationStrip.ITEM_COUNT);
+
+        // Precompute the positive-weight cumulative table once: the 50-slot
+        // strip would otherwise re-scan the weight array on every roll.
+        OddsCalculator.Precomputed pre = precompute(weights);
         for (int j = 0; j < AnimationStrip.ITEM_COUNT; j++) {
-            int g = OddsCalculator.pickGrade(rng, weights);
+            int g = (pre != null)
+                    ? pre.pickGrade(rng)
+                    : 1;
             T s = gradeMap.pickRandom(rng, g);
             if (s == null) {
                 s = gradeMap.findFallback(g);
