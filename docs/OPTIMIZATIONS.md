@@ -21,6 +21,7 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 | **D4 fallback 缓存** | `logic/GradeMap.java` | `findFallback` 惰性 per-grade 缓存（`ConcurrentHashMap` + noFallback Set），线程安全 | `GradeMapTest` + 新增 `GradeMapFallbackConcurrencyTest` |
 | **D5 权重和 DRY** | `box/BoxOdds.java` | `totalWeight` 委托 `OddsCalculator.precomputeWeights().total()`，显示层与 roll 层共享同一正权重和来源 | `BoxOddsTest`/`OddsCalculatorTest` |
 | **D8 clamp 辅助** | `terminal/WearBands.java` | 提取 `clampIdx`，消除 4 处重复的 tier clamp 表达式 | `WearBandsTest` |
+| **D9 死代码清理** | `utils/Easing.java` | 移除零引用的 `easeOutQuad`（6 模块 + 测试均无调用） | `EasingTest`/`TerminalAnimsTest` |
 | **等价测试** | `OddsCalculatorTest.java` | `Precomputed` 与原 `pickGrade(int[])` 2000 roll 序列一致 | 通过 |
 
 ### 平台层

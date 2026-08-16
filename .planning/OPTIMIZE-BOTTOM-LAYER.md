@@ -43,6 +43,7 @@
       → 批量/空池高频 fallback 只扫描一次；copier 每次仍应用，行为不变
 - [x] D5 `BoxOdds.totalWeight` 委托给 `OddsCalculator.precomputeWeights`（DRY 统一正权重求和来源）
 - [x] D8 `WearBands` 提取 `clampIdx` 辅助，消除 4 处重复的 clamp 表达式
+- [x] D9 移除 `Easing.easeOutQuad` 死代码（6 模块 + 测试 0 引用）
 - [ ] D2 `WearPenalty`/`WearBands` 枚举化（低价值，可选）
 
 ## 执行纪律
