@@ -112,3 +112,11 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 - `scripts/check-animops-drift.sh` — AnimRenderOps 三平台签名/era 一致（13 ops），✅ 通过
 - `scripts/check-version.sh` — CHANGELOG/README/5 manifest 版本 ${mod_version} 一致，✅ 通过
 - 5 平台 compileJava + common test — ✅ 全绿
+
+
+## 测试覆盖核对（第 41 轮）
+
+全部 12 个关键 common 类均有对应单元测试，且历轮增强覆盖边界/并发/语义等价：
+BoxOdds / BoxStripGenerator / BoxGrades / AnimationStrip / GradeMap / GradeMapCache /
+OpenBlockGuard / OddsCalculator / Easing / WearBands / WearPenalty / TerminalAnims。
+```
