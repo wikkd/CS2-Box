@@ -45,6 +45,13 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 如 A1 各 +7/-1、B3 各 +4/-1），随后 `git stash pop` 恢复原文件上的用户
 未提交改动。经核对，用户在各脏文件上的进行中工作完整保留、未被污染。
 
+## 死代码审查结论（第 20 轮）
+
+- 已删除：`Easing.easeOutQuad`（孤立方法，6 模块 + 测试 0 引用）
+- 保守保留（API 设计完整性，虽生产未用但为一套有意 API 的成员）：
+  `EntityChineseMap.getDisplayNameFull`、`GuiRegion.centered/actions`、
+  `OverlayColor.panelPressed` —— 删除会破坏命名区域/颜色 token/显示名体系完整性。
+
 ## 未做项（已评估为低价值/高风险，不建议）
 
 - **C2 resolveGrade 查表**：仅在 fallback 分支调用一次（低频），收益极小
