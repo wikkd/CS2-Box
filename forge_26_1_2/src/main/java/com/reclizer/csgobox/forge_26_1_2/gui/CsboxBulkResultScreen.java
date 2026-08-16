@@ -43,6 +43,40 @@ public class CsboxBulkResultScreen extends Screen {
     private long lastTickTime = 0;
     private boolean showAllItems = false;
 
+    // Lazy caches for the show-all grid. allItems/allGrades are fixed after
+    // construction, so the O(n^2) consolidation is computed once and reused
+    // across frames instead of every render (forge build has no sort).
+    private Map<ItemStack, Integer> gridConsolidated;
+    private Map<ItemStack, Integer> gridGradeMap;
+    private boolean gridCacheBuilt = false;
+
+    private void buildGridCacheIfNeeded() {
+        if (gridCacheBuilt) {
+            return;
+        }
+        Map<ItemStack, Integer> consolidated = new LinkedHashMap<>();
+        Map<ItemStack, Integer> gradeMap = new LinkedHashMap<>();
+        for (int i = 0; i < allItems.size(); i++) {
+            ItemStack stack = allItems.get(i);
+            int grade = i < allGrades.size() ? allGrades.get(i) : 1;
+            boolean found = false;
+            for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
+                if (ItemStack.isSameItemSameComponents(stack, entry.getKey())) {
+                    entry.setValue(entry.getValue() + stack.getCount());
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && !stack.isEmpty()) {
+                consolidated.put(stack.copy(), stack.getCount());
+                gradeMap.put(stack.copy(), grade);
+            }
+        }
+        this.gridConsolidated = consolidated;
+        this.gridGradeMap = gradeMap;
+        this.gridCacheBuilt = true;
+    }
+
     public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("csgo_bulk_result"));
         this.player = player;
@@ -230,24 +264,11 @@ public class CsboxBulkResultScreen extends Screen {
     }
 
     private void renderAllItemsGrid(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        Map<ItemStack, Integer> consolidated = new LinkedHashMap<>();
-        Map<ItemStack, Integer> gradeMap = new LinkedHashMap<>();
-        for (int i = 0; i < allItems.size(); i++) {
-            ItemStack stack = allItems.get(i);
-            int grade = i < allGrades.size() ? allGrades.get(i) : 1;
-            boolean found = false;
-            for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
-                if (ItemStack.isSameItemSameComponents(stack, entry.getKey())) {
-                    entry.setValue(entry.getValue() + stack.getCount());
-                    found = true;
-                    break;
-                }
-            }
-            if (!found && !stack.isEmpty()) {
-                consolidated.put(stack.copy(), stack.getCount());
-                gradeMap.put(stack.copy(), grade);
-            }
-        }
+        // allItems/allGrades are fixed after construction, so consolidate once
+        // and reuse across frames.
+        buildGridCacheIfNeeded();
+        Map<ItemStack, Integer> consolidated = gridConsolidated;
+        Map<ItemStack, Integer> gradeMap = gridGradeMap;
 
         int cols = Math.min(8, this.width / 80);
         int itemSize = Math.min(64, this.width / cols - 12);
