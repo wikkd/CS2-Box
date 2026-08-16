@@ -123,3 +123,11 @@ Quat（第 43 轮，10 用例四元数）、GuiRegion（第 44 轮，10 用例�
 （第 44 轮，5 用例颜色）、EntityChineseMap（第 45 轮，5 用例中文名/回退）、OverlayColor
 （第 45 轮，5 用例暗色主题层级）、TerminalPalette（第 46 轮，4 用例稀有度颜色映射/边界）。
 ```
+
+
+## 测试规模终验（第 47 轮）
+
+- common 测试：25 个测试文件、198 个 @Test 用例，全量通过（BUILD SUCCESSFUL）。
+- 几乎覆盖所有含逻辑的 common 类（含历轮为每个优化补充的边界/并发/语义等价测试）。
+- 未覆盖：BoxFileWatcher（并发文件监听，测试需真实 WatchService/线程时序，成本高、
+  CI 脆弱、价值低）、纯数据类（常量，无需测）——明确判定不测。
