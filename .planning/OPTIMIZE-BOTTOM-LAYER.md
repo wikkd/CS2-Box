@@ -22,11 +22,10 @@
       → 保留原 `pickGrade(Random,int[])` 签名完全兼容（null/空/全零→1）。
 - [x] B2 `BoxStripGenerator.generate` 预计算一次权重表，50 槽不再重复扫描
       → 单开 + 批量第一条 strip 路径的绝对热点。
-- [x] B3（forge_26_2 参考）批量路径 `computeKResults` 开头一次性
-      `precomputeWeights(snapshot.weights())`，K 次 roll（含 50 槽 strip + 后续行）
-      共用同一 `Precomputed`；null（全非正）回退 grade 1，语义不变。
-      其他平台 v26_1_2/v26_2/v1_21_1 已用 BoxStripGenerator（本就预计算），
-      forge_26_1_2 待同步（文件脏）。
+- [x] B3 批量路径 `computeKResults` 开头一次性 `precomputeWeights`，K 次
+      follow-up roll 共用同一 Precomputed；null 回退 grade 1。
+      → 已在 v26_1_2 / v26_2 / v1_21_1（正式三平台，干净）+ forge_26_2 落地并编译通过；
+        forge_26_1_2 待同步（文件脏）。
 
 ### C. 中等 — 平台层纯机械
 - [x] C1 `new EquipmentSlot[]` 提为常量（CsboxScreen countKeys/hasKeyAnywhere）
