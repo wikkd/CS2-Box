@@ -11,9 +11,10 @@
 ## 已识别的优化项（来自代码审查报告）
 
 ### A. 高优先级 — 并发正确性（平台层，涉及多平台同步）
-- [ ] A1 `BoxJsonLoader.LAST_LOAD_ERRORS` 非线程安全（ArrayList 跨线程 clear/add）
-      → 5 个平台各改一份（v26_1_2/v26_2/v1_21_1/forge_26_1_2/forge_26_2）。
-      → 用 CopyOnWriteArrayList 或加锁。风险中等，涉及手工合入（工作区已有大量改动时谨慎）。
+- [x] A1 `BoxJsonLoader.LAST_LOAD_ERRORS` 非线程安全（ArrayList 跨线程 clear/add）
+      → forge_26_2 已修复（CopyOnWriteArrayList + import），编译通过。
+      → v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2 待同步（文件脏，留待用户清理后按
+        forge_26_2 的 diff 定点合入；forge_26_2 为唯一干净平台，已作为参考实现）。
 
 ### B. 高收益 — common 纯性能热点（无平台差异，一改全生效）✅ 已落地
 - [x] B1 `OddsCalculator.pickGrade` 预计算正权重/累计和，避免每槽重复求和
