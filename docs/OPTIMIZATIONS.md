@@ -263,3 +263,5 @@ renderEntries 的主要 label 热点已优化 → 判定收益中等、次要，
 v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidated 物品 map
 （O(n²) isSameItemSameComponents 扫描）+ 排序，即使 allItems 构造后不变。改为惰性缓存
 （首次构建一次，之后复用），消除 show-all 打开期间的每帧 O(n²)。视觉等价。
+已覆盖 **全部 5 平台**：v26_1_2/v26_2/v1_21_1（有排序版）+ forge_26_1_2/forge_26_2
+（无排序版，仅缓存 consolidated/gradeMap）。
