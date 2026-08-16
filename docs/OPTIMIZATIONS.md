@@ -139,3 +139,10 @@ Quat（第 43 轮，10 用例四元数）、GuiRegion（第 44 轮，10 用例�
 - **无新的孤立死代码**（类似 easeOutQuad 的零引用方法不存在）。
 - 保留项复核：actions/centered/getDisplayNameFull/panelPressed 为有意 API 体系成员
   （第 20 轮已决定保留）；slotIndex/swapPop/tierAbbr 有测试引用，为有效公共 API。
+
+
+## 渲染 DRY（第 51 轮）
+
+v26_1_2 `IconListTools` 抽取 `renderProgressFrame`，消除 `renderItemProgress`/
+`renderItemProgressFocus` 约 30 行重复；逐行等价（视觉不变）。v26_2 因
+`renderItemProgressFocus` 有自身结构差异，未合入（镜像纪律允许平台差异）。
