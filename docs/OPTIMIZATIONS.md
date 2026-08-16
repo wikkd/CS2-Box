@@ -23,7 +23,7 @@ CONSTRAINT-001（common 不依赖 MC）、平台镜像纪律；在触碰已有�
 | **D8 clamp 辅助** | `terminal/WearBands.java` | 提取 `clampIdx`，消除 4 处重复的 tier clamp 表达式 | `WearBandsTest` |
 | **D9 死代码清理** | `utils/Easing.java` | 移除零引用的 `easeOutQuad`（6 模块 + 测试均无调用） | `EasingTest`/`TerminalAnimsTest` |
 | **D10 竞态修复** | `logic/OpenBlockGuard.java` | `isBlocked` 过期删除改 `remove(key,value)` 条件删除，消除 ABA 竞态（防误删并发新 deadline） | `OpenBlockGuardTest`（8 个全过） |
-| **等价测试** | `OddsCalculatorTest.java` | `Precomputed` 与原 `pickGrade(int[])` 2000 roll 序列一致 | 通过 |
+| **等价测试** | `OddsCalculatorTest.java` | `Precomputed` 与原 `pickGrade(int[])` 2000 roll 序列一致；另含大权重（~3×MAX，long 累加）等价测试 | 通过（12 用例） |
 
 ### 平台层
 
