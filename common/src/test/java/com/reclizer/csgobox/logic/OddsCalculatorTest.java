@@ -148,4 +148,21 @@ final class OddsCalculatorTest {
         assertNull(OddsCalculator.precomputeWeights(new int[0]));
         assertNull(OddsCalculator.precomputeWeights(new int[]{0, -1, -3, 0}));
     }
+
+    @Test
+    @DisplayName("single-level weights always pick grade 1")
+    void singleLevelWeightsAlwaysGrade1() {
+        // A one-element weight array (single grade tier) must always roll grade 1.
+        int[] weights = {10};
+        Random rng = new Random(42);
+        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
+        assertEquals(10L, pre.total());
+        for (int i = 0; i < 100; i++) {
+            assertEquals(1, OddsCalculator.pickGrade(rng, weights));
+        }
+        Random rng2 = new Random(7);
+        for (int i = 0; i < 100; i++) {
+            assertEquals(1, pre.pickGrade(rng2));
+        }
+    }
 }
