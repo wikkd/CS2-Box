@@ -26,6 +26,8 @@ import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
+import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -122,9 +124,12 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        if (CONFIG.enableHotReload()) {
-            event.enqueueWork(this::startBoxWatcher);
-        }
+        event.enqueueWork(() -> {
+            Networking.registerMessages();
+            if (CONFIG.enableHotReload()) {
+                startBoxWatcher();
+            }
+        });
         com.reclizer.csgobox.forge_1_20_1.villager.ModVillagers.registerTrades();
         LOGGER.info("CS2 Box initialized successfully");
     }
@@ -238,10 +243,13 @@ public class CsgoBox {
         if (CONFIG.loadDefaultBoxes()) {
             BoxJsonLoader.loadAll();
         }
+        TerminalSessionManager.bindServer(event.getServer());
         LOGGER.info("CS2 Box server started with {} box definitions", BoxRegistry.size());
     }
 
     public void onServerStopping(ServerStoppingEvent event) {
+        TerminalSessionManager.saveNow();
+        TerminalSessionManager.unbindServer();
         if (boxWatcher != null) {
             boxWatcher.stop();
             boxWatcher = null;

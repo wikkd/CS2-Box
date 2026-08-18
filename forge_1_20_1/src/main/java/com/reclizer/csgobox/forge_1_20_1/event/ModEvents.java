@@ -80,10 +80,9 @@ public final class ModEvents {
 
     @SubscribeEvent
     public static void playerLoggedOut(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
-        // TODO: uncomment when terminal/ is ported
-        // if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
-        //     com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager.clearOpen(sp.getStringUUID());
-        // }
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager.clearOpen(sp.getStringUUID());
+        }
     }
 
     @SubscribeEvent
@@ -93,10 +92,9 @@ public final class ModEvents {
         if (server.getTickCount() % 100 == 0) {
             OpenBlockGuard.tick(server.overworld().getGameTime());
         }
-        // TODO: uncomment when terminal/ is ported
-        // if (server.getTickCount() % 20 == 0) {
-        //     com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager.tickSessions(
-        //             server, server.overworld().getGameTime() * 50L);
-        // }
+        if (server.getTickCount() % 20 == 0) {
+            com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager.tickSessions(
+                    server, server.overworld().getGameTime() * 50L);
+        }
     }
 }
