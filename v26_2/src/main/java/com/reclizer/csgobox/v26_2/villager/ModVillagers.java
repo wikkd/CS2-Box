@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  *
  * <p>All point values are anchored to the in-repo economy: 9 Armory Points =
  * 1 {@code csgo_key0} (see {@code data/csgobox/recipe/armory_point_exchange.json}).
- * Mineral-to-point trades deliberately pay LESS than crafting a key0 from the
+ * Mineral-to-point trades pay less than crafting a key0 from the
  * same minerals, so there is no arbitrage loop.</p>
  */
 public final class ModVillagers {

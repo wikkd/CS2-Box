@@ -34,12 +34,8 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Random;
 
-/**
- * Client-to-server request to open the currently held box.
- *
- * <p>The request id is for matching the later client animation result only. The
- * server never trusts it for authorization.</p>
- */
+/** Client-to-server request to open the currently held box. The request id
+ *  only matches the later client animation result; never trusted by the server. */
 public record PacketCsgoProgress(long requestId) implements CustomPacketPayload {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -64,10 +60,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (!(box.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
-            // Strict separation (v1.0.8): terminals are only buyable through
-            // the terminal negotiation protocol — never through the classic
-            // crate pipeline, which would open them for free (no key, no
-            // Armory Points). A crafted packet holding a terminal is refused.
+            // Terminals are only buyable via the negotiation protocol; the
+            // classic crate pipeline would open them for free. Refuse crafted packets.
             if (box.getItem() instanceof ItemTerminal) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
@@ -94,8 +88,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
                 }
                 return;
             }
-            // Same guard for a crafted box_id component pointing at a
-            // terminal definition from a plain ItemCsgoBox stack.
+            // Same guard for a box_id pointing at a terminal from a plain box stack.
             if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
@@ -103,10 +96,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
                 return;
             }
 
-            // Policy hook: server scripts / other mods may veto the open
-            // before anything is rolled or consumed. Fires after the built-in
-            // guards and before the RNG roll — canceling aborts cleanly with
-            // no rollback and no cooldown side effects.
+            // Mods may veto the open before any roll or consumption.
             BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
             NeoForge.EVENT_BUS.post(opening);
             if (opening.isCanceled()) {
@@ -127,12 +117,9 @@ var boxId = ItemCsgoBox.getBoxId(box);
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
 
-            // The grade pool is definition-derived and immutable, so it is
-            // built once per box id (same cache the bulk path uses) instead
-            // of re-copied on every single open. GradeMapCache is invalidated
-            // by BoxRegistry on reload, so a config change can never serve a
-            // stale pool. pickRandom always returns ItemStack::copy results,
-            // so callers may mutate the returned stack freely.
+            // Grade pool is immutable per box id (shared cache with the bulk
+            // path, invalidated on reload). pickRandom returns copies, so
+            // callers may mutate freely.
             var gradeMap = GradeMapCache.get(boxId.toString(),
                     () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
             if (gradeMap.isEmpty()) {
@@ -168,10 +155,8 @@ var boxId = ItemCsgoBox.getBoxId(box);
                 strip.grades().set(winningIndex, finalGrade);
             }
 
-            // Keys are consumed only after the whole roll is validated (box id,
-            // weights, grade pool, winning index, fallback). A broken or
-            // hot-reloaded-empty definition must never eat a key: every failure
-            // above replies sendRejected before any consumption happens.
+            // Consume keys only after the whole roll is validated — a broken
+            // definition must never eat a key.
             if (!tryConsumeKeys(player, box, 1)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
@@ -205,8 +190,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
             }
-            // Creative mode is fully free: keys, Armory Points and now boxes
-            // (parity with tryConsumeKeys / PacketTerminalBuy).
+            // Creative mode is fully free (parity with tryConsumeKeys).
             if (!player.getAbilities().instabuild) {
                 box.shrink(1);
             }
@@ -233,11 +217,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
         ));
     }
 
-    /**
-     * Damages a durable item stack by a fraction of its max durability
-     * proportional to the wear value (0..1). Clamped so the item never breaks
-     * (damage is at most maxDamage - 1) and never goes negative.
-     */
+    /** Damages a stack by wear (0..1) × max durability; clamped to never break. */
     static void applyWearDamage(ItemStack stack, float wear) {
         int maxDamage = stack.getMaxDamage();
         if (maxDamage <= 0) {
@@ -248,11 +228,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    /**
-     * Resolves the grade (1..5) of an item produced by the fallback path. The
-     * box definition is the source of truth; the per-open item list no longer
-     * exists now that the grade pool is cached.
-     */
+    /** Resolves the grade (1..5) of a fallback item against the box definition. */
     static int resolveGrade(ItemStack item, ResourceLocation boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
@@ -270,28 +246,15 @@ var boxId = ItemCsgoBox.getBoxId(box);
     }
 
     /**
-     * Consume up to {@code count} keys matching the box's key id from anywhere
-     * in the player's inventory (items, armor, offhand). If the box has no key
-     * requirement, returns true without touching inventory. Returns true only
-     * when the requested count was fully consumed (or none was required).
-     *
-     * <p>Scans all 41 player inventory slots — the previous implementation
-     * only walked {@code items} (36 hotbar + main slots), so a player holding
-     * the key in offhand or wearing a key-as-armor would be silently
-     * under-deducted. The bulk path would then crash with a "missing keys"
-     * assertion and refund the boxes; the operator-facing log only saw the
-     * refund, never the under-count cause.</p>
+     * Consume up to {@code count} keys from anywhere (items, armor, offhand);
+     * true only when fully consumed (or no key required).
      */
     static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
         ResourceLocation keyId = ItemCsgoBox.getKey(box);
         return tryConsumeKeys(entity, keyId, count);
     }
 
-    /**
-     * Consume keys by their id directly. This avoids repeated lookups of the key id
-     * from the box, which could return different values if the player's hand changes
-     * between calls (e.g., during bulk operations).
-     */
+    /** Consume keys by id directly; avoids lookups that could change if the hand switches mid-call. */
     static boolean tryConsumeKeys(Player entity, ResourceLocation keyId, int count) {
         if (keyId == null || keyId.toString().equals("minecraft:air")) {
             return true;
@@ -309,11 +272,7 @@ var boxId = ItemCsgoBox.getBoxId(box);
         return remaining == 0;
     }
 
-    /**
-     * Consume up to {@code count} boxes matching the template (same item,
-     * same components) from anywhere in the player's inventory (items, armor,
-     * offhand). Returns true only when the full count was consumed.
-     */
+    /** Consume up to {@code count} boxes matching the template from anywhere; true when fully consumed. */
     static boolean tryConsumeBoxes(Player entity, ItemStack box, int count) {
         if (count <= 0) {
             return true;
@@ -328,16 +287,8 @@ var boxId = ItemCsgoBox.getBoxId(box);
         return remaining == 0;
     }
 
-    /**
-     * Shrinks matching stacks from the given inventory slice until either the
-     * requested count is satisfied or the slice is exhausted. Returns the
-     * remaining (un-fulfilled) count.
-     *
-     * <p>Either {@code keyId} (for keys) or {@code boxTemplate} (for boxes)
-     * must be non-null; the other is ignored. Keys match by item id; boxes
-     * match by item type + components ({@code
-     * ItemStack.isSameItemSameComponents}).</p>
-     */
+    /** Shrinks matching stacks until the count is satisfied or the slice exhausted;
+     *  returns what's left. Keys match by id, boxes by item + components. */
     private static int consumeFromList(java.util.List<ItemStack> stacks,
                                        ResourceLocation keyId,
                                        ItemStack boxTemplate,
@@ -351,14 +302,9 @@ var boxId = ItemCsgoBox.getBoxId(box);
             }
             boolean matches;
             if (keyId != null) {
-                // CRITICAL: skip box instances. ItemCsgoBox.getKey(box) returns
-                // the box's own configured key id (via getBoxId → ITEM.getKey
-                // fallback), so a naive "keyId equals getKey(stack.item)"
-                // check would match boxes that the player also happens to own
-                // and would shrink them under the guise of "key consumption".
-                // In the bulk path this led to boxes being double-counted
-                // (once as boxes, once as keys) — 5 boxes + 5 keys opened
-                // 5 times would drain 5 boxes + 5 boxes = 10 boxes total.
+                // Never consume boxes as keys: ItemCsgoBox.getKey(box) returns
+                // the box's own key id, so a plain id match would shrink boxes
+                // too (a past double-count bug).
                 if (stack.getItem() instanceof ItemCsgoBox) {
                     continue;
                 }

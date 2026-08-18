@@ -5,7 +5,6 @@ import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
-import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,12 +17,9 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
-import com.reclizer.csgobox.v1_21_1.packet.PacketCsgoBulkProgress;
 
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Total overview for a bulk box open. Shift+right-click the held box to

@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="${loader_version_range}"
 license="${mod_license}"
-issueTrackerURL="https://github.com/ChloePrime/CS2-Box/issues"
+issueTrackerURL="https://github.com/wikkd/CS2-Box/issues"
 
 [[mods]]
 modId="${mod_id}"

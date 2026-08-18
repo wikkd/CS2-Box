@@ -179,3 +179,12 @@ opencode.json
 /overview.md
 lsp/
 run-data/
+
+# Local tool state (never commit)
+.hvigor/
+.superpowers/
+.cw_skill/
+.planning/*.tmp
+
+# Runtime config backups
+*.bak

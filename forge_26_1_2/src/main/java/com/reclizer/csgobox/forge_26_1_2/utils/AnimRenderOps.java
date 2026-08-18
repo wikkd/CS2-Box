@@ -26,21 +26,16 @@ public final class AnimRenderOps {
     private AnimRenderOps() {
     }
 
-    /** Decoupled rendering runs through RenderPipelines, which carry their
-     *  own blend state - no flush/state juggling needed (GuiGraphicsExtractor
-     *  has no flush() at all in 26.1.2). */
+    /** RenderPipelines carry their own blend state — no flush/state juggling
+     *  (GuiGraphicsExtractor has no flush() in 26.1.2). */
     public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h) {
         blitTextured(gg, tex, x, y, w, h, w, h);
     }
 
-    /** Variant carrying the texture's real pixel size. 26.1.2's convenience
-     *  blit(RenderPipeline, tex, x, y, u, v, w, h, texW, texH) treats the
-     *  SOURCE UV window as width=w/height=h (srcWidth=width internally), so
-     *  passing a target size larger than the texture (gold_item.png is 32x24,
-     *  drawn at ~169x127 in the opening strip) would push the UV window past
-     *  1.0 and wrap/stretch the icon. The 12-arg overload takes the source
-     *  window explicitly: srcWidth=texW/srcHeight=texH keeps UV = [0,1] while
-     *  width/height stay the free-form target size. */
+    /** Variant carrying the texture's real pixel size: the convenience blit
+     *  treats the source UV window as w×h, so an enlarged draw (gold_item.png
+     *  32x24 at ~169x127) would push UV past 1.0. The 12-arg overload keeps
+     *  UV = [0,1] and uses width/height as the free-form target size. */
     public static void blitTextured(GuiGraphicsExtractor gg, Identifier tex, int x, int y, int w, int h, int texW, int texH) {
         gg.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0F, 0F, w, h, texW, texH, texW, texH);
     }
@@ -89,10 +84,8 @@ public final class AnimRenderOps {
                                     float pX, float pY, float scale) {
         if (itemStack == null || itemStack.isEmpty() || entity == null) return;
         int seed = (int) (entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
-        // Per-item visual baseline (P1-3): measure the model's true extents
-        // and offset the draw so the visual centre of every item (swords,
-        // tools, armour, boxes) lands on the same pixel, instead of letting
-        // the model's own asymmetry float it within the slot.
+        // Measure the model's true extents and offset the draw so every
+        // item's visual centre lands on the same pixel.
         Minecraft mc = Minecraft.getInstance();
         float offsetX = 0;
         float offsetY = 0;
@@ -102,12 +95,9 @@ public final class AnimRenderOps {
                 mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
                 AABB bounds = tracked.getModelBoundingBox();
                 if (bounds != null) {
-                    // item() renders the model into a 16x16 GUI icon with the
-                    // model ORIGIN pinned to pixel (8,8) of that icon and one
-                    // block unit = 16px (GuiItemAtlas.drawToSlot translates to
-                    // the slot centre then scales by 16). The visual centre
-                    // therefore lands at (8 + 16*centreX, 8 + 16*centreY);
-                    // shift by the negated value so it pins onto (pX,pY).
+                    // The 16x16 GUI icon pins the model origin at (8,8) with
+                    // 1 block unit = 16px, so the visual centre lands at
+                    // (8 + 16*centreX, 8 + 16*centreY); negate to pin (pX,pY).
                     offsetX = -16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F;
                     offsetY = -16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F;
                 } else {
@@ -118,8 +108,7 @@ public final class AnimRenderOps {
                     offsetY = -8F;
                 }
             } catch (Throwable ignored) {
-                // Model measurement is best-effort; centre the draw so icons
-                // never drift toward the bottom-right on a resolver hiccup.
+                // Best-effort measurement; centre so icons never drift bottom-right.
                 offsetX = -8F;
                 offsetY = -8F;
             }
@@ -134,12 +123,10 @@ public final class AnimRenderOps {
         guiGraphics.pose().popMatrix();
     }
 
-    /** 3D rotating item preview (drag-to-rotate). The rotation is the raw
-     *  unit quaternion produced by {@link ItemDrag3D} — the drag-feel scheme
-     *  (One-Euro + arcball + damped spring) works in quaternion space, so we
-     *  pass it through unchanged instead of projecting onto two euler angles.
-     *  Decoupled path: the item re-routes through the PictureInPicture
-     *  renderer (Icon3DRenderState) to restore 1.21.1's drag-to-spin. */
+    /** 3D rotating item preview (drag-to-rotate). The raw quaternion from
+     *  {@link ItemDrag3D} passes through unchanged — the drag scheme works in
+     *  quaternion space. Decoupled path re-routes through the PIP renderer
+     *  (Icon3DRenderState) to restore 1.21.1's drag-to-spin. */
     public static void renderItem3D(GuiGraphicsExtractor guiGraphics, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) {
@@ -153,9 +140,8 @@ public final class AnimRenderOps {
 
         int textureSize = Math.max(1, Math.round(16.0F * scale));
 
-        // Extract the item model into a render state the PIP renderer can submit.
-        // TrackingItemStackRenderState is the subclass that registers a model
-        // identity for texture caching across frames (matches OversizedItemRenderer).
+        // TrackingItemStackRenderState registers a model identity so the PIP
+        // renderer caches the texture across frames (matches OversizedItemRenderer).
         TrackingItemStackRenderState trackedState = new TrackingItemStackRenderState();
         ItemModelResolver resolver = mc.getItemModelResolver();
         resolver.updateForLiving(trackedState, item, ItemDisplayContext.GUI, player);
@@ -170,21 +156,15 @@ public final class AnimRenderOps {
             modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
             modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
         } else {
-            // Some flat items (armour leggings etc.) report no bounds; fall
-            // back to a unit model so the PIP renderer still centres it
-            // (mirrors renderItem2D's null-bounds handling).
+            // Flat items may report no bounds; a unit model keeps them centred.
             modelSpan = 1.0F;
             modelCenterX = 0.0F;
             modelCenterY = 0.0F;
             modelCenterZ = 0.0F;
         }
 
-        // (cx, cy) is the TOP-LEFT of the preview square, matching the
-        // 1.21.1 reference renderItem3D and every 26.x caller (CsboxScreen /
-        // TerminalBootScreen pass previewPixelX/Y, BulkOverview passes
-        // centre - size/2). The PIP renderer centres the model inside its
-        // target rect, so the square spans (cx, cy) .. (cx+size, cy+size)
-        // and the model centre lands on (cx+half, cy+half).
+        // (cx, cy) is the TOP-LEFT of the preview square (all 26.x callers
+        // pass top-left; the PIP renderer centres the model inside it).
         // Forge's Icon3DRenderState carries Euler angles (degrees) instead of
         // the common Quat; decompose in the same XYZ order the PIP renderer
         // applies (mulPose X, then Y, then Z) so the visual matches the

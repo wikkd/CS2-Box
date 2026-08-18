@@ -33,10 +33,9 @@ import java.util.concurrent.ThreadLocalRandom;
 public class CsboxProgressScreen extends Screen {
     private static final int MAX_WAIT_TICKS = 200;
     /**
-     * After the strip finishes scrolling we drain bulk result chunks for a few
-     * extra ticks (networked chunks may not all arrive in the same frame),
-     * then show the consolidated result. Falls back to the single-item popup
-     * (or closes) when no bulk chunks arrived.
+     * After the strip finishes we drain bulk result chunks for a few extra
+     * ticks (they may not arrive in the same frame), then show the
+     * consolidated result; falls back to the single-item popup otherwise.
      */
     private static final int MAX_BULK_WAIT_TICKS = 100;
 
@@ -126,13 +125,9 @@ public class CsboxProgressScreen extends Screen {
 
     /**
      * CS2-style depth-of-field backdrop: always blur the live world regardless
-     * of the menu-background-blurriness option. This framework hook runs exactly
-     * once per frame; blurring again in renderBg would throw
-     * "Can only blur once per frame" (GuiRenderState) and freeze the screen.
-     *
-     * <p>When the Blur mod is loaded, defer to the vanilla implementation so
-     * its fade-in animation and user blurriness setting drive the radius
-     * (the vanilla path is what the mod's mixins hook into).
+     * of the blurriness option. This hook runs once per frame (blurring again
+     * in renderBg throws "Can only blur once per frame"). With the Blur mod
+     * loaded, defer to vanilla so the mod's mixins keep driving the radius.
      */
     @Override
     protected void extractBlurredBackground(GuiGraphicsExtractor guiGraphics) {
@@ -246,19 +241,10 @@ public class CsboxProgressScreen extends Screen {
         }
         // Real-time magnification bounded by the circular lens edge. Scissor
         // only supports rectangles, so the magnified strip is drawn in
-        // horizontal slices. Each slice's half-width is taken at the slice
-        // edge FARTHEST from the lens centre, making the scissor rect
-        // inscribed in the disc: magnified content never spills outside the
-        // circle. Slice height adapts to the local slope of the arc - coarse
-        // in the flat middle, 1-2px near the steep poles - so the inscribed
-        // error stays well under a pixel.
-        //
-        // Adjacent slices whose clip rect rounds to the same (x0, x1) produce
-        // bit-identical output, so they are merged into a single band first -
-        // the card redraw (a 3D item render + buffer flush per card) then
-        // runs once per band instead of once per slice. The merged rect stays
-        // inscribed in the disc (same rounding, same far edge), so visual
-        // output is unchanged.
+        // horizontal slices whose rects are inscribed in the disc (far edge
+        // from the centre; height adapts to the arc slope) so nothing spills
+        // outside the circle. Adjacent slices with identical clip rects merge
+        // into one band so the per-card redraw runs once per band.
         int yMin = Math.max(lensMinY, (int) Math.ceil(magnifiedTop));
         int yMax = Math.min(lensMinY + lensW, (int) Math.floor(magnifiedBottom));
         int maxBands = yMax - yMin + 1;
@@ -464,11 +450,7 @@ public class CsboxProgressScreen extends Screen {
         return super.keyPressed(event);
     }
 
-    /**
-     * Consumes every pending bulk chunk that matches this screen's request id.
-     * Bulk open results travel in several small packets; this keeps draining
-     * until the server-side burst is exhausted.
-     */
+    /** Drains every pending bulk chunk matching this screen's request id. */
     private void drainBulkChunks() {
         boolean got = false;
         PacketBoxBulkResult chunk;
@@ -480,10 +462,7 @@ public class CsboxProgressScreen extends Screen {
         this.quietBulkTicks = got ? 0 : this.quietBulkTicks + 1;
     }
 
-    /**
-     * Shows the consolidated bulk result (or the single-item popup when no
-     * bulk chunks arrived while draining).
-     */
+    /** Shows the consolidated bulk result (single-item popup if none arrived). */
     private void finishAndShowResult() {
         // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
         // Screen.removed() (not onClose()), so the onClose hideGui=false

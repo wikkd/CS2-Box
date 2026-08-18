@@ -1,12 +1,7 @@
 package com.reclizer.csgobox.forge_26_2.event;
 
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
-import com.reclizer.csgobox.forge_26_2.gui.CsboxBulkOverviewScreen;
-import com.reclizer.csgobox.forge_26_2.gui.CsboxScreen;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_26_2.item.ModItems;
-import com.reclizer.csgobox.forge_26_2.sounds.ModSounds;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -34,24 +29,10 @@ public final class ClickEvent {
 
         ItemStack heldItem = player.getMainHandItem();
 
-        if (heldItem.getItem() instanceof ItemCsgoBox) {
-
-            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
-            if (vol > 0) {
-                player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
-            }
-
-            Minecraft mc = Minecraft.getInstance();
-            if (mc != null) {
-                boolean shift = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）
-                mc.execute(() -> {
-                    if (shift) {
-                        mc.setScreenAndShow(new CsboxBulkOverviewScreen());
-                    } else {
-                        mc.setScreenAndShow(new CsboxScreen());
-                    }
-                });
-            }
+        // Box kind decides the screen: ItemTerminal opens the terminal boot
+        // screen, every other box opens the classic crate UI (Shift → bulk).
+        if (heldItem.getItem() instanceof ItemCsgoBox boxItem) {
+            boxItem.openScreen(heldItem);
         }
     }
 }

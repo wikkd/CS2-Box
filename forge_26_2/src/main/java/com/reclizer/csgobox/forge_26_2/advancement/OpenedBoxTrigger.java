@@ -34,7 +34,7 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
     }
 
     public void trigger(ServerPlayer player) {
-        this.trigger(player, (java.util.function.Predicate<TriggerInstance>) instance -> instance.matches(player));
+        this.trigger(player, instance -> instance.matches(player));
     }
 
     public record TriggerInstance(Optional<ContextAwarePredicate> player, int count) implements SimpleInstance {

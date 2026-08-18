@@ -5,8 +5,10 @@ import com.reclizer.csgobox.forge_26_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.forge_26_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.forge_26_2.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
-import com.reclizer.csgobox.forge_26_2.utils.IconListTools;
+import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_26_2.utils.HudVisibility;
+import com.reclizer.csgobox.forge_26_2.utils.IconListTools;
+import com.reclizer.csgobox.forge_26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,6 +20,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class CsboxProgressScreen extends Screen {
     private static final int MAX_WAIT_TICKS = 200;
+    private static final int MAX_BULK_WAIT_TICKS = 100;
 
     private final Player player;
     private final long expectedRequestId;
@@ -64,6 +68,20 @@ public class CsboxProgressScreen extends Screen {
     private int resultGrade = 0;
     private int waitingTicks = 0;
 
+    /** Rejected opens (cooldown, missing key, dead player) show a red banner
+     *  for REJECT_CLOSE_TICKS before closing instead of snapping away. */
+    private static final int REJECT_CLOSE_TICKS = 40;
+    private boolean rejected = false;
+    private int rejectedTicks = 0;
+
+    // Bulk-result aggregation state. waitingBulkTicks < 0 means we are not in
+    // the drain phase yet; while draining, every chunk with our request id is
+    // consumed and the finish fires after two quiet ticks or the hard cap.
+    private int waitingBulkTicks = -1;
+    private int quietBulkTicks = 0;
+    private List<ItemStack> bulkItems = List.of();
+    private List<Integer> bulkGrades = List.of();
+
     public CsboxProgressScreen(Player player, long requestId) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("cs_progress"));
         this.player = player;
@@ -91,13 +109,16 @@ public class CsboxProgressScreen extends Screen {
 
     /**
      * CS2-style depth-of-field backdrop: always blur the live world regardless
-     * of the menu-background-blurriness option. This framework hook runs exactly
-     * once per frame; blurring again in renderBg would throw
-     * "Can only blur once per frame" (GuiRenderState) and freeze the screen.
+     * of the blurriness option. This hook runs once per frame (blurring again
+     * in renderBg throws "Can only blur once per frame").
      */
     @Override
     protected void extractBlurredBackground(GuiGraphicsExtractor guiGraphics) {
-        guiGraphics.blurBeforeThisStratum();
+        if (ModList.isLoaded("blur")) {
+            super.extractBlurredBackground(guiGraphics);
+        } else {
+            AnimRenderOps.renderBlurredBackground(guiGraphics);
+        }
     }
 
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
@@ -106,7 +127,15 @@ public class CsboxProgressScreen extends Screen {
 
         // CS2-style backdrop: the blur is applied by extractBlurredBackground;
         // here we only dim the blurred world.
-        guiGraphics.fill(0, 0, this.width, this.height, 0x8C000000);
+        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
+
+        if (rejected) {
+            Component msg = Component.translatable("gui.csgobox.progress.rejected");
+            float scale = 1.0F;
+            float w = this.font.width(msg) * scale;
+            RenderFontTool.drawString(guiGraphics, this.font, msg.getVisualOrderText(),
+                    (this.width - w) / 2.0F, this.height * 40 / 100, 0, 0, scale, 0xFFFF5555);
+        }
 
         if (openTime < 5) return;
 
@@ -199,19 +228,10 @@ public class CsboxProgressScreen extends Screen {
         }
         // Real-time magnification bounded by the circular lens edge. Scissor
         // only supports rectangles, so the magnified strip is drawn in
-        // horizontal slices. Each slice's half-width is taken at the slice
-        // edge FARTHEST from the lens centre, making the scissor rect
-        // inscribed in the disc: magnified content never spills outside the
-        // circle. Slice height adapts to the local slope of the arc - coarse
-        // in the flat middle, 1-2px near the steep poles - so the inscribed
-        // error stays well under a pixel.
-        //
-        // Adjacent slices whose clip rect rounds to the same (x0, x1) produce
-        // bit-identical output, so they are merged into a single band first -
-        // the card redraw (a 3D item render + buffer flush per card) then
-        // runs once per band instead of once per slice. The merged rect stays
-        // inscribed in the disc (same rounding, same far edge), so visual
-        // output is unchanged.
+        // horizontal slices whose rects are inscribed in the disc (far edge
+        // from the centre; height adapts to the arc slope) so nothing spills
+        // outside the circle. Adjacent slices with identical clip rects merge
+        // into one band so the per-card redraw runs once per band.
         int yMin = Math.max(lensMinY, (int) Math.ceil(magnifiedTop));
         int yMax = Math.min(lensMinY + lensW, (int) Math.floor(magnifiedBottom));
         int maxBands = yMax - yMin + 1;
@@ -306,6 +326,14 @@ public class CsboxProgressScreen extends Screen {
     public void tick() {
         super.tick();
 
+        if (rejected) {
+            rejectedTicks++;
+            if (rejectedTicks >= REJECT_CLOSE_TICKS) {
+                this.onClose();
+            }
+            return;
+        }
+
         if (serverWinningIndex == null) {
             waitingTicks++;
             if (waitingTicks > MAX_WAIT_TICKS) {
@@ -317,8 +345,8 @@ public class CsboxProgressScreen extends Screen {
             if (result == null) {
                 return;
             }
-            if (result.item().isEmpty()) {
-                this.onClose();
+            if (result.animationItems().isEmpty()) {
+                this.rejected = true;
                 return;
             }
 
@@ -357,29 +385,18 @@ public class CsboxProgressScreen extends Screen {
             startTime++;
         }
 
-        if (startTime == totalTicks) {
-            PacketBoxBulkResult bulk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId);
-            // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
-            // Screen.removed() (not onClose()), so the onClose hideGui=false
-            // reset below would never run otherwise, leaving the HUD hidden
-            // after bulk open completes.
-            if (this.minecraft != null) {
-                HudVisibility.show();
+        if (startTime >= totalTicks) {
+            if (waitingBulkTicks < 0) {
+                waitingBulkTicks = 0;
+                quietBulkTicks = 0;
+                bulkItems = new ArrayList<>();
+                bulkGrades = new ArrayList<>();
             }
-            if (bulk != null && !bulk.items().isEmpty()) {
-                List<ItemStack> allItems = new ArrayList<>();
-                List<Integer> allGrades = new ArrayList<>();
-                if (!this.resultItem.isEmpty()) {
-                    allItems.add(this.resultItem.copy());
-                    allGrades.add(this.resultGrade);
-                }
-                allItems.addAll(bulk.items());
-                allGrades.addAll(bulk.grades());
-                Minecraft.getInstance().setScreenAndShow(new CsboxBulkResultScreen(this.player, allItems, allGrades));
-            } else if (!this.resultItem.isEmpty()) {
-                Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(this.resultItem, this.resultGrade));
-            } else {
-                this.onClose();
+            waitingBulkTicks++;
+            drainBulkChunks();
+            if (waitingBulkTicks >= MAX_BULK_WAIT_TICKS
+                    || (waitingBulkTicks >= 10 && quietBulkTicks >= 2)) {
+                finishAndShowResult();
             }
             return;
         }
@@ -409,6 +426,44 @@ public class CsboxProgressScreen extends Screen {
                             ModSounds.CS_DITA.get(), SoundSource.NEUTRAL, tickVol * 10F, 1F);
                 }
             }
+        }
+    }
+
+    /** Drains every pending bulk chunk matching this screen's request id. */
+    private void drainBulkChunks() {
+        boolean got = false;
+        PacketBoxBulkResult chunk;
+        while ((chunk = PacketBoxBulkResult.consumeMatching(this.expectedRequestId)) != null) {
+            this.bulkItems.addAll(chunk.items());
+            this.bulkGrades.addAll(chunk.grades());
+            got = true;
+        }
+        this.quietBulkTicks = got ? 0 : this.quietBulkTicks + 1;
+    }
+
+    /** Shows the consolidated bulk result (single-item popup if none arrived). */
+    private void finishAndShowResult() {
+        // restore hideGui BEFORE setScreen — Minecraft.setScreen calls
+        // Screen.removed() (not onClose()), so the onClose hideGui=false
+        // reset below would never run otherwise, leaving the HUD hidden
+        // after bulk open completes.
+        if (this.minecraft != null) {
+            HudVisibility.show();
+        }
+        if (!this.bulkItems.isEmpty()) {
+            List<ItemStack> allItems = new ArrayList<>();
+            List<Integer> allGrades = new ArrayList<>();
+            if (!this.resultItem.isEmpty()) {
+                allItems.add(this.resultItem.copy());
+                allGrades.add(this.resultGrade);
+            }
+            allItems.addAll(this.bulkItems);
+            allGrades.addAll(this.bulkGrades);
+            Minecraft.getInstance().setScreenAndShow(new CsboxBulkResultScreen(this.player, allItems, allGrades));
+        } else if (!this.resultItem.isEmpty()) {
+            Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(this.resultItem, this.resultGrade));
+        } else {
+            this.onClose();
         }
     }
 

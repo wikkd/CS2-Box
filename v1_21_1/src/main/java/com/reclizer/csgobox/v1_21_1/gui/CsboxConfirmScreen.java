@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
-import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;

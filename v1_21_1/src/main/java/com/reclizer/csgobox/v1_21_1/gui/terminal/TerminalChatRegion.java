@@ -17,11 +17,10 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
 
 /**
- * Region 4+5: the dealer chat stream — avatar + bubble lines, system
- * messages, offer cards (flip-in rows) and the typing indicator. Pure
- * rendering + layout; all timing comes from {@link TerminalAnims} and all
- * state from {@link NegotiationModel}. Draws newest entries at the bottom
- * (HTML auto-scroll) and only the visible window (≤64 entries kept).
+ * Region 4+5: dealer chat stream — avatar, bubble lines, system messages,
+ * offer cards and the typing indicator. Pure rendering + layout; timing from
+ * {@link TerminalAnims}, state from {@link NegotiationModel}. Newest entries
+ * at the bottom, only the visible window drawn (≤64 kept).
  *
  * era: decoupled
  */
@@ -71,8 +70,7 @@ public final class TerminalChatRegion {
 
     public void render(GuiGraphics gg, int x0, int y0, int x1, int y1,
                        long nowMs, NegotiationModel model) {
-        // panel background: dot grid tiles (24px period, 1 blit per dot —
-        // replaces the old per-frame fill storm of drawDotGrid).
+        // panel background: dot grid tiles (24px period, 1 blit per dot)
         int bodyTop = y0 + 9; // below the title strip (28px strip -> gui 9)
         drawDotGrid(gg, x0 + 3, bodyTop + 1, x1 - x0 - 5, y1 - bodyTop - 3);
         // title strip
@@ -81,11 +79,8 @@ public final class TerminalChatRegion {
                 Component.translatable("csgobox.terminal.chat.title").getString(),
                 x0 + 4, y0 + 2, 0.6F, 0.47F, TerminalPalette.TEXT);
 
-        // chat stream: top-down — the first entry sits at the panel top and
-        // new entries pop in below it (HTML top-down compact flow). When the
-        // stream overflows the viewport it auto-follows the newest entry;
-        // scrollOffset = px scrolled DOWN from the top (0 = top, maxScroll =
-        // bottom/newest). Wheel-up moves back toward older entries.
+        // Top-down stream: newest entries at the bottom; overflow auto-follows
+        // the newest. scrollOffset = px scrolled down (0 = top, max = newest).
         List<Object> entries = model.history();
         int start = Math.max(0, entries.size() - MAX_ENTRIES);
         int viewportH = y1 - bodyTop - 1;
@@ -198,16 +193,15 @@ public final class TerminalChatRegion {
 
         drawRounded(gg, x, y, CARD_W, CARD_H, cardBg, cardBorder);
 
-        // thumb: dark gradient backdrop (design .thumb linear-gradient) + item;
-        // gradient starts right of the 3px rarity stripe so the stripe stays visible
+        // thumb: gradient backdrop + item; starts right of the rarity stripe
         AnimRenderOps.fillGradient(gg, x + 4, y + 1, x + 4 + CARD_THUMB_W, y + CARD_H - 1,
                 TerminalPalette.THUMB_TOP, TerminalPalette.THUMB_BOTTOM);
         // rarity stripe (3px, left) — tier colour of the actual offered item
         int rarity = rarityColor(offer);
         AnimRenderOps.fill(gg, x + 1, y + 1, x + 4, y + CARD_H - 1, rarity);
         net.minecraft.world.entity.player.Player p = net.minecraft.client.Minecraft.getInstance().player;
-        // renderItem2D anchors at the icon's top-left: back out half the scaled
-        // icon so the visual centre lands on the thumb centre (~92% fill, 88/96)
+        // renderItem2D anchors at the icon's top-left: back out half the
+        // scaled icon so the visual centre lands on the thumb centre
         float thumbScale = (CARD_THUMB_W - 2) / 16F;
         AnimRenderOps.renderItem2D(p, gg, TerminalOfferItems.itemFor(offer),
                 x + 4 + CARD_THUMB_W / 2F - 8F * thumbScale,
@@ -273,11 +267,7 @@ public final class TerminalChatRegion {
                 x + (availW - textW) / 2F, y + 1, 0.16F, 0.43F, color);
     }
 
-    /**
-     * System text: server-supplied translatable args win (e.g. the terminal
-     * owner's name in the locked refusal); without args the local player name
-     * is used as the default single %s arg (multi-arg safe).
-     */
+    /** Server-supplied args win; otherwise the local player name fills the single %s. */
     private static String sysText(NegotiationModel.SystemEntry se) {
         String[] args = se.args();
         if (args != null) {
@@ -293,12 +283,8 @@ public final class TerminalChatRegion {
         return FormattedCharSequence.forward(s, Style.EMPTY);
     }
 
-    /**
-     * Rounded rectangle with a small FIXED corner radius (2px): the old
-     * 16x16 membrane scaled its 4px corner to ~25% of the box width, which
-     * read as a big arc/capsule on cards and bubbles instead of a proper
-     * rounded rectangle. Corners come from the hard-edged circle texture.
-     */
+    /** Rounded rectangle, fixed 2px corner radius (a scaled 16x16 membrane
+     *  read as a big arc on wide cards); corners from the circle texture. */
     public static void drawRounded(GuiGraphics gg, int x, int y, int w, int h,
                                    int fill, int border) {
         if (w <= 0 || h <= 0) {
@@ -333,11 +319,8 @@ public final class TerminalChatRegion {
         AnimRenderOps.fill(gg, x, y + r, x + w, y + h - r, fill);
     }
 
-    /**
-     * Perfect pill/capsule: a rectangle body plus two full semicircle ends
-     * built from a hard-edged circle texture (terminal_circle.png) — no
-     * 2px-corner stair-stepping even at large sizes. Border drawn 1px larger.
-     */
+    /** Pill: rectangle body + two semicircle ends from the circle texture —
+     *  no corner stair-stepping at large sizes. Border drawn 1px larger. */
     public static void drawPill(GuiGraphics gg, int x, int y, int w, int h,
                                 int fill, int border) {
         if (w <= 0 || h <= 0) {
@@ -345,11 +328,8 @@ public final class TerminalChatRegion {
         }
         int r = Math.max(1, h / 2);
         int d = 2 * r;
-        // border caps: diameter d+2 (always even) — concentric with the fill
-        // caps so the 1px ring is uniform. Even h: d+2 = h+2, caps and rect
-        // both span h+2 rows. Odd h: caps span h+1 rows and the h+2-row rect
-        // adds the flat bottom strip mirroring the fill's own; an odd h+2
-        // circle would bulge 1px at the bottom arcs instead.
+        // Border caps d+2, concentric with fill caps so the 1px ring is
+        // uniform; odd heights get a flat bottom strip instead of a bulge.
         int bd = d + 2;
         AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x - 1, y - 1, bd, bd,
                 0, 0, 32, 32, 32, 32, border);

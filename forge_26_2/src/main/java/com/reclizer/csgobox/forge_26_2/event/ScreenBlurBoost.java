@@ -1,0 +1,80 @@
+package com.reclizer.csgobox.forge_26_2.event;
+
+import com.reclizer.csgobox.forge_26_2.CsgoBox;
+import com.reclizer.csgobox.forge_26_2.gui.CsLookItemScreen;
+import com.reclizer.csgobox.forge_26_2.gui.CsboxBulkOverviewScreen;
+import com.reclizer.csgobox.forge_26_2.gui.CsboxBulkResultScreen;
+import com.reclizer.csgobox.forge_26_2.gui.CsboxConfirmScreen;
+import com.reclizer.csgobox.forge_26_2.gui.CsboxProgressScreen;
+import com.reclizer.csgobox.forge_26_2.gui.CsboxScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/**
+ * Boosts the menu-blur radius while a csgobox translucent-background screen is
+ * open: the GUI blur (26.x {@code MenuBlurRadius} global uniform) is driven by
+ * the vanilla {@code menuBackgroundBlurriness} option and cannot be set
+ * directly, so the option is temporarily raised to {@link CsgoBox#CONFIG}
+ * {@code blurRadius} while our screens are shown and restored when the last
+ * one closes.
+ *
+ * <p>Soft-adaptation contract: when the Blur mod is installed it renders its
+ * own blur with its own radius, so this boost intentionally does not apply to
+ * that path (users tune radius in the Blur mod config).</p>
+ */
+@Mod.EventBusSubscriber(value = Dist.CLIENT, modid = CsgoBox.MODID)
+public final class ScreenBlurBoost {
+
+    /** Vanilla option value captured before the first boost, or null. */
+    private static Integer originalBlurriness;
+
+    private ScreenBlurBoost() {
+    }
+
+    @SubscribeEvent
+    public static void onScreenOpening(ScreenEvent.Opening event) {
+        boolean openingOurs = isModScreen(event.getNewScreen());
+        boolean leavingOurs = isModScreen(event.getCurrentScreen());
+        if (openingOurs && !leavingOurs) {
+            boost();
+        } else if (leavingOurs && !openingOurs) {
+            restore();
+        }
+    }
+
+    private static void boost() {
+        int radius = CsgoBox.CONFIG.blurRadius();
+        if (radius <= 0) {
+            return;
+        }
+        OptionInstance<Integer> option = Minecraft.getInstance().options.menuBackgroundBlurriness();
+        if (originalBlurriness == null) {
+            originalBlurriness = option.get();
+        }
+        if (option.get() < radius) {
+            option.set(radius);
+        }
+    }
+
+    private static void restore() {
+        if (originalBlurriness == null) {
+            return;
+        }
+        Minecraft.getInstance().options.menuBackgroundBlurriness().set(originalBlurriness);
+        originalBlurriness = null;
+    }
+
+    private static boolean isModScreen(Screen screen) {
+        return screen instanceof CsboxScreen
+                || screen instanceof CsboxProgressScreen
+                || screen instanceof CsboxBulkOverviewScreen
+                || screen instanceof CsboxBulkResultScreen
+                || screen instanceof CsboxConfirmScreen
+                || screen instanceof CsLookItemScreen;
+    }
+}

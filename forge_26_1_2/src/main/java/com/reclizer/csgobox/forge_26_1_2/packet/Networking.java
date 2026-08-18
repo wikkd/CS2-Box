@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.forge_26_1_2.packet;
 
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;

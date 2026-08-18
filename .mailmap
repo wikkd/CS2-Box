@@ -1,7 +1,7 @@
 # .mailmap — 作者身份归并（无损，不改写历史）
 # 格式：正确身份 <正确邮箱>  历史提交中的身份 <历史邮箱>
-# 效果：git log / git shortlog / git blame 显示时统一归到 wikkd
+# 效果：git log / git shortlog / git blame 显示时统一归到 FrostStarInquire
 
-wikkd <18630220656@qq.com> FrostStarInquire <110705549+wikkd@users.noreply.github.com>
-wikkd <18630220656@qq.com> FrostStarInquire <18630220656@qq.com>
-wikkd <18630220656@qq.com> 霜月星询 <12214766+hou-xiangling@user.noreply.gitee.com>
+FrostStarInquire <18630220656@qq.com>
+FrostStarInquire <18630220656@qq.com> <110705549+wikkd@users.noreply.github.com>
+FrostStarInquire <18630220656@qq.com> <12214766+hou-xiangling@user.noreply.gitee.com>

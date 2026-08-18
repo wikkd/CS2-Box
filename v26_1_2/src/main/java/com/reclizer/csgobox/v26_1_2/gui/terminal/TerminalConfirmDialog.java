@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v26_1_2.gui.terminal;
 
-import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;

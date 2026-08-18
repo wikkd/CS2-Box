@@ -8,7 +8,6 @@ import com.reclizer.csgobox.v1_21_1.box.GradeGroup;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
-import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IJeiHelpers;

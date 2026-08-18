@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_26_2.utils;
 
+import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.forge_26_2.gui.pip.Icon3DRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -96,6 +97,20 @@ public final class GuiItemMove {
                 cy + textureSize);
 
         guiGraphics.getRenderState().addPicturesInPictureState(pipState);
+    }
+
+    /** Quat overload (terminal drag state): delegates to the AnimRenderOps
+     *  renderItem3D path so the decoupled spin/drag orientation is honoured. */
+    public static void renderItemInInventoryFollowsMouse(
+            GuiGraphicsExtractor guiGraphics,
+            int x,
+            int y,
+            Quat rotation,
+            ItemStack item,
+            LivingEntity player,
+            float scale
+    ) {
+        AnimRenderOps.renderItem3D(guiGraphics, item, player, x, y, rotation, scale);
     }
 
     private static float radiansToDegrees(float radians) {

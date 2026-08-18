@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
 /**
  * TACZ (Timeless & Classics Guns: Zero) inspect viewport integration facade.
  *
- * <p>This class deliberately contains ZERO direct references to TACZ classes.
+ * <p>This class contains no direct references to TACZ classes.
  * TACZ types are only referenced by {@link TaczInspectViewportImpl}, which is
  * loaded lazily via reflection when TACZ is actually present. The JVM
  * resolves class constants during verification, so any direct TACZ reference

@@ -109,12 +109,6 @@ public final class NegotiationModel {
     public static int priceForGrade(int grade) {
         return GRADE_PRICE[Math.max(0, Math.min(grade - 1, GRADE_PRICE.length - 1))];
     }
-    /** weapon preset id: "pistol" | "rifle" | "smg" (matches weapon_*.png). */
-    public static final String[] SKIN_WP = {"pistol", "rifle", "smg"};
-    /** weapon gradient endpoints (baked into weapon_*.png, kept for tinting). */
-    public static final int[] SKIN_C1 = {0xFFCFE8F5, 0xFFE878BC, 0xFFD05050};
-    public static final int[] SKIN_C2 = {0xFF5A8FC0, 0xFF7D4A86, 0xFF5A2626};
-
     // ---- timings ----
 
     public static final long TYPING_MS = 1100L;

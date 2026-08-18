@@ -21,7 +21,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
  * accessible from server scripts via
  * {@code NeoForgeEvents.onEvent('com.reclizer.csgobox.<version>.event.TerminalBuyEvent', ...)}.</p>
  *
- * <p>Note: terminal purchases intentionally do <em>not</em> fire
+ * <p>Terminal purchases do <em>not</em> fire
  * {@link BoxOpenedEvent} — the terminal protocol is a separate pipeline.
  * Listeners that need both paths (boxes and terminal) should subscribe to
  * both events.</p>

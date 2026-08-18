@@ -15,34 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * Writes tutorial markdown files into the {@code config/csbox/} directory
- * on first load by downloading them from the configured sources (see
- * {@link TutorialSources}). The files are not loaded as boxes because
- * their extension is not {@code .json}.
- *
- * <p>Tutorials are versioned: file names embed the mod version, e.g.
- * {@code _tutorial_v1.0.5.md} and {@code _tutorial_v1.0.5_zh_cn.md}. On
- * startup, if no file matches the current mod version, every stale
- * {@code _tutorial_v*_.md} file is deleted outright — the new-version
- * tutorial is downloaded right after, so the stale copy has no value
- * to keep around.</p>
- *
- * <p>The pattern {@code ^_tutorial_v.*\.md$} deliberately does NOT match:
- * user-authored {@code notes.md}, the older un-versioned
- * {@code _tutorial.md}, or the {@code _tutorial_sources.json} config.
- * Only mod-managed tutorial files with a version stamp are candidates
- * for deletion.</p>
- *
- * <p>Tutorials are network-only: if every configured source fails (or the
- * player is offline), no file is written. Existing files are never
- * overwritten by name, so user edits to current-version files survive.</p>
- *
- * <p>Resolved from the {@code common/} source set so all Minecraft
- * version modules share a single class file. The mod version is read
- * from the jar manifest via
- * {@link Package#getImplementationVersion()} so we no longer depend on
- * any per-platform {@code CsgoBox} entry point.</p>
+    /**
+ * Tutorial downloader: on first load, fetches version-stamped markdown
+ * tutorials into {@code config/csbox/}. Version mismatch deletes every
+ * {@code _tutorial_v*_.md} (pattern excludes user files like
+ * {@code notes.md}); downloads only if all sources are reachable and never
+ * overwrites existing files. Mod version comes from the jar manifest via
+ * {@link Package#getImplementationVersion()}, so common/ stays platform-free.
  */
 public final class BoxDefaults {
 
@@ -56,12 +35,9 @@ public final class BoxDefaults {
     private static final Pattern STALE_TUTORIAL = Pattern.compile("^_tutorial_v.*\\.md$");
 
     /**
-     * Default loot pool written for the terminal machine on first run. The
-     * terminal item resolves to the {@code csgobox:terminal} box definition;
-     * giving that definition its own config (instead of borrowing the first
-     * registered box) decouples the terminal's loot from every other crate.
-     * Uses only vanilla items so the pool always resolves, weighted toward
-     * higher tiers so the terminal feels like a premium dispenser.
+     * Default terminal loot pool, written on first run. Own config so the
+     * terminal's loot stays decoupled from other crates. Vanilla-only items,
+     * weighted toward higher tiers.
      */
     private static final String TERMINAL_DEFAULT_JSON = """
             {
@@ -415,7 +391,7 @@ public final class BoxDefaults {
      * anything that already declares a {@code type} is left alone.
      *
      * <p>Unloadable files self-heal instead of silently degrading into a
-     * regular crate: an empty file is simply rewritten with the default;
+     * regular crate: an empty file is rewritten with the default;
      * a non-empty corrupt file is backed up as
      * {@code terminal.json.corrupt-<millis>} before the default is written,
      * so the player's data is preserved for manual recovery while the

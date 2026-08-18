@@ -21,12 +21,8 @@ import net.minecraft.world.item.ItemStack;
 
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_26_1_2.packet.PacketCsgoBulkProgress;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Total overview for a bulk box open. Shift+right-click the held box to
@@ -95,12 +91,6 @@ public class CsboxBulkOverviewScreen extends Screen {
         if (limit > 0) {
             this.openableCount = Math.min(this.openableCount, limit);
         }
-    }
-
-    private static ItemStack keySample(Identifier keyId) {
-        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
-        if (ref == null) return ItemStack.EMPTY;
-        return ref.value().getDefaultInstance();
     }
 
     @Override

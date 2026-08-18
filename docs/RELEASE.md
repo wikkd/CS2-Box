@@ -35,6 +35,10 @@ done
 > 与 CI；其发布门禁独立运行 `scripts/test-forge-2612.sh`（L0-L3）+ L4 运行时 E2E，
 > 流程见 `docs/TESTING-FORGE-2612.md` §6。
 
+> `forge_26_2`（MinecraftForge 26.2，实验模块）1.0.7 线已追平（2026-08-18），
+> **不进入本构建矩阵**与 CI；发布门禁独立运行 `scripts/test-forge-262.sh`（L0-L3）
+> + L4 运行时 E2E，流程见 `docs/TESTING-FORGE-262.md`。
+
 产物命名：`<module>/build/libs/csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
 
 ## 3. 质量门（发布前必须全绿）

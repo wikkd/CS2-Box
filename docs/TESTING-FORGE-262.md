@@ -1,10 +1,8 @@
 # forge_26_2 (MinecraftForge 26.2) 测试流程（新模块，2026-08-14 首建）
 
 > 适用范围：`forge_26_2` 平台模块 = **MinecraftForge 26.2-65.1.1**（Java 25，
-> ForgeGradle 7.0.34）。基于 `forge_26_1_2`（**1.0.6 发行基线**，其 1.0.6 首版在
-> 提交 `2a7251a` 用 build.gradle 排除清单保持 1.0.6 特性）整模块迁移，只应用
-> **MC 26.1.2 → 26.2 编译必需的 API 适配**，行为保持 1.0.6 基线（不做 1.0.7/1.0.8
-> 特性合入，见 §2）。与其余平台版本**隔离**：默认
+> ForgeGradle 7.0.34）。基于 `forge_26_1_2`（1.0.6/1.0.7 同步线）整模块迁移，
+> **1.0.7 线已追平**（2026-08-18 全面审计确认）。与其余平台版本**隔离**：默认
 > `active_versions=26.1.2` 不变、不进 CI 矩阵、不参与 3 平台镜像纪律与
 > AnimRenderOps 漂移门禁（与 forge_26_1_2 同策略）。
 
@@ -29,12 +27,13 @@
 | F | `gui/pip/Icon3DRenderer.java` | 26.2 API：父类 `PictureInPictureRenderer` 变为注解式（无 BufferSource 构造器）；`renderToTexture(renderState, poseStack, SubmitNodeCollector)`；`gameRenderer.lighting()` 取代 `getLighting()`；不再自调 `FeatureRenderDispatcher.renderAllFeatures()`（父类负责）。**保留 1.0.6 euler 旋转 API**（`rotXDeg/rotYDeg/rotZDeg`，不引入 1.0.7 的 Quat 漂移） |
 | G | `CsgoBox.java` | `RegisterPictureInPictureRendererEvent.register(...)` 改为无参构造实例注册（26.2 事件 API：`register(PictureInPictureRenderer<?>)`，无 BufferSource，事件自带静态 BUS） |
 
-**未合入的 1.0.7/1.0.8 特性**（保持 1.0.6 基线，经 build.gradle 排除清单 + 源文件回退实现）：
+**已合入的 1.0.7 特性**（2026-08-18 追平）：
 终端机（terminal 物品/屏/会话/倒计时）、军火商与武库拆解台（block/menu/villager/recipe）、
 KubeJS 事件三件套（BoxOpeningEvent/TerminalBuyEvent/ArmoryRecycleEvent）、模糊增强
-（ScreenBlurBoost）、批量开箱恢复、`AnimRenderOps` 渲染门面、`HudVisibility` 之外的所有
-1.0.7/1.0.8 渲染重构。后续如需追平 1.0.7+ 线，按「镜像纪律」删除排除清单并合入
-`forge_26_1_2` 对应改动。
+（ScreenBlurBoost）、批量开箱恢复、`AnimRenderOps` 渲染门面、`HudVisibility`、
+教程系统（TutorialFetcher/TutorialSources/BoxJsonSchemaValidator）等全部 1.0.7 增量
+已从 `forge_26_1_2` 同步。PIP 渲染器保持 **Forge 欧拉角方案**（与 NeoForge 的 Quat/Supplier
+方案不同，有意保持）。
 
 ## 3. 自动化门禁（L0-L3）
 
@@ -48,7 +47,7 @@ KubeJS 事件三件套（BoxOpeningEvent/TerminalBuyEvent/ArmoryRecycleEvent）�
 | S2 | jar 存在非空、`csgobox-forge-26.2-<ver>.jar`、mods.toml `version="<ver>"` 已展开 |
 | S3 | `scripts/check-version.sh`（版本四同步；forge_26_2 的 mods.toml 自动纳入模板校验） |
 | S4 | `scripts/check-animops-drift.sh`（3 NeoForge 平台；forge 按设计不在内） |
-| S5 | `:forge_26_2:test` JUnit 全绿（PlatformSmokeTest，入口可加载 + 1.0.6 基线字段守卫：断言 ITEM_TERMINAL / ITEM_ARMORY_POINT 不存在） |
+| S5 | `:forge_26_2:test` JUnit 全绿（PlatformSmokeTest，入口可加载 + 1.0.7 物品守卫：断言 ITEM_TERMINAL / ITEM_ARMORY_POINT 存在） |
 
 ## 4. 隔离性（与其他版本互不影响）
 
@@ -72,19 +71,17 @@ forge-26.2 构建目标（当前仅 forge-26.1.2，见 TESTING-FORGE-2612.md §5
 
 ## 6. 发布门禁对照
 
-- [x] L0-L3 全绿（`./scripts/test-forge-262.sh`，PASS 7 / FAIL 0 / WARN 0，2026-08-14）
+- [x] L0-L3 全绿（`./scripts/test-forge-262.sh`，PASS 7 / FAIL 0 / WARN 0，2026-08-18）
 - [ ] L4 关键路径 F1-F4（待人工）
-- [x] 版本四同步（`scripts/check-version.sh` 通过）
+- [x] 版本四同步（`scripts/check-version.sh` 通过，2026-08-18）
 - [x] `mods.toml` 区间：forge `[65,)`、MC `[26.2,26.3)`、pack_format 81
 
-> 状态（2026-08-14）：模块首建完成并**回退到 1.0.6 发行基线**（删 1.0.7/1.0.8
-> 专属文件 39 项、恢复 1.0.6 才有的 3 文件、33 同名文件回退 1.0.6 内容、
-> build.gradle 加回排除清单 + 7 项 26.2 编译适配）；并完成等级 5 卡带渲染修复
-> （`IconListTools.blitGoldItemAspect` UV 越界平铺 → 12 参显式源窗口）与 1.0.8
-> 资源排除补全（`data/{loot_table,structure,worldgen,tags}`、
-> `data/minecraft/worldgen/template_pool/village/**`、`textures/gui/armory_recycler.png`）。
-> L0-L3 门禁全绿、`runClient` 启动正常；L4 待人工。已提交 git（源码，build/`run/`
-> 不入库）。jar 产物 `csgobox-forge-26.2-1.0.6.jar`。
+> 状态（2026-08-18）：**1.0.7 线已追平**。以 `forge_26_1_2` 为基准整模块迁移
+>（`scripts/port-forge-262.py` + 手工适配），`build.gradle` 排除清单已删除，
+> `PlatformSmokeTest` 断言 1.0.7 物品存在。2026-08-18 全面审计：5 平台
+> `clean compileJava` 全通过、`test-forge-262.sh` 7/7 PASS、版本四同步 OK、
+> 资源一致性补齐（4 个物品定义从 `forge_26_1_2` 补入）。jar 产物
+> `csgobox-forge-26.2-1.0.6.jar`。
 
 ## 7. 已知差异与注意
 

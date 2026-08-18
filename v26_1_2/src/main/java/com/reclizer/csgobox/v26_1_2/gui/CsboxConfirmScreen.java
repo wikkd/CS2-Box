@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
-import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -13,11 +12,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
 
 import java.util.concurrent.ThreadLocalRandom;

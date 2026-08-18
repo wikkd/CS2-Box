@@ -1,15 +1,10 @@
 package com.reclizer.csgobox.forge_26_2.utils;
 
 import com.reclizer.csgobox.utils.ColorTools;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.AABB;
 
 public final class IconListTools {
 
@@ -45,7 +40,7 @@ public final class IconListTools {
     // background gradient (drawn by the caller) rather than retinted, so
     // the gold bar at the slot edges stays visible.
     private static void blitGoldItemAspect(GuiGraphicsExtractor guiGraphics,
-                                           int x, int y, int availW, int availH) {
+                                           int x, int y, int availW, int availH, int alpha) {
         int drawW;
         int drawH;
         if ((long) availW * GOLD_ITEM_TEX_HEIGHT < (long) availH * GOLD_ITEM_TEX_WIDTH) {
@@ -57,24 +52,26 @@ public final class IconListTools {
         }
         int drawX = x + (availW - drawW) / 2;
         int drawY = y + (availH - drawH) / 2;
-        // 26.x blit 的 10 参重载会把 srcWidth/srcHeight 取作 width/height，
-        // 放大绘制（gold_item.png 32x24 画到 ~169x127）时 UV 会被推到
-        // 1.0 以外造成 wrap 平铺（正是"9 个合成图"的来源）。改用 12 参重载
-        // 显式传源窗口 = 整个纹理像素尺寸，使 UV 保持 [0,1] 只画一次。
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GOLD_ITEM_TEXTURE,
+        // Tint variant (full UV window) so the gold gem fades with the frame.
+        AnimRenderOps.blitTextured(guiGraphics, GOLD_ITEM_TEXTURE,
                 drawX, drawY,
-                0F, 0F,
                 drawW, drawH,
+                0, 0,
                 GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
-                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT);
+                GOLD_ITEM_TEX_WIDTH, GOLD_ITEM_TEX_HEIGHT,
+                ColorTools.withAlpha(0xFFFFFFFF, alpha));
     }
 
-    private static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color) {
-        guiGraphics.fillGradient(pX0, pY0, toX, toY, 0xFF696969, 0xFFD3D3D3);
-        guiGraphics.fill(pX0, pY0, pX0 + 2, toY, color);
+    private static void renderRarity(GuiGraphicsExtractor guiGraphics, int pX0, int pY0, int toX, int toY, int color, int alpha) {
+        AnimRenderOps.fillGradient(guiGraphics, pX0, pY0, toX, toY,
+                ColorTools.withAlpha(0xFF696969, alpha), ColorTools.withAlpha(0xFFD3D3D3, alpha));
+        AnimRenderOps.fill(guiGraphics, pX0, pY0, pX0 + 2, toY, ColorTools.withAlpha(color, alpha));
     }
 
-    public static void renderItemFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade) {
+    /** {@code alpha} (0..255) fades the whole frame (gradient, rarity bar,
+     *  gold texture); the item icon itself has no alpha channel in the
+     *  render pipeline and slides with the frame instead. */
+    public static void renderItemFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, int pX, int pY, int width, int height, int grade, int alpha) {
         int color = ColorTools.colorItems(grade);
 
         int frameWidth = width * 8 / 100;
@@ -82,18 +79,23 @@ public final class IconListTools {
         float scale = frameWidth * 60F / 100F / 16F;
         int toX = pX + frameWidth;
         int toY = pY + frameHeight;
-        int itemX = pX + frameWidth * 20 / 100;
-        int itemY = pY + frameHeight * 10 / 100;
+        // 26.x renderItem2D takes the ICON CENTRE (1.21.1 took the top-left
+        // and added 8*scale internally, so the old 20%/10% offsets happened to
+        // centre it there). Pass the slot centre directly, otherwise the icon
+        // floats toward the top-left corner of the frame.
+        int itemX = pX + frameWidth / 2;
+        int itemY = pY + frameHeight / 2;
         if (grade == 5) {
-            guiGraphics.fillGradient(pX, pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            guiGraphics.fill(pX, pY, pX + 2, toY, color);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, toX, toY,
+                    ColorTools.withAlpha(0xFF533c00, alpha), ColorTools.withAlpha(0xFFb69008, alpha));
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, toY, ColorTools.withAlpha(color, alpha));
             // 26.1.2 changed blit: must pass RenderPipeline explicitly and
             // last two ints are textureWidth/textureHeight (pixels), not UVs.
             blitGoldItemAspect(guiGraphics, pX + 2, pY + 2,
-                    frameWidth - 4, frameHeight - 4);
+                    frameWidth - 4, frameHeight - 4, alpha);
         } else {
-            renderRarity(guiGraphics, pX, pY, toX, toY, color);
-            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
+            renderRarity(guiGraphics, pX, pY, toX, toY, color, alpha);
+            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
         }
     }
 
@@ -101,54 +103,23 @@ public final class IconListTools {
         int color = ColorTools.colorItems(grade);
         int pad = Math.max(3, Math.min(8, width / 10));
         int iconW = Math.max(8, width - pad * 2);
-        int iconH = Math.max(8, height - pad * 2);
-        int itemX = pX + (width - iconW) / 2;
-        int itemY = pY + (height - iconH) / 2;
+        // 26.x renderItem2D takes the ICON CENTRE: pin the visual centre on
+        // the cell centre instead of the icon-box top-left.
+        int itemX = pX + width / 2;
+        int itemY = pY + height / 2;
         if (grade == 5) {
-            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
-            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
-            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2, width - 4, height - 4);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
+            blitGoldItemAspect(guiGraphics, pX + 2, pY + 2, width - 4, height - 4, 255);
         } else {
-            guiGraphics.fillGradient(pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
-            guiGraphics.fill(pX, pY, pX + 2, pY + height, color);
-            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, iconW / 16F);
+            AnimRenderOps.fillGradient(guiGraphics, pX, pY, pX + width, pY + height, 0xFF696969, 0xFFD3D3D3);
+            AnimRenderOps.fill(guiGraphics, pX, pY, pX + 2, pY + height, color);
+            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, iconW / 16F);
         }
     }
 
     public static void renderGuiItem(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float scale) {
-        if (itemStack == null || itemStack.isEmpty() || entity == null) return;
-        int seed = (int)(entity.getUUID().getLeastSignificantBits() & 0x7FFFFFFFL);
-        // Per-item visual baseline (P1-3): measure the model's true extents
-        // and offset the draw so the visual centre of every item (swords,
-        // tools, armour, boxes) lands on the same pixel, instead of letting
-        // the model's own asymmetry float it within the slot.
-        Minecraft mc = Minecraft.getInstance();
-        float offsetX = 0;
-        float offsetY = 0;
-        if (mc != null) {
-            try {
-                TrackingItemStackRenderState tracked = new TrackingItemStackRenderState();
-                mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
-                AABB bounds = tracked.getModelBoundingBox();
-                if (bounds != null) {
-                    // Model space is roughly -8..+8 for a 16px item. Shift so
-                    // the measured centre sits at the slot centre.
-                    offsetX = -((float) ((bounds.minX + bounds.maxX) * 0.5D));
-                    offsetY = -((float) ((bounds.minY + bounds.maxY) * 0.5D));
-                }
-            } catch (Throwable ignored) {
-                // Model measurement is best-effort; fall back to the previous
-                // top-left anchored draw on any resolver hiccup.
-            }
-        }
-        // Anchor-relative scale: translate to the target pixel first, then
-        // apply the scale so that drawing at (0,0) lands at the original (pX,pY).
-        guiGraphics.pose().pushMatrix();
-        guiGraphics.pose().translate(pX, pY);
-        if (scale != 1.0F) guiGraphics.pose().scale(scale, scale);
-        guiGraphics.pose().translate(offsetX, offsetY);
-        guiGraphics.item(entity, itemStack, 0, 0, seed);
-        guiGraphics.pose().popMatrix();
+        AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, pX, pY, scale);
     }
 
     public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
@@ -158,19 +129,19 @@ public final class IconListTools {
         float scale = frameWidth * 60F / 100F / 16F;
         int toX = (int)(pX + frameWidth);
         int toY = (int)(pY + frameHeight);
-        float itemX = pX + frameWidth * 20 / 100F;
-        float itemY = pY + frameHeight * 10 / 100F;
+        float itemX = pX + frameWidth / 2F;
+        float itemY = pY + frameHeight / 2F;
         if (grade == 5) {
-            guiGraphics.fillGradient((int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
             blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F));
-            guiGraphics.fill((int) pX, toY, toX, toY + 2, color);
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
+            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
         } else {
-            guiGraphics.fillGradient((int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            guiGraphics.fillGradient((int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            guiGraphics.fill((int) pX, toY, toX, toY + 2, color);
+            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
+            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
         }
     }
 
@@ -181,19 +152,19 @@ public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtra
         float scale = frameWidth * 92F / 100F / 16F;
         int toX = (int)(pX + frameWidth);
         int toY = (int)(pY + frameHeight);
-        float itemX = pX + (frameWidth - scale * 16F) / 2F;
-        float itemY = pY + (frameHeight - scale * 16F) / 2F;
+        float itemX = pX + frameWidth / 2F;
+        float itemY = pY + frameHeight / 2F;
         if (grade == 5) {
-            guiGraphics.fillGradient((int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
             blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F));
-            guiGraphics.fill((int) pX, toY, toX, toY + 2, color);
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
+            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
         } else {
-            guiGraphics.fillGradient((int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            guiGraphics.fillGradient((int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
                     ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            renderGuiItem(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            guiGraphics.fill((int) pX, toY, toX, toY + 2, color);
+            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
+            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
         }
         int bx0 = (int) pX;
         int by0 = (int) pY;
@@ -203,6 +174,6 @@ public static void renderItemProgressFocus(LivingEntity entity, GuiGraphicsExtra
         int tintA = (int) (70F * (0.4F + 0.6F * focus));
         int tintTop = ColorTools.argbColor(tintA, 176, 140, 255);
         int tintBottom = ColorTools.argbColor(tintA - 12, 48, 80, 255);
-        guiGraphics.fillGradient(bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
+        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
     }
 }

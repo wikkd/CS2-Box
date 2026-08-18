@@ -1,11 +1,12 @@
 package com.reclizer.csgobox.forge_26_2.config;
 
+import com.reclizer.csgobox.config.CsboxConfigDefaults;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public class CsboxConfig {
 
     /** Sentinel upper bound meaning "no limit" for unbounded config ranges. */
-    public static final int NO_UPPER_BOUND = Integer.MAX_VALUE;
+    public static final int NO_UPPER_BOUND = CsboxConfigDefaults.NO_UPPER_BOUND;
 
     private final ForgeConfigSpec.BooleanValue loadDefaultBoxesValue;
     private final ForgeConfigSpec.BooleanValue enableDebugLoggingValue;
@@ -22,63 +23,82 @@ public class CsboxConfig {
     private final ForgeConfigSpec.IntValue globalDropRatePercentValue;
     private final ForgeConfigSpec.EnumValue<ErrorChatAudience> jsonErrorAudienceValue;
     private final ForgeConfigSpec.BooleanValue damageItemByWearValue;
+    private final ForgeConfigSpec.EnumValue<BackgroundStyle> backgroundStyleValue;
+    private final ForgeConfigSpec.IntValue blurRadiusValue;
 
     public CsboxConfig(ForgeConfigSpec.Builder builder) {
         builder.comment("General settings").push("general");
         this.animationSpeedValue = builder
                 .comment("Animation playback speed: SLOW = 2x base, NORMAL = 1x base, FAST = 0.5x base")
-                .defineEnum("animationSpeed", AnimationSpeed.NORMAL);
+                .defineEnum("animationSpeed", AnimationSpeed.valueOf(CsboxConfigDefaults.ANIMATION_SPEED));
         this.globalDropRatePercentValue = builder
                 .comment("Global drop rate multiplier in percent (default 100; 0 = off, no upper bound)")
-                .defineInRange("globalDropRatePercent", 100, 0, NO_UPPER_BOUND);
+                .defineInRange("globalDropRatePercent", CsboxConfigDefaults.GLOBAL_DROP_RATE_PERCENT,
+                        CsboxConfigDefaults.GLOBAL_DROP_RATE_PERCENT_MIN, NO_UPPER_BOUND);
         builder.pop();
 
         builder.comment("Advanced settings").push("advanced");
         this.loadDefaultBoxesValue = builder
                 .comment("Auto-load default boxes from config/csbox/*.json on startup")
-                .define("loadDefaultBoxes", true);
+                .define("loadDefaultBoxes", CsboxConfigDefaults.LOAD_DEFAULT_BOXES);
         this.enableDebugLoggingValue = builder
                 .comment("Enable verbose debug logging")
-                .define("enableDebugLogging", false);
+                .define("enableDebugLogging", CsboxConfigDefaults.ENABLE_DEBUG_LOGGING);
         this.enableAchievementsValue = builder
                 .comment("Enable the achievement system (stats are still accumulated when off)")
-                .define("enableAchievements", true);
+                .define("enableAchievements", CsboxConfigDefaults.ENABLE_ACHIEVEMENTS);
         this.enableHotReloadValue = builder
                 .comment("Watch config/csbox/*.json and auto-reload on file changes (300ms debounce)")
-                .define("enableHotReload", true);
+                .define("enableHotReload", CsboxConfigDefaults.ENABLE_HOT_RELOAD);
         this.bulkOpenCountValue = builder
                 .comment("Max boxes per bulk open (0 = unlimited, default). Server-enforced; the overview screen clamps its estimate to this value.")
-                .defineInRange("bulkOpenCount", 0, 0, NO_UPPER_BOUND);
+                .defineInRange("bulkOpenCount", CsboxConfigDefaults.BULK_OPEN_COUNT,
+                        CsboxConfigDefaults.BULK_OPEN_COUNT_MIN, NO_UPPER_BOUND);
         this.jsonErrorAudienceValue = builder
                 .comment("Who can see JSON load errors in chat on join: OP_ONLY (default) or EVERYONE")
-                .defineEnum("jsonErrorAudience", ErrorChatAudience.OP_ONLY);
+                .defineEnum("jsonErrorAudience", ErrorChatAudience.valueOf(CsboxConfigDefaults.JSON_ERROR_AUDIENCE));
         this.damageItemByWearValue = builder
                 .comment("Drawn items with durability lose durability by their wear value percentage (default on)")
-                .define("damageItemByWear", true);
+                .define("damageItemByWear", CsboxConfigDefaults.DAMAGE_ITEM_BY_WEAR);
         builder.pop();
 
         builder.comment("Sound settings").push("sound");
         this.openSoundVolumeValue = builder
                 .comment("Open sound volume in percent (0-100)")
-                .defineInRange("openSoundVolume", 100, 0, 100);
+                .defineInRange("openSoundVolume", CsboxConfigDefaults.OPEN_SOUND_VOLUME,
+                        CsboxConfigDefaults.SOUND_VOLUME_MIN, CsboxConfigDefaults.SOUND_VOLUME_MAX);
         this.tickSoundVolumeValue = builder
                 .comment("Tick sound volume in percent (0-100)")
-                .defineInRange("tickSoundVolume", 50, 0, 100);
+                .defineInRange("tickSoundVolume", CsboxConfigDefaults.TICK_SOUND_VOLUME,
+                        CsboxConfigDefaults.SOUND_VOLUME_MIN, CsboxConfigDefaults.SOUND_VOLUME_MAX);
         this.finishSoundVolumeValue = builder
                 .comment("Finish sound volume in percent (0-100)")
-                .defineInRange("finishSoundVolume", 100, 0, 100);
+                .defineInRange("finishSoundVolume", CsboxConfigDefaults.FINISH_SOUND_VOLUME,
+                        CsboxConfigDefaults.SOUND_VOLUME_MIN, CsboxConfigDefaults.SOUND_VOLUME_MAX);
         builder.pop();
 
         builder.comment("Animation settings").push("animation");
         this.totalAnimationTicksValue = builder
                 .comment("Base animation duration in ticks")
-                .defineInRange("totalAnimationTicks", 145, 20, 500);
+                .defineInRange("totalAnimationTicks", CsboxConfigDefaults.TOTAL_ANIMATION_TICKS,
+                        CsboxConfigDefaults.TOTAL_ANIMATION_TICKS_MIN, CsboxConfigDefaults.TOTAL_ANIMATION_TICKS_MAX);
         this.animationSpeedMultiplierValue = builder
                 .comment("Animation speed multiplier (higher = faster, minimum 1)")
-                .defineInRange("animationSpeedMultiplier", 1, 1, 10);
+                .defineInRange("animationSpeedMultiplier", CsboxConfigDefaults.ANIMATION_SPEED_MULTIPLIER,
+                        CsboxConfigDefaults.ANIMATION_SPEED_MULTIPLIER_MIN, CsboxConfigDefaults.ANIMATION_SPEED_MULTIPLIER_MAX);
         this.showItemNamesValue = builder
                 .comment("Show item names in box preview screen")
-                .define("showItemNames", true);
+                .define("showItemNames", CsboxConfigDefaults.SHOW_ITEM_NAMES);
+        builder.pop();
+
+        builder.comment("UI settings").push("ui");
+        this.backgroundStyleValue = builder
+                .comment("Screen background style: TRANSLUCENT = blurred world shows through (default), OPAQUE = solid dark panels")
+                .defineEnum("backgroundStyle", BackgroundStyle.valueOf(CsboxConfigDefaults.BACKGROUND_STYLE));
+        this.blurRadiusValue = builder
+                .comment("Menu-blur radius while csgobox screens are open (0 = follow vanilla menuBackgroundBlurriness, default 8)")
+                .defineInRange("blurRadius", CsboxConfigDefaults.BLUR_RADIUS,
+                        CsboxConfigDefaults.BLUR_RADIUS_MIN, CsboxConfigDefaults.BLUR_RADIUS_MAX);
         builder.pop();
     }
 
@@ -142,6 +162,14 @@ public class CsboxConfig {
         return damageItemByWearValue.get();
     }
 
+    public BackgroundStyle backgroundStyle() {
+        return backgroundStyleValue.get();
+    }
+
+    public int blurRadius() {
+        return blurRadiusValue.get();
+    }
+
     public enum AnimationSpeed {
         SLOW,
         NORMAL,
@@ -151,5 +179,10 @@ public class CsboxConfig {
     public enum ErrorChatAudience {
         OP_ONLY,
         EVERYONE
+    }
+
+    public enum BackgroundStyle {
+        OPAQUE,
+        TRANSLUCENT
     }
 }

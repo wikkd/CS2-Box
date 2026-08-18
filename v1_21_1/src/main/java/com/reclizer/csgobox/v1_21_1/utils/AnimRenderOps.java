@@ -98,14 +98,10 @@ public final class AnimRenderOps {
         gg.blit(tex, x, y, 0, 0, w, h, w, h);
     }
 
-    /** Variant carrying the texture's real pixel size. 1.21.1's convenience
-     *  blit(tex, x, y, u, v, w, h, texW, texH) treats the SOURCE UV window as
-     *  width=w/height=h (uWidth=width internally), so passing a target size
-     *  larger than the texture (gold_item.png is 32x24, drawn at ~169x127 in
-     *  the opening strip) would push the UV window past 1.0 and wrap/stretch
-     *  the icon. The 11-arg overload takes the source window explicitly:
-     *  uWidth=texW/vHeight=texH keeps UV = [0,1] while width/height stay the
-     *  free-form target size. */
+    /** Variant carrying the texture's real pixel size: the convenience blit
+     *  treats the source UV window as w×h, so an enlarged draw (gold_item.png
+     *  32x24 at ~169x127) would push UV past 1.0. The 11-arg overload keeps
+     *  UV = [0,1] and uses width/height as the free-form target size. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
         gg.flush();
         RenderSystem.enableBlend();
@@ -197,13 +193,10 @@ public final class AnimRenderOps {
         RenderSystem.applyModelViewMatrix();
     }
 
-    /** 3D rotating item preview (drag-to-rotate). The rotation is the raw
-     *  unit quaternion produced by {@link ItemDrag3D} — the drag-feel scheme
-     *  (One-Euro + arcball + damped spring) works in quaternion space, so we
-     *  pass it through unchanged instead of projecting onto two euler angles.
-     *  TACZ guns bypass the vanilla ItemRenderer: TACZ's GUI branch only
-     *  draws the flat slot texture, so the bedrock gun model is rendered
-     *  directly (see {@link #renderGunModel3D}). */
+    /** 3D rotating item preview (drag-to-rotate). The raw quaternion from
+     *  {@link ItemDrag3D} passes through unchanged — the drag scheme works in
+     *  quaternion space. TACZ guns bypass the vanilla ItemRenderer (its GUI
+     *  branch only draws the flat slot texture); see {@link #renderGunModel3D}. */
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
@@ -259,16 +252,11 @@ public final class AnimRenderOps {
         RenderSystem.applyModelViewMatrix();
     }
 
-    /** Centre of the RENDERED geometry of a baked item model, in the space
-     *  the drag rotation is applied (block units), or {@code null} for models
-     *  without quads (custom renderers). Every quad vertex is pushed through
-     *  the exact chain {@code ItemRenderer.render} applies ({@code
-     *  ItemTransform.apply} then the {@code -0.5} shift) and the centre of
-     *  the resulting bounding box is taken — the same semantics as 26.x's
-     *  {@code getModelBoundingBox} centre, and more accurate than pushing
-     *  just the raw diagonal midpoint through the transform (rotation turns
-     *  the AABB into an OBB, so the two no longer coincide). Computed once
-     *  per model instance and cached. */
+    /** Centre of the RENDERED geometry of a baked item model, in drag-rotation
+     *  space (block units), or {@code null} for models without quads. Pushes
+     *  every quad vertex through the exact {@code ItemRenderer.render} chain
+     *  ({@code ItemTransform.apply} + {@code -0.5} shift) — rotation turns the
+     *  AABB into an OBB, so a raw midpoint is wrong. Computed once per model. */
     private static Vector3f itemModelCenter(BakedModel model) {
         Object cached = ITEM_MODEL_CENTERS.get(model);
         if (cached == NO_CENTER) {
@@ -349,12 +337,10 @@ public final class AnimRenderOps {
         return center;
     }
 
-    /** TACZ gun 3D render: same outer pose convention as the vanilla branch
-     *  (anchor = top-left of the preview square, Y-flip, drag quaternion,
-     *  16px per block unit) but the model is a {@link BedrockGunModel} drawn
-     *  on an identity stack with the placement in RenderSystem's model-view
-     *  matrix — TACZ's GUI item rendering draws only the flat slot texture,
-     *  so the vanilla ItemRenderer path cannot carry the drag rotation. */
+    /** TACZ gun 3D render: same pose convention as the vanilla branch, but
+     *  the model is a {@link BedrockGunModel} drawn on an identity stack via
+     *  RenderSystem's model-view matrix — the vanilla ItemRenderer path only
+     *  draws the flat slot texture. */
     private static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
@@ -395,10 +381,8 @@ public final class AnimRenderOps {
     }
 
     /** Model-space centre of the gun's default-pose bounding box (block
-     *  units), computed once per model instance by walking the part tree with
-     *  the base bone rotations ({@code xRot/yRot/zRot} are the static bedrock
-     *  pose — {@code cleanAnimationTransform} resets offsets/quaternions/scales,
-     *  not these). */
+     *  units), computed once per model by walking the part tree with the base
+     *  bone rotations ({@code cleanAnimationTransform} does not reset these). */
     public static Vector3f gunModelCenter(BedrockGunModel model) {
         Vector3f cached = GUN_MODEL_CENTERS.get(model);
         if (cached != null) {

@@ -8,7 +8,6 @@ import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
-import com.reclizer.csgobox.v1_21_1.utils.GuiItemMove;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

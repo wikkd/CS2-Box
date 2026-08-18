@@ -1,24 +1,17 @@
-// ProGuard 7.5.0 standalone — minify the production jar to ~50% by
-// stripping unused classes / methods / fields. High-risk: mis-shrinking
-// a reflectively-called method will surface as a runtime
-// NoSuchMethodError on the player's client. Keep proguard-rules.pro in
-// sync with every new @SubscribeEvent / @Mod / @EventBusSubscriber /
-// CustomPacketPayload addition; treat the minified jar as opt-in.
+// ProGuard minify is opt-in: shrink-only (no obfuscation), invoked via
+// ./gradlew :v1_21_1:minifyJar -Pactive_versions=1.21.1. Output lands in
+// build/libs/csgobox-1.21.1-<version>-minified.jar and is never part of
+// the default build. High-risk: mis-shrinking a reflectively-called
+// method surfaces as a runtime NoSuchMethodError on the player's client.
+// Keep proguard-rules.pro in sync with every new @SubscribeEvent / @Mod /
+// EventBusSubscriber / CustomPacketPayload addition; the class-list audit
+// (scripts/slim-audit-classes.py) is the hard gate.
 //
-// We use ProGuard's standalone main class (proguard.ProGuard) via
-// JavaExec rather than the ProGuard Gradle plugin, because the
-// ProGuard plugin (7.4.2) conflicts with Gradle 8's strict
-// plugins{} block ordering and ProGuard 7.5+ no longer ships a
-// separately-executable jar (Maven-only). This way we feed the
-// proguard-base 7.5.0 dependency directly to the task classpath.
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.guardsquare:proguard-base:7.5.0'
-    }
-}
+// ProGuard is run through its standalone main class (proguard.ProGuard)
+// via JavaExec because the ProGuard Gradle plugin (7.4.2) conflicts with
+// Gradle's strict plugins{} block ordering and ProGuard ships Maven-only
+// artifacts. The proguard-base 7.9.1 dependency lives on the
+// proguardTool configuration below, not the buildscript classpath.
 
 plugins {
     id 'java-library'
@@ -214,35 +207,35 @@ tasks.named('jar', Jar).configure {
     exclude '**/*+[0-9]+*'
 }
 
-// ProGuard / R8 minify was attempted in the 1.0.6 cleanup pass but rolled
-// back: R8 outputs Android .dex bytecode (incompatible with mc 1.21.1's
-// Java class loader), and ProGuard 7.x Gradle plugin (7.4.2) is
-// incompatible with Gradle 8's strict plugins{} block ordering. ProGuard
-// 7.5+ has no published standalone jar (Maven-only), so a manual
-// java -cp invocation is the only route, and that crosses into
-// engineering territory the ROI no longer justifies (we already reached
-// -32% total size reduction via clean + dedup + dead-code removal).
-//
-// The keep rules written for that attempt are kept in
-// /Users/shuangyuexingxun/Desktop/CS2-Box/proguard-rules.pro at the
-// repository root for future reference if / when the toolchain catches up.
+// The 1.0.6 cleanup pass reached -32% via clean + dedup + dead-code removal
+// and rolled its ProGuard attempt back because the rules file used
+// -keepclassmembers for annotation-discovered classes (silently dropping
+// 9 functional classes) and referenced a non-existent annotation package
+// (net.neoforged.bus.api.EventBusSubscriber). Those bugs are fixed: the
+// rules now class-level-keep @net.neoforged.fml.common.EventBusSubscriber
+// classes and add forge-specific entry points (see proguard-rules.pro).
 
-// ProGuard 7.5.0 minify task — produces a smaller jar alongside the
-// unminified one. Invoked via: ./gradlew :v1_21_1:minifyJar
+// ProGuard minify task — produces a smaller jar alongside the unminified
+// one (shrink-only: no obfuscation, no optimization). Invoked via:
+// ./gradlew :v1_21_1:minifyJar
 // -Pactive_versions=1.21.1
 configurations {
     proguardTool
 }
 dependencies {
-    proguardTool 'com.guardsquare:proguard-base:7.5.0'
+    proguardTool 'com.guardsquare:proguard-base:7.9.1'
 }
 
 tasks.register('minifyJar', JavaExec) {
-    description = 'Minify the v1_21_1 mod jar with ProGuard 7.5.0 (see proguard-rules.pro).'
+    description = 'Minify the v1_21_1 mod jar with ProGuard (see proguard-rules.pro).'
     group = 'build'
 
     classpath = configurations.proguardTool
     mainClass = 'proguard.ProGuard'
+
+    // Rebuild the unminified jar first: the minified output must always be
+    // derived from the current source state (and the -Pslim debugLevel flag).
+    dependsOn tasks.named('jar')
 
     def rules = rootProject.file('proguard-rules.pro')
     def unminified = tasks.named('jar').get().outputs.files.singleFile
@@ -266,6 +259,12 @@ tasks.register('minifyJar', JavaExec) {
         sb.append("-injars '").append(unminified.absolutePath).append("'\n")
         sb.append("-outjars '").append(minified.absolutePath).append("'\n")
         libs.each { path -> sb.append("-libraryjars '").append(path).append("'\n") }
+        ['java.base.jmod', 'java.net.http.jmod'].each { name ->
+            def jmod = new File(System.getProperty('java.home'), "jmods/${name}")
+            if (jmod.exists()) {
+                sb.append("-libraryjars '").append(jmod.absolutePath).append("'\n")
+            }
+        }
         sb.append("-include '").append(rules.absolutePath).append("'\n")
         sb.append("-dontoptimize\n-dontobfuscate\n-dontpreverify\n")
         sb.append("-dontskipnonpubliclibraryclasses\n-dontusemixedcaseclassnames\n")
@@ -276,15 +275,10 @@ tasks.register('minifyJar', JavaExec) {
         sb.append("-keepattributes Signature\n")
         sb.append("-keepattributes InnerClasses\n")
         sb.append("-keepattributes EnclosingMethod\n")
-        // ProGuard 7.5 strict: unresolved class refs are an error, not a
-        // warning. The mod's -keepclassmembers enum `*` rule pulls in
-        // constants from neoForm 1.21.1-20240808.144430.zip and a few
-        // pieces of jna / asyncutil that the offline runtime classpath
-        // does not surface — those are all jar-in-jar resources in
-        // production. We accept them here so we can measure the minified
-        // size; any runtime NPE after deployment is a separate
-        // investigation that will land new -keep rules in proguard-rules.pro.
-        sb.append("-ignorewarnings\n-dontwarn **\n")
+        // No -ignorewarnings / -dontwarn ** here: missing classes must fail
+        // the build instead of being silently swallowed. Any library that is
+        // legitimately absent from the offline runtime classpath gets an
+        // explicit -dontwarn entry in proguard-rules.pro.
         config.text = sb.toString()
         args '@' + config.absolutePath
     }
@@ -293,4 +287,7 @@ tasks.register('minifyJar', JavaExec) {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    if (project.hasProperty('slim')) {
+        options.debugOptions.debugLevel = 'lines,source'
+    }
 }

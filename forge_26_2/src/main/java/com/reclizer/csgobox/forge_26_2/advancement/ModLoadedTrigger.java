@@ -27,7 +27,7 @@ public class ModLoadedTrigger extends SimpleCriterionTrigger<ModLoadedTrigger.Tr
     }
 
     public void trigger(ServerPlayer player) {
-        this.trigger(player, (java.util.function.Predicate<TriggerInstance>) instance -> true);
+        this.trigger(player, instance -> true);
     }
 
     public record TriggerInstance(Optional<ContextAwarePredicate> player) implements SimpleInstance {

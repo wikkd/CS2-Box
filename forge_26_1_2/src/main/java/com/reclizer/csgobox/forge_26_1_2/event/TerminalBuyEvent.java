@@ -23,7 +23,7 @@ import net.minecraftforge.eventbus.api.event.MutableEvent;
  * accessible from server scripts via
  * {@code ForgeEvents.onEvent('com.reclizer.csgobox.forge_26_1_2.event.TerminalBuyEvent', ...)}.</p>
  *
- * <p>Note: terminal purchases intentionally do <em>not</em> fire
+ * <p>Terminal purchases do <em>not</em> fire
  * {@link BoxOpenedEvent} — the terminal protocol is a separate pipeline.
  * Listeners that need both paths (boxes and terminal) should subscribe to
  * both events.</p>

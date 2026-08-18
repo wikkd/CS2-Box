@@ -24,6 +24,11 @@ public final class BoxItemCodec {
 
     private static final Gson GSON = new Gson();
 
+    /** Shared Gson instance, reused by {@code CsboxCommand} for item JSON output. */
+    public static Gson gson() {
+        return GSON;
+    }
+
     private BoxItemCodec() {
     }
 
@@ -31,7 +36,7 @@ public final class BoxItemCodec {
      * Result of {@link #parseItem}: the parsed {@link ItemStack} on success,
      * or a human-readable error string on failure. {@code error == null}
      * indicates success; callers route the error into the box loader's
-     * LoadError list so it surfaces via {@code /csbox errors} and the
+     * LoadError list so it surfaces via {@code /csbox info error} and the
      * join-time announcement.
      */
     record ParseOutcome(ItemStack stack, String error) {

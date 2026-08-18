@@ -23,8 +23,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
  * and the preview is centred from the model's measured bounding box rather
  * than a fixed magic offset.</p>
  *
- * <p>Note: deliberately omits the {@code @OnlyIn(Dist.CLIENT)} annotation;
- * see {@link Icon3DRenderState} for the rationale.</p>
+ * <p>Omits the {@code @OnlyIn(Dist.CLIENT)} annotation; see
+ * {@link Icon3DRenderState} for the rationale.</p>
  */
 public class Icon3DRenderer extends PictureInPictureRenderer<Icon3DRenderState> {
 

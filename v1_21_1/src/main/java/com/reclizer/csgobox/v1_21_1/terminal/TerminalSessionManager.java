@@ -17,57 +17,38 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Holds the per-player terminal locks. Keyed by {@code player-uuid:terminal-uid}
- * so every individual terminal (not just every terminal type) owns its own
- * negotiation — an opened terminal resumes where it left off, a never-opened
- * terminal starts fresh, and two terminals of the same type never share state.
- * Sessions survive logout and server-side screen close; they are released only
- * by a completed buy, five rejects, or a timeout self-destruct.
- *
- * <p>State is persisted to the world save (see {@link TerminalStateStore}): an
- * expired terminal stays dead across restarts (and when handed to another
- * player, it is destroyed on their next open), while an opened-but-live
- * terminal stays locked to its owner — anyone else is refused by the dealer,
- * who points at the owner ("去问问xxx吧").</p>
- */
+    /**
+     * Per-player terminal locks keyed by {@code player-uuid:terminal-uid}:
+     * each terminal owns its own negotiation. Sessions survive logout and
+     * screen close; released by a completed buy, five rejects, or timeout.
+     * Persisted via {@link TerminalStateStore}; expired terminals stay dead
+     * across restarts, live ones stay locked to their owner.
+     */
 public final class TerminalSessionManager {
 
     private static final Map<String, TerminalSession> SESSIONS = new ConcurrentHashMap<>();
 
     /**
-     * Terminal uids whose negotiation timed out without a deal. The stack may
-     * still exist somewhere (chest / ground / offline inventory / another
-     * player); the next time a terminal carrying one of these uids is opened,
-     * it is destroyed on the spot. Persisted with the world save. A uid is
-     * removed again once the terminal is confirmed destroyed (inventory sweep
-     * at timeout or open-time consume).
-     *
-     * <p>Ordered (FIFO) so the capacity eviction below always drops the
-     * OLDEST entry — a random eviction could resurrect a terminal whose
-     * destruction was never confirmed.</p>
+     * Uids whose negotiation timed out without a deal. The terminal may
+     * still exist somewhere; the next open destroys it. Ordered (FIFO) so
+     * eviction at capacity drops the oldest entry first.
      */
     private static final Set<String> DESTROYED_UIDS = Collections.synchronizedSet(new LinkedHashSet<>());
 
     /**
-     * Runtime-only binding of the terminal uid whose negotiation screen is
-     * currently open for each player (server-authoritative). Set on a
-     * successful open, cleared on close / buy / reject-destroy / timeout /
-     * logout / server unbind. buy and reject are only accepted while the
-     * main-hand uid matches this binding — otherwise a player who switched
-     * hotbar slots mid-screen would operate (or destroy) a DIFFERENT
-     * terminal's negotiation. Never persisted: it is screen state, not world
-     * state.
+     * Server-authoritative binding of the uid whose negotiation screen is
+     * open per player. Buy/reject are only accepted while the main-hand uid
+     * matches, so a hotbar switch mid-screen cannot operate another terminal.
+     * Screen state only; never persisted.
      */
     private static final Map<String, String> OPEN_UID = new ConcurrentHashMap<>();
 
     private static final int DESTROYED_UID_CAP = 8192;
 
-    /** The running server — bound on start; mutations are flushed by the
-     *  1 Hz tick and on server stop (see {@link #flush()}). */
+    /** Server bound on start; mutations flushed on the 1 Hz tick and server stop. */
     private static MinecraftServer SERVER;
 
-    /** Set when a persisted structure changed; {@link #flush()} writes once per change. */
+    /** Persisted structure changed; {@link #flush()} writes once per change. */
     private static boolean dirty;
 
     private TerminalSessionManager() {
@@ -79,11 +60,7 @@ public final class TerminalSessionManager {
         TerminalStateStore.load(server);
     }
 
-    /** Drop the server reference and ALL in-memory session state. Called
-     *  after {@link #saveNow()} on server stop, so no data is lost: the
-     *  collections must not outlive the world — otherwise sessions and
-     *  destroyed uids from world A would be ticked against and persisted
-     *  into world B in single-player / LAN world switching. */
+    /** Drop server and all in-memory state on stop (after {@link #saveNow()}); must not outlive the world. */
     public static void unbindServer() {
         SERVER = null;
         SESSIONS.clear();
@@ -92,7 +69,7 @@ public final class TerminalSessionManager {
         dirty = false;
     }
 
-    /** The active session for the player's terminal, creating a fresh one when none exists. */
+    /** Active session for the player's terminal, creating one when none exists. */
     public static TerminalSession getOrCreate(ServerPlayer player, ItemStack terminalStack) {
         ResourceLocation boxId = ItemCsgoBox.getBoxId(terminalStack);
         if (boxId == null) {
@@ -102,17 +79,14 @@ public final class TerminalSessionManager {
         if (def == null) {
             return null;
         }
-        // Every opened terminal is stamped with its own uid on first use, so
-        // the session is bound to THIS terminal — never to the box type.
+        // Sessions bind to the terminal's own uid, never to the box type.
         String uid = ItemCsgoBox.ensureTerminalUid(terminalStack);
         String key = player.getStringUUID() + ":" + uid;
         TerminalSession existing = SESSIONS.get(key);
         if (existing != null && !existing.isFinished()) {
             return existing;
         }
-        // The countdown lives on the WORLD clock (game ticks × 50), so a
-        // fresh negotiation's deadline is stamped in world time too — it
-        // expires only while the world runs, exactly like restored sessions.
+        // Deadline in world time (game ticks × 50): expires only while the world runs.
         long worldMs = player.level().getGameTime() * 50L;
         TerminalSession created = TerminalSession.create(player.getStringUUID(), uid, boxId, def, worldMs);
         ItemCsgoBox.stampTerminalOwner(terminalStack, player.getGameProfile().getName());
@@ -140,23 +114,15 @@ public final class TerminalSessionManager {
         OPEN_UID.remove(playerUuid);
     }
 
-    /**
-     * True when the player's open screen is bound to exactly this terminal
-     * uid — the gate buy/reject/close must pass so a hotbar switch mid-screen
-     * can never operate a different terminal.
-     */
+    /** Gate for buy/reject/close: the open screen must be bound to this exact uid. */
     public static boolean isOpenBinding(String playerUuid, String terminalUid) {
         return terminalUid != null && terminalUid.equals(OPEN_UID.get(playerUuid));
     }
 
     /**
-     * Display name of the player whose LIVE negotiation locks this terminal
-     * to another player: an opened-but-not-expired terminal handed over is
-     * unusable by anyone but its owner — the dealer refuses and points at the
-     * owner. Null when the uid is free (never opened, finished by a buy or
-     * five rejects, or timed out). The name comes from the online player
-     * first (handles renames), then the terminal's owner stamp, then the raw
-     * uuid as a last resort.
+     * Display name of the owner locking this terminal, or null when the uid
+     * is free. Online player first (handles renames), then the owner stamp,
+     * then the raw uuid.
      */
     public static String activeOwnerName(String terminalUid, String playerUuid, ItemStack terminalStack) {
         if (terminalUid == null) {
@@ -189,7 +155,7 @@ public final class TerminalSessionManager {
         return stamped != null ? stamped : playerUuid;
     }
 
-    /** The player's active session for one specific terminal (by uid), or null. */
+    /** The player's session for one terminal (by uid), or null. */
     public static TerminalSession getByUid(ServerPlayer player, String terminalUid) {
         if (terminalUid == null) {
             return null;
@@ -224,12 +190,7 @@ public final class TerminalSessionManager {
         return removed;
     }
 
-    /**
-     * Server tick pass (1 Hz, driven by the vanilla {@code ServerTickEvent}):
-     * advances the authoritative countdown of every locked session and drops
-     * sessions that are finished or just expired — an expired negotiation
-     * self-destructs exactly like five rejects, so the next open is fresh.
-     */
+    /** 1 Hz tick: advance countdowns, drop finished/expired sessions. */
     public static void tickSessions(MinecraftServer server, long nowMs) {
         boolean removed = SESSIONS.entrySet().removeIf(entry -> {
             TerminalSession session = entry.getValue();
@@ -248,14 +209,9 @@ public final class TerminalSessionManager {
         flush();
     }
 
-    /**
-     * Timeout self-destruct: when the owner is online and the terminal is
-     * found and destroyed right now, the expired uid is cleaned up; otherwise
-     * (offline / chest / handed off) the uid is remembered so the terminal is
-     * destroyed on its next open wherever it is.
-     */
+    /** Timeout self-destruct: destroy the terminal if the owner is online; else remember the uid for the next open. */
     private static void destroyTerminal(MinecraftServer server, TerminalSession session) {
-        // A corrupted persisted player uuid must never crash the server tick.
+        // Corrupted persisted uuid must not crash the tick.
         ServerPlayer player;
         try {
             player = server.getPlayerList().getPlayer(UUID.fromString(session.playerUuid()));
@@ -272,8 +228,7 @@ public final class TerminalSessionManager {
                 }
             }
             if (destroyedAny) {
-                // Confirmed gone (all copies the inventory sweep can see) —
-                // clean the expired uid so the next open starts fresh.
+                // Confirmed destroyed — clean the uid so the next open starts fresh.
                 player.sendSystemMessage(Component.translatable("csgobox.terminal.sys.destroyed"));
                 DESTROYED_UIDS.remove(session.uid());
                 OPEN_UID.remove(session.playerUuid());
@@ -281,15 +236,11 @@ public final class TerminalSessionManager {
                 return;
             }
         }
-        // Not confirmed (offline / stored away / handed off) — keep the uid so
-        // the next open destroys the terminal wherever it is.
+        // Not confirmed — keep the uid so the next open destroys it wherever it is.
         DESTROYED_UIDS.add(session.uid());
         OPEN_UID.remove(session.playerUuid());
         if (DESTROYED_UIDS.size() > DESTROYED_UID_CAP) {
-            // FIFO eviction: the ordered set's head is the oldest entry, so
-            // a flood of timeouts can only push out terminals whose expired
-            // uid was recorded longest ago — never a random one whose
-            // destruction is still unconfirmed.
+            // FIFO: the head is the oldest entry; never evict an unconfirmed uid at random.
             DESTROYED_UIDS.remove(DESTROYED_UIDS.iterator().next());
         }
         dirty = true;
@@ -297,7 +248,7 @@ public final class TerminalSessionManager {
 
     // ---- persistence (TerminalStateStore) ----
 
-    /** All live (unfinished) sessions — for the world save. */
+    /** Live (unfinished) sessions — for the world save. */
     public static List<TerminalSession> allSessions() {
         return SESSIONS.values().stream().filter(s -> !s.isFinished()).toList();
     }
@@ -319,9 +270,7 @@ public final class TerminalSessionManager {
         }
     }
 
-    /** Persist pending mutations; no-op when nothing changed. The dirty flag
-     *  is only cleared after a successful write, so a failed save is retried
-     *  on the next flush instead of silently dropping the mutation. */
+    /** Persist pending mutations; dirty clears only after a successful write, so a failed save is retried. */
     public static void flush() {
         if (dirty && SERVER != null) {
             if (TerminalStateStore.save(SERVER)) {

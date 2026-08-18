@@ -11,11 +11,30 @@
     @net.neoforged.neoforge.event.* <methods>;
 }
 
-# ---- 2. EventBusSubscriber auto-registration ----
-# Keep no-arg constructor + all event-handler methods.
--keepclassmembers @net.neoforged.bus.api.EventBusSubscriber class * {
+# ---- 2. EventBusSubscriber auto-registration (NeoForge) ----
+# NeoForge discovers these classes by annotation scanning (no code reference),
+# so the CLASS itself must be kept. The 1.0.6 attempt only used
+# -keepclassmembers and silently dropped ModEvents / ClientModEvents /
+# ClickEvent / CsboxCommand / LoadErrorAnnouncer / ScreenBlurBoost from the
+# minified jar. The annotation lives in net.neoforged.fml.common (NOT
+# net.neoforged.bus.api) on 21.x and 26.x alike.
+-keep @net.neoforged.fml.common.EventBusSubscriber class * {
     <init>();
     public *;
+}
+
+# ---- 2b. Forge (MinecraftForge) entry + subscriber surfaces ----
+# forge_26_1_2 uses the net.minecraftforge.* annotation family instead of
+# net.neoforged.*: @Mod entry class (string-key lookup in mods.toml) and
+# @Mod.EventBusSubscriber classes (annotation scanning, no code reference).
+# On NeoForge platforms these classes do not exist and produce Notes only.
+-keep @net.minecraftforge.fml.common.Mod class * { <init>(...); }
+-keep @net.minecraftforge.fml.common.Mod$EventBusSubscriber class * {
+    <init>();
+    public *;
+}
+-keepclassmembers class * {
+    @net.minecraftforge.eventbus.api.SubscribeEvent <methods>;
 }
 
 # ---- 3. Networking: CustomPacketPayload records ----
@@ -76,7 +95,20 @@
 -keep class com.reclizer.csgobox.utils.ColorTools { *; }
 -keep class com.reclizer.csgobox.utils.OverlayColor { *; }
 
+# ---- 8. Runtime-discovered surfaces (JEI + GUI screens) ----
+# JEI plugin/recipe classes are discovered reflectively by the JEI runtime;
+# EntityChineseMap feeds the JEI recipe category at runtime.
+-keep class com.reclizer.csgobox.**.jei.** { *; }
+-keep class com.reclizer.csgobox.utils.EntityChineseMap { *; }
+# ArmoryRecyclerScreen is opened from the event chain; kept explicitly so the
+# recycler GUI cannot be silently dropped by shrink.
+-keep class com.reclizer.csgobox.**.gui.ArmoryRecyclerScreen { *; }
+
 # ---- Standard NeoForge / Minecraft library suppressions ----
+# TACZ (Temporal Arsenal Craft Zombie / 永恒枪械工坊) is a compileOnly
+# dependency on v1_21_1 only; at runtime it is optional (ModList.isLoaded),
+# so its classes are legitimately absent and must not fail the shrink.
+-dontwarn com.tacz.guns.**
 -dontwarn com.google.common.**
 -dontwarn com.google.errorprone.**
 -dontwarn com.google.j2objc.**

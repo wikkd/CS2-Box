@@ -18,6 +18,11 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
+    if (project.hasProperty('slim')) {
+        // Slim builds drop LocalVariableTable (keeps LineNumberTable for
+        // crash reports). Default builds are untouched.
+        options.debugOptions.debugLevel = 'lines,source'
+    }
 }
 
 tasks.withType(Jar).configureEach {

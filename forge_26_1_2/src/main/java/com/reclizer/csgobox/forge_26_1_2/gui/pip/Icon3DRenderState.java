@@ -16,12 +16,12 @@ import org.jspecify.annotations.Nullable;
  * (degrees, not matrices) keeps the state immutable and safe to reuse across
  * frames for PIP texture caching.</p>
  *
- * <p>Note: this class references {@link PictureInPictureRenderState}, which
+ * <p>This class references {@link PictureInPictureRenderState}, which
  * lives in {@code net.minecraft.client.*}. In a dedicated-server context
  * the class still loads (the JVM only resolves client classes when methods
  * are called), and the registration listener in {@code CsgoBox.registerIcon3DRenderer}
- * never fires without a client. We deliberately omit the
- * {@code @OnlyIn(Dist.CLIENT)} annotation because in NeoForge 26.1.2 it's a
+ * never fires without a client. The {@code @OnlyIn(Dist.CLIENT)} annotation
+ * is omitted because in NeoForge 26.1.2 it's a
  * runtime no-op that now logs an {@code ERROR}-level deprecation warning at
  * every mod load.</p>
  */

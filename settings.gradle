@@ -74,6 +74,7 @@ def versionModules = [
         '26.1.2':  'v26_1_2',
         '26.2':    'v26_2',
         'forge-26.1.2': 'forge_26_1_2',
+        'forge-26.2': 'forge_26_2',
 ]
 
 activeVersions.each { versionName ->

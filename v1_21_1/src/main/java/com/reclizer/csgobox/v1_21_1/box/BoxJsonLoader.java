@@ -34,13 +34,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Reads and writes box definitions under config/csbox.
- *
- * <p>Per-item parsing and serialization is delegated to {@link BoxItemCodec};
- * default-config generation is delegated to {@link BoxDefaults}. This class
- * focuses on directory I/O, top-level JSON shape, and registration.</p>
- */
+/** Reads and writes box definitions under config/csbox. Item parsing is in
+ *  {@link BoxItemCodec}, default config generation in {@link BoxDefaults};
+ *  this class owns directory I/O, top-level JSON shape and registration. */
 public final class BoxJsonLoader {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -87,10 +83,7 @@ public final class BoxJsonLoader {
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
-    /** Strips an optional {@code "#RRGGBB "} prefix from a name and returns the
-     *  bare text + 0xRRGGBB color. If the prefix is absent, malformed, or the
-     *  remaining text is empty, the original string is returned as the text
-     *  and no color is set (matches the pre-color behavior). */
+    /** Strips an optional {@code "#RRGGBB "} prefix; returns text + color, or the raw string without color. */
     private static ParsedName parseColoredName(String raw) {
         if (raw == null) return new ParsedName("", OptionalInt.empty());
         Matcher m = NAME_COLOR_PREFIX.matcher(raw);
@@ -104,9 +97,7 @@ public final class BoxJsonLoader {
         return new ParsedName(text, OptionalInt.of(rgb));
     }
 
-    /** Inverse of {@link #parseColoredName}: serializes a styled Component back
-     *  to a "name" string, prepending the color as a hex prefix when the
-     *  Component carries one. */
+    /** Inverse of {@link #parseColoredName}: Component -> "name" string with hex color prefix. */
     private static String serializeColoredName(net.minecraft.network.chat.Component name) {
         if (name == null) return "";
         String text = name.getString();
@@ -129,12 +120,10 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        // Generate the default terminal box config (decoupled terminal loot)
-        // on first run, before scanning existing box JSON files.
+        // First-run defaults, before scanning existing configs.
         BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
-        // One-time migration for pre-v1.0.8 terminal.json (no "type" field,
-        // may carry a legacy "key"); must run before any parse.
+        // Pre-v1.0.8 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
@@ -175,27 +164,13 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * Re-scan the box directory and update {@link BoxRegistry} in place.
-     *
-     * <p>Unlike {@link #loadAll()} this does NOT call {@code BoxRegistry.clear()}:
-     * <ul>
-     *   <li>Files that fail to parse leave the previous {@link BoxDefinition}
-     *       in place (no wholesale data loss from one bad JSON).</li>
-     *   <li>Files that parse successfully {@code put}-overwrite the entry with
-     *       the same id.</li>
-     *   <li>Files that disappeared since the previous load are explicitly
-     *       {@link BoxRegistry#remove removed} so the registry mirrors disk.</li>
-     * </ul>
-     *
-     * <p>Used by the {@code /csbox reload} command and by the common
-     * {@code BoxFileWatcher} when JSON files change on disk.</p>
-     *
-     * <p>Does NOT call {@link BoxDefaults#writeTutorialIfMissing} so that
-     * auto-reload never resurrects the sample config the user deleted.
-     * Default terminal/premium configs and the legacy terminal migration DO
-     * run, matching {@link #loadAll()} — a deleted or pre-v1.0.8
-     * {@code terminal.json} must not leave the terminal item registered but
-     * unloadable until the next restart.</p>
+     * Re-scan the box directory and update {@link BoxRegistry} in place
+     * without {@code clear()}: failed files keep their previous definition,
+     * successful ones overwrite by id, files gone from disk are removed.
+     * Used by {@code /csbox reload} and {@code BoxFileWatcher}. Never
+     * resurrects the deleted sample tutorial, but re-runs terminal/premium
+     * defaults and the legacy migration so a deleted terminal.json stays
+     * loadable.
      */
     public static void reloadPreserving() {
         LAST_LOAD_ERRORS.clear();
@@ -285,7 +260,7 @@ public final class BoxJsonLoader {
         LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, line, column));
     }
 
-    /** Overload for the common case where the error has no JSON position. */
+    /** No-JSON-position convenience overload. */
     private static void recordLoadError(Path file, String fileName, String reason) {
         recordLoadError(file, fileName, reason, -1, -1);
     }
@@ -298,12 +273,8 @@ public final class BoxJsonLoader {
         LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, -1, -1, true));
     }
 
-    /**
-     * Extracts the {@code at line N column M} tuple from a Gson error message.
-     * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
-     * to fish the numbers out of the formatted message. Returns {@code {-1,-1}}
-     * when the pattern is not found.
-     */
+    /** Extracts {@code at line N column M} from a Gson error message (Gson 2.13+
+     *  removed {@code getLocation()}); {@code {-1,-1}} when not found. */
     private static final java.util.regex.Pattern GSON_LOCATION_PATTERN =
             java.util.regex.Pattern.compile("at line (\\d+) column (\\d+)");
 
@@ -345,12 +316,9 @@ public final class BoxJsonLoader {
             if (!"csbox".equals(type) && !"terminal".equals(type)) {
                 type = "csbox";
             }
-            // Strict separation (v1.0.8): the type field is the single source
-            // of truth, and the terminal machine has no key field at all. The
-            // file name "terminal.json" is reserved for the terminal: a legacy
-            // config that never gained "type" must not silently degrade into a
-            // keyless crate (the pre-migration free-loot hole), so refuse to
-            // load it instead.
+            // v1.0.8: "type" is the single source of truth; a terminal.json
+            // without "type":"terminal" would silently become a keyless
+            // crate, so refuse to load it.
             if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
                 String msg = "terminal.json must declare \"type\": \"terminal\" "
                         + "(v1.0.8+: type is the single registration source; terminals have no key field)";
@@ -425,13 +393,8 @@ public final class BoxJsonLoader {
         }
     }
 
-    /**
-     * Parses an {@link ResourceLocation} while normalizing any thrown exception to
-     * {@link IllegalArgumentException}. MC's {@code ResourceLocation.parse} throws
-     * a Mojang-specific {@code ResourceLocationException} whose concrete type
-     * changes between versions; the rest of this loader only relies on the
-     * IAE contract.
-     */
+    /** Parses an {@link ResourceLocation}, normalizing any exception to
+     *  {@link IllegalArgumentException} (the MC exception type varies by version). */
     private static ResourceLocation parseIdentifierSafe(String value, String fieldName) {
         try {
             return ResourceLocation.parse(value);
@@ -441,9 +404,7 @@ public final class BoxJsonLoader {
         }
     }
 
-    /**
-     * JSON "random" is ordered grade1 -> grade5.
-     */
+    /** JSON "random" is ordered grade1 -> grade5. */
     private static int[] parseWeights(JsonObject json, Path file, String fileName) {
         int[] weights = BoxGrades.DEFAULT_WEIGHTS.clone();
         if (json.has("random")) {
@@ -474,9 +435,7 @@ public final class BoxJsonLoader {
         return weights;
     }
 
-    /**
-     * Parses either a plain entity id list or alternating entity id/drop-rate pairs.
-     */
+    /** Parses a plain entity id list, or alternating id/drop-rate pairs. */
     private static void parseEntities(JsonObject json, List<ResourceLocation> dropEntityIds,
                                        Map<ResourceLocation, Float> entityDropRates,
                                        Path file, String fileName) {

@@ -1,16 +1,19 @@
 package com.reclizer.csgobox.forge_26_2.event;
 
+import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_2.item.ModItems;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.damagesource.DamageSource;
@@ -48,7 +51,10 @@ public final class ModEvents {
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
-                ItemStack stack = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+                Item item = BuiltInRegistries.ITEM.get(def.id())
+                        .map(Holder.Reference::value)
+                        .orElse(ModItems.ITEM_CSGOBOX.get());
+                ItemStack stack = new ItemStack(item);
                 ItemCsgoBox.setBoxId(def.id(), stack);
                 mob.spawnAtLocation((ServerLevel) mob.level(), stack);
             }
@@ -76,15 +82,30 @@ public final class ModEvents {
         }
     }
 
+    /** Drop the player's open-terminal binding on logout (sessions stay). */
+    @SubscribeEvent
+    public static void playerLoggedOut(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.reclizer.csgobox.forge_26_2.terminal.TerminalSessionManager.clearOpen(sp.getStringUUID());
+        }
+    }
+
     /**
      * Periodically prunes expired open-cooldown entries from
-     * {@link com.reclizer.csgobox.forge_26_2.packet.PacketCsgoProgress#tickOpenBlockMap(long)}
+     * {@link com.reclizer.csgobox.logic.OpenBlockGuard#tick(long)}
      * so the map stays bounded.
      */
     @SubscribeEvent
     public static void serverTick(TickEvent.ServerTickEvent.Pre event) {
         if (event.server().getTickCount() % 100 == 0) {
-            com.reclizer.csgobox.forge_26_2.packet.PacketCsgoProgress.tickOpenBlockMap(event.server().overworld().getGameTime());
+            OpenBlockGuard.tick(event.server().overworld().getGameTime());
+        }
+        // 1 Hz authoritative terminal countdown on the WORLD clock (game ticks
+        // × 50) — it advances only while the world runs, and the deadline
+        // survives restarts exactly (game time is part of the world save).
+        if (event.server().getTickCount() % 20 == 0) {
+            com.reclizer.csgobox.forge_26_2.terminal.TerminalSessionManager.tickSessions(
+                    event.server(), event.server().overworld().getGameTime() * 50L);
         }
     }
 }

@@ -5,7 +5,6 @@ import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 

@@ -14,6 +14,7 @@
 - **3 个平台模块**：`v1_21_1`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。**已归档（EOL）平台** `v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11` 于 2026-08-09 从仓库删除，最后状态在 tag `eol-legacy-21x-1.0.6`，复活需从该 tag 检出。
 - **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
 - **同步开发模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），随 **1.0.6 发行** 纳入 git 管理，自 **1.0.7 线起纳入同步开发**——与 `v26_1_2` 基准保持特性同步（同一 `mod_version`，经 `scripts/port-forge-2612.py` 机械转换 + 手工适配，见「平台模块镜像纪律」§forge 同步），`build.gradle` 的 1.0.7 线排除清单已随首轮同步删除；**不在 CI 矩阵**，不入三平台正式发行矩阵（仍为实验模块，勿当正式平台发布）。测试流程与发布门禁见 `docs/TESTING-FORGE-2612.md`。
+- **实验模块 `forge_26_2`**（MinecraftForge 26.2-65.1.1，Java 25，2026-08-14 首建）：注册在 `settings.gradle`（`-Pactive_versions=forge-26.2`）。**1.0.7 线已追平**：以 `forge_26_1_2`（1.0.6/1.0.7 同步线）为基准整模块迁移，经 `scripts/port-forge-262.py` 机械移植（包名 `forge_26_1_2 → forge_26_2` + Forge 26.1.2→26.2 API 映射）+ 手工适配（`Options.hideGui` 移除 → `utils/HudVisibility`、`setScreen` → `setScreenAndShow`、advancement 包迁移、PIP 渲染器保持 **Forge 欧拉角方案**——`event.register(new Icon3DRenderer())` + `getRenderState().addPicturesInPictureState`，与 NeoForge 26.2 的 Quat/Supplier 方案不同），`build.gradle` 的 1.0.7 线排除清单已删除，`PlatformSmokeTest` 已改为断言 1.0.7 物品存在。**不在 CI 矩阵**、不参与 3 平台镜像纪律与 AnimRenderOps 漂移门禁（与 `forge_26_1_2` 同策略）。2026-08-18 全面审计确认：`test-forge-262.sh` 7/7 PASS，5 平台 `clean compileJava` 全通过，版本四同步 OK，资源一致性已补齐（4 个物品定义从 `forge_26_1_2` 补入）。测试流程与迁移记录见 `docs/TESTING-FORGE-262.md`。
 
 ## 架构约束（CONSTRAINT-001）
 
@@ -67,7 +68,8 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `utils/AnimRenderOps.java` — **动画渲染唯一适配点**（各平台一份，`// era: legacy|decoupled` 头标注）：屏与逻辑助手只经它调用渲染原语（`blitTextured`×3 变体 / `fill` / `fillGradient` / `scissor` / `scissorDisable` / `setBlendNormal` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D` / `supports3D`，共 13 个公开 op）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（CI `common-test` job 已接线）。**新增原语须三平台同步补**，否则漂移检查失败
 - `utils/IconListTools.java` — 2D 物品网格（26.x/1.21.8+ 有 per-item bounding box 居中；渲染原语已委托 AnimRenderOps）
 - `utils/GuiItemMove.java` — 3D 拖拽预览（`renderRotAngleX/Y` 纯数学保留，渲染委托 `AnimRenderOps.renderItem3D`）
-- `utils/HudVisibility.java`（仅 v26_2）— 26.2 无 `Options.hideGui`，用 `Minecraft.gui.hud.toggle()/isHidden()` 包装
+- `utils/ButtonPalette.java`（v26_1_2 / v26_2）— 按钮调色板常量（CLOSE 等），Forge 侧未移植
+- `utils/HudVisibility.java`（v26_2 / forge_26_2）— 26.2 无 `Options.hideGui`，用 `Minecraft.gui.hud.toggle()/isHidden()` 包装
 - `common/utils/` — `ColorTools` / `OverlayColor`（三档 token：surface/panel/divider）/ `GuiRegion`（容器化布局）/ `EntityChineseMap`
 - `advancement/OpenedBoxTrigger.java` — `csgobox:opened_box` trigger + `Stats.CUSTOM` 累加
 - `event/BoxOpenedEvent.java` — NeoForge 事件总线开箱通知（post-event，KubeJS 兼容，见 `docs/KUBEJS-EVENTS.md`）
@@ -81,6 +83,27 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `common` 有 JUnit 5（`BoxJsonSchemaValidatorTest` 24 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
 - `common` 架构约束检查由 `:common:checkCommonArchitecture` 自动挂载在编译上（见「架构约束」节）
 - AnimRenderOps 跨平台签名漂移检查：`scripts/check-animops-drift.sh`（3 平台，CI 已接线，本地改门面后必跑）
-- 平台层最小测试：`v26_1_2` 有 `PlatformSmokeTest`（JUnit 5，验证入口类可加载，不初始化 MC 运行时）：`./gradlew :v26_1_2:test -Pactive_versions=26.1.2`
+- 平台层最小测试：`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 均有 `PlatformSmokeTest`（JUnit 5，验证入口类可加载，不初始化 MC 运行时）：`./gradlew :<module>:test -Pactive_versions=<v>`
 - 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
+- **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`
+
+### 平台 Java 文件差异矩阵（2026-08-18 审计）
+
+| 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 |
+|------|:-------:|:-------:|:-----:|:------------:|:----------:|
+| TACZ compat (2 文件) | ✅ | — | — | — | — |
+| `ButtonPalette` | — | ✅ | ✅ | — | — |
+| `HudVisibility` | — | — | ✅ | — | ✅ |
+| JEI (4 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ |
+| `PacketSyncBoxDefinitions` | — | ✅ | ✅ | — | — |
+| `Networking`（Forge 专用） | — | — | — | ✅ | ✅ |
+| `BoxJsonSchemaValidator` | — | — | — | — | ✅ |
+| `TutorialFetcher` + `TutorialSources` | — | — | — | — | ✅ |
+| **文件数** | **80** | **81** | **82** | **77** | **81** |
+
+- TACZ：仅 `v1_21_1` 有 `compileOnly` 依赖，其它平台不需要
+- ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）
+- JEI：NeoForge 3 平台已同步；**Forge 2 平台均缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
+- Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常
+- Tutorial/Validator：`forge_26_2` 有 3 个教程系统文件（从 `forge_26_1_2` 1.0.6 带入），其它平台还未同步
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`

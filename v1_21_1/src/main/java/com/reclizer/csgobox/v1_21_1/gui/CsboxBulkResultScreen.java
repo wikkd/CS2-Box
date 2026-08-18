@@ -1,7 +1,5 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
-import com.reclizer.csgobox.v1_21_1.CsgoBox;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.OverlayColor;

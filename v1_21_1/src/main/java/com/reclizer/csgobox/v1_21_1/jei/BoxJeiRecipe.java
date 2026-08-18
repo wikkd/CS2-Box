@@ -4,7 +4,6 @@ import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 

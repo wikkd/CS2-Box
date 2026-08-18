@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Minimal platform-layer test harness (JUnit 5), mirroring the v26_1_2 module.
@@ -17,9 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * renames, and version-drift that silently break the module while
  * compileJava still passes.</p>
  *
- * <p>Baseline note: the module is pinned to release 1.0.6. Terminal /
- * armory-point items belong to the 1.0.7 line and must NOT leak back into the
- * forge module — the absent-field assertions below are the regression guard.</p>
+ * <p>Sync note: this module was brought up to the 1.0.7 line (terminal /
+ * armory-point items), so those item fields are now ASSERTED present, not
+ * asserted absent, as the old 1.0.6 baseline guard did.</p>
  */
 class PlatformSmokeTest {
 
@@ -47,17 +46,14 @@ class PlatformSmokeTest {
     }
 
     @Test
-    void v106BaselineItemsAreDeclared() throws NoSuchFieldException {
+    void v107ItemsAreDeclared() throws NoSuchFieldException {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGOBOX"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY0"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY1"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY2"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY3"));
-    }
-
-    @Test
-    void v107TerminalItemsDoNotLeakIntoV106Baseline() {
-        assertThrows(NoSuchFieldException.class, () -> ModItems.class.getDeclaredField("ITEM_TERMINAL"));
-        assertThrows(NoSuchFieldException.class, () -> ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
+        // 1.0.7-line statically-registered items.
+        assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
+        assertNotNull(ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
     }
 }

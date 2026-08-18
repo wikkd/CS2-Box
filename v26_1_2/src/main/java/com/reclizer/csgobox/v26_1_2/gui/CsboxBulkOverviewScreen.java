@@ -4,7 +4,6 @@ import com.reclizer.csgobox.utils.GuiRegion;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.v26_1_2.utils.AnimRenderOps;
-import com.reclizer.csgobox.v26_1_2.utils.GuiItemMove;
 import com.reclizer.csgobox.v26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -19,16 +18,11 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
-import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
 
-import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Total overview for a bulk box open. Shift+right-click the held box to
@@ -96,12 +90,6 @@ public class CsboxBulkOverviewScreen extends Screen {
         if (limit > 0) {
             this.openableCount = Math.min(this.openableCount, limit);
         }
-    }
-
-    private static ItemStack keySample(Identifier keyId) {
-        var ref = BuiltInRegistries.ITEM.get(keyId).orElse(null);
-        if (ref == null) return ItemStack.EMPTY;
-        return ref.value().getDefaultInstance();
     }
 
     @Override

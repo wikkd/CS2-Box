@@ -23,8 +23,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
  * pose origin at the texture centre (matching the 1.21.1 reference
  * path where the slot centre is the rotation anchor).</p>
  *
- * <p>Note: deliberately omits the {@code @OnlyIn(Dist.CLIENT)} annotation;
- * see {@link Icon3DRenderState} for the rationale. The parent class
+ * <p>Omits the {@code @OnlyIn(Dist.CLIENT)} annotation; see
+ * {@link Icon3DRenderState} for the rationale. The parent class
  * re-added the annotation in 26.2 but our subclass only runs through
  * a client-side registration guard so the runtime warning would be
  * noise.</p>

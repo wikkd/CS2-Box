@@ -16,12 +16,10 @@ import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -41,13 +39,9 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Reads and writes box definitions under config/csbox.
- *
- * <p>Per-item parsing and serialization is delegated to {@link BoxItemCodec};
- * default-config generation is delegated to {@link BoxDefaults}. This class
- * focuses on directory I/O, top-level JSON shape, and registration.</p>
- */
+/** Reads and writes box definitions under config/csbox. Item parsing is in
+ *  {@link BoxItemCodec}, default config generation in {@link BoxDefaults};
+ *  this class owns directory I/O, top-level JSON shape and registration. */
 public final class BoxJsonLoader {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -65,16 +59,10 @@ public final class BoxJsonLoader {
     private static final List<LoadError> LAST_LOAD_ERRORS = new CopyOnWriteArrayList<>();
 
     /**
-     * In-process parse cache keyed by file name: content-hash -> parsed
-     * result (or failure) plus the LoadErrors the parse produced. Reloads
-     * (file watcher, {@code /csbox reload}) skip any file whose SHA-256 hash
-     * is unchanged, so the expensive per-item parse (registry lookups,
-     * DataComponent codec decode) never reruns for untouched configs.
-     *
-     * <p>Do NOT persist this cache across JVM restarts: {@link BoxDefinition}
-     * and the {@link ItemStack}s it holds reference Minecraft registry
-     * holders/components that are rebuilt per launch; stale entries would
-     * reference defunct objects.</p>
+     * Parse cache: file-name -> content-hash -> result/errors. Reloads skip
+     * files whose SHA-256 is unchanged. Never persists across restarts — the
+     * cached {@link BoxDefinition}/{@link ItemStack}s reference registry
+     * objects rebuilt per launch.
      */
     private static final ConcurrentHashMap<String, CachedFile> PARSED_CACHE = new ConcurrentHashMap<>();
 
@@ -89,12 +77,9 @@ public final class BoxJsonLoader {
     });
 
     /**
-     * Background executor for the startup tutorial download. The fetch has
-     * network timeouts of several seconds; running it on the server thread
-     * would block world start. Downloads are idempotent and failure-safe
-     * inside {@link BoxDefaults}, so the file may simply appear a moment
-     * after startup. Daemon thread: a shutdown mid-download simply leaves
-     * the tutorial missing and the next launch re-attempts it.
+     * Background executor for the startup tutorial download: network timeouts
+     * must not block world start. Failure-safe — a shutdown mid-download just
+     * leaves the tutorial missing and the next launch retries.
      */
     private static final ExecutorService TUTORIAL_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "csgobox-tutorial");
@@ -102,8 +87,7 @@ public final class BoxJsonLoader {
         return t;
     });
 
-    /** Content-hash -> parse-result entry; {@code definition} empty means the
-     *  parse failed and {@code errors} carries the diagnostics. */
+    /** Hash -> parse result; empty {@code definition} = failed parse with diagnostics. */
     private record CachedFile(String hash, Optional<BoxDefinition> definition, List<LoadError> errors) {}
 
     /** Matches an optional leading hex color in the box "name" field, e.g.
@@ -136,10 +120,7 @@ public final class BoxJsonLoader {
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
-    /** Strips an optional {@code "#RRGGBB "} prefix from a name and returns the
-     *  bare text + 0xRRGGBB color. If the prefix is absent, malformed, or the
-     *  remaining text is empty, the original string is returned as the text
-     *  and no color is set (matches the pre-color behavior). */
+    /** Strips an optional {@code "#RRGGBB "} prefix; returns text + color, or the raw string without color. */
     private static ParsedName parseColoredName(String raw) {
         if (raw == null) return new ParsedName("", OptionalInt.empty());
         Matcher m = NAME_COLOR_PREFIX.matcher(raw);
@@ -151,18 +132,6 @@ public final class BoxJsonLoader {
             return new ParsedName("", OptionalInt.empty());
         }
         return new ParsedName(text, OptionalInt.of(rgb));
-    }
-
-    /** Inverse of {@link #parseColoredName}: serializes a styled Component back
-     *  to a "name" string, prepending the color as a hex prefix when the
-     *  Component carries one. */
-    private static String serializeColoredName(net.minecraft.network.chat.Component name) {
-        if (name == null) return "";
-        String text = name.getString();
-        net.minecraft.network.chat.TextColor tc = name.getStyle().getColor();
-        if (tc == null) return text;
-        int rgb = tc.getValue() & 0xFFFFFF;
-        return String.format("#%06X %s", rgb, text);
     }
 
     public static void loadAll() {
@@ -178,16 +147,13 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        // Generate the default terminal box config (decoupled terminal loot)
-        // on first run, before scanning existing box JSON files.
+        // First-run defaults, before scanning existing configs.
         BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.writeDefaultPremiumBoxIfMissing(BOXES_DIR);
-        // One-time migration for pre-v1.0.8 terminal.json (no "type" field,
-        // may carry a legacy "key"); must run before any parse.
+        // Pre-v1.0.8 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
-        // Tutorial download runs on a background thread: its network timeouts
-        // (seconds) must not block the server thread during world start.
+        // Background download: network timeouts must not block the server thread.
         TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
 
         List<Path> scannedFiles = new ArrayList<>();
@@ -223,27 +189,13 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * Re-scan the box directory and update {@link BoxRegistry} in place.
-     *
-     * <p>Unlike {@link #loadAll()} this does NOT call {@code BoxRegistry.clear()}:
-     * <ul>
-     *   <li>Files that fail to parse leave the previous {@link BoxDefinition}
-     *       in place (no wholesale data loss from one bad JSON).</li>
-     *   <li>Files that parse successfully {@code put}-overwrite the entry with
-     *       the same id.</li>
-     *   <li>Files that disappeared since the previous load are explicitly
-     *       {@link BoxRegistry#remove removed} so the registry mirrors disk.</li>
-     * </ul>
-     *
-     * <p>Used by the {@code /csbox reload} command and by the common
-     * {@code BoxFileWatcher} when JSON files change on disk.</p>
-     *
-     * <p>Does NOT call {@link BoxDefaults#writeTutorialIfMissing} so that
-     * auto-reload never resurrects the sample config the user deleted.
-     * Default terminal/premium configs and the legacy terminal migration DO
-     * run, matching {@link #loadAll()} — a deleted or pre-v1.0.8
-     * {@code terminal.json} must not leave the terminal item registered but
-     * unloadable until the next restart.</p>
+     * Re-scan the box directory and update {@link BoxRegistry} in place
+     * without {@code clear()}: failed files keep their previous definition,
+     * successful ones overwrite by id, files gone from disk are removed.
+     * Used by {@code /csbox reload} and {@code BoxFileWatcher}. Never
+     * resurrects the deleted sample tutorial, but re-runs terminal/premium
+     * defaults and the legacy migration so a deleted terminal.json stays
+     * loadable.
      */
     public static void reloadPreserving() {
         LAST_LOAD_ERRORS.clear();
@@ -330,17 +282,13 @@ public final class BoxJsonLoader {
         LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, line, column));
     }
 
-    /** Overload for the common case where the error has no JSON position. */
+    /** No-JSON-position convenience overload. */
     private static void recordLoadError(Path file, String fileName, String reason) {
         recordLoadError(file, fileName, reason, -1, -1);
     }
 
-    /**
-     * Extracts the {@code at line N column M} tuple from a Gson error message.
-     * Gson 2.13+ removed {@code JsonSyntaxException.getLocation()}, so we have
-     * to fish the numbers out of the formatted message. Returns {@code {-1,-1}}
-     * when the pattern is not found.
-     */
+    /** Extracts {@code at line N column M} from a Gson error message (Gson 2.13+
+     *  removed {@code getLocation()}); {@code {-1,-1}} when not found. */
     private static final java.util.regex.Pattern GSON_LOCATION_PATTERN =
             java.util.regex.Pattern.compile("at line (\\d+) column (\\d+)");
 
@@ -352,13 +300,8 @@ public final class BoxJsonLoader {
         return new int[]{-1, -1};
     }
 
-    /**
-     * Iterates every non-underscore {@code .json} file in {@link #BOXES_DIR}
-     * and feeds it to {@code action}. Underscore-prefixed files
-     * ({@code _tutorial_sources.json}, versioned tutorial markdown is not
-     * {@code .json} anyway) are skipped: they are mod metadata, never boxes.
-     * Shared by {@link #loadAll()} and {@link #reloadPreserving()}.
-     */
+    /** Feeds every non-underscore {@code .json} in {@link #BOXES_DIR} to
+     *  {@code action}; underscore-prefixed files are mod metadata, never boxes. */
     private static void forEachBoxJson(Consumer<Path> action) throws IOException {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(BOXES_DIR, "*.json")) {
             for (Path file : stream) {
@@ -378,8 +321,7 @@ public final class BoxJsonLoader {
 
         CachedFile cached = PARSED_CACHE.get(fileName);
         if (cached != null && cached.hash().equals(hash)) {
-            // Unchanged content: reuse the previous parse verbatim, including
-            // its diagnostics, so the announce/report surface stays identical.
+            // Unchanged: reuse the cached parse and its diagnostics.
             LAST_LOAD_ERRORS.addAll(cached.errors());
             return cached.definition();
         }
@@ -432,12 +374,9 @@ public final class BoxJsonLoader {
             if (!"csbox".equals(type) && !"terminal".equals(type)) {
                 type = "csbox";
             }
-            // Strict separation (v1.0.8): the type field is the single source
-            // of truth, and the terminal machine has no key field at all. The
-            // file name "terminal.json" is reserved for the terminal: a legacy
-            // config that never gained "type" must not silently degrade into a
-            // keyless crate (the pre-migration free-loot hole), so refuse to
-            // load it instead.
+            // v1.0.8: "type" is the single source of truth; a terminal.json
+            // without "type":"terminal" would silently become a keyless
+            // crate, so refuse to load it.
             if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
                 String msg = "terminal.json must declare \"type\": \"terminal\" "
                         + "(v1.0.8+: type is the single registration source; terminals have no key field)";
@@ -509,13 +448,8 @@ public final class BoxJsonLoader {
         }
     }
 
-    /**
-     * Parses an {@link Identifier} while normalizing any thrown exception to
-     * {@link IllegalArgumentException}. MC's {@code Identifier.parse} throws
-     * a Mojang-specific {@code ResourceLocationException} whose concrete type
-     * changes between versions; the rest of this loader only relies on the
-     * IAE contract.
-     */
+    /** Parses an {@link Identifier}, normalizing any exception to
+     *  {@link IllegalArgumentException} (the MC exception type varies by version). */
     private static Identifier parseIdentifierSafe(String value, String fieldName) {
         try {
             return Identifier.parse(value);
@@ -558,9 +492,7 @@ public final class BoxJsonLoader {
         return weights;
     }
 
-    /**
-     * Parses either a plain entity id list or alternating entity id/drop-rate pairs.
-     */
+    /** Parses a plain entity id list, or alternating id/drop-rate pairs. */
     private static void parseEntities(JsonObject json, List<Identifier> dropEntityIds,
                                        Map<Identifier, Float> entityDropRates,
                                        Path file, String fileName) {

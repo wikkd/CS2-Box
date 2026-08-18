@@ -84,27 +84,16 @@ public class CsgoBox {
             "armory_point", "premium_supply_box");
 
     public static final String MODID = "csgobox";
-    /**
-     * Mod version, set during construction from {@code ModContainer}.
-     * Consumed by {@code BoxDefaults.writeTutorialIfMissing} — the load
-     * runs in {@code FMLCommonSetupEvent.enqueueWork} (1.21.1) or
-     * {@code ServerStartingEvent} (26.x), both of which fire AFTER this
-     * constructor completes. Default {@code "unknown"} is therefore only
-     * observable if the class is loaded before mod init, which is not a
-     * normal code path.
-     */
+    /** Mod version from {@code ModContainer}; consumed by the tutorial download
+     *  which fires after this constructor. "unknown" only if loaded pre-init. */
     public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final CsboxConfig CONFIG;
     public static final ModConfigSpec CONFIG_SPEC;
     public static Stat<ResourceLocation> OPENED_BOXES_STAT;
 
-    /**
-     * Background thread pool used by {@code PacketCsgoBulkProgress} to compute
-     * K random results off the main thread. Two daemon threads are enough for
-     * concurrent bulk requests from two operators; further requests queue.
-     * Shut down on mod unload via {@link FMLCommonSetupEvent} shutdown hook.
-     */
+    /** Background pool for {@code PacketCsgoBulkProgress} rolls (2 daemon
+     *  threads; further requests queue). Shut down on mod unload. */
     public static final ExecutorService BULK_COMPUTE_POOL = Executors.newFixedThreadPool(2, new ThreadFactory() {
         private final AtomicInteger counter = new AtomicInteger();
 
@@ -116,11 +105,8 @@ public class CsgoBox {
         }
     });
 
-    /**
-     * Watches {@code config/csbox/} for JSON changes and triggers a debounced
-     * reload. Created during {@link #commonSetup} when {@code enableHotReload}
-     * is true, shut down during {@link #onServerStopping}.
-     */
+    /** Watches {@code config/csbox/} for JSON changes (debounced reload);
+     *  created in {@link #commonSetup}, shut down in {@link #onServerStopping}. */
     private static BoxFileWatcher boxWatcher;
 
     static {
@@ -212,11 +198,8 @@ public class CsgoBox {
                 (msg, err) -> LOGGER.error("[BoxFileWatcher] {}", msg, err));
     }
 
-    /**
-     * Broadcasts the current box registry to every connected player so client
-     * registries (and the JEI probability category) follow server state after
-     * reloads. No-op on the client or without a server.
-     */
+    /** Broadcasts the box registry to all players so client registries follow
+     *  server state after reloads. No-op on the client or without a server. */
     public static void broadcastBoxDefinitions() {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) {
@@ -243,25 +226,12 @@ public class CsgoBox {
 
     /**
      * Scan {@code config/csbox/*.json} and register one dynamic item per file
-     * so vanilla {@code /give} can address any box by its file name. Boxes
-     * whose JSON declares {@code "type": "terminal"} are registered as
-     * {@link ItemTerminal} (they open the terminal UI); everything else is a
-     * plain {@link ItemCsgoBox}. The dynamic item's {@code box_id} is pre-set
-     * to the same id as the file name, so
-     * {@code /give @p csgobox:weapon_supply_box 5} hands the player 5
-     * ready-to-open boxes.
-     *
-     * <p>Trade-off: items without a matching model file
-     * ({@code assets/csgobox/models/item/<name>.json}) render as missing-texture.
-     * Functional behavior (open, RNG, give) is unaffected. Drop a model file
-     * to fix the icon.</p>
-     *
-     * <p>Registered via {@link RegisterEvent} using deferred suppliers so the
-     * {@link Item} instances are constructed during registry finalization,
-     * <em>before</em> the registry freezes. The previous implementation
-     * scheduled this work through {@code FMLCommonSetupEvent.enqueueWork},
-     * which fires AFTER the item registry has frozen and therefore crashed
-     * with {@code IllegalStateException: Registry is already frozen}.</p>
+     * so {@code /give} can address any box by its file name: "terminal" type
+     * becomes {@link ItemTerminal}, everything else a plain {@link ItemCsgoBox}
+     * with {@code box_id} preset. Items without a model file render as
+     * missing-texture (function unaffected). Registered via {@link RegisterEvent}
+     * deferred suppliers, before the registry freezes — enqueueWork fires
+     * after freeze and would crash.
      */
     private void registerDynamicBoxItems(final RegisterEvent event) {
         if (!event.getRegistryKey().equals(Registries.ITEM)) {
@@ -276,12 +246,9 @@ public class CsgoBox {
                 return;
             }
         }
-        // The terminal is a dynamic item like every other box, so the default
-        // terminal.json must exist before the scan or csgobox:terminal would
-        // not be registered on a fresh install. BoxJsonLoader.loadAll() also
-        // writes it, but that runs at server start, AFTER the item registry
-        // has frozen. Pre-v1.0.8 terminal.json files (no "type" field) are
-        // upgraded to the type-driven format here, before the scan reads it.
+        // Default terminal.json must exist before the scan (BoxJsonLoader
+        // writes it only at server start, after the registry freezes).
+        // Pre-v1.0.8 files (no "type") are upgraded here first.
         BoxDefaults.upgradeLegacyTerminalConfig(configDir);
         BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
@@ -296,8 +263,7 @@ public class CsgoBox {
                 if (idStr.isEmpty()) {
                     continue;
                 }
-                // Statically-registered items (ModItems) must not be re-added
-                // from config/csbox/*.json.
+                // Statically-registered items (ModItems) are never re-added.
                 if (STATIC_ITEM_IDS.contains(idStr)) {
                     skipped++;
                     continue;
@@ -314,14 +280,11 @@ public class CsgoBox {
                     continue;
                 }
                 final ResourceLocation boxId = itemId;
-                // The JSON "type" field is the single source of truth (v1.0.8
-                // strict separation): "terminal" registers an ItemTerminal so
-                // the client can dispatch to the terminal UI (ClickEvent /
-                // PacketTerminalBuy match instanceof ItemTerminal) without
-                // needing the box definition — remote clients never receive
-                // the type field. Terminals carry no key field; everything
-                // else stays a plain ItemCsgoBox. The terminal item model
-                // resolves by registry id to common models/item/terminal.json.
+                // "type" is the single source of truth (v1.0.8): terminal
+                // registers an ItemTerminal (client dispatch is by instanceof,
+                // remote clients never see the type field); everything else a
+                // plain ItemCsgoBox. The terminal model resolves by registry
+                // id to common models/item/terminal.json.
                 final boolean isTerminal = "terminal".equals(BoxJsonLoader.readType(file));
                 event.register(Registries.ITEM, itemId, () -> {
                     ItemCsgoBox item;
@@ -387,14 +350,10 @@ public class CsgoBox {
         }
 
         /**
-         * Dynamic box items (registered from {@code config/csbox/*.json}
-         * filenames) have no {@code assets/csgobox/models/item/<id>.json}, so
-         * vanilla bakes them to the missing-texture model (purple/black) in
-         * the inventory and in the 3D preview. 1.21.1 has no per-stack
-         * ITEM_MODEL component (that is a 26.x API), so remap every csgobox
-         * item that ended up with the missing model to the baked csgo_box
-         * model here. Static items (keys, terminal, …) keep their real model
-         * (particle icon is not the "missingno" sprite) and are left alone.
+         * Dynamic box items have no model file, so vanilla bakes them to the
+         * missing model. 1.21.1 has no per-stack ITEM_MODEL component (a 26.x
+         * API), so remap csgobox items stuck with the missing model to the
+         * baked csgo_box model; static items keep their real model.
          */
         @SubscribeEvent
         public static void onModelBaking(ModelEvent.ModifyBakingResult event) {
@@ -412,11 +371,8 @@ public class CsgoBox {
                 }
                 ModelResourceLocation loc = new ModelResourceLocation(itemId, "inventory");
                 BakedModel current = models.get(loc);
-                // Dynamic boxes have no model file, so ModelBakery registers
-                // them with the baked missing model (particle icon is the
-                // "missingno" sprite). Swap those over to the csgo_box model;
-                // items with a real model (particle icon != missingno) are
-                // left untouched so user-provided pack models keep working.
+                // Swap missing-model dynamic boxes to the csgo_box model;
+                // items with a real model are left untouched.
                 if (current == null
                         || current.getParticleIcon().contents().name().equals(missingSprite)) {
                     models.put(loc, baseModel);
