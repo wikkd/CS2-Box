@@ -66,7 +66,7 @@ public final class BoxStripGenerator {
                 s = emptyValue;
             }
             items.add(s);
-            grades.add(Math.clamp(g, 1, 5));
+            grades.add(Math.min(Math.max(g, 1), 5));
         }
         int winningIndex = AnimationStrip.randomWinningIndex(rng, items.size());
         winningIndex = AnimationStrip.findNearestValid(items, winningIndex, gradeMap::isValid);

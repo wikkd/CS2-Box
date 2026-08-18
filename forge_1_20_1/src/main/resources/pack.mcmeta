@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "description": "CS2 Box",
+    "pack_format": ${pack_format}
+  }
+}

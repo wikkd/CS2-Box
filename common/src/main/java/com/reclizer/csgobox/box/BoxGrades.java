@@ -48,6 +48,6 @@ public final class BoxGrades {
 
     /** Clamps a drop rate into the valid [0, 1] range. */
     public static float clampDropRate(float rate) {
-        return Math.clamp(rate, 0.0F, 1.0F);
+        return Math.min(Math.max(rate, 0.0F), 1.0F);
     }
 }

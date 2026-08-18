@@ -57,7 +57,7 @@ public final class AnimationStrip {
         if (items == null || items.isEmpty()) {
             return -1;
         }
-        startingIndex = Math.clamp(startingIndex, 0, items.size() - 1);
+        startingIndex = Math.min(Math.max(startingIndex, 0), items.size() - 1);
         if (valid.test(items.get(startingIndex))) {
             return startingIndex;
         }
