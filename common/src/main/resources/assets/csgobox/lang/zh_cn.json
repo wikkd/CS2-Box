@@ -172,6 +172,8 @@
   "block.csgobox.armory_recycler": "武库拆解台",
   "item.csgobox.armory_recycler": "武库拆解台",
   "entity.csgobox.arms_dealer": "军火商",
+  "entity.minecraft.villager.arms_dealer": "军火商",
+  "entity.minecraft.villager.csgobox.arms_dealer": "军火商",
   "gui.csgobox.armory_recycler.title": "武库拆解台",
   "gui.csgobox.armory_recycler.dismantle": "拆解",
   "gui.csgobox.armory_recycler.input": "投料口",

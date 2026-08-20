@@ -172,6 +172,8 @@
   "block.csgobox.armory_recycler": "Armory Recycler",
   "item.csgobox.armory_recycler": "Armory Recycler",
   "entity.csgobox.arms_dealer": "Arms Dealer",
+  "entity.minecraft.villager.arms_dealer": "Arms Dealer",
+  "entity.minecraft.villager.csgobox.arms_dealer": "Arms Dealer",
   "gui.csgobox.armory_recycler.title": "Armory Recycler",
   "gui.csgobox.armory_recycler.dismantle": "Dismantle",
   "gui.csgobox.armory_recycler.input": "Input",
