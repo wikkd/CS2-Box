@@ -5,7 +5,7 @@
 
 ## 背景
 
-`CsLookItemScreen`（开箱物品检视页）底部有 6 个工具栏按钮（检视/手套/模型/信息/贴纸/更多），当前交互仅有：
+`CsLookItemScreen`（开箱物品检视页）底部有 6 个工具栏按钮（检视武器模型/第一人称检视动画/检视人物模型/磨损度/贴纸/更改检视时的风景），当前交互仅有：
 
 - 悬停时背景色瞬时变亮（无过渡、无提示）
 - ⓘ 按钮点击切换信息面板
@@ -74,13 +74,15 @@ guiGraphics.blit(RenderPipelines.GUI_TEXTURED, icons[i], iconX, iconY, 0F, 0F, i
 ### 6. 文案（common 共享 lang，一次改全平台生效）
 
 ```
-gui.csgobox.csgo_box.toolbar.inspect → 检视 / Inspect
-gui.csgobox.csgo_box.toolbar.gloves  → 手套 / Gloves
-gui.csgobox.csgo_box.toolbar.model   → 模型 / Model
-gui.csgobox.csgo_box.toolbar.info    → 信息 / Info
-gui.csgobox.csgo_box.toolbar.sticker → 贴纸 / Sticker
-gui.csgobox.csgo_box.toolbar.more    → 更多 / More
+gui.csgobox.csgo_box.toolbar.inspect → 检视武器模型 / Inspect Weapon Model
+gui.csgobox.csgo_box.toolbar.gloves  → 第一人称检视动画 / First-Person Inspect Animation
+gui.csgobox.csgo_box.toolbar.model   → 检视人物模型 / Inspect Character Model
+gui.csgobox.csgo_box.toolbar.info    → 磨损度 / Wear Rating
+gui.csgobox.csgo_box.toolbar.sticker → 贴纸 / Stickers
+gui.csgobox.csgo_box.toolbar.more    → 更改检视时的风景 / Change Inspect Scenery
 ```
+
+> **文案已永久确立（2026-08-20）**：以上 6 条 tooltip 文本由用户从 CS:GO 游戏内实际确认，替换早期临时文案（检视/手套/模型/信息/贴纸/更多）。后续改动须保持与 CS:GO 一致，不得回退为简写。
 
 ### 7. 平台合入策略（AGENTS.md 镜像纪律）
 
@@ -98,6 +100,6 @@ gui.csgobox.csgo_box.toolbar.more    → 更多 / More
 
 ## 不做的事（YAGNI）
 
-- 不给 5 个死按钮（检视/手套/模型/贴纸/更多）分配功能——本次仅悬停反馈
+- 不给 5 个死按钮（检视武器模型/第一人称检视动画/检视人物模型/贴纸/更改检视时的风景）分配功能——本次仅悬停反馈
 - 不改背景 hover 变色（已移除，改为仅图标反白）
 - 不加键盘快捷键
