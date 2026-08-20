@@ -58,7 +58,6 @@ pngquant 3.0.3 量化（保留 alpha，P 模式）。第一批 3 张大图：
 |---|---|---|---|
 | `textures/screens/lens_vignette.png` | 30,727 B | 8,626 B | -22,101 B |
 | `textures/item/csgo_box.png` | 29,184 B | 13,260 B | -15,924 B |
-| `textures/item/premium_supply_box.png` | 24,634 B | 13,954 B | -10,680 B |
 
 第二批 6 张 UI 小图（q85-100，视觉模型逐张验收「无可见差异」后入库，
 对比图 `shots/_slim_ui_sprites_grid.png`）：
@@ -75,14 +74,13 @@ pngquant 3.0.3 量化（保留 alpha，P 模式）。第一批 3 张大图：
 `terminal_avatar_wm.png` / `terminal_circle.png` 量化后反而变大，**跳过不量化**。
 
 **含损决策记录**：
-- 皮肤初测 q70-95 有可见缺陷（`csgo_box` 左下条纹压碎、`premium` 粉橙块丢失），
+- 皮肤初测 q70-95 有可见缺陷（`csgo_box` 左下条纹压碎），
   **升到 q85-100 修复并通过**（视觉模型 + 人眼复核）。q70 版本不保留。
 - vignette 原计划 512→256 降采样；实测 pngquant 量化在**保留 512×512 分辨率**
   的情况下已达成体积目标（30.7→8.6 KB），**放弃降采样**（无分辨率损失，更优）。
 - 原件备份：`/tmp/csbox-slim-orig/`（git HEAD 亦有原件）。
 - 对比图：`shots/_slim_vignette_before_after.png`、
   `shots/_slim_csgo_box_q85_before_after.png`、
-  `shots/_slim_premium_box_q85_before_after.png`、
   `shots/_slim_ui_sprites_grid.png`。
 
 ### 1c. 音效重编码 — `scripts/slim-encode-sounds.sh`

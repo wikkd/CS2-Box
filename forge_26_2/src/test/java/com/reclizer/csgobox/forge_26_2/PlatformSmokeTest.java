@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Minimal platform-layer test harness (JUnit 5), mirroring the v26_1_2 module.
@@ -54,6 +55,15 @@ class PlatformSmokeTest {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY3"));
         // 1.0.7-line statically-registered items.
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
-        assertNotNull(ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
+    }
+
+    /**
+     * The village-exclusive premium box was permanently removed on
+     * 2026-08-19; the field must never come back.
+     */
+    @Test
+    void premiumBoxItemIsPermanentlyRemoved() {
+        assertThrows(NoSuchFieldException.class,
+                () -> ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
     }
 }

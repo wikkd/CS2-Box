@@ -45,9 +45,8 @@ public final class ModItems {
                 for (BoxDefinition def : BoxRegistry.getAll()) {
                     // Resolve the item registered for this box id: dynamic
                     // items are registered under config/csbox file names, so
-                    // terminal-type boxes surface as ItemTerminal and the
-                    // village premium case as ItemPremiumBox. Fall back to the
-                    // plain box item when no matching item exists (e.g. a
+                    // terminal-type boxes surface as ItemTerminal. Fall back to
+                    // the plain box item when no matching item exists (e.g. a
                     // definition added by /csbox reload before a restart).
                     Item item = BuiltInRegistries.ITEM.get(def.id())
                             .map(Holder.Reference::value)
@@ -67,7 +66,9 @@ public final class ModItems {
     public static final Supplier<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", () -> new ItemCsgoKey(itemProperties("csgo_key2")));
     public static final Supplier<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", () -> new ItemCsgoKey(itemProperties("csgo_key3")));
     public static final Supplier<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(itemProperties("armory_point").rarity(Rarity.COMMON)));
-    public static final Supplier<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", () -> new ItemPremiumBox(itemProperties("premium_supply_box")));
+
+    // NOTE: the village-exclusive "premium_supply_box" item was permanently
+    // removed on 2026-08-19. Do NOT reintroduce it.
 
     /** Forge 26.1 requires the item id to be set on Properties before construction. */
     private static Item.Properties itemProperties(String name) {

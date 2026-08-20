@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Minimal platform-layer test harness (JUnit 5), mirroring the v26_1_2 module.
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * compileJava still passes.</p>
  *
  * <p>Sync note: the module tracks the v26_1_2 baseline as of the 1.0.7 dev
- * line (terminal / premium box / armory-point items are now expected). The
+ * line (terminal / armory-point items are now expected). The
  * declared-field assertions below guard against accidental field removal or
  * mirror overwrites that drop the synced registrations.</p>
  */
@@ -56,8 +57,17 @@ class PlatformSmokeTest {
     }
 
     @Test
-    void v107PremiumAndArmoryItemsAreDeclared() throws NoSuchFieldException {
-        assertNotNull(ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
+    void v107ArmoryItemsAreDeclared() throws NoSuchFieldException {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
+    }
+
+    /**
+     * The village-exclusive premium box was permanently removed on
+     * 2026-08-19; the field must never come back.
+     */
+    @Test
+    void premiumBoxItemIsPermanentlyRemoved() {
+        assertThrows(NoSuchFieldException.class,
+                () -> ModItems.class.getDeclaredField("ITEM_PREMIUM_BOX"));
     }
 }

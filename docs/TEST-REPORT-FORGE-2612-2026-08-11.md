@@ -49,7 +49,7 @@ E2E 无此崩溃。
   物品定义：`csgo_box.json`、`csgo_key0-3.json`（内容与 v26_1_2 一致，
   `{"model":{"type":"minecraft:model","model":"csgobox:item/<name>"}}`）。
 - `forge_26_1_2/build.gradle` 排除清单追加 1.0.7 专有定义
-  `assets/csgobox/items/{terminal,armory_point,premium_supply_box}.json`，
+  `assets/csgobox/items/{terminal,armory_point}.json`，
   维持 1.0.6 特性基线。
 
 **验证**：

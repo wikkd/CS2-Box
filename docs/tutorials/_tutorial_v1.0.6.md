@@ -53,7 +53,7 @@ A box can carry a colored display name by prefixing the `name` value with a hex 
 
 ```json
 {
-  "name": "#FF5555 Premium Crate",
+  "name": "#FF5555 Crimson Crate",
   "key":  "csgobox:csgo_key0",
   "drop": 0.12,
   "random": [625, 125, 25, 5, 2],

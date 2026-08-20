@@ -61,7 +61,7 @@ A box can carry a colored display name by prefixing the `name` value with a hex 
 
 ```json
 {
-  "name": "#FF5555 Premium Crate",
+  "name": "#FF5555 Crimson Crate",
   "key":  "csgobox:csgo_key0",
   "drop": 0.12,
   "random": [625, 125, 25, 6, 4],
@@ -186,7 +186,7 @@ opens the whole batch.
 
 ## Terminal machine (1.0.7)
 
-The terminal (`csgobox:terminal`) is a premium box-type item with its own loot
+The terminal (`csgobox:terminal`) is a box-type item with its own loot
 pool: the `type: terminal` box definition in `config/csbox/terminal.json`.
 Right-click the terminal to open the terminal UI instead of the crate screen.
 
@@ -227,14 +227,9 @@ arms-dealer villager.
 |-------|--------|
 | 1     | 1 iron ingot → 2 points; 1 emerald → 2 points |
 | 2     | 1 gold ingot → 4 points; 8 points → `csgobox:csgo_box` |
-| 3     | 1 diamond → 12 points; 9 points → `csgobox:csgo_key0`; 16 points → `csgobox:premium_supply_box` |
+| 3     | 1 diamond → 12 points; 9 points → `csgobox:csgo_key0` |
 | 4     | 24 points → `csgobox:csgo_key1`; 12 points → `csgobox:terminal` |
 | 5     | 45 points + 1 diamond → `csgobox:csgo_key2` |
-
-The **premium supply box** (`csgobox:premium_supply_box`) is a village-exclusive
-`csbox`-type crate: it never drops from mobs (`drop` 0, no `entity` list) and is
-only obtainable from the arms dealer. It opens with `csgobox:csgo_key1` and its
-default pool is weighted toward the upper grades.
 
 ## In-game commands
 

@@ -63,7 +63,9 @@ public final class ModItems {
     public static final RegistryObject<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", () -> new ItemCsgoKey(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", () -> new ItemCsgoKey(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
-    public static final RegistryObject<Item> ITEM_PREMIUM_BOX = ITEMS.register("premium_supply_box", () -> new ItemPremiumBox(new Item.Properties()));
+
+    // NOTE: the village-exclusive "premium_supply_box" item was permanently
+    // removed on 2026-08-19. Do NOT reintroduce it.
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

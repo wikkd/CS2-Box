@@ -331,7 +331,7 @@ final class BoxJsonSchemaValidatorTest {
         @Test
         @DisplayName("unknown type value reports type")
         void unknownType() {
-            assertSingleIssue(validate("{ \"type\": \"premium\" }"), "type");
+            assertSingleIssue(validate("{ \"type\": \"battle_pass\" }"), "type");
         }
 
         @Test

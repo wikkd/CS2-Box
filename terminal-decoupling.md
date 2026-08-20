@@ -14,7 +14,7 @@
 | 主题 | 最终状态 |
 |---|---|
 | 箱子类型判定 | JSON 无 `type` 字段；派生访问器 `type()` / `isTerminal()`：**ID 为 `csgobox:terminal` 且 `key == minecraft:air`** 才是终端机；`key: air` 单独出现不会成为终端机（第 6 节） |
-| 首次启动 | 空箱子：不生成 `terminal.json` / `premium_supply_box.json`；玩家自建配置后才进入创造物品栏（第 7 节） |
+| 首次启动 | 空箱子：不生成 `terminal.json`；玩家自建配置后才进入创造物品栏（第 7 节） |
 | 共享逻辑封装 | `isTerminal()` + `ModItems.boxItemFor(def)` 单一映射 + `ItemCsgoBox.openScreen(stack)` 多态入口（第 8 节） |
 | 会话锁 | 服务端 `TerminalSessionManager`（键 `玩家UUID:箱子ID`）；未满 5 轮拒绝 / 未成交前重开续谈，5 轮拒绝（FAILED）或成交（CLOSED）才释放（第 9 节） |
 | 计时 | 服务端 1Hz tick，**世界时钟**（世界游戏刻 × 50）推进，默认 3 小时；世界暂停 / 停机不计时，重启续算（第 10、12 节） |
@@ -204,17 +204,16 @@ if (terminalDef != null) {
 - **类型判定集中**：`BoxDefinition` 新增 `isTerminal()`（`csgobox:terminal` + air 钥匙），
   `type()` 委托它。`ModItems` 创造栏不再内联 `"terminal".equals(path)` 的判断，
   改走统一的 `ModItems.boxItemFor(def)` 映射：`isTerminal()` → `ItemTerminal`、
-  `premium_supply_box` → `ItemPremiumBox`、其余 → `ItemCsgoBox`。
-- **创造栏单一循环**：删除高级箱独立条目块，终端机 / 高级箱 / 动态箱子全部经
-  「注册箱子循环」进入物品栏（高级箱与终端机/普通箱一致：首次启动不再自动
-  生成 `premium_supply_box.json`，玩家创建该配置后才进入创造栏；顺带修复了
-  此前高级箱在创造栏出现两次的重复条目——独立块一次 + 循环一次）。
+  其余 → `ItemCsgoBox`。
+- **创造栏单一循环**：删除独立条目块，终端机 / 动态箱子全部经
+  「注册箱子循环」进入物品栏（与终端机/普通箱一致：首次启动不再自动
+  生成 `terminal.json`，玩家创建该配置后才进入创造栏）。
 - **打开行为多态**：`ItemCsgoBox` 新增客户端 `openScreen(stack)`（音效 +
   Shift 批量/单开），`ItemTerminal` 覆写为终端机启动屏；`ClickEvent` 收敛为
   单一 `instanceof ItemCsgoBox` + `openScreen`，不再需要「先匹配 ItemTerminal
   再匹配 ItemCsgoBox」的顺序约束。
 - **掉落一致**：`ModEvents.livingDeath` 生成掉落物改走 `boxItemFor(def)`，
-  终端/高级箱定义配置了 `entity` 时掉出对应物品类（此前一律掉 `csgo_box`，
+  终端定义配置了 `entity` 时掉出对应物品类（此前一律掉 `csgo_box`，
   终端定义会掉出打开经典箱子 UI 的错误物品）。
 
 验证：4 平台 `clean compileJava` 通过，`:common:test` 通过，

@@ -9,7 +9,6 @@ gradients and fine stripes lose more bytes to dithering noise than they gain).
 Accepted qualities (validated visually, see shots/_slim_*_before_after.png):
   1. lens_vignette.png : --quality 60-95 (radial overlay, visually lossless)
   2. csgo_box.png      : --quality 85-100 (fine stripes must survive)
-     premium_supply_box.png
   3. terminal UI sprites : --quality 85-100 (small UI textures, no visible
      banding; validated with vision model on shots/_slim_ui_sprites_grid.png).
      Files: spot_glow / terminal_avatar / terminal_circle_glow /
@@ -34,7 +33,6 @@ ASSETS = os.path.normpath(os.path.join(
 TARGETS = {
     "textures/screens/lens_vignette.png": "60-95",
     "textures/item/csgo_box.png": "85-100",
-    "textures/item/premium_supply_box.png": "85-100",
     "textures/screens/spot_glow.png": "85-100",
     "textures/screens/gold_item.png": "85-100",
     "textures/gui/terminal/terminal_avatar.png": "85-100",

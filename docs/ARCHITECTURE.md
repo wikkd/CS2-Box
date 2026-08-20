@@ -42,7 +42,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 - **`BoxGrades`** — 5 档等级名→等级号映射、默认权重 `{625,125,25,6,4}`、drop rate 夹取与各 schema 上限常量（2026-08 重构下沉）
 - **`BoxRegistryStore<K,V>`** — 泛型注册表容器（register/remove 无条件触发变更回调、clear 触发清空回调）；平台 `BoxRegistry` 是提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调的薄壳
 - **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items/grades/winningIndex，经 `GradeMap.isValid` 定位中奖位）；平台传 `ItemStack.EMPTY` 作空值
-- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` / `premium_supply_box.json` 默认配置**(v1.0.8 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` 默认配置**(v1.0.8 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 
@@ -62,7 +62,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 
 - **`ItemCsgoBox`** / **`ItemCsgoKey`** + `ModItems`(DeferredRegister 集中注册)
 - 4 把钥匙:`csgo_key0`(铁)、`csgo_key1`(金)、`csgo_key2`(钻石)、`csgo_key3`(下界合金,仅锻造台配方)
-- **`ItemTerminal`**(终端机,继承 `ItemCsgoBox`,覆写 `openScreen` 打开终端谈判屏)/ **`ItemPremiumBox`**(军火商高级箱)
+- **`ItemTerminal`**(终端机,继承 `ItemCsgoBox`,覆写 `openScreen` 打开终端谈判屏)
 
 ### 3.4 平台薄壳与适配
 
@@ -149,7 +149,7 @@ common/src/main/resources/         ← 跨版本资源(纹理、音效、lang、
   └── data/csgobox/advancement/
 
 v26_1_2/src/main/resources/         ← 平台特化资源(独立运行时类路径)
-  └── assets/csgobox/items/         (csgo_box / csgo_key0-3 / armory_point / armory_recycler / premium_supply_box / terminal items)
+  └── assets/csgobox/items/         (csgo_box / csgo_key0-3 / armory_point / armory_recycler / terminal items)
 
 runs/client/                        ← 运行时测试数据(csgobox.toml、csbox/*.json)
 runs/server/

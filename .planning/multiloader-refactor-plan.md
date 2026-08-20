@@ -20,7 +20,7 @@
 - **CsboxCommandOps 未拆**（计划 YAGNI 条款）：审计 261 行 `CsboxCommand`，全部 handler 与 Component/CommandSourceStack 强耦合（translatable/sendSuccess/withStyle），MC 无关纯逻辑不足 30 行（仅 MAX_NBT_CHARS 常量 + 截断分支），不强拆。
 - **阶段 4 无删除**：平台资源均为版本敏感物——`assets/csgobox/items/*.json` 是 1.21.4+ item 模型定义（v1_21_1 无此目录，三 26.x 平台间完全一致但 common 无此格式需求）；`data/csgobox/advancement/root.json` 平台版与 common 版 background 路径格式不同（版本格式适配，EXCLUDE 语义下平台副本优先，非隐性分叉）；lang/models/textures 抽查无平台副本。故未提交 `chore: dedupe shared resources into common`。
 - **forge 行为归一**（阶段 1 顺带）：`forge_26_1_2` BoxDefinition 的 `DEFAULT_WEIGHTS {625,125,25,5,2}` 与 MAX 上限 256/16/256 为 v1.0.6 发行快照旧值，按特性同步纪律统一到 common `BoxGrades` 值（`{625,125,25,6,4}` 与 1024/64/1024）。
-- **已知 forge 同步缺口（不在本次范围）**：forge items/ 缺 `armory_point.json`、`premium_supply_box.json`（1.0.6 发行后新增，下次 forge 同步补齐）。
+- **已知 forge 同步缺口（不在本次范围）**：forge items/ 缺 `armory_point.json`（1.0.6 发行后新增，下次 forge 同步补齐）。
 
 **验证结果**（修复提交后全部重跑）：
 - `:common:test` 全部通过（含新增 BoxGradesTest/BoxRegistryStoreTest/BoxStripGeneratorTest/OpenBlockGuardTest），checkCommonArchitecture 随编译自动拦截通过

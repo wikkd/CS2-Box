@@ -81,7 +81,7 @@ public class CsgoBox {
     /** Items statically registered in {@code ModItems}; never re-added from config JSON. */
     private static final Set<String> STATIC_ITEM_IDS = Set.of(
             "csgo_box", "csgo_key0", "csgo_key1", "csgo_key2", "csgo_key3",
-            "armory_point", "premium_supply_box");
+            "armory_point");
 
     public static final String MODID = "csgobox";
     /** Mod version from {@code ModContainer}; consumed by the tutorial download

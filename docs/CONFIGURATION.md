@@ -102,7 +102,6 @@
 首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
 
 - **自动生成 `terminal.json`**（v1.0.8 起恢复）：内置默认配置且含 `"type": "terminal"`，终端机开箱即用；用户已存在的 `terminal.json` 不会被覆盖，旧版（无 `type` 且带遗留 `key`）配置会自动迁移。
-- **自动生成 `premium_supply_box.json`**：军火商高级箱内置默认配置，开箱即用；用户文件不会被覆盖。
 - 异步下载 `_tutorial_v<版本>.md` 教程文档（联网时）。
 
 **普通箱子没有内置默认配置**：`weapon_supply_box.json` 等普通箱文件需要由玩家/服主自行创建（或从教程文档中复制示例），创建后才会出现在创造物品栏。

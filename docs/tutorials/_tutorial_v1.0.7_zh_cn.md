@@ -177,7 +177,7 @@
 
 ## 终端机(1.0.7)
 
-终端机(`csgobox:terminal`)是一种高级箱类物品,拥有独立掉落池:`config/csbox/terminal.json` 中的 `type: terminal` 箱子定义。右键终端机打开终端机界面,而不是宝箱界面。
+终端机(`csgobox:terminal`)是一种独立的箱子类物品,拥有独立掉落池:`config/csbox/terminal.json` 中的 `type: terminal` 箱子定义。右键终端机打开终端机界面,而不是宝箱界面。
 
 - **无需钥匙** —— 默认终端机配置使用 `"key": "minecraft:air"`。
 - **出价以武库点数计价**,按稀有度档位固定:grade1 = 6、grade2 = 10、grade3 = 16、grade4 = 22、grade5 = 30。接受报价即支付该价格。
@@ -197,11 +197,9 @@
 |------|------|
 | 1    | 1 铁锭 → 2 点数;1 绿宝石 → 2 点数 |
 | 2    | 1 金锭 → 4 点数;8 点数 → `csgobox:csgo_box` |
-| 3    | 1 钻石 → 12 点数;9 点数 → `csgobox:csgo_key0`;16 点数 → `csgobox:premium_supply_box` |
+| 3    | 1 钻石 → 12 点数;9 点数 → `csgobox:csgo_key0` |
 | 4    | 24 点数 → `csgobox:csgo_key1`;12 点数 → `csgobox:terminal` |
 | 5    | 45 点数 + 1 钻石 → `csgobox:csgo_key2` |
-
-**军火商高级箱**(`csgobox:premium_supply_box`)是村庄专属的 `csbox` 类型宝箱:永远不会从生物掉落(`drop` 为 0,无 `entity` 列表),只能从军火商处获得。它使用 `csgobox:csgo_key1` 开启,默认掉落池偏向高等级。
 
 ## 游戏内命令
 

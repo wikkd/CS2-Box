@@ -93,6 +93,6 @@ public final class CsgoBoxJeiPlugin implements IModPlugin {
         if (!recipes.isEmpty()) {
             return recipes.get(0).boxStack();
         }
-        return new ItemStack(ModItems.ITEM_PREMIUM_BOX.get());
+        return new ItemStack(ModItems.ITEM_CSGOBOX.get());
     }
 }

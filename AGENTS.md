@@ -21,6 +21,7 @@
 - **`common/` 不得 import 任何 `net.minecraft.*` / `net.neoforged.*`**（编译环境无 MC classpath，违反即编译失败）。共享资源（纹理/音效/lang/配方/成就）也放在 `common/src/main/resources/`。该约束由 `:common:checkCommonArchitecture` Gradle task 自动化执行（挂载在 `compileJava` 依赖上，任何编译/测试都会触发，含 forge_26_1_2 把 common 源码编进自身 classpath 的场景）。
 - 平台模块通过 `srcDir project(':common').file('src/main/resources')` 共享资源。
 - 依赖方向：`平台 → common`，`common` 不依赖任何平台。
+- **`premium_supply_box` / `ItemPremiumBox` 永久移除（2026-08-19）**：该「军火商高级箱」物品已从代码、资源、配置与全部文档中彻底删除，**禁止以任何形式再次引入**（含历史条目复活）。`forge_26_1_2` / `forge_26_2` 的 `PlatformSmokeTest` 含反向守卫（`premiumBoxItemIsPermanentlyRemoved`）断言该字段永不回归，新增字段/资源/交易时勿再使用该命名。
 
 ## 平台模块镜像纪律（重要！）
 

@@ -94,7 +94,6 @@ public final class ModVillagers {
             byLevel.put(3, new VillagerTrades.ItemListing[]{
                     buyPoints(Items.DIAMOND, 1, point, 12, 12, 10),
                     sellKey(point, 9, key0, 16, 10),
-                    sellKey(point, 16, ModItems.ITEM_PREMIUM_BOX.get(), 12, 5),
             });
             byLevel.put(4, new VillagerTrades.ItemListing[]{
                     sellKey(point, 24, key1, 8, 15),

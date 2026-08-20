@@ -61,7 +61,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | S2 | `./gradlew :forge_26_1_2:jar` + 产物校验 | jar 存在非空、文件名 `csgobox-forge-26.1.2-<ver>.jar`、`mods.toml` 内 `version="<ver>"` 已展开 |
 | S3 | `scripts/check-version.sh` | 版本四同步 OK |
 | S4 | `scripts/check-animops-drift.sh` | 3 平台渲染门面签名一致 |
-| S5 | `./gradlew :forge_26_1_2:test` | JUnit 全绿（入口类可加载；`ITEM_PREMIUM_BOX`/`ITEM_ARMORY_POINT` 不泄漏；`terminal` 已转动态注册无静态字段） |
+| S5 | `./gradlew :forge_26_1_2:test` | JUnit 全绿（入口类可加载；`ITEM_ARMORY_POINT` 已声明且 `ITEM_PREMIUM_BOX` 永不回归；`terminal` 已转动态注册无静态字段） |
 
 常用参数：`--skip-compile` / `--skip-jar` / `--skip-version` / `--skip-drift` /
 `--skip-test`（调试单项时用）；`FORGE_TEST_TIMEOUT=3600` 覆盖 Gradle 阶段超时
@@ -182,7 +182,7 @@ forge **不参与** 3 平台镜像纪律与 `build.yml` 构建矩阵（保持实
 > （ModItems / ModBlocks / CsboxConfig / AnimRenderOps / IconListTools /
 > ButtonPalette / GuiItemMove / PacketTerminalBuy / Networking 等）后
 > `clean compileJava` 通过，L0-L3 门禁 7/7 PASS；`PlatformSmokeTest` 基线守卫
-> 已更新为 1.0.7 同步断言（terminal / premium / armory 为预期项）。
+> 已更新为 1.0.7 同步断言（terminal / armory 为预期项）。
 >
 > **同步记录（2026-08-12，1.0.7 线第二轮）**：Blur 软适配合入 forge 全部 6 屏
 > （CsboxScreen 删除 `extractBackground` override、背景 fill 移入 `renderBg` 走
@@ -263,5 +263,5 @@ forge 已获得与 NeoForge 平台同等的黑盒 E2E（`mc_*` 工具 + `test_cs
 | S1 失败 | 看编译错误；改动涉及平台时不要依赖增量缓存，必须 `clean` |
 | S2 产物缺失 | 确认 `-Pactive_versions=forge-26.1.2` 传了；看 jar task 输出路径 |
 | S3 失败 | 按 `scripts/check-version.sh` 输出四处版本同步 |
-| S5 失败 | 看 `forge_26_1_2/build/test-results/test/` 报告；`PlatformSmokeTest` 断言已随 1.0.7 同步更新（terminal/armory/premium 为预期项），失败说明同步回退或字段被误删 |
+| S5 失败 | 看 `forge_26_1_2/build/test-results/test/` 报告；`PlatformSmokeTest` 断言已随 1.0.7 同步更新（terminal/armory 为预期项），失败说明同步回退或字段被误删 |
 | runClient 起不来 | 检查 JDK 25 toolchain、删除 `run/` 后重试、看 `logs/latest.log` |

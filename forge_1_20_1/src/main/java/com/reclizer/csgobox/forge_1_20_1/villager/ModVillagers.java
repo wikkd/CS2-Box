@@ -81,14 +81,6 @@ public final class ModVillagers {
                         12, 5, 0.05f)
         });
 
-        // Level 3: premium box trade
-        map.put(3, new VillagerTrades.ItemListing[]{
-                (trader, rng) -> new MerchantOffer(
-                        new ItemStack(com.reclizer.csgobox.forge_1_20_1.item.ModItems.ITEM_ARMORY_POINT.get(), 15),
-                        new ItemStack(com.reclizer.csgobox.forge_1_20_1.item.ModItems.ITEM_PREMIUM_BOX.get()),
-                        4, 10, 0.05f)
-        });
-
         // Level 4: diamond trade
         map.put(4, new VillagerTrades.ItemListing[]{
                 (trader, rng) -> new MerchantOffer(
