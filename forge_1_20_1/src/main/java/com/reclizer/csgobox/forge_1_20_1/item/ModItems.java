@@ -40,6 +40,7 @@ public final class ModItems {
                 entries.accept(ModItems.ITEM_CSGO_KEY2.get());
                 entries.accept(ModItems.ITEM_CSGO_KEY3.get());
                 entries.accept(ModItems.ITEM_ARMORY_POINT.get());
+                entries.accept(ModItems.ITEM_TERMINAL.get());
                 entries.accept(ModBlocks.ARMORY_RECYCLER_ITEM.get());
 
                 for (BoxDefinition def : BoxRegistry.getAll()) {
@@ -63,6 +64,11 @@ public final class ModItems {
     public static final RegistryObject<Item> ITEM_CSGO_KEY2 = ITEMS.register("csgo_key2", () -> new ItemCsgoKey(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_CSGO_KEY3 = ITEMS.register("csgo_key3", () -> new ItemCsgoKey(new Item.Properties()));
     public static final RegistryObject<Item> ITEM_ARMORY_POINT = ITEMS.register("armory_point", () -> new Item(new Item.Properties().rarity(Rarity.COMMON)));
+    /** Terminal machine — statically registered so it always exists even
+     *  without a {@code terminal.json}; the loot pool (BoxDefinition) still
+     *  comes from {@code config/csbox/terminal.json} at server start, and the
+     *  dynamic item registration skips this id ({@code containsKey}). */
+    public static final RegistryObject<Item> ITEM_TERMINAL = ITEMS.register("terminal", () -> new ItemTerminal(new Item.Properties()));
 
     // NOTE: the village-exclusive "premium_supply_box" item was permanently
     // removed on 2026-08-19. Do NOT reintroduce it.

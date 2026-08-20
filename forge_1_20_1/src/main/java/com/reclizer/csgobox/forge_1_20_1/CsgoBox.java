@@ -14,6 +14,10 @@ import com.reclizer.csgobox.forge_1_20_1.item.ModItems;
 import com.reclizer.csgobox.forge_1_20_1.menu.ModMenus;
 import com.reclizer.csgobox.forge_1_20_1.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -22,6 +26,7 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ModelEvent;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -47,6 +52,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -285,6 +291,61 @@ public class CsgoBox {
                         ModMenus.ARMORY_RECYCLER.get(),
                         com.reclizer.csgobox.forge_1_20_1.gui.ArmoryRecyclerScreen::new);
             });
+        }
+
+        /**
+         * Dynamic box items have no model file, so vanilla bakes them to the
+         * missing model. 1.20.1 has no per-stack ITEM_MODEL component (a 26.x
+         * API), so remap csgobox items stuck with the missing model to the
+         * baked csgo_box model; terminal-type items (ItemTerminal) go to the
+         * terminal model instead so every terminal config file renders as a
+         * terminal. Static items keep their real model.
+         */
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public static void onModelBaking(ModelEvent.ModifyBakingResult event) {
+            Map<ResourceLocation, BakedModel> models = event.getModels();
+            ModelResourceLocation base = new ModelResourceLocation(
+                    new ResourceLocation(CsgoBox.MODID, "csgo_box"), "inventory");
+            ModelResourceLocation terminalLoc = new ModelResourceLocation(
+                    new ResourceLocation(CsgoBox.MODID, "terminal"), "inventory");
+            BakedModel baseModel = models.get(base);
+            BakedModel terminalModel = models.get(terminalLoc);
+            if (baseModel == null) {
+                LOGGER.warn("[csgo-model] csgo_box model missing at bake time; dynamic box remap skipped");
+                return;
+            }
+            // Missing-model instance: the same baked model vanilla assigns to
+            // items with no models/item/<id>.json (BlockModel.MISSING baked).
+            BakedModel missingModel = models.get(ModelBakery.MISSING_MODEL_LOCATION);
+            ResourceLocation missingSprite = MissingTextureAtlasSprite.getLocation();
+            int swapped = 0;
+            for (ResourceLocation itemId : ForgeRegistries.ITEMS.getKeys()) {
+                if (!CsgoBox.MODID.equals(itemId.getNamespace())) {
+                    continue;
+                }
+                ModelResourceLocation loc = new ModelResourceLocation(itemId, "inventory");
+                BakedModel current = models.get(loc);
+                // Missing-model dynamic boxes: either the entry is absent, is
+                // the vanilla missing-model instance, or its particle is the
+                // missing sprite. Items with a real model are left untouched.
+                boolean isMissing = current == null;
+                if (current != null) {
+                    isMissing = current == missingModel
+                            || current.getParticleIcon().contents().name().equals(missingSprite);
+                }
+                if (!isMissing) {
+                    continue;
+                }
+                Item item = ForgeRegistries.ITEMS.getValue(itemId);
+                BakedModel replacement = item instanceof ItemTerminal && terminalModel != null
+                        ? terminalModel : baseModel;
+                models.put(loc, replacement);
+                swapped++;
+                LOGGER.info("[csgo-model] remapped {} -> {}", itemId, replacement == terminalModel ? "terminal" : "csgo_box");
+            }
+            if (swapped > 0) {
+                LOGGER.info("[csgo-model] remapped {} dynamic box item model(s)", swapped);
+            }
         }
     }
 }

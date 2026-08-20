@@ -1,0 +1,85 @@
+{
+  "name": "#FF5555 武器供应商终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "random": [
+    10,
+    20,
+    40,
+    80,
+    160
+  ],
+  "grade5": [
+    {
+      "id": "minecraft:netherite_sword",
+      "price": 4000
+    },
+    {
+      "id": "minecraft:trident",
+      "price": 4000
+    },
+    {
+      "id": "minecraft:bow",
+      "components": {
+        "minecraft:enchantments": {
+          "minecraft:power": 5
+        }
+      },
+      "price": 3500
+    }
+  ],
+  "grade4": [
+    {
+      "id": "minecraft:diamond_sword",
+      "price": 1500
+    },
+    {
+      "id": "minecraft:crossbow",
+      "components": {
+        "minecraft:enchantments": {
+          "minecraft:multishot": 1
+        }
+      },
+      "price": 1500
+    }
+  ],
+  "grade3": [
+    {
+      "id": "minecraft:golden_sword",
+      "price": 500
+    },
+    {
+      "id": "minecraft:shield",
+      "price": 500
+    }
+  ],
+  "grade2": [
+    {
+      "id": "minecraft:iron_sword",
+      "price": 200
+    },
+    {
+      "id": "minecraft:bow",
+      "price": 200
+    },
+    {
+      "id": "minecraft:arrow",
+      "count": 64,
+      "price": 200
+    }
+  ],
+  "grade1": [
+    {
+      "id": "minecraft:wooden_sword",
+      "price": 50
+    },
+    {
+      "id": "minecraft:stone_axe",
+      "price": 50
+    },
+    {
+      "id": "minecraft:leather_helmet",
+      "price": 50
+    }
+  ]
+}

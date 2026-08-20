@@ -81,7 +81,7 @@ public class CsgoBox {
     /** Items statically registered in {@code ModItems}; never re-added from config JSON. */
     private static final Set<String> STATIC_ITEM_IDS = Set.of(
             "csgo_box", "csgo_key0", "csgo_key1", "csgo_key2", "csgo_key3",
-            "armory_point");
+            "armory_point", "terminal");
 
     public static final String MODID = "csgobox";
     /** Mod version from {@code ModContainer}; consumed by the tutorial download
@@ -367,14 +367,19 @@ public class CsgoBox {
          * Dynamic box items have no model file, so vanilla bakes them to the
          * missing model. 1.21.1 has no per-stack ITEM_MODEL component (a 26.x
          * API), so remap csgobox items stuck with the missing model to the
-         * baked csgo_box model; static items keep their real model.
+         * baked csgo_box model; terminal-type items (ItemTerminal) go to the
+         * terminal model instead so every terminal config file renders as a
+         * terminal. Static items keep their real model.
          */
         @SubscribeEvent
         public static void onModelBaking(ModelEvent.ModifyBakingResult event) {
             Map<ModelResourceLocation, BakedModel> models = event.getModels();
             ModelResourceLocation base = new ModelResourceLocation(
                     ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_box"), "inventory");
+            ModelResourceLocation terminalLoc = new ModelResourceLocation(
+                    ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "terminal"), "inventory");
             BakedModel baseModel = models.get(base);
+            BakedModel terminalModel = models.get(terminalLoc);
             if (baseModel == null) {
                 return;
             }
@@ -385,11 +390,15 @@ public class CsgoBox {
                 }
                 ModelResourceLocation loc = new ModelResourceLocation(itemId, "inventory");
                 BakedModel current = models.get(loc);
-                // Swap missing-model dynamic boxes to the csgo_box model;
-                // items with a real model are left untouched.
+                // Swap missing-model dynamic boxes to the csgo_box model
+                // (terminals to the terminal model); items with a real model
+                // are left untouched.
                 if (current == null
                         || current.getParticleIcon().contents().name().equals(missingSprite)) {
-                    models.put(loc, baseModel);
+                    Item item = BuiltInRegistries.ITEM.get(itemId);
+                    BakedModel replacement = item instanceof ItemTerminal && terminalModel != null
+                            ? terminalModel : baseModel;
+                    models.put(loc, replacement);
                 }
             }
         }

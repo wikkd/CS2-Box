@@ -179,6 +179,8 @@
 
 终端机(`csgobox:terminal`)是一种独立的箱子类物品,拥有独立掉落池:`config/csbox/terminal.json` 中的 `type: terminal` 箱子定义。右键终端机打开终端机界面,而不是宝箱界面。
 
+> **多终端**:与普通宝箱一样,**一个 JSON 文件注册一个终端机**——任意文件只要声明 `"type": "terminal"` 就会注册为对应 id 的终端机(如 `terminal2.json` → `csgobox:terminal2`),拥有自己独立的谈判掉落池。`csgobox:terminal` 本身是静态注册的(与 `csgobox:csgo_box` 同机制),即使 `terminal.json` 不存在物品也始终存在;默认配置只自动生成 `terminal.json`,军火商村民固定出售 `csgobox:terminal`,额外终端机用 `/give` 获取。
+
 - **无需钥匙** —— 默认终端机配置使用 `"key": "minecraft:air"`。
 - **出价以武库点数计价**,按稀有度档位固定:grade1 = 6、grade2 = 10、grade3 = 16、grade4 = 22、grade5 = 30。接受报价即支付该价格。
 - 每次会话进行 5 轮谈判;每份报价带约 3 天的倒计时;出价物品从终端机箱子的各档位掉落池中抽样。

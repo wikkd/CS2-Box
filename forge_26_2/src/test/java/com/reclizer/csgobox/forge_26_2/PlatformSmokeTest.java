@@ -55,6 +55,7 @@ class PlatformSmokeTest {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY3"));
         // 1.0.7-line statically-registered items.
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
+        assertNotNull(ModItems.class.getDeclaredField("ITEM_TERMINAL"));
     }
 
     /**

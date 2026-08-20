@@ -1,0 +1,115 @@
+{
+  "name": "#00E5FF 附魔书终端",
+  "type": "terminal",
+  "drop": 0.04,
+  "random": [
+    15,
+    30,
+    60,
+    120,
+    220
+  ],
+  "grade5": [
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:mending": 1
+        }
+      },
+      "price": 4000
+    },
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:sharpness": 5
+        }
+      },
+      "price": 3800
+    }
+  ],
+  "grade4": [
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:protection": 4
+        }
+      },
+      "price": 1500
+    },
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:efficiency": 5
+        }
+      },
+      "price": 1500
+    }
+  ],
+  "grade3": [
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:fire_aspect": 2
+        }
+      },
+      "price": 500
+    },
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:looting": 3
+        }
+      },
+      "price": 500
+    }
+  ],
+  "grade2": [
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:unbreaking": 3
+        }
+      },
+      "price": 200
+    },
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:silk_touch": 1
+        }
+      },
+      "price": 200
+    }
+  ],
+  "grade1": [
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:fortune": 1
+        }
+      },
+      "price": 50
+    },
+    {
+      "id": "minecraft:enchanted_book",
+      "components": {
+        "minecraft:stored_enchantments": {
+          "minecraft:smite": 2
+        }
+      },
+      "price": 50
+    }
+  ],
+  "entity": [
+    "minecraft:witch"
+  ]
+}

@@ -61,6 +61,11 @@ class PlatformSmokeTest {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
     }
 
+    @Test
+    void terminalIsStaticallyRegistered() throws NoSuchFieldException {
+        assertNotNull(ModItems.class.getDeclaredField("ITEM_TERMINAL"));
+    }
+
     /**
      * The village-exclusive premium box was permanently removed on
      * 2026-08-19; the field must never come back.
