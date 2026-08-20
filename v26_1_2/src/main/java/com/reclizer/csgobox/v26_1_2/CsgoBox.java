@@ -88,6 +88,9 @@ public class CsgoBox {
     public static final CsboxConfig CONFIG;
     public static final ModConfigSpec CONFIG_SPEC;
     public static Stat<Identifier> OPENED_BOXES_STAT;
+    public static final Identifier TERMINAL_BUYS_STAT_ID =
+            Identifier.fromNamespaceAndPath(CsgoBox.MODID, "terminal_buys");
+    public static Stat<Identifier> TERMINAL_BUYS_STAT;
 
     /** Background pool for {@code PacketCsgoBulkProgress} rolls (2 daemon
      *  threads; further requests queue). Shut down on mod unload. */
@@ -125,6 +128,7 @@ public class CsgoBox {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
+        modEventBus.addListener(this::resolveTerminalBuysStat);
         modEventBus.addListener(this::registerDynamicBoxItems);
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
@@ -135,6 +139,7 @@ public class CsgoBox {
             ResourceKey<?> registryKey = event.getRegistryKey();
             if (registryKey.equals(Registries.CUSTOM_STAT)) {
                 event.register(Registries.CUSTOM_STAT, OpenedBoxTrigger.STAT_ID, () -> OpenedBoxTrigger.STAT_ID);
+                event.register(Registries.CUSTOM_STAT, TERMINAL_BUYS_STAT_ID, () -> TERMINAL_BUYS_STAT_ID);
             } else if (registryKey.equals(Registries.TRIGGER_TYPE)) {
                 event.register(Registries.TRIGGER_TYPE, OpenedBoxTrigger.ID, () -> OpenedBoxTrigger.INSTANCE);
                 event.register(Registries.TRIGGER_TYPE, ModLoadedTrigger.ID, () -> ModLoadedTrigger.INSTANCE);
@@ -215,6 +220,15 @@ public class CsgoBox {
                     "Custom stat " + OpenedBoxTrigger.STAT_ID + " not registered — CUSTOM_STAT registry missing entry");
         }
         LOGGER.info("Resolved custom stat {} -> {}", OpenedBoxTrigger.STAT_ID, OPENED_BOXES_STAT);
+    }
+
+    private void resolveTerminalBuysStat(final FMLCommonSetupEvent event) {
+        TERMINAL_BUYS_STAT = Stats.CUSTOM.get(TERMINAL_BUYS_STAT_ID);
+        if (TERMINAL_BUYS_STAT == null) {
+            throw new IllegalStateException(
+                    "Custom stat " + TERMINAL_BUYS_STAT_ID + " not registered — CUSTOM_STAT registry missing entry");
+        }
+        LOGGER.info("Resolved custom stat {} -> {}", TERMINAL_BUYS_STAT_ID, TERMINAL_BUYS_STAT);
     }
 
     public static boolean debug() {

@@ -61,6 +61,9 @@ public class CsgoBox {
     public static final CsboxConfig CONFIG;
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static Stat<ResourceLocation> OPENED_BOXES_STAT;
+    public static final ResourceLocation TERMINAL_BUYS_STAT_ID =
+            new ResourceLocation(CsgoBox.MODID, "terminal_buys");
+    public static Stat<ResourceLocation> TERMINAL_BUYS_STAT;
 
     public static final ExecutorService BULK_COMPUTE_POOL = Executors.newFixedThreadPool(2, new ThreadFactory() {
         private final AtomicInteger counter = new AtomicInteger();
@@ -94,6 +97,7 @@ public class CsgoBox {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
+        modEventBus.addListener(this::resolveTerminalBuysStat);
         modEventBus.addListener(this::registerDynamicBoxItems);
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
@@ -105,6 +109,7 @@ public class CsgoBox {
                 event.register(Registries.CUSTOM_STAT, helper -> {
                     // ResourceLocation 重载：String 重载会再拼一次 modid（csgobox:csgobox:opened_boxes 非法）
                     helper.register(OpenedBoxTrigger.STAT_ID, OpenedBoxTrigger.STAT_ID);
+                    helper.register(TERMINAL_BUYS_STAT_ID, TERMINAL_BUYS_STAT_ID);
                 });
             }
         });
@@ -154,6 +159,15 @@ public class CsgoBox {
                     "Custom stat " + OpenedBoxTrigger.STAT_ID + " not registered — CUSTOM_STAT registry missing entry");
         }
         LOGGER.info("Resolved custom stat {} -> {}", OpenedBoxTrigger.STAT_ID, OPENED_BOXES_STAT);
+    }
+
+    private void resolveTerminalBuysStat(final FMLCommonSetupEvent event) {
+        TERMINAL_BUYS_STAT = Stats.CUSTOM.get(TERMINAL_BUYS_STAT_ID);
+        if (TERMINAL_BUYS_STAT == null) {
+            throw new IllegalStateException(
+                    "Custom stat " + TERMINAL_BUYS_STAT_ID + " not registered — CUSTOM_STAT registry missing entry");
+        }
+        LOGGER.info("Resolved custom stat {} -> {}", TERMINAL_BUYS_STAT_ID, TERMINAL_BUYS_STAT);
     }
 
     public static boolean debug() {

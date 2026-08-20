@@ -198,5 +198,6 @@
   "jei.csgobox.recipe.entity_rate": "%s drops %s%%",
   "jei.csgobox.tooltip.grade_weight": "[%s] weight %s/%s",
   "jei.csgobox.tooltip.item_chance": "Per-item chance %s%%",
-  "stat.csgobox.opened_boxes": "CS Boxes Opened"
+  "stat.csgobox.opened_boxes": "CS Boxes Opened",
+  "stat.csgobox.terminal_buys": "Terminal Purchases"
 }

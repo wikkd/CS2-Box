@@ -198,5 +198,6 @@
   "jei.csgobox.recipe.entity_rate": "%s 掉落 %s%%",
   "jei.csgobox.tooltip.grade_weight": "[%s] 权重 %s/%s",
   "jei.csgobox.tooltip.item_chance": "单件概率 %s%%",
-  "stat.csgobox.opened_boxes": "开启的 CS 箱子数"
+  "stat.csgobox.opened_boxes": "开启的 CS 箱子数",
+  "stat.csgobox.terminal_buys": "终端机购买次数"
 }

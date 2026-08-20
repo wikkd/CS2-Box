@@ -140,6 +140,7 @@ public class PacketTerminalBuy {
             sp.drop(toGive, false);
         }
         session.model().buyForced(worldMs);
+        sp.awardStat(CsgoBox.TERMINAL_BUYS_STAT, 1);
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);

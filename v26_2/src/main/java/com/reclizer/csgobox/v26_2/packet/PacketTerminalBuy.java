@@ -162,6 +162,7 @@ public record PacketTerminalBuy(
             sp.drop(toGive, false);
         }
         session.model().buyForced(worldMs);
+        sp.awardStat(CsgoBox.TERMINAL_BUYS_STAT, 1);
         // A purchase consumes the terminal machine: the item and its uid are
         // destroyed, and the session lock is released immediately.
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
