@@ -26,6 +26,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
 | `v26_2/` | 26.2 | 26.2.0.59 | 25 `--enable-preview` | 最新版；decoupled API + PIP 3D 重写 |
 | `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | 实验模块：随 v26_1_2 同步开发，不入正式发行矩阵 |
 | `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | 实验模块：1.0.7 线已追平，不入正式发行矩阵 |
+| `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | 实验模块：1.20.1 回移（ForgeGradle 7.x），不入正式发行矩阵 |
 
 > **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库，最后状态保留在 tag `eol-legacy-21x-1.0.6`；旧版本玩家仍可下载既有发布产物。
 
@@ -40,6 +41,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
    - MC 26.1.2 → NeoForge **26.1.2.95**（loader 11+）
    - MC 26.2 → NeoForge **26.2.0.59**
    - Forge 版（实验模块）→ MinecraftForge **26.1.2-64.1.0**，jar 名为 `csgobox-forge-26.1.2-<mod_version>.jar`
+   - Forge 1.20.1 版（实验模块）→ MinecraftForge **47.4.22**，jar 名为 `csgobox-forge-1.20.1-<mod_version>.jar`
 2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：`csgobox-<mc>-1.0.6.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
 3. 将 jar 放入 Minecraft 客户端的 `mods/` 文件夹。
 4. 启动游戏，世界内用 `/give @p csgobox:csgo_box` 获取箱子即可开箱。
@@ -50,13 +52,13 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
 
 **前置要求**
 
-| 要求 | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 |
-|---|---|---|---|
-| Java JDK | 21 | 25（`--enable-preview`） | 25（`--enable-preview`） |
-| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 |
-| NeoForge / Forge | 21.1.248+ | 26.1.2.95 / 26.2.0.59（loader 11+） | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 |
-| Gradle | 9.5.1（wrapper 自动下载，无需手动安装） | 同左 | 同左 |
-| NeoGradle / ForgeGradle | 7.1.38 | 同左 | ForgeGradle 7.0.31/7.0.34 |
+| 要求 | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 | forge_1_20_1 |
+|---|---|---|---|---|
+| Java JDK | 21 | 25（`--enable-preview`） | 25（`--enable-preview`） | 17 |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 | 1.20.1 |
+| NeoForge / Forge | 21.1.248+ | 26.1.2.95 / 26.2.0.59（loader 11+） | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 | MinecraftForge 47.4.22 |
+| Gradle | 9.5.1（wrapper 自动下载，无需手动安装） | 同左 | 同左 | 同左 |
+| NeoGradle / ForgeGradle | 7.1.38 | 同左 | ForgeGradle 7.0.31/7.0.34 | ForgeGradle [7.0.17,8) |
 
 > 互联网连接：首次构建需下载 NeoForged userdev 与依赖。
 
@@ -208,6 +210,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 - `CONFIG` 是 `public static final`，不要写 `null` 守卫。
 - **不使用 Cloth Config**，仅用 `ModConfigSpec`。
 - 升级版本号时四处同步：`gradle.properties` 的 `mod_version` + 各平台 `neoforge.mods.toml`（模板变量自动注入）+ `CHANGELOG.md` + `README.md`；一致性由 `scripts/check-version.sh` 守护。
+- **`premium_supply_box` / `ItemPremiumBox` 已永久移除（2026-08-19）**：该「军火商高级箱」物品及其全部痕迹（代码 / 资源 / 配置 / 文档）已被彻底删除，**请勿再次引入**——`forge_26_1_2` / `forge_26_2` 的 `PlatformSmokeTest` 反向守卫会直接断言失败。
 
 ### 报告问题
 

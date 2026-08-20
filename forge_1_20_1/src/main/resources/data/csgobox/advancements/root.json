@@ -1,0 +1,21 @@
+{
+  "criteria": {
+    "requirement": {
+      "trigger": "csgobox:mod_loaded"
+    }
+  },
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.root.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.root.description"
+    },
+    "icon": {
+      "item": "minecraft:chest"
+    },
+    "show_toast": false,
+    "announce_to_chat": false,
+    "background": "csgobox:textures/gui/advancements/backgrounds/background_root.png"
+  }
+}

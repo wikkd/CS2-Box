@@ -30,6 +30,10 @@ minecraft {
             if (project.hasProperty('gameDir')) {
                 workingDir = project.file(project.property('gameDir'))
             }
+            if (project.hasProperty('skipAssets')) {
+                // slime-launcher: 离线环境跳过资产下载（DISABLE_ASSETS 在 Main 类加载时静态初始化，必须是 JVM -D 参数；缺失文件运行时静默降级）
+                jvmArgs '-Dnet.minecraftforge.launcher.skip.assets=true'
+            }
         }
         register('server') {
             args '--nogui'
@@ -76,9 +80,22 @@ repositories {
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${mc_version_forge_1_20_1}-${forge_version_forge_1_20_1}")
 
+    // TACZ (Timeless & Classics Guns: Zero, official 1.20.1) — optional
+    // compileOnly dependency for TACZ item validation + the CsLookItemScreen
+    // inspect viewport. The jar is NOT committed (~55MB): run
+    // scripts/download-tacz-1201.sh to populate local-repo first. Guarded at
+    // runtime via ModList.isLoaded("tacz").
+    compileOnly 'com.tacz:tacz:1.1.8-hotfix'
+    // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer; extracted
+    // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
+    compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.2-forge+mc1.20.1'
+
     // JEI (compileOnly — optional at runtime)
     compileOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge-api:${jei_version_forge_1_20_1}"
-    runtimeOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge:${jei_version_forge_1_20_1}"
+    // runtimeOnly 需显式 -PwithJei：userdev 环境下 JEI 构造报 NoSuchMethodError（I18n SRG 名未重映射），E2E 测试不需要 JEI
+    if (project.hasProperty('withJei')) {
+        runtimeOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge:${jei_version_forge_1_20_1}"
+    }
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

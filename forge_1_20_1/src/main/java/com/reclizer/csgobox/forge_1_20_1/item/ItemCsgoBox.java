@@ -127,9 +127,15 @@ public class ItemCsgoBox extends Item {
 
     // ---- Open screen (client-side entry, overridden by ItemTerminal) ----
 
+    /**
+     * Client-side open entry: plays the open sound and opens the classic crate
+     * screen (Shift → bulk overview). The terminal machine overrides this in
+     * {@link ItemTerminal}. Only called from {@code ClickEvent} on the client;
+     * never invoke on a dedicated server. The actual screen code lives in
+     * {@link com.reclizer.csgobox.forge_1_20_1.gui.BoxScreenOpener} so server-side class loading stays client-free.
+     */
     public void openScreen(ItemStack stack) {
-        // Classic crate screen opener — will be wired in a later phase
-        // when gui/ classes are ported
+        com.reclizer.csgobox.forge_1_20_1.gui.BoxScreenOpener.openClassic(stack);
     }
 
     public static int[] getRandom(ItemStack stack) {

@@ -1,0 +1,27 @@
+{
+  "parent": "csgobox:root",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.shopper.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.shopper.description"
+    },
+    "icon": {
+      "item": "minecraft:emerald"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "open_200_boxes": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "count": 200
+      }
+    }
+  },
+  "rewards": {}
+}

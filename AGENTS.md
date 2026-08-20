@@ -12,9 +12,10 @@
 - **每次 Gradle 调用只能构建一个 MC 版本**（NeoGradle userdev IDEA 扩展冲突，历史限制）。用 `-Pactive_versions=<v>` 覆盖 `gradle.properties` 的默认值（当前默认 26.1.2）。
 - **NeoGradle 全平台统一 7.1.38**（含 v1_21_1/3/4/5——曾用 7.0.171，与 Gradle wrapper 9.5.1 配置阶段不兼容已升级）。wrapper 9.5.1 满足全部模块（forge_26_1_2 的 ForgeGradle 7 要求 ≥9.3）。
 - **3 个平台模块**：`v1_21_1`（NeoForge 21.x，旧 API）+ `v26_1_2` / `v26_2`（NeoForge 26.x，decoupled API）。**已归档（EOL）平台** `v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` / `v1_21_11` 于 2026-08-09 从仓库删除，最后状态在 tag `eol-legacy-21x-1.0.6`，复活需从该 tag 检出。
-- **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。
+- **v1_21_1 有 compileOnly TACZ 依赖**（永恒枪械工坊：零，检视视口集成）：jar 不入库（~57MB，仓库惯例 `*.jar` 全局忽略、只提交 pom），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jarjar 提取编译所需的 `simplebedrockmodel`（CI 自动执行）。运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境功能静默降级。**`forge_1_20_1` 同样有 TACZ 依赖**（official 1.20.1 构建），脚本 `scripts/download-tacz-1201.sh`（产物同机制，jar 入 `local-repo/` 不提交，CI 自动执行）。
 - **同步开发模块 `forge_26_1_2`**（MinecraftForge 26.1.2-64.1.0，Java 25）：已注册在 `settings.gradle`（`-Pactive_versions=forge-26.1.2`），随 **1.0.6 发行** 纳入 git 管理，自 **1.0.7 线起纳入同步开发**——与 `v26_1_2` 基准保持特性同步（同一 `mod_version`，经 `scripts/port-forge-2612.py` 机械转换 + 手工适配，见「平台模块镜像纪律」§forge 同步），`build.gradle` 的 1.0.7 线排除清单已随首轮同步删除；**不在 CI 矩阵**，不入三平台正式发行矩阵（仍为实验模块，勿当正式平台发布）。测试流程与发布门禁见 `docs/TESTING-FORGE-2612.md`。
 - **实验模块 `forge_26_2`**（MinecraftForge 26.2-65.1.1，Java 25，2026-08-14 首建）：注册在 `settings.gradle`（`-Pactive_versions=forge-26.2`）。**1.0.7 线已追平**：以 `forge_26_1_2`（1.0.6/1.0.7 同步线）为基准整模块迁移，经 `scripts/port-forge-262.py` 机械移植（包名 `forge_26_1_2 → forge_26_2` + Forge 26.1.2→26.2 API 映射）+ 手工适配（`Options.hideGui` 移除 → `utils/HudVisibility`、`setScreen` → `setScreenAndShow`、advancement 包迁移、PIP 渲染器保持 **Forge 欧拉角方案**——`event.register(new Icon3DRenderer())` + `getRenderState().addPicturesInPictureState`，与 NeoForge 26.2 的 Quat/Supplier 方案不同），`build.gradle` 的 1.0.7 线排除清单已删除，`PlatformSmokeTest` 已改为断言 1.0.7 物品存在。**不在 CI 矩阵**、不参与 3 平台镜像纪律与 AnimRenderOps 漂移门禁（与 `forge_26_1_2` 同策略）。2026-08-18 全面审计确认：`test-forge-262.sh` 7/7 PASS，5 平台 `clean compileJava` 全通过，版本四同步 OK，资源一致性已补齐（4 个物品定义从 `forge_26_1_2` 补入）。测试流程与迁移记录见 `docs/TESTING-FORGE-262.md`。
+- **实验模块 `forge_1_20_1`**（MinecraftForge 1.20.1-47.4.22，Java 17，ForgeGradle 7.x，2026-08-18 首建）：注册在 `settings.gradle`（`-Pactive_versions=forge-1.20.1`）。1.0.7 线功能向 MC 1.20.1 的回移，以 `forge_26_1_2` 为基准、复用 `common/` 全部纯 Java 逻辑；三大重写区域：Networking 改 `SimpleChannel`（14 packet）、Capability 走 `LazyOptional` + `AttachCapabilitiesEvent`、渲染层 `GuiGraphics` 直调（**无 PIP 系统**，普通物品 `AnimRenderOps.renderItem3D` 降级 2D、`supports3D()` 返回 false，但 **TACZ 枪械经 `renderGunModel3D` 全 3D**——`RenderSystem.getModelViewStack()` 在 1.20.1 返回 `PoseStack`，用 `pushPose`+`mulPoseMatrix` 而非 26.x 的 Matrix4fStack 方案）；DataComponent 存储回退 ItemStack NBT，`StreamCodec`/`RegistryFriendlyByteBuf` 改 `FriendlyByteBuf` 手动序列化。TACZ 检视（`TaczInspectViewport`+`BoxItemCodec.validateTacz`）与 TACZ 依赖同 `v1_21_1` 机制（`scripts/download-tacz-1201.sh`，gun tag 读顶层 ItemStack NBT）。JEI 未实现（依赖已声明）。**不在 CI 矩阵**、不参与 3 平台镜像纪律与 AnimRenderOps 漂移门禁（与其他 forge 模块同策略），不入正式发行矩阵。测试流程见 `docs/TESTING-FORGE-1201.md`，迁移计划见 `.opencode/plans/2026-08-18-forge-1-20-1-port.md`。
 
 ## 架构约束（CONSTRAINT-001）
 
@@ -90,21 +91,21 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 
 ### 平台 Java 文件差异矩阵（2026-08-18 审计）
 
-| 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 |
-|------|:-------:|:-------:|:-----:|:------------:|:----------:|
-| TACZ compat (2 文件) | ✅ | — | — | — | — |
-| `ButtonPalette` | — | ✅ | ✅ | — | — |
-| `HudVisibility` | — | — | ✅ | — | ✅ |
-| JEI (4 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ |
-| `PacketSyncBoxDefinitions` | — | ✅ | ✅ | — | — |
-| `Networking`（Forge 专用） | — | — | — | ✅ | ✅ |
-| `BoxJsonSchemaValidator` | — | — | — | — | ✅ |
-| `TutorialFetcher` + `TutorialSources` | — | — | — | — | ✅ |
-| **文件数** | **80** | **81** | **82** | **77** | **81** |
+| 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
+|------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|
+| TACZ compat (2 文件) | ✅ | — | — | — | — | ✅ |
+| `ButtonPalette` | — | ✅ | ✅ | — | — | ✅ |
+| `HudVisibility` | — | — | ✅ | — | ✅ | — |
+| JEI (4 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `PacketSyncBoxDefinitions` | — | ✅ | ✅ | — | — | — |
+| `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
+| `BoxJsonSchemaValidator` | — | — | — | — | ✅ | — |
+| `TutorialFetcher` + `TutorialSources` | — | — | — | — | ✅ | — |
+| **文件数** | **80** | **81** | **82** | **77** | **81** | **77** |
 
-- TACZ：仅 `v1_21_1` 有 `compileOnly` 依赖，其它平台不需要
+- TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）与 `forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）
 - JEI：NeoForge 3 平台已同步；**Forge 2 平台均缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
-- Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常
+- Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）
 - Tutorial/Validator：`forge_26_2` 有 3 个教程系统文件（从 `forge_26_1_2` 1.0.6 带入），其它平台还未同步
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`

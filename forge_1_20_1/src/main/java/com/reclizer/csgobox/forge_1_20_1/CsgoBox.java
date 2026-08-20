@@ -103,7 +103,8 @@ public class CsgoBox {
         modEventBus.addListener((RegisterEvent event) -> {
             if (event.getRegistryKey().equals(Registries.CUSTOM_STAT)) {
                 event.register(Registries.CUSTOM_STAT, helper -> {
-                    helper.register(OpenedBoxTrigger.STAT_ID.toString(), OpenedBoxTrigger.STAT_ID);
+                    // ResourceLocation 重载：String 重载会再拼一次 modid（csgobox:csgobox:opened_boxes 非法）
+                    helper.register(OpenedBoxTrigger.STAT_ID, OpenedBoxTrigger.STAT_ID);
                 });
             }
         });
@@ -160,7 +161,8 @@ public class CsgoBox {
     }
 
     private void registerDynamicBoxItems(final RegisterEvent event) {
-        if (!event.getRegistryKey().equals(ForgeRegistries.ITEMS)) {
+        // 注意：必须用 Registries.ITEM（ResourceKey）；ForgeRegistries.ITEMS 是 registry 对象，equals 永假
+        if (!event.getRegistryKey().equals(Registries.ITEM)) {
             return;
         }
         Path configDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
@@ -204,7 +206,7 @@ public class CsgoBox {
                 }
                 final ResourceLocation boxId = itemId;
                 final boolean isTerminal = "terminal".equals(BoxJsonLoader.readType(file));
-                event.register(ForgeRegistries.ITEMS.getRegistryKey(), helper -> {
+                event.register(Registries.ITEM, helper -> {
                     ItemCsgoBox item;
                     if (isTerminal) {
                         item = new ItemTerminal(new Item.Properties()) {
@@ -264,10 +266,10 @@ public class CsgoBox {
             LOGGER.info("CS2 Box client setup complete");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
             event.enqueueWork(() -> {
-                // GUI screen registration will be added when gui/ classes are ported
-                // net.minecraft.client.gui.screens.MenuScreens.register(
-                //         ModMenus.ARMORY_RECYCLER.get(),
-                //         com.reclizer.csgobox.forge_1_20_1.gui.ArmoryRecyclerScreen::new);
+                // 1.20.1 屏幕注册：MenuScreens.register 必须在主线程执行（FMLClientSetupEvent.enqueueWork）
+                net.minecraft.client.gui.screens.MenuScreens.register(
+                        ModMenus.ARMORY_RECYCLER.get(),
+                        com.reclizer.csgobox.forge_1_20_1.gui.ArmoryRecyclerScreen::new);
             });
         }
     }
