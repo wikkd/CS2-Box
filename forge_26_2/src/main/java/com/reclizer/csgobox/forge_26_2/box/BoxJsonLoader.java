@@ -263,6 +263,14 @@ public final class BoxJsonLoader {
         recordLoadError(file, fileName, reason, -1, -1);
     }
 
+    /** Non-fatal diagnostics (partially dropped components, migrated formats):
+     *  kept items surface via the same error listing, marked as warnings. */
+    private static void recordLoadWarning(Path file, String fileName, String reason) {
+        String boxId = fileName.endsWith(".json")
+                ? fileName.substring(0, fileName.length() - 5) : fileName;
+        LAST_LOAD_ERRORS.add(new LoadError(file, boxId, reason, -1, -1, true));
+    }
+
     /** Extracts {@code at line N column M} from a Gson error message (Gson 2.13+
      *  removed {@code getLocation()}); {@code {-1,-1}} when not found. */
     private static final java.util.regex.Pattern GSON_LOCATION_PATTERN =
@@ -332,6 +340,9 @@ public final class BoxJsonLoader {
                     for (JsonElement elem : itemsArr) {
                         BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
                         if (outcome.isSuccess()) {
+                            for (String warning : outcome.warnings()) {
+                                recordLoadWarning(file, fileName, "Item: " + warning);
+                            }
                             items.add(outcome.stack());
                         } else {
                             recordLoadError(file, fileName,
