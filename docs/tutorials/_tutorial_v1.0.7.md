@@ -87,7 +87,7 @@ Each entry inside a `grade*` array is an item object.
 |--------------|-------------------|----------|---------|----------------------------------------------------------------------|
 | `id`         | resource_location | yes      | -       | Item id, e.g. `minecraft:diamond_sword`. Unknown ids are skipped.    |
 | `count`      | integer           | no       | `1`     | Stack size. Most items accept 1-64.                                  |
-| `price`      | integer           | no       | -       | Reserved for terminal item valuation; must be a non-negative integer. Not used by the economy yet — see [Terminal machine](#terminal-machine-107). |
+| `price`      | integer           | no       | -       | The item's terminal purchase price in Armory Points (falls back to the grade-default price if unset). Must be a non-negative integer — see [Terminal machine](#terminal-machine-107). |
 | `components` | object            | no       | -       | Minecraft 1.21+ data components (preferred over `tag`).              |
 | `tag`        | string            | no       | -       | Legacy NBT tag string. Kept for backwards compatibility with 1.20.x. |
 
@@ -200,20 +200,20 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
 > obtained via `/give`.
 
 - **No key required** — the default terminal config uses `"key": "minecraft:air"`.
-- **Offers are priced in Armory Points**, fixed per rarity grade: grade1 = 6,
-  grade2 = 10, grade3 = 16, grade4 = 22, grade5 = 30. Pay the price to accept;
-  accepted items carry a **random wear value** (rolled like box openings,
-  uniform 0..1; durability is reduced by the wear percentage when
+- **Offers are priced in Armory Points**. The price is the per-item `price`
+  field in the box JSON if set, otherwise it falls back to the default
+  grade-level price (grade1 = 6, grade2 = 10, grade3 = 16, grade4 = 22,
+  grade5 = 30). Accepted items carry a **random wear value** (rolled like box
+  openings, uniform 0..1; durability is reduced by the wear amount when
   `damageItemByWear` is on). Items **without a durability bar** take a wear
-  penalty instead: every 5% of wear adds 1 Armory Point (up to +20 at
-  Battle-Scarred), so the more worn the item, the more it costs.
+  penalty instead: every 5% of wear adds 1 Armory Point on top of the item
+  price (up to +20 at Battle-Scarred), so the more worn the item, the more it
+  costs.
 - Each session runs a 5-round negotiation; every offer carries a ~3-day
   countdown, and the offered item is sampled from the terminal box's grade
   pools.
 - Sources: creative tab, or the arms-dealer villager (level 4) for 12 Armory
   Points.
-- The per-item `price` field in a terminal box is validated but reserved — the
-  terminal economy uses the fixed per-grade prices above.
 
 ## Armory economy (1.0.7)
 

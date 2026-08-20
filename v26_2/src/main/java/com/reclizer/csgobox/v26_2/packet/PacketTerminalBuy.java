@@ -129,7 +129,9 @@ public record PacketTerminalBuy(
         if (grade < 1 || grade > 5) {
             return invalid;
         }
-        int basePrice = NegotiationModel.priceForGrade(grade);
+        // Use the per-item price from the JSON config, falling back to the
+        // default grade-level price if none was set.
+        int basePrice = roundData.price() >= 0 ? roundData.price() : NegotiationModel.priceForGrade(grade);
         int price = basePrice;
         // Items without a durability bar can't take wear damage, so the
         // offered wear becomes an Armory Point penalty — the more worn the

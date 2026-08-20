@@ -36,18 +36,21 @@ public class PacketTerminalState {
         private final NegotiationModel.Offer offer;
         private final ItemStack item;
         private final int grade;
+        private final int price;
 
-        public RoundItem(int round, NegotiationModel.Offer offer, ItemStack item, int grade) {
+        public RoundItem(int round, NegotiationModel.Offer offer, ItemStack item, int grade, int price) {
             this.round = round;
             this.offer = offer;
             this.item = item == null ? ItemStack.EMPTY : item.copy();
             this.grade = grade;
+            this.price = price;
         }
 
         public int round() { return round; }
         public NegotiationModel.Offer offer() { return offer; }
         public ItemStack item() { return item; }
         public int grade() { return grade; }
+        public int price() { return price; }
     }
 
     public PacketTerminalState(String boxId, String terminalUid, long requestId,
@@ -88,7 +91,8 @@ public class PacketTerminalState {
             CompoundTag tag = buf.readNbt();
             ItemStack item = tag == null ? ItemStack.EMPTY : ItemStack.of(tag);
             int grade = buf.readVarInt();
-            r.add(new RoundItem(ri, offer, item, grade));
+            int price = buf.readVarInt();
+            r.add(new RoundItem(ri, offer, item, grade, price));
         }
         this.rounds = r;
         CompoundTag siTag = buf.readNbt();
@@ -117,6 +121,7 @@ public class PacketTerminalState {
             writeOffer(buf, ri.offer());
             buf.writeNbt(ri.item().save(new CompoundTag()));
             buf.writeVarInt(ri.grade());
+            buf.writeVarInt(ri.price());
         }
         buf.writeNbt(sessionItem.save(new CompoundTag()));
     }
@@ -124,7 +129,7 @@ public class PacketTerminalState {
     public static PacketTerminalState fromSession(TerminalSession session, long requestId) {
         List<RoundItem> rounds = new ArrayList<>();
         for (TerminalRoundData rd : session.rounds().values()) {
-            rounds.add(new RoundItem(rd.round(), rd.offer(), rd.item(), rd.grade()));
+            rounds.add(new RoundItem(rd.round(), rd.offer(), rd.item(), rd.grade(), rd.price()));
         }
         NegotiationModel.Snapshot snap = session.model().snapshot();
         return new PacketTerminalState(

@@ -114,7 +114,9 @@ public class PacketTerminalBuy {
         if (grade < 1 || grade > 5) {
             return invalid;
         }
-        int basePrice = NegotiationModel.priceForGrade(grade);
+        // Use the per-item price from the JSON config, falling back to the
+        // default grade-level price if none was set.
+        int basePrice = roundData.price() >= 0 ? roundData.price() : NegotiationModel.priceForGrade(grade);
         int price = basePrice;
         if (!roundData.item().isDamageableItem()) {
             price += WearPenalty.surcharge(roundData.offer().wearVal());

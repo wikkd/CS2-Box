@@ -95,7 +95,7 @@
 
 - `id`:物品命名空间 ID
 - `count`:数量(默认 1)
-- `price`(可选):整数,**该物品在 0 磨损下的基准价格/价值**;必须为非负整数,缺省则无价格。终端机默认配置按档位给出阶梯价(grade1=50 / grade2=200 / grade3=500 / grade4=1500 / grade5=4000,均为 [PLACEHOLDER],待经济系统联调重定)
+- `price`(可选):整数,**该物品在终端机购买的成交价(武库点数)**;必须为非负整数,缺省则回退到该档位的默认价(`NegotiationModel.GRADE_PRICE`:grade1=6 / grade2=10 / grade3=16 / grade4=22 / grade5=30)。购买时实际成交价 = 该物品 `price`(或默认档位价)+ 磨损惩罚(仅对无耐久条物品,每 5% 磨损 +1 点)。
 - `components`(可选):Minecraft 1.21+ data components
 - 旧版 `tag` 字符串字段**仍可加载**(向后兼容)
 

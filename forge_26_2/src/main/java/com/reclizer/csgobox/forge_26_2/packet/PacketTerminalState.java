@@ -38,7 +38,8 @@ public record PacketTerminalState(
 ) implements CustomPacketPayload {
 
     /** One server-sampled round: script offer + actual item + box grade. */
-    public record RoundItem(int round, NegotiationModel.Offer offer, ItemStack item, int grade) {
+    /** One server-sampled round: script offer + actual item + box grade + terminal price. */
+    public record RoundItem(int round, NegotiationModel.Offer offer, ItemStack item, int grade, int price) {
     }
 
     public static final Type<PacketTerminalState> TYPE = new Type<>(
@@ -52,7 +53,7 @@ public record PacketTerminalState(
     public static PacketTerminalState fromSession(TerminalSession session, long requestId) {
         List<RoundItem> rounds = new ArrayList<>();
         for (TerminalRoundData rd : session.rounds().values()) {
-            rounds.add(new RoundItem(rd.round(), rd.offer(), rd.item(), rd.grade()));
+            rounds.add(new RoundItem(rd.round(), rd.offer(), rd.item(), rd.grade(), rd.price()));
         }
         NegotiationModel.Snapshot snap = session.model().snapshot();
         return new PacketTerminalState(
@@ -131,6 +132,7 @@ public record PacketTerminalState(
             writeOffer(buf, ri.offer());
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, ri.item());
             buf.writeVarInt(ri.grade());
+            buf.writeVarInt(ri.price());
         }
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, packet.sessionItem);
     }
@@ -156,7 +158,8 @@ public record PacketTerminalState(
             NegotiationModel.Offer offer = readOffer(buf);
             ItemStack item = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
             int grade = buf.readVarInt();
-            rounds.add(new RoundItem(r, offer, item, grade));
+            int price = buf.readVarInt();
+            rounds.add(new RoundItem(r, offer, item, grade, price));
         }
         ItemStack sessionItem = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         return new PacketTerminalState(boxId, terminalUid, requestId, round, status, generation, cap, countdownDeadlineMs,

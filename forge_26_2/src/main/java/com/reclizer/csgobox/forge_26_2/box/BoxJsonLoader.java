@@ -337,6 +337,7 @@ public final class BoxJsonLoader {
                 if (json.has(gradeKey)) {
                     JsonArray itemsArr = json.getAsJsonArray(gradeKey);
                     List<ItemStack> items = new ArrayList<>();
+                    List<Integer> prices = new ArrayList<>();
                     for (JsonElement elem : itemsArr) {
                         BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
                         if (outcome.isSuccess()) {
@@ -344,13 +345,15 @@ public final class BoxJsonLoader {
                                 recordLoadWarning(file, fileName, "Item: " + warning);
                             }
                             items.add(outcome.stack());
+                            // Read per-item terminal price from JSON; -1 means "use default grade price".
+                            prices.add(parsePrice(elem));
                         } else {
                             recordLoadError(file, fileName,
                                     "Item: " + outcome.error());
                         }
                     }
                     if (!items.isEmpty()) {
-                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items));
+                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items, prices));
                     }
                 }
             }
@@ -555,5 +558,22 @@ public final class BoxJsonLoader {
 
     private static float getFloat(JsonObject json, String key, float defaultValue) {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
+    }
+
+
+    /**
+     * Read the per-item terminal price from a JSON element. If the element is
+     * an object with a {@code price} field, returns its int value; otherwise
+     * returns -1, meaning "use the default grade-level price".
+     */
+    private static int parsePrice(JsonElement elem) {
+        try {
+            if (elem.isJsonObject() && elem.getAsJsonObject().has("price")) {
+                return elem.getAsJsonObject().get("price").getAsInt();
+            }
+        } catch (Exception ignored) {
+            // Malformed price field — fall through to default.
+        }
+        return -1;
     }
 }

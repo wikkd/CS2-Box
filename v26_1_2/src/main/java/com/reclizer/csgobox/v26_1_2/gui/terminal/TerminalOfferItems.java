@@ -20,6 +20,7 @@ public final class TerminalOfferItems {
     private static final Map<Integer, ItemStack> ROUND_ITEM = new HashMap<>();
     private static final Map<Integer, Integer> ROUND_GRADE = new HashMap<>();
     private static final Map<Integer, Float> ROUND_WEAR = new HashMap<>();
+    private static final Map<Integer, Integer> ROUND_PRICE = new HashMap<>();
     private static ItemStack sessionItem = ItemStack.EMPTY;
 
     private TerminalOfferItems() {
@@ -30,14 +31,16 @@ public final class TerminalOfferItems {
         ROUND_ITEM.clear();
         ROUND_GRADE.clear();
         ROUND_WEAR.clear();
+        ROUND_PRICE.clear();
         sessionItem = ItemStack.EMPTY;
     }
 
-    /** Register the server-sampled item + box grade + offered wear for one round. */
-    public static void setRoundItem(int round, ItemStack item, int grade, float wearVal) {
+    /** Register the server-sampled item + box grade + offered wear + terminal price for one round. */
+    public static void setRoundItem(int round, ItemStack item, int grade, float wearVal, int price) {
         ROUND_ITEM.put(round, item.copy());
         ROUND_GRADE.put(round, grade);
         ROUND_WEAR.put(round, wearVal);
+        ROUND_PRICE.put(round, price);
     }
 
     /** Register the server-sampled region-10 slot item. */
@@ -65,29 +68,37 @@ public final class TerminalOfferItems {
         return NegotiationModel.rarityKeyForGrade(gradeFor(offer));
     }
 
+    /** The round's custom terminal price (-1 = use default grade price). */
+    public static int priceForRoundRaw(int round) {
+        return ROUND_PRICE.getOrDefault(round, -1);
+    }
+
     /**
-     * Whole Armory Point price of the offered item: the shared grade price
-     * plus the wear surcharge when the item has no durability bar (matches
-     * the server's authoritative buy price).
+     * Whole Armory Point price of the offered item: the per-item price (or
+     * the shared grade default) plus the wear surcharge when the item has no
+     * durability bar (matches the server's authoritative buy price).
      */
     public static int priceFor(NegotiationModel.Offer offer) {
-        return priceFor(itemFor(offer), gradeFor(offer), offer.wearVal());
+        return priceFor(itemFor(offer), gradeFor(offer), offer.wearVal(),
+                ROUND_PRICE.getOrDefault(offer.round(), -1));
     }
 
     /** Whole Armory Point price of a round by its server-sampled grade. */
     public static int priceForRound(int round) {
         return priceFor(ROUND_ITEM.getOrDefault(round, ItemStack.EMPTY),
                 ROUND_GRADE.getOrDefault(round, 1),
-                ROUND_WEAR.getOrDefault(round, 0F));
+                ROUND_WEAR.getOrDefault(round, 0F),
+                ROUND_PRICE.getOrDefault(round, -1));
     }
 
-    /** Base grade price without the wear surcharge (for the penalty breakdown). */
+    /** Base price without the wear surcharge (for the penalty breakdown). */
     public static int basePriceFor(NegotiationModel.Offer offer) {
-        return NegotiationModel.priceForGrade(gradeFor(offer));
+        int custom = ROUND_PRICE.getOrDefault(offer.round(), -1);
+        return custom >= 0 ? custom : NegotiationModel.priceForGrade(gradeFor(offer));
     }
 
-    private static int priceFor(ItemStack item, int grade, float wearVal) {
-        int price = NegotiationModel.priceForGrade(grade);
+    private static int priceFor(ItemStack item, int grade, float wearVal, int customPrice) {
+        int price = customPrice >= 0 ? customPrice : NegotiationModel.priceForGrade(grade);
         if (!item.isEmpty() && !item.isDamageableItem()) {
             price += WearPenalty.surcharge(wearVal);
         }

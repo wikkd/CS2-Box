@@ -290,17 +290,20 @@ public final class BoxJsonLoader {
                 if (json.has(gradeKey)) {
                     JsonArray itemsArr = json.getAsJsonArray(gradeKey);
                     List<ItemStack> items = new ArrayList<>();
+                    List<Integer> prices = new ArrayList<>();
                     for (JsonElement elem : itemsArr) {
                         BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
                         if (outcome.isSuccess()) {
                             items.add(outcome.stack());
+                            // Read per-item terminal price from JSON; -1 means "use default grade price".
+                            prices.add(parsePrice(elem));
                         } else {
                             recordLoadError(file, fileName,
                                     "Item: " + outcome.error());
                         }
                     }
                     if (!items.isEmpty()) {
-                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items));
+                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i], weights[4 - i], items, prices));
                     }
                 }
             }
@@ -453,8 +456,15 @@ public final class BoxJsonLoader {
             GradeGroup g = def.findGrade(GRADE_IDS[i]).orElse(null);
             JsonArray itemsArr = new JsonArray();
             if (g != null) {
-                for (ItemStack item : g.items()) {
-                    itemsArr.add(BoxItemCodec.serializeItemStack(item));
+                for (int idx = 0; idx < g.items().size(); idx++) {
+                    ItemStack item = g.items().get(idx);
+                    JsonObject itemObj = BoxItemCodec.serializeItemStack(item);
+                    // Preserve the per-item terminal price if set.
+                    int p = g.priceForIndex(idx);
+                    if (p >= 0) {
+                        itemObj.addProperty("price", p);
+                    }
+                    itemsArr.add(itemObj);
                 }
             }
             json.add(gradeKey, itemsArr);
@@ -497,5 +507,21 @@ public final class BoxJsonLoader {
 
     private static float getFloat(JsonObject json, String key, float defaultValue) {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
+    }
+
+    /**
+     * Read the per-item terminal price from a JSON element. If the element is
+     * an object with a {@code price} field, returns its int value; otherwise
+     * returns -1, meaning "use the default grade-level price".
+     */
+    private static int parsePrice(JsonElement elem) {
+        try {
+            if (elem.isJsonObject() && elem.getAsJsonObject().has("price")) {
+                return elem.getAsJsonObject().get("price").getAsInt();
+            }
+        } catch (Exception ignored) {
+            // Malformed price field — fall through to default.
+        }
+        return -1;
     }
 }

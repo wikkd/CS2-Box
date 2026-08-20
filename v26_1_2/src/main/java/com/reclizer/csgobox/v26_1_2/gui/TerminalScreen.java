@@ -121,7 +121,7 @@ public class TerminalScreen extends Screen {
         Map<Integer, NegotiationModel.Offer> offers = new HashMap<>();
         for (PacketTerminalState.RoundItem ri : state.rounds()) {
             offers.put(ri.round(), ri.offer());
-            TerminalOfferItems.setRoundItem(ri.round(), ri.item(), ri.grade(), ri.offer().wearVal());
+            TerminalOfferItems.setRoundItem(ri.round(), ri.item(), ri.grade(), ri.offer().wearVal(), ri.price());
         }
         TerminalOfferItems.setSessionItem(state.sessionItem());
         model.setOfferSource(offers::get);

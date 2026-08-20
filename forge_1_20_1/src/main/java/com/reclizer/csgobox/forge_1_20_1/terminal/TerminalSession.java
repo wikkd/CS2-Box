@@ -47,7 +47,7 @@ public final class TerminalSession {
                     rnd.nextInt(1000),
                     r == NegotiationModel.MAX_ROUNDS);
             Sample sample = sampleItem(def, 1 + rnd.nextInt(5), rnd);
-            sampled.put(r, new TerminalRoundData(r, offer, sample.item(), sample.grade()));
+            sampled.put(r, new TerminalRoundData(r, offer, sample.item(), sample.grade(), sample.price()));
         }
         ItemStack slotItem = sampleSessionItem(def, rnd);
 
@@ -65,7 +65,7 @@ public final class TerminalSession {
         Map<Integer, TerminalRoundData> restored = new LinkedHashMap<>();
         for (PacketTerminalState.RoundItem ri : state.rounds()) {
             if (ri.round() >= 1 && ri.round() <= NegotiationModel.MAX_ROUNDS) {
-                restored.put(ri.round(), new TerminalRoundData(ri.round(), ri.offer(), ri.item(), ri.grade()));
+                restored.put(ri.round(), new TerminalRoundData(ri.round(), ri.offer(), ri.item(), ri.grade(), ri.price()));
             }
         }
         NegotiationModel model = new NegotiationModel();
@@ -96,12 +96,18 @@ public final class TerminalSession {
 
     private static Sample sampleItem(BoxDefinition def, int baseGrade, Random rnd) {
         for (int g = baseGrade; g >= 1; g--) {
-            List<ItemStack> pool = poolFor(def, g);
+            GradeGroup gradeGroup = findGrade(def, g);
+            List<ItemStack> pool = gradeGroup != null ? gradeGroup.items() : null;
             if (pool != null && !pool.isEmpty()) {
-                return new Sample(pool.get(rnd.nextInt(pool.size())).copy(), g);
+                int idx = rnd.nextInt(pool.size());
+                int price = gradeGroup != null ? gradeGroup.priceForIndex(idx) : -1;
+                if (price < 0) {
+                    price = NegotiationModel.priceForGrade(g);
+                }
+                return new Sample(pool.get(idx).copy(), g, price);
             }
         }
-        return new Sample(new ItemStack(Items.IRON_SWORD), 1);
+        return new Sample(new ItemStack(Items.IRON_SWORD), 1, NegotiationModel.priceForGrade(1));
     }
 
     private static ItemStack sampleSessionItem(BoxDefinition def, Random rnd) {
@@ -117,14 +123,19 @@ public final class TerminalSession {
     }
 
     private static List<ItemStack> poolFor(BoxDefinition def, int gradeLevel) {
+        GradeGroup grade = findGrade(def, gradeLevel);
+        return grade != null ? grade.items() : null;
+    }
+
+    private static GradeGroup findGrade(BoxDefinition def, int gradeLevel) {
         for (GradeGroup grade : def.grades()) {
             if (BoxGrades.gradeLevel(grade.id()) == gradeLevel) {
-                return grade.items();
+                return grade;
             }
         }
         return null;
     }
 
-    private record Sample(ItemStack item, int grade) {
+    private record Sample(ItemStack item, int grade, int price) {
     }
 }
