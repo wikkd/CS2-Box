@@ -118,6 +118,7 @@ gradle-app.setting
 # Common working directory
 run/
 runs/
+prod/
 
 # Unit-test JVM log output (Bootstrap boots logging relative to module dir)
 v1_21_1/logs/
