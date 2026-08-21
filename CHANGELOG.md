@@ -28,6 +28,7 @@
 | ⭐ **渲染工程化** | `AnimRenderOps` 每平台唯一渲染门面（13 op，6 屏 + 3 助手全收口、零原始 draw 残留），`check-animops-drift.sh` CI 门禁；Blur 软适配 + `blurRadius` 配置 | 全平台 |
 
 > **升级须知**：
+> - **终端机出厂即空箱**：2.0.0 起不再自动生成 `terminal.json`——创造栏的终端机与默认箱一样全空，自建 `terminal.json`（声明 `"type": "terminal"`）后才绑定谈判奖池；已有的用户配置不受影响。
 > - 旧版（v2.0.0 之前）`terminal.json` **自动迁移**（补 `"type": "terminal"`、删除遗留 `key`）；缺 `type` 的终端配置会被拒绝加载并报错——**杜绝静默退化成免钥匙免费开箱**，详见 `docs/CONFIGURATION.md`。
 > - 教程文件随版本更名为 `_tutorial_v2.0.0-beta*.md`，首次启动自动下载新版并清理过期教程。
 > - jar 产物名变为 `csgobox-<mc>-2.0.0-beta.jar`。
@@ -64,11 +65,13 @@
 
 - **终端机报价磨损改为随机 + 无耐久条物品磨损惩罚（v2.0.0）**：终端机 5 轮报价的磨损值不再按皮肤固定（MW 0.1138 / WW 0.4022 / FT 0.3074），改为**与开箱同款的服务端随机**——`TerminalSession.create` 会话创建时每轮 `rnd.nextFloat()`（0~1 均匀，服务端采样权威，`NegotiationModel` 无 offerSource 的兜底同规则）；聊天卡片磨损行改显该报价**实际**档位（`WearBands.tierIndex(offer.wearVal())`，删除废弃常量 `SKIN_WEAR_VAL` / `SKIN_WEAR_KEYS`）。配套：购买时若该轮实际给予的物品**没有耐久条**（`isDamageableItem()` 为假），磨损不再无意义——按 `WearPenalty`（common 纯函数，`ceil(磨损值 × 20)`，每 5% 磨损 = 1 武库点数，0~+20）在等级基础价上追加惩罚价：磨损越多，购买点数越多（FN 边缘 +0 ~ 战痕累累 +20）；有耐久条的物品维持原行为（磨损 → 扣耐久，不加价）。定价服务端权威（`PacketTerminalBuy`），客户端 `TerminalOfferItems` 同公式显示最终价，报价卡片 / 计数 / 接受按钮价格自动含惩罚，确认对话框新增「含磨损惩罚 +X」提示（新 lang 键 `csgobox.terminal.confirm.price.penalty` 中英）。四平台同步（common `WearPenalty` + 单测，各平台 `clean compileJava` 通过）。
 
-- **终端机供给与宝箱统一（空箱子 + 按注册入栏）**：首次启动不再自动写入
-  `config/csbox/terminal.json`（删除默认终端配置），终端机与 `csbox` 一样只在
-  玩家创建 `terminal.json` 后出现在创造物品栏；配置 JSON 不再需要 `type` 字段，箱子类型由
-  `key` 推导（仅 `csgobox:terminal` + `minecraft:air` 钥匙视为终端机，air 单独
-  出现不会误判）。
+- **终端机供给与宝箱统一（出厂即空箱）**：首次启动不再自动写入
+  `config/csbox/terminal.json`（删除 `BoxDefaults.TERMINAL_DEFAULT_JSON` 与
+  `writeDefaultTerminalIfMissing`，6 平台 12 处调用全部移除）——终端机与
+  `csbox` 默认箱一样**全空**：创造栏终端条目保留但为空箱状态（打开为空
+  谈判屏），自建 `terminal.json` 并声明 `"type": "terminal"` 后才绑定奖池；
+  空文件视为合法未配置状态，损坏文件备份为 `terminal.json.corrupt-<时间戳>`
+  后移出加载路径（不回写默认配置）。
 
 - **终端机与宝箱共享逻辑封装**：`BoxDefinition.isTerminal()` 集中类型判定；
   `ModItems.boxItemFor()` 统一「定义 → 物品类」映射，创造栏单循环覆盖终端机 /
@@ -78,7 +81,7 @@
 
 - **军火商台词池扩充 + 每局随机台词**：谈判台词由固定 5 条剧本扩展为 12 条池（新增 7 条商人台词，如「略有磨损。有一两道划痕，但不耽误干活。」「眼光这么高？挺好。接下来这件才是黄金标准。」等），每局开局从池中随机抽取 5 条不重复组成当轮剧本——重开终端/新谈判台词有变化，5 轮报价结构不变；`NegotiationModel` 新增 `roundLine` 实例洗牌（Fisher-Yates 部分洗牌），`start()` 与新实例构造各洗一次（restore 恢复的会话沿用实例内台词顺序，历史台词不受影响）；中英 lang 新增 `line.5`~`line.11`。`:common:test` 更新（台词断言改为池成员校验 + 新增「5 轮台词唯一」用例）。
 
-- **终端机 type 字段唯一判定 + 字段严格分离（v2.0.0）**：JSON `type` 字段成为物品注册的唯一判定机制——`"type": "terminal"` 注册 `ItemTerminal`，`"type": "csbox"`（或省略）注册普通 `ItemCsgoBox`；运行时 `BoxDefinition.isTerminal()` 同步改为读 `type`，不再按「id + key」派生。**终端机不再有 `key` 字段**（默认 `terminal.json` 自动生成且含 `"type": "terminal"`，schema 验证器对终端机残留 `key` 报错，`/csbox info` 不再显示终端机的钥匙行）。旧版（v2.0.0 之前）配置自动迁移：注册前 `BoxDefaults.upgradeLegacyTerminalConfig` 为无 `type` 的 `terminal.json` 补 `"type": "terminal"` 并删除遗留 `key`；迁移未覆盖时 `terminal.json` 缺 `type` 会被拒绝加载并给出明确 LoadError——**杜绝静默退化成免钥匙免费开箱**。四平台同步（`BoxDefinition` 增 `type` 字段含 stream codec，各平台 `clean compileJava` 通过，`:common:test` 新增 5 个 type 分离用例全绿）。
+- **终端机 type 字段唯一判定 + 字段严格分离（v2.0.0）**：JSON `type` 字段成为物品注册的唯一判定机制——`"type": "terminal"` 注册 `ItemTerminal`，`"type": "csbox"`（或省略）注册普通 `ItemCsgoBox`；运行时 `BoxDefinition.isTerminal()` 同步改为读 `type`，不再按「id + key」派生。**终端机不再有 `key` 字段**（2.0.0 起终端机出厂即空箱、不再生成默认 `terminal.json`；自建配置须声明 `"type": "terminal"`，schema 验证器对终端机残留 `key` 报错，`/csbox info` 不再显示终端机的钥匙行）。旧版（v2.0.0 之前）配置自动迁移：注册前 `BoxDefaults.upgradeLegacyTerminalConfig` 为无 `type` 的 `terminal.json` 补 `"type": "terminal"` 并删除遗留 `key`；迁移未覆盖时 `terminal.json` 缺 `type` 会被拒绝加载并给出明确 LoadError——**杜绝静默退化成免钥匙免费开箱**。四平台同步（`BoxDefinition` 增 `type` 字段含 stream codec，各平台 `clean compileJava` 通过，`:common:test` 新增 5 个 type 分离用例全绿）。
 
 #### 武库商与军火商（世界生成 / 村庄经济）
 
@@ -147,11 +150,13 @@
 
 ### 更改
 - **终端机报价与物品改为服务端采样**：5 轮 offer（皮肤 / 磨损 / 风格 / 编号 / 图案）+ 每轮实际给予物品 + 区域 10 槽位物品全部在会话创建时由服务端从箱子分级池一次性采样（原客户端 `TerminalOfferItems` 随机逻辑迁至 `TerminalSession.create`）；`TerminalOfferItems` 改静态查表、`TerminalOfferRegion` 删除本地随机池与逐轮缓存，客户端不再本地随机——重开一致性由服务端快照保证，客户端只负责渲染。
-- **终端机供给与宝箱统一（空箱子 + 按注册入栏）**：首次启动不再自动写入
-  `config/csbox/terminal.json`（删除默认终端配置），终端机与 `csbox` 一样只在
-  玩家创建 `terminal.json` 后出现在创造物品栏；配置 JSON 不再需要 `type` 字段，箱子类型由
-  `key` 推导（仅 `csgobox:terminal` + `minecraft:air` 钥匙视为终端机，air 单独
-  出现不会误判）。
+- **终端机供给与宝箱统一（出厂即空箱）**：首次启动不再自动写入
+  `config/csbox/terminal.json`（删除 `BoxDefaults.TERMINAL_DEFAULT_JSON` 与
+  `writeDefaultTerminalIfMissing`，6 平台 12 处调用全部移除）——终端机与
+  `csbox` 默认箱一样**全空**：创造栏终端条目保留但为空箱状态（打开为空
+  谈判屏），自建 `terminal.json` 并声明 `"type": "terminal"` 后才绑定奖池；
+  空文件视为合法未配置状态，损坏文件备份为 `terminal.json.corrupt-<时间戳>`
+  后移出加载路径（不回写默认配置）。
 - **终端机与宝箱共享逻辑封装**：`BoxDefinition.isTerminal()` 集中类型判定；
   `ModItems.boxItemFor()` 统一「定义 → 物品类」映射，创造栏单循环覆盖终端机 /
   动态箱子；`ItemCsgoBox.openScreen()`

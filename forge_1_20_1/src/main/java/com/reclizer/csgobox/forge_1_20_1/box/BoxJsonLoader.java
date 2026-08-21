@@ -102,7 +102,6 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
         BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
 
@@ -152,7 +151,6 @@ public final class BoxJsonLoader {
             }
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         Set<ResourceLocation> previousIds = new HashSet<>(BoxRegistry.getIds());

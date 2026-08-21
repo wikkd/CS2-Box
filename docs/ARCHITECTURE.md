@@ -42,7 +42,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 - **`BoxGrades`** — 5 档等级名→等级号映射、默认权重 `{625,125,25,6,4}`、drop rate 夹取与各 schema 上限常量（2026-08 重构下沉）
 - **`BoxRegistryStore<K,V>`** — 泛型注册表容器（register/remove 无条件触发变更回调、clear 触发清空回调）；平台 `BoxRegistry` 是提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调的薄壳
 - **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items/grades/winningIndex，经 `GradeMap.isValid` 定位中奖位）；平台传 `ItemStack.EMPTY` 作空值
-- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` 默认配置**(v2.0.0 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并对遗留 `terminal.json` 做一次性 type 迁移（**2.0.0 起终端机不再生成默认配置**——出厂即空箱，与普通箱一样由玩家自建 JSON）;在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 

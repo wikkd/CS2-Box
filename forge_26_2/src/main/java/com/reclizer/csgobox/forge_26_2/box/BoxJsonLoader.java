@@ -120,8 +120,6 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
 
-        // First-run defaults, before scanning existing configs.
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         // Pre-v2.0.0 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
@@ -167,9 +165,9 @@ public final class BoxJsonLoader {
      * without {@code clear()}: failed files keep their previous definition,
      * successful ones overwrite by id, files gone from disk are removed.
      * Used by {@code /csbox reload} and {@code BoxFileWatcher}. Never
-     * resurrects the deleted sample tutorial, but re-runs terminal
-     * defaults and the legacy migration so a deleted terminal.json stays
-     * loadable.
+     * resurrects the deleted sample tutorial, but re-runs the legacy
+     * terminal migration (the terminal ships unconfigured since 2.0.0 —
+     * no default terminal.json is ever written).
      */
     public static void reloadPreserving() {
         LAST_LOAD_ERRORS.clear();
@@ -183,7 +181,6 @@ public final class BoxJsonLoader {
             }
             CsgoBox.LOGGER.info("Created boxes config directory: {}", BOXES_DIR);
         }
-        BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         Set<Identifier> previousIds = new HashSet<>(BoxRegistry.getIds());

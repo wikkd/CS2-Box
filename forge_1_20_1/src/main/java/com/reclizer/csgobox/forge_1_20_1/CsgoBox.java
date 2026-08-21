@@ -200,8 +200,10 @@ public class CsgoBox {
                 return;
             }
         }
+        // Pre-v2.0.0 files (no "type") are upgraded here first. Since 2.0.0
+        // the terminal ships unconfigured — no default terminal.json is
+        // generated (empty crate, same as the default box).
         BoxDefaults.upgradeLegacyTerminalConfig(configDir);
-        BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
         int skipped = 0;
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDir, "*.json")) {

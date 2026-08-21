@@ -179,9 +179,9 @@
 
 终端机(`csgobox:terminal`)是一种独立的箱子类物品,拥有独立掉落池:`config/csbox/terminal.json` 中的 `type: terminal` 箱子定义。右键终端机打开终端机界面,而不是宝箱界面。
 
-> **多终端**:与普通宝箱一样,**一个 JSON 文件注册一个终端机**——任意文件只要声明 `"type": "terminal"` 就会注册为对应 id 的终端机(如 `terminal2.json` → `csgobox:terminal2`),拥有自己独立的谈判掉落池。`csgobox:terminal` 本身是静态注册的(与 `csgobox:csgo_box` 同机制),即使 `terminal.json` 不存在物品也始终存在;默认配置只自动生成 `terminal.json`,军火商村民固定出售 `csgobox:terminal`,额外终端机用 `/give` 获取。
+> **多终端**:与普通宝箱一样,**一个 JSON 文件注册一个终端机**——任意文件只要声明 `"type": "terminal"` 就会注册为对应 id 的终端机(如 `terminal2.json` → `csgobox:terminal2`),拥有自己独立的谈判掉落池。`csgobox:terminal` 本身是静态注册的(与 `csgobox:csgo_box` 同机制),即使 `terminal.json` 不存在物品也始终存在——此时它是**空箱**(不绑定奖池),需自建 `terminal.json` 配置谈判奖池;军火商村民固定出售 `csgobox:terminal`,额外终端机用 `/give` 获取。
 
-- **无需钥匙** —— 默认终端机配置使用 `"key": "minecraft:air"`。
+- **无需钥匙** —— 终端机没有 `key` 字段,打开不消耗钥匙。
 - **出价以武库点数计价**。成交价 = 物品 JSON 的 `price` 字段(若已设置)或该档位的默认价(grade1 = 6、grade2 = 10、grade3 = 16、grade4 = 22、grade5 = 30);若物品无耐久条,还需叠加磨损惩罚(每 5% 磨损 +1 点)。接受报价即支付该价格。
 - 每次会话进行 5 轮谈判;每份报价带约 3 天的倒计时;出价物品从终端机箱子的各档位掉落池中挑选。
 - 获取途径:创造模式物品栏,或军火商村民(4 级)用 12 武库点数兑换。

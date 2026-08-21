@@ -33,9 +33,9 @@
 | 主题 | v2.0.0 状态 |
 |---|---|
 | 箱子类型判定 | JSON `type` 字段是**唯一**判定机制：`"type": "terminal"` → `ItemTerminal`；`"type": "csbox"`（或省略）→ `ItemCsgoBox`。`BoxDefinition` 重新持有 `type` 字段（record/CODEC/STREAM_CODEC/Builder），`isTerminal()` / `type()` 直接读它 |
-| 字段分离 | **终端机不再有 `key` 字段**：默认 `terminal.json` 删除 `key`；schema 验证器对「terminal + key」报错；`/csbox info` 不再显示终端机钥匙行。`BoxJsonLoader` 只在非终端机时解析 `key` |
+| 字段分离 | **终端机不再有 `key` 字段**：用户自建 `terminal.json` 不得含 `key`；schema 验证器对「terminal + key」报错；`/csbox info` 不再显示终端机钥匙行。`BoxJsonLoader` 只在非终端机时解析 `key` |
 | 旧配置迁移 | `BoxDefaults.upgradeLegacyTerminalConfig` 在注册前把无 `type` 的 `terminal.json` 一次性补 `"type": "terminal"` 并删遗留 `key`；迁移未覆盖时该文件被拒绝加载并给 LoadError（杜绝静默退化成免钥匙免费开箱） |
-| 首次启动 | 恢复自动生成 `terminal.json`（af10870 起，含 `"type": "terminal"`） |
+| 首次启动 | **空箱子**（2026-08-22 起）：不再生成 `terminal.json`，终端机出厂即无绑定 loot；创造栏静态条目保留（空箱状态），用户自建 `terminal.json` 才绑定奖池（第 14 节） |
 
 ---
 
@@ -457,3 +457,33 @@ v26_1_2 `PlatformSmokeTest` 与 forge L0-L3 门禁 7/7 PASS；
 
 4 平台 `clean compileJava` 通过；`:common:test` 通过（common 未改动）；
 `check-animops-drift.sh` 未涉及（未改渲染门面）。
+
+---
+
+## 14. 变更（2026-08-22）：终端机出厂即空箱，删除默认配置自动生成
+
+需求：创造物品栏的终端机应与 `csgobox:csgo_box` 默认箱一致——**都是全空的**，
+不再自带内置奖池。本节落地第 7 节「空箱子」方向（af10870 曾反转恢复自动生成，
+本次重新移除），并修正 §0.5 表中「首次启动」行为。
+
+### 实现
+
+- **common**：删除 `BoxDefaults.TERMINAL_DEFAULT_JSON`（内置 5 档 loot 常量）与
+  `writeDefaultTerminalIfMissing`；`upgradeLegacyTerminalConfig` 空文件分支视为
+  合法「未配置」状态直接保留；`recoverCorruptTerminal` 改为**仅备份不回填**
+  （损坏文件移为 `terminal.json.corrupt-<millis>`，不再写回默认配置）。
+  legacy → `"type": "terminal"` 一次性迁移逻辑保留不变。
+- **6 平台**：`CsgoBox.registerDynamicBoxItems` 与 `BoxJsonLoader.loadAll` /
+  `reloadPreserving` 共 12 处 `writeDefaultTerminalIfMissing` 调用全部移除。
+- **创造栏**：`ModItems` 的无条件终端静态条目**保留**（与第 7 节方案不同——
+  终端机仍在创造栏，只是空箱状态）；删除自动配置后 `BoxRegistry` 循环不再
+  产出终端盖章条目。打开无配置终端机时 `PacketTerminalOpen` 回 empty FAILED
+  快照，屏幕有超时兜底不卡死。
+- **测试**：`BoxDefaultsTest` 重写为 5 用例新语义（missingTerminalIsNeverCreated /
+  emptyFileStaysEmpty / corruptFileIsBackedUpAndRemoved + 2 个迁移用例）。
+
+### 验证
+
+`:common:test` 通过；6 平台 `clean compileJava` 通过；文档同步：
+`CHANGELOG.md` / `docs/ARCHITECTURE.md` / `docs/CONFIGURATION.md` §3.3 /
+两份 2.0.0-beta 教程。

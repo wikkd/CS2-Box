@@ -34,183 +34,6 @@ public final class BoxDefaults {
      */
     private static final Pattern STALE_TUTORIAL = Pattern.compile("^_tutorial_v.*\\.md$");
 
-    /**
-     * Default terminal loot pool, written on first run. Own config so the
-     * terminal's loot stays decoupled from other crates. Vanilla-only items,
-     * weighted toward higher tiers.
-     */
-    private static final String TERMINAL_DEFAULT_JSON = """
-            {
-              "name": "#00E5FF CS2 终端机",
-              "type": "terminal",
-              "drop": 0.06,
-              "random": [
-                20,
-                40,
-                80,
-                160,
-                300
-              ],
-              "grade5": [
-                {
-                  "id": "minecraft:netherite_sword",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_axe",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_pickaxe",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_helmet",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_chestplate",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_leggings",
-                  "price": 4000
-                },
-                {
-                  "id": "minecraft:netherite_boots",
-                  "price": 4000
-                }
-              ],
-              "grade4": [
-                {
-                  "id": "minecraft:diamond_sword",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_axe",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_pickaxe",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_helmet",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_chestplate",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_leggings",
-                  "price": 1500
-                },
-                {
-                  "id": "minecraft:diamond_boots",
-                  "price": 1500
-                }
-              ],
-              "grade3": [
-                {
-                  "id": "minecraft:golden_sword",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_axe",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_pickaxe",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_helmet",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_chestplate",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_leggings",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:golden_boots",
-                  "price": 500
-                },
-                {
-                  "id": "minecraft:totem_of_undying",
-                  "price": 500
-                }
-              ],
-              "grade2": [
-                {
-                  "id": "minecraft:iron_sword",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_axe",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_pickaxe",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_helmet",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_chestplate",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_leggings",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:iron_boots",
-                  "price": 200
-                },
-                {
-                  "id": "minecraft:crossbow",
-                  "price": 200
-                }
-              ],
-              "grade1": [
-                {
-                  "id": "minecraft:leather_helmet",
-                  "price": 50
-                },
-                {
-                  "id": "minecraft:leather_chestplate",
-                  "price": 50
-                },
-                {
-                  "id": "minecraft:leather_leggings",
-                  "price": 50
-                },
-                {
-                  "id": "minecraft:leather_boots",
-                  "price": 50
-                },
-                {
-                  "id": "minecraft:bow",
-                  "price": 50
-                }
-              ],
-              "entity": [
-                "minecraft:wither_skeleton",
-                "minecraft:piglin_brute",
-                "minecraft:elder_guardian",
-                "minecraft:ravager",
-                "minecraft:warden"
-              ]
-            }
-            """;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(BoxDefaults.class);
 
     private BoxDefaults() {
@@ -282,25 +105,6 @@ public final class BoxDefaults {
     }
 
     /**
-     * Writes a default {@code terminal.json} into the boxes directory when
-     * none exists yet, so the terminal machine has its own decoupled loot
-     * out of the box. A user-authored terminal config is never overwritten.
-     */
-    public static void writeDefaultTerminalIfMissing(Path boxesDir) {
-        try {
-            Path file = boxesDir.resolve("terminal.json");
-            if (Files.exists(file)) {
-                return;
-            }
-            Files.writeString(file, TERMINAL_DEFAULT_JSON);
-            LOGGER.info("Wrote default terminal box config: {}", file);
-        } catch (Exception e) {
-            LOGGER.warn("Default terminal config skipped due to error: {}",
-                    e.getMessage());
-        }
-    }
-
-    /**
      * Upgrades a pre-v2.0.0 {@code terminal.json} to the type-driven format.
      * Since v2.0.0 the JSON {@code type} field is the single source of truth
      * for item registration, and the terminal machine no longer has a
@@ -311,12 +115,12 @@ public final class BoxDefaults {
      * manual edits. Only the exact {@code terminal.json} file is touched;
      * anything that already declares a {@code type} is left alone.
      *
-     * <p>Unloadable files self-heal instead of silently degrading into a
-     * regular crate: an empty file is rewritten with the default;
-     * a non-empty corrupt file is backed up as
-     * {@code terminal.json.corrupt-<millis>} before the default is written,
-     * so the player's data is preserved for manual recovery while the
-     * terminal keeps registering as a terminal.</p>
+     * <p>Since 2.0.0 the terminal ships UNCONFIGURED (empty crate, same as
+     * the default box), so no default is ever written back: an empty file is
+     * left alone (the terminal simply stays unbound); a non-empty corrupt
+     * file is backed up as {@code terminal.json.corrupt-<millis>} and
+     * removed from the load path, preserving the player's data for manual
+     * recovery.</p>
      */
     public static void upgradeLegacyTerminalConfig(Path boxesDir) {
         Path file = boxesDir.resolve("terminal.json");
@@ -325,8 +129,9 @@ public final class BoxDefaults {
         }
         try {
             if (Files.size(file) == 0L) {
-                Files.writeString(file, TERMINAL_DEFAULT_JSON);
-                LOGGER.info("Recovered empty terminal.json with the default config: {}", file);
+                // An empty terminal.json is a valid "unconfigured" state —
+                // the loader skips it and the terminal stays an empty crate.
+                LOGGER.info("Empty terminal.json left unconfigured: {}", file);
                 return;
             }
             JsonObject json = GSON.fromJson(Files.readString(file), JsonObject.class);
@@ -350,19 +155,17 @@ public final class BoxDefaults {
         }
     }
 
-    /** Backs up an unreadable terminal.json and writes the default in its place. */
+    /** Backs up an unreadable terminal.json; no default replaces it (the terminal becomes unconfigured). */
     private static void recoverCorruptTerminal(Path file) {
         try {
             Path backup = file.resolveSibling("terminal.json.corrupt-" + System.currentTimeMillis());
             Files.move(file, backup, StandardCopyOption.REPLACE_EXISTING);
-            Files.writeString(file, TERMINAL_DEFAULT_JSON);
-            LOGGER.warn("Recovered corrupt terminal.json (backup kept at {}): {}", backup.getFileName(), file);
+            LOGGER.warn("Corrupt terminal.json backed up and left unconfigured (backup at {})", backup.getFileName());
         } catch (IOException e) {
             LOGGER.warn("Terminal config recovery failed: {}", e.getMessage());
         }
     }
 
-    /**
     /**
      * Forces a re-download of every tutorial file for the current mod
      * version, overwriting existing copies. Used by

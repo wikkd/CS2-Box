@@ -12,12 +12,12 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for the terminal.json default-write and legacy migration paths
- * in {@link BoxDefaults} (v2.0.0 strict type separation).
+ * Unit tests for the terminal.json legacy migration paths in
+ * {@link BoxDefaults} (v2.0.0 strict type separation; since 2.0.0 the
+ * terminal ships unconfigured — no default config is ever written).
  */
 class BoxDefaultsTest {
 
@@ -37,37 +37,27 @@ class BoxDefaultsTest {
     }
 
     @Test
-    @DisplayName("missing terminal.json is written with the default type-driven config")
-    void missingWritesDefault() throws IOException {
-        BoxDefaults.writeDefaultTerminalIfMissing(tempDir);
-        String content = readTerminal();
-        assertTrue(content.contains("\"type\": \"terminal\""), "default must declare terminal type");
-        assertFalse(content.contains("\"key\""), "default must not carry a key field");
+    @DisplayName("missing terminal.json is never created — the terminal ships unconfigured")
+    void missingTerminalIsNeverCreated() {
+        BoxDefaults.upgradeLegacyTerminalConfig(tempDir);
+        assertFalse(Files.exists(terminalJson()), "no default terminal.json may be generated");
     }
 
     @Test
-    @DisplayName("existing terminal.json is never overwritten by writeDefaultTerminalIfMissing")
-    void existingUserConfigIsKept() throws IOException {
-        Files.writeString(terminalJson(), "{\"name\": \"custom\", \"type\": \"terminal\"}");
-        BoxDefaults.writeDefaultTerminalIfMissing(tempDir);
-        assertTrue(readTerminal().contains("\"custom\""));
-    }
-
-    @Test
-    @DisplayName("empty terminal.json is recovered with the default config")
-    void emptyFileIsRecovered() throws IOException {
+    @DisplayName("empty terminal.json is left alone (valid unconfigured state)")
+    void emptyFileStaysEmpty() throws IOException {
         Files.writeString(terminalJson(), "");
         BoxDefaults.upgradeLegacyTerminalConfig(tempDir);
-        assertTrue(parseTerminal().has("type"), "recovered file must declare a type");
-        assertTrue(parseTerminal().get("type").getAsString().equals("terminal"));
+        assertTrue(Files.exists(terminalJson()), "the empty file must not be deleted");
+        assertTrue(readTerminal().isEmpty(), "the empty file must not gain content");
     }
 
     @Test
-    @DisplayName("corrupt non-empty terminal.json is backed up and replaced with the default")
-    void corruptFileIsBackedUpAndRecovered() throws IOException {
+    @DisplayName("corrupt non-empty terminal.json is backed up and removed, never replaced with a default")
+    void corruptFileIsBackedUpAndRemoved() throws IOException {
         Files.writeString(terminalJson(), "{ not json !!!");
         BoxDefaults.upgradeLegacyTerminalConfig(tempDir);
-        assertTrue(parseTerminal().get("type").getAsString().equals("terminal"));
+        assertFalse(Files.exists(terminalJson()), "the corrupt file must be moved away");
         try (Stream<Path> files = Files.list(tempDir)) {
             assertTrue(files.anyMatch(p -> p.getFileName().toString().startsWith("terminal.json.corrupt-")),
                     "corrupt file must be kept as a backup");
@@ -95,6 +85,5 @@ class BoxDefaultsTest {
         String content = readTerminal();
         assertTrue(content.contains("\"mine\""));
         assertTrue(content.contains("\"random\""));
-        assertNotNull(content);
     }
 }
