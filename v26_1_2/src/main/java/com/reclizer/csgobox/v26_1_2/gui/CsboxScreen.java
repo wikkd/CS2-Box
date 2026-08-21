@@ -262,7 +262,7 @@ public class CsboxScreen extends Screen {
         this.renderLabels(guiGraphics, mouseX, mouseY, partialTicks);
         if (this.hint != null) {
             float scale = 0.9F;
-            float w = RenderFontTool.width(this.font, this.hint.getVisualOrderText(), scale);
+            float w = this.font.width(this.hint) * scale;
             RenderFontTool.drawString(guiGraphics, this.font, this.hint.getVisualOrderText(),
                     (this.width - w) / 2.0F, this.height * 30 / 100, 0, 0, scale, 0xFFFF5555);
             this.hintTicks--;
@@ -420,7 +420,7 @@ public class CsboxScreen extends Screen {
         if (tc != null) {
             titleColor = 0xFF000000 | (tc.getValue() & 0xFFFFFF);
         }
-        RenderFontTool.drawStringClampedVanilla(guiGraphics, this.font, boxName,
+        RenderFontTool.drawStringClamped(guiGraphics, this.font, boxName,
                 boxNameX, this.height * 13F / 100F, 0, 0, boxNameScale,
                 boxNameMaxWidth, titleColor);
 
@@ -435,8 +435,8 @@ public class CsboxScreen extends Screen {
                         this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
                 renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_open_1").getVisualOrderText(),
                         this.width * 40F / 100F, this.height * 94F / 100F, 0.8F);
-                renderTextVanilla(guiGraphics, itemKey.getItem().getName(itemKey).getVisualOrderText(),
-                        this.width * 35F / 100F, this.height * 94F / 100F, 0.8F, 255);
+                renderText(guiGraphics, itemKey.getItem().getName(itemKey).getVisualOrderText(),
+                        this.width * 35F / 100F, this.height * 94F / 100F, 0.8F);
             }
         }
 
@@ -449,7 +449,7 @@ public class CsboxScreen extends Screen {
         if (boxEmpty) {
             Component warnText = Component.translatable("gui.csgobox.csgo_box.label_not_configured");
             FormattedCharSequence warnSeq = warnText.getVisualOrderText();
-            float warnWidth = RenderFontTool.width(this.font, warnSeq, 1.2F);
+            float warnWidth = this.font.width(warnSeq) * 1.2F;
             int bgX0 = Math.max(8, (int) ((this.width - warnWidth) / 2.0F) - 8);
             int bgX1 = Math.min(this.width - 8, (int) ((this.width + warnWidth) / 2.0F) + 8);
             // Banner Y: sit in the same vertical band the 3D crate would have
@@ -502,13 +502,6 @@ public class CsboxScreen extends Screen {
                 ColorTools.withAlpha(0xFFD3D3D3, alpha));
     }
 
-    /** Dynamic/external text (item names) keeps the default font. */
-    private void renderTextVanilla(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText,
-                                   float px, float py, float scale, int alpha) {
-        RenderFontTool.drawStringVanilla(guiGraphics, this.font, pText, px, py, 0, 0, scale,
-                ColorTools.withAlpha(0xFFD3D3D3, alpha));
-    }
-
     /** Page-turn labels: mirrors renderGridAnimated's slide/fade so the item
      *  names and the gold slot label travel with their frames. */
     private void renderLabelsAnimated(GuiGraphicsExtractor guiGraphics, boolean showNames, float partialTicks) {
@@ -547,7 +540,7 @@ public class CsboxScreen extends Screen {
                 // to render untruncated, but longer localisation keys or
                 // modded item names would otherwise bleed into the next slot.
                 int slotVisualWidth = Math.round(this.width * 9F / 100F);
-                RenderFontTool.drawStringClampedVanilla(guiGraphics, this.font, component,
+                RenderFontTool.drawStringClamped(guiGraphics, this.font, component,
                         this.width * 4F / 100 + px * this.width * 9F / 100,
                         this.height * py / 100F + offsetY, 0, 0, 0.6F,
                         slotVisualWidth, ColorTools.withAlpha(0xFFD3D3D3, alpha));
@@ -562,7 +555,7 @@ public class CsboxScreen extends Screen {
 
     private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
                                     int x, int y, int w, int h, float scale, int color) {
-        float textW = RenderFontTool.width(this.font, text, scale);
+        float textW = this.font.width(text) * scale;
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, color);

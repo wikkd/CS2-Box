@@ -213,7 +213,8 @@ public class TerminalScreen extends Screen {
         }
         // centre: title
         Component title = Component.translatable("gui.csgobox.terminal.title");
-        int titleW = RenderFontTool.widthSpaced(font, title.getString(), 0.7F, 0.55F);
+        int titleW = Math.round(font.width(title.getString()) * 0.55F)
+                + Math.round(0.7F * (title.getString().length() - 1));
         RenderFontTool.drawSpacedText(gg, font, title.getString(),
                 (tx0 + tx1) / 2F - titleW / 2F, ty0 + 2, 0.7F, 0.55F, 0xFFE6EAED);
         // right: close button (glyph only; hover shows a subtle square)
@@ -251,7 +252,8 @@ public class TerminalScreen extends Screen {
         int rty = ry0 + 9;
         AnimRenderOps.fill(gg, rx0, ry0, rx1, rty, TerminalPalette.TITLE);
         Component offerTitle = Component.translatable("csgobox.terminal.offer.title");
-        int offerTitleW = RenderFontTool.widthSpaced(font, offerTitle.getString(), 0.6F, 0.47F);
+        int offerTitleW = Math.round(font.width(offerTitle.getString()) * 0.47F)
+                + Math.round(0.6F * (offerTitle.getString().length() - 1));
         RenderFontTool.drawSpacedText(gg, font, offerTitle.getString(),
                 rx0 + 4, ry0 + 2, 0.6F, 0.47F, TerminalPalette.TEXT);
         offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY);

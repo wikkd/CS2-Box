@@ -20,15 +20,14 @@ final class TerminalAssetsTest {
 
     /** name -> (expected width, expected height) */
     private static final String[][] ASSETS = {
-            {"rounded_corner.png", "8", "8"},
+            {"terminal_round_rect.png", "16", "16"},
+            {"terminal_dot.png", "6", "6"},
+            {"terminal_dot_tile.png", "512", "512"},
+            {"terminal_scan_band.png", "8", "24"},
+            {"terminal_circle_glow.png", "128", "128"},
+            {"terminal_badge.png", "72", "72"},
             {"terminal_avatar.png", "64", "64"},
             {"terminal_avatar_wm.png", "128", "128"},
-            {"terminal_badge.png", "72", "72"},
-            {"terminal_cap.png", "16", "8"},
-            {"terminal_circle.png", "32", "32"},
-            {"terminal_circle_glow.png", "128", "128"},
-            {"terminal_dot_tile.png", "24", "24"},
-            {"terminal_scan_band.png", "8", "24"},
     };
 
     @Test

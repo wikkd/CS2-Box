@@ -27,8 +27,12 @@ public final class TerminalActionBar {
     private static final int CAPSULE_H = 9;
     private static final int HOLD_FULL = 1; // holdFill() >= 1 fires
 
-    /** Info badge + chevron are drawn as crisp fill geometry (4px disc and
-     *  3x2 triangle) — no texture down-scaling. */
+    /** Baked SVG->PNG textures: info badge (light disc + dark "i") and the
+     *  upward chevron — the 1-gui fills and font glyphs they replace render as
+     *  chunky 4px blocks at guiScale 4. */
+    private static final Identifier TEX_INFO = Identifier.parse("csgobox:textures/gui/terminal/terminal_info.png");
+    private static final Identifier TEX_CHEVRON = Identifier.parse("csgobox:textures/gui/terminal/terminal_chevron.png");
+
     private enum Pill { NONE, ACCEPT, REJECT }
 
     /** What a completed pill press asked the screen to do. */
@@ -67,14 +71,11 @@ public final class TerminalActionBar {
         int counterW = RenderFontTool.drawSpacedText(gg, font, counterStr, x0 + 4, midY - 2 + slide,
                 0.3F, 0.47F, TerminalPalette.ACTION_TEXT);
 
-        // ---- info badge (design .info: light disc + dark "i", crisp fills) ----
+        // ---- info badge (design .info: light disc + dark "i", baked SVG->PNG) ----
         infoX = x0 + 4 + counterW + 2;
         infoY = midY - 2;
-        AnimRenderOps.fill(gg, infoX + 1, infoY, infoX + 3, infoY + 1, 0xFFCFD6DB);
-        AnimRenderOps.fill(gg, infoX, infoY + 1, infoX + 4, infoY + 3, 0xFFCFD6DB);
-        AnimRenderOps.fill(gg, infoX + 1, infoY + 3, infoX + 3, infoY + 4, 0xFFCFD6DB);
-        AnimRenderOps.fill(gg, infoX + 2, infoY + 1, infoX + 3, infoY + 2, 0xFF20242A);
-        AnimRenderOps.fill(gg, infoX + 2, infoY + 2, infoX + 3, infoY + 4, 0xFF20242A);
+        AnimRenderOps.blitTextured(gg, TEX_INFO, infoX, infoY, 4, 4,
+                0, 0, 32, 32, 32, 32, 0xFFFFFFFF);
         if (mx >= infoX - 1 && mx <= infoX + 5 && my >= infoY - 1 && my <= infoY + 5) {
             drawTooltip(gg, infoX + 6, midY + 3, font);
         }
@@ -84,7 +85,7 @@ public final class TerminalActionBar {
                 ? Component.translatable("csgobox.terminal.cap.label",
                         Component.translatable("csgobox.terminal.cap.unlimited")).getString()
                 : Component.translatable("csgobox.terminal.cap.label", model.cap()).getString();
-        int capWText = RenderFontTool.widthSpaced(font, capText, 0.3F, 0.47F);
+        int capWText = Math.round(font.width(capText) * 0.47F) + Math.round(0.3F * (capText.length() - 1));
         capX = x1 - capWText - 6;
         capY = midY - 2;
         capW = capWText + 4;
@@ -93,8 +94,8 @@ public final class TerminalActionBar {
         RenderFontTool.drawSpacedText(gg, font, capText, capX, capY,
                 0.3F, 0.47F, capHover ? TerminalPalette.CAP_SELECTED : TerminalPalette.ACTION_TEXT);
         // chevron — always points up (the menu opens upward, HTML .chev)
-        AnimRenderOps.fill(gg, capX + capWText - 1, capY + 1, capX + capWText, capY + 2, 0xFFFFFFFF);
-        AnimRenderOps.fill(gg, capX + capWText - 2, capY + 2, capX + capWText + 1, capY + 3, 0xFFFFFFFF);
+        AnimRenderOps.blitTextured(gg, TEX_CHEVRON, capX + capWText - 2, capY + 1, 3, 2,
+                0, 0, 32, 32, 32, 32, 0xFFFFFFFF);
         if (capOpen) {
             drawCapMenu(gg, capX + capW - 27, capY - 5 * 7 - 1, nowMs, model, mx, my);
         }
@@ -139,7 +140,7 @@ public final class TerminalActionBar {
 
     /** Rendered label width at the capsule's 0.6/0.51 style (same as drawCapsule). */
     private static int pillWidth(Font font, String label) {
-        return RenderFontTool.widthSpaced(font, label, 0.6F, 0.51F);
+        return Math.round(font.width(label) * 0.51F) + Math.round(0.6F * (label.length() - 1));
     }
 
     private void drawCapsule(GuiGraphicsExtractor gg, int x, int y, int w, int h,
@@ -169,10 +170,10 @@ public final class TerminalActionBar {
                 AnimRenderOps.scissor(gg, x + 1, y + 1, fw, h - 2);
                 int ri = Math.max(1, (h - 2) / 2);
                 int di = 2 * ri;
-                AnimRenderOps.blitTextured(gg, AnimRenderOps.TEX_PILL_CAP,
-                        x + 1, y + 1, di, di, 0, 0, 8, 8, 16, 8, fillColor);
-                AnimRenderOps.blitTextured(gg, AnimRenderOps.TEX_PILL_CAP,
-                        x + w - 1 - di, y + 1, di, di, 8, 0, 8, 8, 16, 8, fillColor);
+                AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE,
+                        x + 1, y + 1, di, di, 0, 0, 32, 32, 32, 32, fillColor);
+                AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE,
+                        x + w - 1 - di, y + 1, di, di, 0, 0, 32, 32, 32, 32, fillColor);
                 AnimRenderOps.fill(gg, x + 1 + ri, y + 1, x + w - 1 - ri, y + h - 1, fillColor);
                 AnimRenderOps.scissorDisable(gg);
             }
@@ -217,7 +218,7 @@ public final class TerminalActionBar {
 
     private void drawTooltip(GuiGraphicsExtractor gg, int x, int y, Font font) {
         String tip = Component.translatable("csgobox.terminal.tip").getString();
-        int w = RenderFontTool.width(font, tip, 0.43F) + 5;
+        int w = Math.round(font.width(tip) * 0.43F) + 5;
         int h = 8;
         TerminalChatRegion.drawRounded(gg, x, y, w, h, TerminalPalette.TOOLTIP_BG,
                 TerminalPalette.TOOLTIP_BORDER);

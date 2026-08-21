@@ -162,12 +162,12 @@ public class CsboxBulkResultScreen extends Screen {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.4F)) * 0.5F, this.height * 0.06F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.4F, 0xFFFFFFFF);
         int shown = cursor;
         int total = allItems.size();
         Component progress = Component.literal(shown + " / " + total);
         RenderFontTool.drawString(guiGraphics, this.font, progress.getVisualOrderText(),
-                (this.width - RenderFontTool.width(this.font, progress.getVisualOrderText(), 0.9F)) * 0.5F, this.height * 0.13F, 0, 0, 0.9F, 0xFFAAAAAA);
+                (this.width - this.font.width(progress)) * 0.5F, this.height * 0.13F, 0, 0, 0.9F, 0xFFAAAAAA);
     }
 
     private void renderEntries(GuiGraphicsExtractor guiGraphics, float partialTicks) {
@@ -207,6 +207,10 @@ public class CsboxBulkResultScreen extends Screen {
             } else if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
             }
+            // Reuse the per-entry pre-rendered label (stable) instead of
+            // rebuilding the string + Component + visual-order sequence per frame.
+            RenderFontTool.drawString(guiGraphics, this.font, e.labelSeq,
+                    itemX + itemSize + 12, y - this.font.lineHeight * 0.5F, 0, 0, 0.9F, labelColor);
             index++;
         }
     }
@@ -219,7 +223,7 @@ public class CsboxBulkResultScreen extends Screen {
         if (cursor < allItems.size()) {
             Component waiting = Component.translatable("gui.csgobox.bulk.waterfall_empty");
             RenderFontTool.drawString(guiGraphics, this.font, waiting.getVisualOrderText(),
-                    (this.width - RenderFontTool.width(this.font, waiting.getVisualOrderText(), 0.9F)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
+                    (this.width - this.font.width(waiting)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
             return;
         }
         if (!visible.isEmpty()) {
@@ -240,7 +244,7 @@ public class CsboxBulkResultScreen extends Screen {
         Style style = Style.EMPTY.withBold(true);
         Component showAllText = Component.translatable("gui.csgobox.bulk.show_all").withStyle(style);
         FormattedCharSequence showAllSeq = showAllText.getVisualOrderText();
-        float showAllTextW = RenderFontTool.width(this.font, showAllSeq, 0.95F);
+        float showAllTextW = this.font.width(showAllSeq) * 0.95F;
         float showAllTextX = showAllX + (btnW - showAllTextW) / 2.0F;
         float showAllTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, showAllSeq, showAllTextX, showAllTextY, 0, 0, 0.95F, 0xFFFFFFFF);
@@ -253,7 +257,7 @@ public class CsboxBulkResultScreen extends Screen {
         guiGraphics.fill(collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
         Component collectText = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence collectSeq = collectText.getVisualOrderText();
-        float collectTextW = RenderFontTool.width(this.font, collectSeq, 0.95F);
+        float collectTextW = this.font.width(collectSeq) * 0.95F;
         float collectTextX = collectX + (btnW - collectTextW) / 2.0F;
         float collectTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, collectSeq, collectTextX, collectTextY, 0, 0, 0.95F, 0xFFFFFFFF);
@@ -275,7 +279,7 @@ public class CsboxBulkResultScreen extends Screen {
 
         Component title = Component.translatable("gui.csgobox.bulk.all_rewards_title");
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.2F)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
+                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
 
         int idx = 0;
         for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
@@ -297,7 +301,7 @@ public class CsboxBulkResultScreen extends Screen {
 
             if (count > 1) {
                 Component countText = Component.literal("x" + count);
-                int countW = RenderFontTool.width(this.font, countText.getVisualOrderText(), 0.8F);
+                int countW = this.font.width(countText);
                 RenderFontTool.drawString(guiGraphics, this.font, countText.getVisualOrderText(),
                         x + itemSize + 4 - countW - 2, y + itemSize + 4 - this.font.lineHeight - 2, 0, 0, 0.8F, 0xFFFFFFFF);
             }
@@ -316,7 +320,7 @@ public class CsboxBulkResultScreen extends Screen {
         Style style = Style.EMPTY.withBold(true);
         Component text = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = RenderFontTool.width(this.font, seq, 0.95F);
+        float textW = this.font.width(seq) * 0.95F;
         float textX = btnX + (btnW - textW) / 2.0F;
         float textY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, 0xFFFFFFFF);
