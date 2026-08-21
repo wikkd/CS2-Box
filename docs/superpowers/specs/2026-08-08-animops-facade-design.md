@@ -19,7 +19,7 @@
 | 适配成本高 | `CsboxProgressScreen` 465 行，1.21.1→1.21.10 diff 112 行（24%）；`IconListTools`/`GuiItemMove` 物品渲染核心每时代整段重写；仓库 5+ 个 merge-*.py 专门为动画功能写定点合入脚本 |
 | 已知渲染缺陷 | legacy 立即模式 blit 继承全局 blend 状态（spot_glow/vignette 需手动重置 blendFuncSeparate）；blur 签名有 **4 种形态**（`partialTicks` / 无参 / `guiGraphics` / 26.x `blurBeforeThisStratum()`）；tint 参数 1.21.11 删除、26.x 无 color 参数 |
 | 跨平台表现不一致 | 同动画在不同时代走 3 套互不相通的物品渲染技术，行为细节天然漂移 |
-| 技术升级难 | 出货页 3D 展示目前仅 1.21.1（TACZ）/1.21.11+（PIP）有；流畅度/性能优化需 10 平台各做一遍 |
+| 技术升级难 | 出货页 3D 展示目前仅 v1_21_1 / forge_1_20_1（TACZ）/1.21.11+（PIP）有；流畅度/性能优化需多平台各做一遍 |
 
 ## 方案对比与结论
 
@@ -35,7 +35,7 @@
    ├─ IconListTools / GuiItemMove / RenderFontTool  ← 逻辑助手（aspect/旋转数学/文本缩放，版本无关）
    │     │ 只调用
    │     └─ utils/AnimRenderOps  ← 唯一版本差异点，每平台 1 份，5 时代变体
-   │           └─ pip/Icon3DRenderer（仅 1.21.11+/26.x）、compat/TaczInspectViewport（仅 1.21.1）留在内部被间接调用
+   │           └─ pip/Icon3DRenderer（仅 1.21.11+/26.x）、compat/TaczInspectViewport（仅 v1_21_1 / forge_1_20_1）留在内部被间接调用
    └─ 动画数值（easedScroll/切带/聚光衰减/音效阈值）保持原样
 ```
 
@@ -43,7 +43,7 @@
 - **布局与数学留在屏/助手（稳定），draw 调用进门面（可变）**。
 - 门面守**原语级**（draw 调用），功能级逻辑（透镜切带/缓动/音效节奏）不入门面——防止抽象泄漏。
 - 屏与助手**永不分支版本**；时代特有能力 = 门面能力探测（如 `supports3D()`）。
-- 1.21.1 的 `TaczInspectViewport`（自驱 TACZ 状态机）是独立路径，**不并入** `renderItem3D`。
+- v1_21_1 / forge_1_20_1 的 `TaczInspectViewport`（自驱 TACZ 状态机）是独立路径，**不并入** `renderItem3D`；TACZ 枪默认 3D 展示走 `renderItem3D → renderGunModel3D`。
 
 ## 门面 API（10 平台同形状）
 

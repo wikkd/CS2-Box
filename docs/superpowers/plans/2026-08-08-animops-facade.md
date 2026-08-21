@@ -18,7 +18,7 @@
 - 镜像纪律：门面文件有时代差异，**禁止 `mirror.sh --force` 跨时代覆盖**；仅同时代对（1.21.0↔1.21.1、26.1.2↔26.2）可镜像
 - 门面文件头注释必须有 `// era: <legacy|mid|renderpipeline|pip|decoupled>`（漂移脚本依赖）
 - **视觉零变化**：每个时代门面实现 = 该时代现有代码逐字搬移，不"顺手修"轴映射/数值
-- 1.21.1 TACZ 分支（`TaczInspectViewport`）不并入 `renderItem3D`
+- 1.21.1 / forge_1_20_1 TACZ 分支（`TaczInspectViewport`）不并入 `renderItem3D`；默认 3D 展示走 `renderItem3D → renderGunModel3D`
 - 不提交任何依赖 jar / 构建产物；提交信息沿用仓库风格（`feat|refactor|docs|build|chore` 前缀）
 
 ---
@@ -257,7 +257,7 @@ git commit -m "refactor(v1_21_1): CsboxProgressScreen 渲染调用收口到 Anim
   - 开箱动画：滚动缓动、聚光灯径向渐变（半透明边缘）、放大镜切带（无残影/鬼影）、vignette 圆环、金色线
   - 抽卡节奏音效（每卡片"嗒"声、8Hz 节流）
   - 批量开箱总览屏 3D 箱子拖拽旋转（rotX/rotY 手感）
-  - 出货页：2D 图标；装 TACZ 时 TACZ 枪默认 3D 展示 + 手套按钮检视动画（TACZ 路径未被误伤）
+  - 出货页：2D 图标；装 TACZ 时 TACZ 枪默认走自家可拖拽 3D 渲染 + 手套按钮进入/重播检视动画（TACZ 路径未被误伤）
   - ESC 退出、hideGui 恢复
 - [ ] **Step 2: 记录结果**到 `docs/RUNTIME-UI-TESTING.md`（新开"AnimRenderOps 重构回归"小节，勾选列表）
 - [ ] **Step 3: Commit**（若记录文档写入则提交）
@@ -424,10 +424,10 @@ git commit -m "refactor(v26_1_2): 助手与 ProgressScreen 收口到 AnimRenderO
 - [ ] 基线收口（`fill`/`fillGradient`/`blitTextured`；`RenderFontTool` 调用保留）→ 8 平台铺开 → clean 编译 → Commit
 - [ ] 注：`RenderFontTool` 不入门面（drawString 各平台签名一致，已是稳定助手）
 
-### Task 3.4: CsLookItemScreen（含 TACZ 分支，仅 1.21.1 特殊）
+### Task 3.4: CsLookItemScreen（含 TACZ 分支，仅 v1_21_1 / forge_1_20_1 特殊）
 
 - [ ] 基线收口：2D 图标与 info panel 的渲染调用 → 门面
-- [ ] **1.21.1 保留**：`TaczInspectViewport.isAvailable/enterDisplay/renderViewport/triggerInspect/exit` 调用链**原样不动**（TACZ 视口是独立路径，非门面 `renderItem3D`）
+- [ ] **1.21.1 保留**：`TaczInspectViewport.isAvailable/enter/renderViewport/triggerInspect/exit` 调用链**原样不动**（TACZ 视口是独立路径，非门面 `renderItem3D`；默认 3D 展示走 `renderItem3D → renderGunModel3D`）
 - [ ] 其余平台按时代铺开 + clean 编译 → Commit
 
 ### Task 3.5: CsboxConfirmScreen（~3 处/平台）

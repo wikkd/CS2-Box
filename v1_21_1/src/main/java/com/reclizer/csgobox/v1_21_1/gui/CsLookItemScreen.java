@@ -34,13 +34,6 @@ public class CsLookItemScreen extends Screen {
     private float infoPanelAnim = 0F;
     /** TACZ inspect viewport visibility, toggled by the gloves toolbar button. */
     private boolean taczViewportActive = false;
-    /** One-shot guard for the default TACZ 3D display attempt on first render. */
-    private boolean taczDisplayChecked = false;
-    /** Frames spent waiting for the TACZ gun display to load before giving up
-     *  on the 3D viewport (TACZ loads gun displays asynchronously after world
-     *  join, so a reward opened immediately can lack its display for a moment). */
-    private static final int MAX_DISPLAY_RETRY_TICKS = 100;
-    private int taczDisplayRetries = 0;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -221,20 +214,11 @@ public class CsLookItemScreen extends Screen {
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
         AnimRenderOps.fill(guiGraphics, this.width * 37 / 100, this.height * 16 / 100,
                 this.width * 63 / 100, this.height * 16 / 100 + 4, ColorTools.colorItems(grade));
-        // TACZ guns default to the 3D display viewport: TACZ's own GUI item
-        // rendering only draws the flat slot texture, so drive its renderer
-        // ourselves. Retry for a few seconds: the gun display may still be
-        // loading right after world join; after the window, failure keeps 2D.
-        if (!this.taczDisplayChecked && this.minecraft != null && this.minecraft.player != null) {
-            this.taczDisplayRetries++;
-            if (TaczInspectViewport.isAvailable(this.openItem)
-                    && TaczInspectViewport.enterDisplay(this.openItem, this.minecraft.player)) {
-                this.taczViewportActive = true;
-                this.taczDisplayChecked = true;
-            } else if (this.taczDisplayRetries >= MAX_DISPLAY_RETRY_TICKS) {
-                this.taczDisplayChecked = true;
-            }
-        }
+        // TACZ guns default to our own 3D render path (AnimRenderOps.renderItem3D
+        // -> renderGunModel3D), which supports drag rotation. The TACZ inspect
+        // viewport is opt-in via the gloves toolbar button ("First-Person
+        // Inspect Animation"); it uses TACZ's fixed-pose renderer and does
+        // not follow mouse drag.
         boolean viewportRendered = false;
         if (this.taczViewportActive && this.minecraft != null && this.minecraft.player != null) {
             viewportRendered = TaczInspectViewport.renderViewport(guiGraphics, openItem,
@@ -280,7 +264,9 @@ public class CsLookItemScreen extends Screen {
             if (hover) {
                 this.hoveredButton = i;
             }
-            boolean active = (i == 3 && this.showInfoPanel) || (i == 1 && this.taczViewportActive);
+            // Inspect (index 0) is the default mode (own 3D drag preview);
+            // gloves (index 1) is active only while the TACZ viewport is on.
+            boolean active = (i == 0 && !this.taczViewportActive) || (i == 1 && this.taczViewportActive) || (i == 3 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             AnimRenderOps.fill(guiGraphics, x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
@@ -489,6 +475,18 @@ public class CsLookItemScreen extends Screen {
             return true;
         }
         int infoSize = toolbarButtonSize();
+        // Inspect button (index 0) is the default mode: our own 3D drag
+        // preview. Clicking it while the TACZ viewport is active returns to
+        // the default preview (exits the first-person inspect viewport).
+        int inspectX = toolbarButtonX(0);
+        int inspectY = toolbarButtonY() + toolbarEnterRise(0);
+        if (button == 0 && isInside(mouseX, mouseY, inspectX, inspectY, infoSize, infoSize)) {
+            if (this.taczViewportActive) {
+                TaczInspectViewport.exit(this.openItem);
+                this.taczViewportActive = false;
+            }
+            return true;
+        }
         int glovesX = toolbarButtonX(1);
         int glovesY = toolbarButtonY() + toolbarEnterRise(1);
         if (button == 0 && isInside(mouseX, mouseY, glovesX, glovesY, infoSize, infoSize)) {

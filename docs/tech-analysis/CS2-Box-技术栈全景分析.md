@@ -61,7 +61,7 @@ flowchart TD
 ```
 
 要点：
-- `v1_21_1` 有 `compileOnly` TACZ 依赖（永恒枪械工坊），首次构建前跑 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/` 并从 jar 提取 `simplebedrockmodel`；运行期经 `ModList.isLoaded("tacz")` 检测，无 TACZ 静默降级。
+- `v1_21_1` / `forge_1_20_1` 有 `compileOnly` TACZ 依赖（永恒枪械工坊），首次构建前分别跑 `scripts/download-tacz.sh` / `scripts/download-tacz-1201.sh` 填充 `local-repo/com/tacz/` 并从 jar 提取 `simplebedrockmodel`；运行期经 `ModList.isLoaded("tacz")` 检测，无 TACZ 静默降级。
 - `forge_26_1_2` 用 ForgeGradle 7（`net.minecraftforge.gradle.merge-source-sets=true`），源码未提交、不参与 CI 与镜像纪律。
 - 涉及改动平台时务必 `clean` 编译——增量缓存可能掩盖破坏（AGENTS.md 明确提醒）。
 

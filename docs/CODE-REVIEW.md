@@ -88,7 +88,7 @@
 - 审查点：是否新增/修改配置项但漏改某平台？是否误加了 null 守卫？是否同步更新了 `docs/CONFIGURATION.md`？
 
 ### 4.6 TACZ 软依赖守卫 🟡
-`v1_21_1` 的 TACZ（永恒枪械工坊：零）为 `compileOnly` 软依赖，运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境须**静默降级**。
+`v1_21_1` / `forge_1_20_1` 的 TACZ（永恒枪械工坊：零）为 `compileOnly` 软依赖，运行时经 `ModList.isLoaded("tacz")` 检测，无 TACZ 环境须**静默降级**。
 
 - 审查点：TACZ 相关代码是否都包在 `isLoaded("tacz")` 判断内？未装 TACZ 时功能是否干净降级（不报错、不紫黑块）？
 

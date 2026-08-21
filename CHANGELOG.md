@@ -112,7 +112,7 @@
 
 ### 上线前补充：TACZ 检视视口 / v1_21_0 平台 / 审美测试脚本
 ### 新增
-- **TACZ 检视视口（仅 1.21.1 平台，可选集成）**：开箱检视屏（CsLookItemScreen）抽中 TACZ（永恒枪械工坊：零）枪械时，中央展示区默认以 3D 视口展示枪械模型（TACZ 自身 GUI 物品渲染只画 2D 槽位贴图，此处经 TACZ 公共渲染器/状态机 API 自驱渲染绕过），点击底部工具栏"手套"按钮播放检视动画与官方检视音效（可重复触发）。不改变玩家手持物品。TACZ 为 compileOnly 软依赖：未安装 TACZ、或抽出物品不是 TACZ 枪械时保持原 2D 图标展示、点击无响应；构建前需运行 `scripts/download-tacz.sh` 下载 TACZ jar（~57MB，不入库，CI 自动下载）。
+- **TACZ 检视视口（v1_21_1 / forge_1_20_1 平台，可选集成）**：开箱检视屏（CsLookItemScreen）抽中 TACZ（永恒枪械工坊：零）枪械时，中央展示区默认走自家可拖拽 3D 渲染路径（`AnimRenderOps.renderItem3D` → `renderGunModel3D`）；点击底部工具栏"手套"按钮（index 1）按需进入 TACZ 第一人称检视视口并播放检视动画/官方检视音效（已激活时再次点击重播，关闭屏幕自动退出）。"检视武器"按钮（index 0）为默认选中项：打开界面即处于自家拖拽预览并默认高亮，点击可切回/退出 TACZ 视口。不再默认自动进入 TACZ 固定视角视口，避免与拖拽预览冲突。TACZ 为 compileOnly 软依赖：未安装 TACZ、或抽出物品不是 TACZ 枪械时保持原 2D/普通 3D 展示、手套点击无响应；构建前需运行 `scripts/download-tacz.sh`（v1_21_1）或 `scripts/download-tacz-1201.sh`（forge_1_20_1）下载 TACZ jar（不入库，CI 自动下载）。
 - **审美测试脚本 `clean` 子命令**（`scripts/test_animation_aesthetics.py`）。一键清理测试产物：默认只删 `shots/*.png` 保留 `report.md`，`--report` 连同报告一起删；`--dry-run` 预览不删、`--yes` 免确认；目录不存在或无匹配文件幂等返回 0，单文件删除失败汇总返回 1。删除前打印清单 + 确认提示防误删。
 - **v1_21_0 平台模块（第 10 个平台，MC 1.21.0 / NeoForge 21.0.167 稳定版）。** NeoForge 稳定线矩阵补全：1.21.0 是 1.21.1 的直接前身（补丁级 API 差异），从 `v1_21_1/` 完整镜像并包名重命名（42 java 文件零适配），`settings.gradle` 的 `versionModules` 与 `gradle.properties` 新增 10 个 `*_21_0` 变量，CI 矩阵新增 1.21.0 (Java 21) 行。`compileJava -Pactive_versions=1.21.0` 验证 BUILD SUCCESSFUL。
 

@@ -406,8 +406,8 @@ TagParser.parseTag(tagStr) → TagParser.parseCompoundFully(tagStr);
   decoupled 传 26.x blit 末参 tint —— 签名统一，实现随时代
 - `renderItem2D`（26.x）：per-item bounding box 居中；`renderItem3D`（26.x）：PIP 路径
   （`Icon3DRenderState` + `submitPictureInPictureRenderState`），radians→degrees 转换在门面内部
-- 屏内 `RenderFontTool` 文本调用不入门面（drawString 各平台签名一致）；1.21.1 TACZ 视口
-  （`TaczInspectViewport`）是独立路径，不并入 `renderItem3D`
+- 屏内 `RenderFontTool` 文本调用不入门面（drawString 各平台签名一致）；v1_21_1 / forge_1_20_1 的 TACZ 视口
+  （`TaczInspectViewport`）是独立路径，不并入 `renderItem3D`；TACZ 枪默认 3D 展示走 `renderItem3D → renderGunModel3D`
 - **新增原语必须三平台同步补**，签名漂移由 `scripts/check-animops-drift.sh` 守护（CI 已接线）
 - 1.21.1 残留 RenderSystem 状态操作（CsboxScreen 深度测试开关、CsLookItemScreen 工具栏 tint
   循环）属有意保留，非 draw 原语

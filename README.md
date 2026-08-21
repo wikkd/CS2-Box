@@ -87,7 +87,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 > 由于 NeoGradle userdev 限制，**每次 Gradle 调用只能构建一个 MC 版本**（历史限制，见 `settings.gradle`）。需要各平台产物时逐个切换 `active_versions`（或用 `-Pactive_versions=<v>` 覆盖）串行构建，详见 [docs/RELEASE.md](./docs/RELEASE.md)。
 
-**v1_21_1 的 TACZ 依赖**（永恒枪械工坊检视视口集成）：jar 不入库（仓库惯例 `*.jar` 全局忽略），首次构建前运行 `scripts/download-tacz.sh` 填充 `local-repo/com/tacz/`（CI 自动执行），并从 jarjar 提取编译所需的 `simplebedrockmodel`。无 TACZ 环境时相关功能**自动降级**，不影响编译与运行。
+**v1_21_1 / forge_1_20_1 的 TACZ 依赖**（永恒枪械工坊检视视口集成）：jar 不入库（仓库惯例 `*.jar` 全局忽略），首次构建前分别运行 `scripts/download-tacz.sh`（v1_21_1）或 `scripts/download-tacz-1201.sh`（forge_1_20_1）填充 `local-repo/com/tacz/`（CI 自动执行），并从 jarjar 提取编译所需的 `simplebedrockmodel`。无 TACZ 环境时相关功能**自动降级**，不影响编译与运行。
 
 ## 使用示例
 
