@@ -167,7 +167,7 @@ public class CsboxConfirmScreen extends Screen {
                 if (conn != null) {
                     Networking.sendToServer(new PacketCsgoBulkProgress(reqId));
                 }
-                Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
+                Minecraft.getInstance().setScreenAndShow(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
             if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {

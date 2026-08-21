@@ -282,7 +282,7 @@ public class CsboxBulkOverviewScreen extends Screen {
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
                 // Second step: confirmation screen restates the exact
                 // consumption before the bulk request is sent.
-                Minecraft.getInstance().setScreen(new CsboxConfirmScreen(
+                Minecraft.getInstance().setScreenAndShow(new CsboxConfirmScreen(
                         this.player, this.templateBox, this.boxCount, this.keyCount, this.openableCount));
                 return true;
             }

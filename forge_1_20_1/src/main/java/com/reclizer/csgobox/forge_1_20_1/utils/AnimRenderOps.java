@@ -15,7 +15,6 @@ import com.tacz.guns.client.model.bedrock.BedrockPart;
 import com.tacz.guns.client.resource.GunDisplayInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -28,15 +27,13 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix4fStack;
+import net.minecraftforge.fml.ModList;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
@@ -45,63 +42,53 @@ import java.util.WeakHashMap;
  * Single per-platform adaptation point for animation rendering primitives.
  * Screens and logic helpers (IconListTools / GuiItemMove) must call ONLY
  * through this class; version-varying render API lives here and nowhere else.
- * era: legacy
+ * era: legacy (1.20.1)
  */
 public final class AnimRenderOps {
+
+    /** TACZ is a compileOnly optional dependency: every TACZ class touch in
+     *  this file must sit behind an {@code isLoaded} gate first, so the JVM
+     *  never resolves IGun/TimelessAPI when the mod is absent at runtime
+     *  (same discipline as BoxItemCodec / TaczInspectViewportImpl). */
+    private static final String TACZ_MOD_ID = "tacz";
+
     private static final Logger LOGGER = LogUtils.getLogger();
+    /** Identity render stack for model rendering: bone transforms accumulate
+     *  here while the outer placement lives in RenderSystem's model-view
+     *  matrix. Safe to reuse on the render thread. */
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
     /** Scratch quaternion for the drag rotation: {@code mulPose} copies the
      *  value immediately, so a single static instance is safe on the render
      *  thread and avoids one allocation per 3D item per frame. */
     private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
-    /** Sentinel cached for models without usable geometry (custom renderers
-     *  or degenerate bounds): distinguishes "not computed" from "nothing to
-     *  centre", so those models are not rescanned every frame. */
-    private static final Object NO_CENTER = new Object();
     /** Cached model-space centre of each TACZ gun's default-pose bounding
      *  box (block units). Gun displays are singletons per gun id and are
      *  replaced on resource reload, so a WeakHashMap lets old models go. */
     private static final Map<BedrockGunModel, Vector3f> GUN_MODEL_CENTERS = new WeakHashMap<>();
-
+    /** Sentinel cached for models without usable geometry (custom renderers
+     *  or degenerate bounds): distinguishes "not computed" from "nothing to
+     *  centre", so those models are not rescanned every frame. */
+    private static final Object NO_CENTER = new Object();
     /** Cached centre (block units, in the drag-rotation space) of each baked
      *  item model's geometry. Models are stable instances owned by the model
      *  manager and are replaced on resource reload, so a WeakHashMap lets old
      *  models go. */
     private static final Map<BakedModel, Object> ITEM_MODEL_CENTERS = new WeakHashMap<>();
 
-    /** Screen.renderBlurredBackground is protected in this MC version and
-     *  depends on the screen's own {@code minecraft} instance, so the facade
-     *  bridges it via reflection (invokes the very same method). */
-    private static final Method SCREEN_RENDER_BLURRED_BACKGROUND;
-
-    static {
-        Method m;
-        try {
-            m = Screen.class.getDeclaredMethod("renderBlurredBackground", float.class);
-            m.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException("Unable to resolve Screen.renderBlurredBackground", e);
-        }
-        SCREEN_RENDER_BLURRED_BACKGROUND = m;
-    }
-
     private AnimRenderOps() {
     }
 
-    /** Immediate-mode blit. Forces SRC_ALPHA: the 8-arg blit inherits whatever
-     *  blend func is current, so translucent textures (spot glow, lens
-     *  vignette) would otherwise render as hard opaque discs. */
+    /** Immediate-mode blit. Forces SRC_ALPHA: the convenience blit inherits
+     *  whatever blend func is current, so translucent textures (spot glow,
+     *  lens vignette) would otherwise render as hard opaque discs. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h) {
-        gg.flush();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(770, 771, 1, 771);
-        gg.blit(tex, x, y, 0, 0, w, h, w, h);
+        blitTextured(gg, tex, x, y, w, h, w, h);
     }
 
     /** Variant carrying the texture's real pixel size: the convenience blit
      *  treats the source UV window as w×h, so an enlarged draw (gold_item.png
-     *  32x24 at ~169x127) would push UV past 1.0. The 11-arg overload keeps
-     *  UV = [0,1] and uses width/height as the free-form target size. */
+     *  32x24 at ~169x127) would push UV past 1.0. The whole texture maps
+     *  onto the free-form w×h target rect with UV kept in [0,1]. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h, int texW, int texH) {
         gg.flush();
         RenderSystem.enableBlend();
@@ -109,10 +96,10 @@ public final class AnimRenderOps {
         gg.blit(tex, x, y, w, h, 0F, 0F, texW, texH, texW, texH);
     }
 
-    /** Sprite-sheet variant: draws a UV window (u,v,uw,vh) of a texW x texH
-     *  texture with an ARGB tint applied via shader color. Legacy immediate
-     *  mode does NOT auto-reset the shader color, so this facade restores
-     *  (1,1,1,1) itself before returning — callers never leak the tint. */
+    /** Sprite-sheet variant: draws a w×h rect with the UV window (u,v,uw,vh)
+     *  of a texW x texH texture, ARGB tint applied via shader color. The
+     *  shader color is NOT auto-reset by the GUI pipeline, so this facade
+     *  restores (1,1,1,1) itself before returning — callers never leak tint. */
     public static void blitTextured(GuiGraphics gg, ResourceLocation tex, int x, int y, int w, int h,
                                     int u, int v, int uw, int vh, int texW, int texH, int tint) {
         gg.flush();
@@ -120,7 +107,7 @@ public final class AnimRenderOps {
         RenderSystem.blendFuncSeparate(770, 771, 1, 771);
         RenderSystem.setShaderColor(((tint >> 16) & 0xFF) / 255F,
                 ((tint >> 8) & 0xFF) / 255F, (tint & 0xFF) / 255F, ((tint >> 24) & 0xFF) / 255F);
-        gg.blit(tex, x, y, w, h, u, v, uw, vh, texW, texH);
+        gg.blit(tex, x, y, w, h, (float) u, (float) v, uw, vh, texW, texH);
         RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
     }
 
@@ -150,24 +137,25 @@ public final class AnimRenderOps {
         gg.flush();
     }
 
-    public static void renderBlurredBackground(Screen screen, GuiGraphics gg, float partialTicks) {
-        try {
-            SCREEN_RENDER_BLURRED_BACKGROUND.invoke(screen, partialTicks);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException("Unable to render blurred background", e);
-        }
+    public static void renderBlurredBackground(GuiGraphics gg) {
+        // 1.20.1 has no menu backdrop blur API (added in 1.20.2) — no-op.
     }
 
-    /** 2D item icon centred at (x, y), scaled (16px per block unit). */
+    /** 2D item icon with its top-left corner at (x, y), scaled (16px per
+     *  block unit). Drawn through the shared buffer source and submitted
+     *  immediately (endBatch) so an active scissor rect clips the icon. */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
         // TACZ guns without a loaded display instance have no model to draw;
         // their custom renderer falls back to the missing-texture slot icon,
         // painting a magenta checkerboard across the card. Skip the draw so
-        // the card frame alone shows until the display is available.
-        if (stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
+        // the card frame alone shows until the display is available. The
+        // isLoaded gate keeps instanceof IGun from ever executing (and thus
+        // from class-loading TACZ) when the optional dependency is absent.
+        if (ModList.get().isLoaded(TACZ_MOD_ID)
+                && stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
             return;
         }
+        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(x, y, 2F);
@@ -177,9 +165,9 @@ public final class AnimRenderOps {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(pose.last().pose());
+        PoseStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushPose();
+        modelViewStack.mulPoseMatrix(pose.last().pose());
         RenderSystem.applyModelViewMatrix();
         PoseStack renderStack = REUSABLE_POSE_STACK;
         renderStack.setIdentity();
@@ -189,18 +177,20 @@ public final class AnimRenderOps {
         RenderSystem.enableDepthTest();
         if (flat) Lighting.setupFor3DItems();
         pose.popPose();
-        modelViewStack.popMatrix();
+        modelViewStack.popPose();
         RenderSystem.applyModelViewMatrix();
     }
 
     /** 3D rotating item preview (drag-to-rotate). The raw quaternion from
-     *  {@link ItemDrag3D} passes through unchanged — the drag scheme works in
+     *  {@code ItemDrag3D} passes through unchanged — the drag scheme works in
      *  quaternion space. TACZ guns bypass the vanilla ItemRenderer (its GUI
      *  branch only draws the flat slot texture); see {@link #renderGunModel3D}. */
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
-        if (item.getItem() instanceof IGun) {
+        // Optional-dependency gate: without it the instanceof below would
+        // class-load TACZ and crash clients that don't have it installed.
+        if (ModList.get().isLoaded(TACZ_MOD_ID) && item.getItem() instanceof IGun) {
             Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(item);
             // No loaded display -> nothing to draw (TACZ would fall back to the
             // missing-texture slot icon, painting a magenta checkerboard).
@@ -214,7 +204,9 @@ public final class AnimRenderOps {
             renderGunModel3D(gg, item, cx, cy, rotation, scale, gunModel, display.get());
             return;
         }
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        BakedModel model = mc.getItemRenderer().getModel(item, player.level(), player, 0);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
@@ -227,28 +219,28 @@ public final class AnimRenderOps {
         // Rotate around the model's geometric centre, not the model origin:
         // block-style models span 0..1 with the origin at a corner, so an
         // origin pivot would swing the box around a point outside its body.
-        // Same convention as the TACZ gun branch (and the 26.x PIP renderer):
-        // translate(-centre) in block units AFTER the 16px scale.
+        // Same convention as the TACZ gun branch: translate(-centre) in block
+        // units AFTER the 16px scale.
         Vector3f center = itemModelCenter(model);
         if (center != null) {
             pose.translate(-center.x, -center.y, -center.z);
         }
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(pose.last().pose());
+        PoseStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushPose();
+        modelViewStack.mulPoseMatrix(pose.last().pose());
         RenderSystem.applyModelViewMatrix();
         PoseStack renderStack = REUSABLE_POSE_STACK;
         renderStack.setIdentity();
-        Minecraft.getInstance().getItemRenderer().render(item, ItemDisplayContext.GUI, false,
+        mc.getItemRenderer().render(item, ItemDisplayContext.GUI, false,
                 renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
         if (flat) Lighting.setupFor3DItems();
         pose.popPose();
-        modelViewStack.popMatrix();
+        modelViewStack.popPose();
         RenderSystem.applyModelViewMatrix();
     }
 
@@ -357,9 +349,9 @@ public final class AnimRenderOps {
         Vector3f center = gunModelCenter(gunModel);
         pose.translate(-center.x, -center.y, -center.z);
         Lighting.setupForEntityInInventory();
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(pose.last().pose());
+        PoseStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushPose();
+        modelViewStack.mulPoseMatrix(pose.last().pose());
         RenderSystem.applyModelViewMatrix();
         REUSABLE_POSE_STACK.setIdentity();
         RenderType renderType = display.enablesTransparency()
@@ -373,7 +365,7 @@ public final class AnimRenderOps {
         } catch (Throwable t) {
             LOGGER.warn("TACZ gun model render failed in 3D preview", t);
         } finally {
-            modelViewStack.popMatrix();
+            modelViewStack.popPose();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             pose.popPose();
@@ -425,7 +417,7 @@ public final class AnimRenderOps {
         if (part.xRot != 0.0F) {
             m.rotateX(part.xRot);
         }
-        // JOML 1.10.5 Matrix4f.rotate has no identity short-circuit and always
+        // JOML Matrix4f.rotate has no identity short-circuit and always
         // builds a quat->matrix product; the quaternion is identity in every
         // default-pose model (constructor and cleanAnimationTransform reset
         // it), so skip the full multiply when it is.
@@ -476,74 +468,5 @@ public final class AnimRenderOps {
 
     public static boolean supports3D() {
         return true;
-    }
-
-    // ---- HD rounded rect / pill (9-slice, no bitmap down-scaling) ----
-
-    /** 8x8 four-quadrant corner mask (rounded_corner.png): each 4x4 quadrant
-     *  is one corner, drawn at original size; the border ring blits them 1.5x
-     *  and the edges are 1px fill rects. */
-    private static final ResourceLocation TEX_ROUNDED_CORNER = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/rounded_corner.png");
-    /** 16x8 pill end-cap mask (terminal_cap.png): left half = left cap, right
-     *  half = mirrored right cap; drawn at ~diameter h (8 -> 7/9 px). */
-    public static final ResourceLocation TEX_PILL_CAP = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_cap.png");
-
-    /** Rounded rectangle with a fixed ~3.5px corner radius, crisp at any
-     *  size: the 4x4 corner quadrants render at original size (1:1), the
-     *  border ring at 1.5x + 1px rect edges, the body as fill rects. */
-    public static void drawRoundedRect(GuiGraphics gg, int x, int y, int w, int h,
-                                       int fill, int border) {
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        if (w < 8 || h < 8) {
-            // Too small for a 4px corner: plain bordered rect.
-            fill(gg, x - 1, y - 1, x + w + 1, y + h + 1, border);
-            fill(gg, x, y, x + w, y + h, fill);
-            return;
-        }
-        int c = 4;
-        int bc = 6;
-        // border ring: corners 1.5x, edges 1px
-        blitTextured(gg, TEX_ROUNDED_CORNER, x - 1, y - 1, bc, bc, 0, 0, 4, 4, 8, 8, border);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x + w + 1 - bc, y - 1, bc, bc, 4, 0, 4, 4, 8, 8, border);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x - 1, y + h + 1 - bc, bc, bc, 0, 4, 4, 4, 8, 8, border);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x + w + 1 - bc, y + h + 1 - bc, bc, bc, 4, 4, 4, 4, 8, 8, border);
-        fill(gg, x + 3, y - 1, x + w - 3, y + 1, border);
-        fill(gg, x + 3, y + h - 1, x + w - 3, y + h + 1, border);
-        fill(gg, x - 1, y + 3, x + 1, y + h - 3, border);
-        fill(gg, x + w - 1, y + 3, x + w + 1, y + h - 3, border);
-        // fill: corners 1:1 + body
-        blitTextured(gg, TEX_ROUNDED_CORNER, x, y, c, c, 0, 0, 4, 4, 8, 8, fill);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x + w - c, y, c, c, 4, 0, 4, 4, 8, 8, fill);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x, y + h - c, c, c, 0, 4, 4, 4, 8, 8, fill);
-        blitTextured(gg, TEX_ROUNDED_CORNER, x + w - c, y + h - c, c, c, 4, 4, 4, 4, 8, 8, fill);
-        fill(gg, x + c, y, x + w - c, y + h, fill);
-        fill(gg, x, y + c, x + w, y + h - c, fill);
-    }
-
-    /** Pill/capsule: two semicircle end caps from the 16x8 cap texture plus a
-     *  fill-rect body. Caps render at diameter h (8 -> 7/9 px, <=25% error)
-     *  instead of the old 32 -> h circle down-scale that aliased badly. */
-    public static void drawPill(GuiGraphics gg, int x, int y, int w, int h,
-                                int fill, int border) {
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        if (h < 5 || w < h) {
-            // Too small for the cap texture (or degenerate): plain bordered rect.
-            fill(gg, x - 1, y - 1, x + w + 1, y + h + 1, border);
-            fill(gg, x, y, x + w, y + h, fill);
-            return;
-        }
-        int bd = h + 2;
-        // border ring: caps 1px larger + body rect
-        blitTextured(gg, TEX_PILL_CAP, x - 1, y - 1, bd, bd, 0, 0, 8, 8, 16, 8, border);
-        blitTextured(gg, TEX_PILL_CAP, x + w + 1 - bd, y - 1, bd, bd, 8, 0, 8, 8, 16, 8, border);
-        fill(gg, x + h / 2, y - 1, x + w - h / 2, y + h + 1, border);
-        // fill: caps at diameter h + body
-        blitTextured(gg, TEX_PILL_CAP, x, y, h, h, 0, 0, 8, 8, 16, 8, fill);
-        blitTextured(gg, TEX_PILL_CAP, x + w - h, y, h, h, 8, 0, 8, 8, 16, 8, fill);
-        fill(gg, x + h / 2, y, x + w - h / 2, y + h, fill);
     }
 }

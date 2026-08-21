@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_1_20_1.gui.terminal;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
@@ -20,7 +21,7 @@ import java.util.Locale;
  * buttons. While a buy request is in flight it switches to a waiting state
  * that consumes all input.
  *
- * era: legacy
+ * era: decoupled
  */
 public final class TerminalConfirmDialog {
 
@@ -70,6 +71,23 @@ public final class TerminalConfirmDialog {
         if (state == State.CLOSED) {
             return;
         }
+        // 1.20.1 renders GUI fills with depth testing on and maps a LARGER z to
+        // NEARER depth (same semantics as the magnifier-lens fix). The offer
+        // region's 3D preview renders at z=100, so a z=0 dialog would sit
+        // farther than it and the item would punch through the modal. Raise the
+        // whole dialog to z=101 so the scrim/panel occlude the preview; the
+        // in-dialog icon (renderItem2D, z+2) and text still draw on top.
+        PoseStack pose = gg.pose();
+        pose.pushPose();
+        try {
+            pose.translate(0.0F, 0.0F, 101.0F);
+            renderModal(gg, screenW, screenH, player);
+        } finally {
+            pose.popPose();
+        }
+    }
+
+    private void renderModal(GuiGraphics gg, int screenW, int screenH, Player player) {
         // scrim dims the terminal underneath
         AnimRenderOps.fill(gg, 0, 0, screenW, screenH, 0x99000000);
 
@@ -90,12 +108,12 @@ public final class TerminalConfirmDialog {
         // item icon + name + wear
         int iconX = x + 9;
         int iconY = y + 15;
-        // 1.21.1 renderItem2D anchors at the icon-box TOP-LEFT and adds
+        // renderItem2D anchors at the icon-box TOP-LEFT and adds
         // 8*scale internally, so (iconX, iconY) already centres the 16px box
         // at (iconX+8.8, iconY+8.8) — matching the 26.x centre call.
         AnimRenderOps.renderItem2D(player, gg, itemStack, iconX, iconY, 1.1F);
         String name = itemStack.getHoverName().getString();
-        RenderFontTool.drawStringClampedVanilla(gg, font, name, x + 26, y + 13,
+        RenderFontTool.drawStringClamped(gg, font, name, x + 26, y + 13,
                 0, 0, 0.52F, w - 36, TerminalPalette.TEXT);
         int tier = WearBands.tierIndex(wearVal);
         String wear = Component.translatable("csgobox.terminal.confirm.wear",
@@ -129,7 +147,7 @@ public final class TerminalConfirmDialog {
 
         if (state == State.WAITING) {
             String waiting = Component.translatable("csgobox.terminal.confirm.waiting").getString();
-            int waitW = RenderFontTool.widthSpaced(font, waiting, 0.5F, 0.4F);
+            int waitW = Math.round(font.width(waiting) * 0.5F) + Math.round(0.4F * (waiting.length() - 1));
             RenderFontTool.drawSpacedText(gg, font, waiting, x + w / 2F - waitW / 2F, btnY + 1,
                     0.5F, 0.4F, 0x88FFFFFF);
             return;
@@ -150,7 +168,7 @@ public final class TerminalConfirmDialog {
                             String label, int border, int text, int fillColor) {
         TerminalChatRegion.drawPill(gg, x, y, w, h, 0xFF1B2026, border);
         Font font = Minecraft.getInstance().font;
-        int labelW = RenderFontTool.widthSpaced(font, label, 0.55F, 0.55F);
+        int labelW = Math.round(font.width(label) * 0.55F) + Math.round(0.55F * (label.length() - 1));
         RenderFontTool.drawSpacedText(gg, font, label,
                 x + (w - labelW) / 2F, y + (h - 3) / 2F - 1, 0.55F, 0.55F, text);
     }

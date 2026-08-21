@@ -5,18 +5,23 @@ import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
+import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
+import com.reclizer.csgobox.forge_1_20_1.packet.PacketCsgoBulkProgress;
+
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Second-step confirmation shown before a bulk open is actually requested.
  * The overview screen counts boxes/keys and navigates here; this screen
  * restates what will be consumed and only sends
- * {@link com.reclizer.csgobox.v1_21_1.packet.PacketCsgoBulkProgress} after
- * the player explicitly confirms.
+ * {@link PacketCsgoBulkProgress} after the player explicitly confirms.
  */
 public class CsboxConfirmScreen extends Screen {
     private final Player player;
@@ -66,8 +71,7 @@ public class CsboxConfirmScreen extends Screen {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.confirm_title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.4F)) * 0.5F,
-                this.height * 0.22F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - this.font.width(title)) * 0.5F, this.height * 0.22F, 0, 0, 1.4F, 0xFFFFFFFF);
 
         Component boxName = this.templateBox.getItem().getName(this.templateBox);
         int rowY = this.height * 36 / 100;
@@ -90,7 +94,8 @@ public class CsboxConfirmScreen extends Screen {
         rowY += rowSpacing * 2;
         drawCentered(guiGraphics,
                 Component.translatable("gui.csgobox.bulk.confirm_will_consume",
-                        this.openableCount, this.openableCount)
+                        this.openableCount,
+                        this.keyCount == Integer.MAX_VALUE ? this.openableCount : this.openableCount)
                         .withStyle(Style.EMPTY.withBold(true)),
                 rowY, 0xFFFFD700);
     }
@@ -126,14 +131,14 @@ public class CsboxConfirmScreen extends Screen {
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
-        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        guiGraphics.fill(x, y, x + w, y + h, borderColor);
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     private void drawCenteredText(GuiGraphics guiGraphics, Component text,
                                    int x, int y, int w, int h, float scale, int color) {
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = RenderFontTool.width(this.font, seq, scale);
+        float textW = this.font.width(seq) * scale;
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, scale, color);
@@ -152,9 +157,11 @@ public class CsboxConfirmScreen extends Screen {
             int backX = backButtonX();
             int w = buttonWidth();
             if (isInside(mouseX, mouseY, confirmX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
-                long reqId = java.util.concurrent.ThreadLocalRandom.current().nextLong();
-                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
-                        new com.reclizer.csgobox.v1_21_1.packet.PacketCsgoBulkProgress(reqId));
+                long reqId = ThreadLocalRandom.current().nextLong();
+                ClientPacketListener conn = Minecraft.getInstance().getConnection();
+                if (conn != null) {
+                    Networking.sendToServer(new PacketCsgoBulkProgress(reqId));
+                }
                 Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }

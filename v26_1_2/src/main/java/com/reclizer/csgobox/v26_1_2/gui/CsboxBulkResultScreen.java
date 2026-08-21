@@ -247,7 +247,6 @@ public class CsboxBulkResultScreen extends Screen {
                 IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
             }
 
-                    itemX + itemSize + 12, y - this.font.lineHeight * 0.5F, 0, 0, 0.9F, labelColor);
             index++;
         }
     }

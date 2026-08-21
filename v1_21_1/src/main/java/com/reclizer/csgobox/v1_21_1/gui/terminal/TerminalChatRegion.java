@@ -308,4 +308,19 @@ public final class TerminalChatRegion {
     public static int rarityColor(NegotiationModel.Offer offer) {
         return TerminalPalette.rarityColorForGrade(TerminalOfferItems.gradeFor(offer));
     }
+
+    /** Rounded rectangle — delegates to the 9-slice renderer in AnimRenderOps
+     *  (drawRoundedRect) so the crisp 3.5px-corner implementation is the single
+     *  source of truth. Kept here so terminal call sites stay stable. */
+    public static void drawRounded(GuiGraphics gg, int x, int y, int w, int h,
+                                   int fill, int border) {
+        AnimRenderOps.drawRoundedRect(gg, x, y, w, h, fill, border);
+    }
+
+    /** Pill/capsule — delegates to AnimRenderOps.drawPill (cap-texture based),
+     *  kept here as the stable static entry point for terminal call sites. */
+    public static void drawPill(GuiGraphics gg, int x, int y, int w, int h,
+                                int fill, int border) {
+        AnimRenderOps.drawPill(gg, x, y, w, h, fill, border);
+    }
 }

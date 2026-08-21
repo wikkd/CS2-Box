@@ -493,7 +493,7 @@ public class CsboxScreen extends Screen {
             int grade = gradeList.get(i);
             x = px;
             y = py;
-            
+        }
         renderText(guiGraphics, goldLabel,
                 this.width * 4 / 100F + x * this.width * 9 / 100F,
                 this.height * y / 100F + offsetY, 0.6F, alpha);

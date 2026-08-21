@@ -206,7 +206,7 @@ public class CsboxBulkResultScreen extends Screen {
                 guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.panel());
             } else if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
-            
+            }
             index++;
         }
     }
