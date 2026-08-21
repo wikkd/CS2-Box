@@ -1,11 +1,11 @@
 package com.reclizer.csgobox.forge_1_20_1.gui;
 
 import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.OverlayColor;
-import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.IconListTools;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
-import net.minecraft.client.Minecraft;
+import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,11 +42,16 @@ public class CsboxBulkResultScreen extends Screen {
     private long lastTickTime = 0;
     private boolean showAllItems = false;
 
+    /** Stagger counter since show-all opened; -1 = not animating. */
+    private int showAllTick = -1;
+    private static final int SHOW_ALL_ENTER = 6;
+
     // Lazy caches for the show-all grid. allItems/allGrades are fixed after
-    // construction, so the O(n^2) consolidation is computed once and reused
-    // across frames instead of every render (forge build has no sort).
+    // construction, so the O(n^2) consolidation + sort is computed once and
+    // reused across frames instead of every render.
     private Map<ItemStack, Integer> gridConsolidated;
     private Map<ItemStack, Integer> gridGradeMap;
+    private List<Map.Entry<ItemStack, Integer>> gridOrdered;
     private boolean gridCacheBuilt = false;
 
     private void buildGridCacheIfNeeded() {
@@ -59,7 +65,7 @@ public class CsboxBulkResultScreen extends Screen {
             int grade = i < allGrades.size() ? allGrades.get(i) : 1;
             boolean found = false;
             for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
-                if (ItemStack.isSameItemSameTags(stack, entry.getKey())) {
+                if (ItemStack.isSameItemSameComponents(stack, entry.getKey())) {
                     entry.setValue(entry.getValue() + stack.getCount());
                     found = true;
                     break;
@@ -70,8 +76,12 @@ public class CsboxBulkResultScreen extends Screen {
                 gradeMap.put(stack.copy(), grade);
             }
         }
+        List<Map.Entry<ItemStack, Integer>> ordered = new ArrayList<>(consolidated.entrySet());
+        ordered.sort(Comparator.comparingInt((Map.Entry<ItemStack, Integer> e) ->
+                -gradeMap.getOrDefault(e.getKey(), 1)));
         this.gridConsolidated = consolidated;
         this.gridGradeMap = gradeMap;
+        this.gridOrdered = ordered;
         this.gridCacheBuilt = true;
     }
 
@@ -141,6 +151,13 @@ public class CsboxBulkResultScreen extends Screen {
                 visible.pollLast();
             }
         }
+        // Row-aware ceiling: covers the widest reachable grid (row r finishes at 2r+6 ticks).
+        int cols = Math.max(1, Math.min(8, this.width / 80));
+        int rows = (int) Math.ceil(64.0 / cols);
+        int animMax = SHOW_ALL_ENTER + 2 * rows;
+        if (this.showAllTick >= 0 && this.showAllTick < animMax) {
+            this.showAllTick++;
+        }
         lastTickTime = now;
     }
 
@@ -160,12 +177,24 @@ public class CsboxBulkResultScreen extends Screen {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.4F)) * 0.5F, this.height * 0.06F, 0, 0, 1.4F, 0xFFFFFFFF);
         int shown = cursor;
         int total = allItems.size();
+        float lineScale = 0.85F;
+        float lineY = this.height * 12.5F / 100F;
         Component progress = Component.literal(shown + " / " + total);
+        float progW = RenderFontTool.width(this.font, progress.getVisualOrderText(), lineScale);
+        float progressX = (this.width - progW) / 2.0F;
         RenderFontTool.drawString(guiGraphics, this.font, progress.getVisualOrderText(),
-                (this.width - this.font.width(progress)) * 0.5F, this.height * 0.13F, 0, 0, 0.9F, 0xFFAAAAAA);
+                progressX, lineY, 0, 0, lineScale, 0xFFAAAAAA);
+        if (cursor < allItems.size()) {
+            // Rewards are granted server-side at request time; the feed is
+            // presentation only, so make that explicit while it is running.
+            Component granted = Component.translatable("gui.csgobox.bulk.rewards_granted");
+            float grantedW = RenderFontTool.width(this.font, granted.getVisualOrderText(), lineScale);
+            RenderFontTool.drawString(guiGraphics, this.font, granted.getVisualOrderText(),
+                    progressX + progW + 6, lineY, 0, 0, lineScale, 0xFF55FF55);
+        }
     }
 
     private void renderEntries(GuiGraphics guiGraphics, float partialTicks) {
@@ -179,6 +208,15 @@ public class CsboxBulkResultScreen extends Screen {
         int colW = Math.min(this.width * 35 / 100, 360);
         int x = (this.width - colW) / 2;
 
+        // Whole-list push: when the newest entry arrives it slides up from
+        // one row below while every older entry is pushed up one row in
+        // lock-step, so nothing teleports. Push eases out over 5 ticks.
+        Entry firstEntry = visible.peekFirst();
+        float freshAge = firstEntry == null
+                ? 1F
+                : (float) (now - firstEntry.appearTick + partialTicks) / LIFE_TICKS;
+        float push = rowH * (1F - Easing.easeOutCubic(Math.min(1F, freshAge / 0.05F)));
+
         int index = 0;
         for (Entry e : visible) {
             float age = (float) (now - e.appearTick + partialTicks) / LIFE_TICKS;
@@ -190,7 +228,7 @@ public class CsboxBulkResultScreen extends Screen {
             } else {
                 alpha = 1F;
             }
-            int y = baseY - index * rowH;
+            int y = baseY - index * rowH + (int) push;
             int intAlpha = (int) (alpha * 255F) & 0xFF;
             int frameColor = (intAlpha << 24) | (ColorTools.colorItems(e.grade) & 0x00FFFFFF);
             int labelColor = (intAlpha << 24) | 0x00EFEFEF;
@@ -198,16 +236,16 @@ public class CsboxBulkResultScreen extends Screen {
             int itemSize = Math.min(rowH - 4, 32);
             int itemX = x;
             int itemY = y - itemSize / 2;
-            guiGraphics.fill(x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
-            guiGraphics.fill(itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
+            AnimRenderOps.fill(guiGraphics, x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
+            AnimRenderOps.fill(guiGraphics, itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
             if (e.stack.isEmpty()) {
-                guiGraphics.fill(itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.panel());
-            } else if (this.player != null) {
-                IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
+                AnimRenderOps.fill(guiGraphics, itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.dividerDim());
+            } else {
+                if (this.player != null) {
+                    IconListTools.renderRewardCell(this.player, guiGraphics, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
+                }
             }
-            // Reuse the per-entry pre-rendered label (stable) instead of
-            // rebuilding the string + Component + visual-order sequence per frame.
-            RenderFontTool.drawString(guiGraphics, this.font, e.labelSeq,
+
                     itemX + itemSize + 12, y - this.font.lineHeight * 0.5F, 0, 0, 0.9F, labelColor);
             index++;
         }
@@ -218,13 +256,13 @@ public class CsboxBulkResultScreen extends Screen {
             renderAllItemsGrid(guiGraphics, mouseX, mouseY);
             return;
         }
-        if (cursor < allItems.size()) {
-            Component waiting = Component.translatable("gui.csgobox.bulk.waterfall_empty");
-            RenderFontTool.drawString(guiGraphics, this.font, waiting.getVisualOrderText(),
-                    (this.width - this.font.width(waiting)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
-            return;
-        }
-        if (!visible.isEmpty()) {
+        if (cursor < allItems.size() || !visible.isEmpty()) {
+            if (cursor < allItems.size()) {
+                Component waiting = Component.translatable("gui.csgobox.bulk.waterfall_empty");
+                RenderFontTool.drawString(guiGraphics, this.font, waiting.getVisualOrderText(),
+                        (this.width - RenderFontTool.width(this.font, waiting.getVisualOrderText(), 0.9F)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
+            }
+            renderSkipButton(guiGraphics, mouseX, mouseY);
             return;
         }
         int btnW = Math.max(120, this.width * 14 / 100);
@@ -237,12 +275,12 @@ public class CsboxBulkResultScreen extends Screen {
         boolean showAllHover = isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH);
         int showAllFill = showAllHover ? 0xFF00AACC : 0xFF0088AA;
         int showAllBorder = showAllHover ? 0xFF00DDFF : 0xFF00AACC;
-        guiGraphics.fill(showAllX, btnY, showAllX + btnW, btnY + btnH, showAllBorder);
-        guiGraphics.fill(showAllX + 1, btnY + 1, showAllX + btnW - 1, btnY + btnH - 1, showAllFill);
+        AnimRenderOps.fill(guiGraphics, showAllX, btnY, showAllX + btnW, btnY + btnH, showAllBorder);
+        AnimRenderOps.fill(guiGraphics, showAllX + 1, btnY + 1, showAllX + btnW - 1, btnY + btnH - 1, showAllFill);
         Style style = Style.EMPTY.withBold(true);
         Component showAllText = Component.translatable("gui.csgobox.bulk.show_all").withStyle(style);
         FormattedCharSequence showAllSeq = showAllText.getVisualOrderText();
-        float showAllTextW = this.font.width(showAllSeq) * 0.95F;
+        float showAllTextW = RenderFontTool.width(this.font, showAllSeq, 0.95F);
         float showAllTextX = showAllX + (btnW - showAllTextW) / 2.0F;
         float showAllTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, showAllSeq, showAllTextX, showAllTextY, 0, 0, 0.95F, 0xFFFFFFFF);
@@ -251,36 +289,65 @@ public class CsboxBulkResultScreen extends Screen {
         boolean collectHover = isInside(mouseX, mouseY, collectX, btnY, btnW, btnH);
         int collectFill = collectHover ? 0xFF00CC00 : 0xFF008800;
         int collectBorder = collectHover ? 0xFF00FF00 : 0xFF00AA00;
-        guiGraphics.fill(collectX, btnY, collectX + btnW, btnY + btnH, collectBorder);
-        guiGraphics.fill(collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
+        AnimRenderOps.fill(guiGraphics, collectX, btnY, collectX + btnW, btnY + btnH, collectBorder);
+        AnimRenderOps.fill(guiGraphics, collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
         Component collectText = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence collectSeq = collectText.getVisualOrderText();
-        float collectTextW = this.font.width(collectSeq) * 0.95F;
+        float collectTextW = RenderFontTool.width(this.font, collectSeq, 0.95F);
         float collectTextX = collectX + (btnW - collectTextW) / 2.0F;
         float collectTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, collectSeq, collectTextX, collectTextY, 0, 0, 0.95F, 0xFFFFFFFF);
     }
 
+    /** Skip button below the waterfall: drains the feed immediately so the
+     *  result buttons appear. Rewards are already granted server-side, so
+     *  skipping loses nothing. */
+    private void renderSkipButton(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int w = Math.max(96, this.width * 9 / 100);
+        int h = this.height * 4 / 100;
+        int x = (this.width - w) / 2;
+        int y = this.height * 95 / 100;
+        boolean hover = isInside(mouseX, mouseY, x, y, w, h);
+        int fill = hover ? OverlayColor.panelHover() : OverlayColor.panel();
+        int border = hover ? 0xFF00DDFF : 0xFF00AACC;
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, border);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fill);
+        Style style = Style.EMPTY.withBold(true);
+        Component text = Component.translatable("gui.csgobox.bulk.skip").withStyle(style);
+        FormattedCharSequence seq = text.getVisualOrderText();
+        float textW = RenderFontTool.width(this.font, seq, 0.9F);
+        float textX = x + (w - textW) / 2.0F;
+        float textY = y + (h - this.font.lineHeight * 0.9F) / 2.0F + 1;
+        int textColor = hover ? 0xFFFFFFFF : 0xFF00CCEE;
+        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.9F, textColor);
+    }
+
     private void renderAllItemsGrid(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // allItems/allGrades are fixed after construction, so consolidate once
-        // and reuse across frames.
+        // allItems/allGrades are fixed after construction, so consolidate + sort
+        // once and reuse across frames.
         buildGridCacheIfNeeded();
         Map<ItemStack, Integer> consolidated = gridConsolidated;
         Map<ItemStack, Integer> gradeMap = gridGradeMap;
+        List<Map.Entry<ItemStack, Integer>> ordered = gridOrdered;
 
         int cols = Math.min(8, this.width / 80);
         int itemSize = Math.min(64, this.width / cols - 12);
-        int rows = (int) Math.ceil((double) consolidated.size() / cols);
         int gridWidth = cols * (itemSize + 8);
         int startX = (this.width - gridWidth) / 2;
         int startY = this.height * 18 / 100;
 
         Component title = Component.translatable("gui.csgobox.bulk.all_rewards_title");
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
+                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.2F)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
 
+        // Cap the grid so it never overflows the screen or covers the
+        // collect button below (8 rows x 8 cols always fits above 86%).
+        int cellLimit = 64;
         int idx = 0;
-        for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
+        for (Map.Entry<ItemStack, Integer> entry : ordered) {
+            if (idx >= cellLimit) {
+                break;
+            }
             int col = idx % cols;
             int row = idx / cols;
             int x = startX + col * (itemSize + 8);
@@ -289,9 +356,15 @@ public class CsboxBulkResultScreen extends Screen {
             int count = entry.getValue();
             int grade = gradeMap.getOrDefault(stack, 1);
 
-            int bgColor = (0xCC << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
-            guiGraphics.fillGradient(x, y, x + itemSize + 4, y + itemSize + 4, bgColor, bgColor);
-            guiGraphics.fill(x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
+            float enterE = this.showAllTick < 0
+                    ? 1F
+                    : Easing.easeOutCubic(Math.max(0F, Math.min(1F,
+                            (this.showAllTick - row * 2F) / (float) SHOW_ALL_ENTER)));
+            int cellAlpha = (int) (0xCC * enterE) & 0xFF;
+            int rowOffset = Math.round(8F * (1F - enterE));
+            int bgColor = (cellAlpha << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
+            AnimRenderOps.fillGradient(guiGraphics, x, y + rowOffset, x + itemSize + 4, y + itemSize + 4 + rowOffset, bgColor, bgColor);
+            AnimRenderOps.fill(guiGraphics, x, y + rowOffset, x + 3, y + itemSize + 4 + rowOffset, ColorTools.colorItems(grade));
 
             if (this.player != null) {
                 IconListTools.renderRewardCell(this.player, guiGraphics, stack, x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
@@ -299,29 +372,43 @@ public class CsboxBulkResultScreen extends Screen {
 
             if (count > 1) {
                 Component countText = Component.literal("x" + count);
-                int countW = this.font.width(countText);
+                int countW = RenderFontTool.width(this.font, countText.getVisualOrderText(), 0.8F);
                 RenderFontTool.drawString(guiGraphics, this.font, countText.getVisualOrderText(),
                         x + itemSize + 4 - countW - 2, y + itemSize + 4 - this.font.lineHeight - 2, 0, 0, 0.8F, 0xFFFFFFFF);
             }
             idx++;
         }
 
+        if (consolidated.size() > cellLimit) {
+            int remaining = consolidated.size() - cellLimit;
+            Component more = Component.translatable("gui.csgobox.bulk.more_items", remaining);
+            float moreW = RenderFontTool.width(this.font, more.getVisualOrderText(), 0.8F);
+            int moreRows = (int) Math.ceil((double) cellLimit / cols);
+            RenderFontTool.drawString(guiGraphics, this.font, more.getVisualOrderText(),
+                    (this.width - moreW) / 2.0F, startY + moreRows * (itemSize + 8) + 4, 0, 0, 0.8F, 0xFFAAAAAA);
+        }
+
         int btnW = Math.max(120, this.width * 14 / 100);
         int btnH = this.height * 5 / 100;
         int btnX = (this.width - btnW) / 2;
-        int btnY = this.height * 92 / 100;
+        int btnY = this.height * 86 / 100;
         boolean hover = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
+        float btnE = this.showAllTick < 0 ? 1F : Easing.easeOutCubic(Math.min(1F, this.showAllTick / 4F));
+        int btnAlpha = (int) (0xFF * btnE) & 0xFF;
         int fill = hover ? 0xFF00CC00 : 0xFF008800;
         int border = hover ? 0xFF00FF00 : 0xFF00AA00;
-        guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, border);
-        guiGraphics.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
+        fill = (btnAlpha << 24) | (fill & 0x00FFFFFF);
+        border = (btnAlpha << 24) | (border & 0x00FFFFFF);
+        AnimRenderOps.fill(guiGraphics, btnX, btnY, btnX + btnW, btnY + btnH, border);
+        AnimRenderOps.fill(guiGraphics, btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
         Style style = Style.EMPTY.withBold(true);
         Component text = Component.translatable("gui.csgobox.bulk.collect").withStyle(style);
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = this.font.width(seq) * 0.95F;
+        float textW = RenderFontTool.width(this.font, seq, 0.95F);
         float textX = btnX + (btnW - textW) / 2.0F;
         float textY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
-        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, 0xFFFFFFFF);
+        int textColor = (btnAlpha << 24) | 0x00FFFFFF;
+        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, textColor);
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
@@ -330,6 +417,17 @@ public class CsboxBulkResultScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && (cursor < allItems.size() || !visible.isEmpty())) {
+            int w = Math.max(96, this.width * 9 / 100);
+            int h = this.height * 4 / 100;
+            int x = (this.width - w) / 2;
+            int y = this.height * 95 / 100;
+            if (isInside(mouseX, mouseY, x, y, w, h)) {
+                this.cursor = allItems.size();
+                this.visible.clear();
+                return true;
+            }
+        }
         if (button == 0 && cursor >= allItems.size() && visible.isEmpty()) {
             int btnW = Math.max(120, this.width * 14 / 100);
             int btnH = this.height * 5 / 100;
@@ -342,7 +440,6 @@ public class CsboxBulkResultScreen extends Screen {
                     return true;
                 }
             } else {
-                // Show both buttons
                 int btnSpacing = 16;
                 int totalBtnWidth = btnW * 2 + btnSpacing;
                 int showAllX = (this.width - totalBtnWidth) / 2;
@@ -350,6 +447,7 @@ public class CsboxBulkResultScreen extends Screen {
 
                 if (isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH)) {
                     showAllItems = true;
+                    this.showAllTick = 0;
                     return true;
                 }
                 if (isInside(mouseX, mouseY, collectX, btnY, btnW, btnH)) {
@@ -362,11 +460,11 @@ public class CsboxBulkResultScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) {
+    public boolean keyPressed(int key, int b, int c) {
+        if (key == 256) {
             this.onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(key, b, c);
     }
 }

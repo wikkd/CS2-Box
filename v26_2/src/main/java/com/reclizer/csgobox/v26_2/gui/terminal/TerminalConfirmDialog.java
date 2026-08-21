@@ -95,7 +95,7 @@ public final class TerminalConfirmDialog {
         // anchor (which added the +8*scale internally).
         AnimRenderOps.renderItem2D(player, gg, itemStack, iconX + 8.8F, iconY + 8.8F, 1.1F);
         String name = itemStack.getHoverName().getString();
-        RenderFontTool.drawStringClamped(gg, font, name, x + 26, y + 13,
+        RenderFontTool.drawStringClampedVanilla(gg, font, name, x + 26, y + 13,
                 0, 0, 0.52F, w - 36, TerminalPalette.TEXT);
         int tier = WearBands.tierIndex(wearVal);
         String wear = Component.translatable("csgobox.terminal.confirm.wear",
@@ -129,7 +129,7 @@ public final class TerminalConfirmDialog {
 
         if (state == State.WAITING) {
             String waiting = Component.translatable("csgobox.terminal.confirm.waiting").getString();
-            int waitW = Math.round(font.width(waiting) * 0.5F) + Math.round(0.4F * (waiting.length() - 1));
+            int waitW = RenderFontTool.widthSpaced(font, waiting, 0.5F, 0.4F);
             RenderFontTool.drawSpacedText(gg, font, waiting, x + w / 2F - waitW / 2F, btnY + 1,
                     0.5F, 0.4F, 0x88FFFFFF);
             return;
@@ -150,7 +150,7 @@ public final class TerminalConfirmDialog {
                             String label, int border, int text, int fillColor) {
         TerminalChatRegion.drawPill(gg, x, y, w, h, 0xFF1B2026, border);
         Font font = Minecraft.getInstance().font;
-        int labelW = Math.round(font.width(label) * 0.55F) + Math.round(0.55F * (label.length() - 1));
+        int labelW = RenderFontTool.widthSpaced(font, label, 0.55F, 0.55F);
         RenderFontTool.drawSpacedText(gg, font, label,
                 x + (w - labelW) / 2F, y + (h - 3) / 2F - 1, 0.55F, 0.55F, text);
     }

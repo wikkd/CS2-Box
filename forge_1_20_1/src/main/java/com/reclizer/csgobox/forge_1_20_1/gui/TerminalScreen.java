@@ -8,24 +8,23 @@ import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalOfferRegion;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalOfferItems;
-import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
-import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalBuy;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalBuyResult;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalClose;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalOpen;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalReject;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalState;
+import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -41,7 +40,7 @@ import java.util.Map;
  * {@link com.reclizer.csgobox.terminal.TerminalAnims}; this screen only
  * assembles the four region helpers and forwards input.
  *
- * era: decoupled
+ * era: legacy
  */
 public class TerminalScreen extends Screen {
 
@@ -66,6 +65,7 @@ public class TerminalScreen extends Screen {
     /** True once the server's locked session state has been applied. */
     private boolean stateReceived;
     private boolean closeSynced;
+    /** The server-side session uid — identifies THIS terminal on close. */
     private String terminalUid;
     /** Nonce echoed by the server so a stale reply for another terminal is dropped. */
     private final long requestId = System.nanoTime();
@@ -84,7 +84,10 @@ public class TerminalScreen extends Screen {
         OPEN_INSTANCE = this;
         this.terminalStack = terminalStack.copy();
         this.terminalName = terminalStack.getHoverName();
-        Networking.sendToServer(new PacketTerminalOpen(this.terminalStack, requestId));
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalOpen(this.terminalStack, requestId)));
+        }
     }
 
     /**
@@ -171,8 +174,8 @@ public class TerminalScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics gg, int mouseX, int mouseY, float partialTicks) {
-        super.render(gg, mouseX, mouseY, partialTicks);
+    public void render(GuiGraphics gg, int mouseX, int mouseY, float partialTick) {
+        super.render(gg, mouseX, mouseY, partialTick);
         this.nowMs = worldNowMs();
         model.tick(nowMs);
         Player player = Minecraft.getInstance().player;
@@ -201,8 +204,7 @@ public class TerminalScreen extends Screen {
         }
         // centre: title
         Component title = Component.translatable("gui.csgobox.terminal.title");
-        int titleW = Math.round(font.width(title.getString()) * 0.55F)
-                + Math.round(0.7F * (title.getString().length() - 1));
+        int titleW = RenderFontTool.widthSpaced(font, title.getString(), 0.7F, 0.55F);
         RenderFontTool.drawSpacedText(gg, font, title.getString(),
                 (tx0 + tx1) / 2F - titleW / 2F, ty0 + 2, 0.7F, 0.55F, 0xFFE6EAED);
         // right: close button (glyph only; hover shows a subtle square)
@@ -240,8 +242,7 @@ public class TerminalScreen extends Screen {
         int rty = ry0 + 9;
         AnimRenderOps.fill(gg, rx0, ry0, rx1, rty, TerminalPalette.TITLE);
         Component offerTitle = Component.translatable("csgobox.terminal.offer.title");
-        int offerTitleW = Math.round(font.width(offerTitle.getString()) * 0.47F)
-                + Math.round(0.6F * (offerTitle.getString().length() - 1));
+        int offerTitleW = RenderFontTool.widthSpaced(font, offerTitle.getString(), 0.6F, 0.47F);
         RenderFontTool.drawSpacedText(gg, font, offerTitle.getString(),
                 rx0 + 4, ry0 + 2, 0.6F, 0.47F, TerminalPalette.TEXT);
         offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY);
@@ -267,7 +268,7 @@ public class TerminalScreen extends Screen {
 
     // ---- close button rect (for hit-testing) ----
     private int closeX, closeY, closeW, closeH;
-    // last-known pointer position (tracked manually for region hit-testing)
+    // last-known pointer position (Screen exposes none in this version)
     private int mouseX, mouseY;
     // chat panel rect (region 4+5, for wheel hit-testing)
     private int chatX0, chatY0, chatX1, chatY1;
@@ -287,7 +288,7 @@ public class TerminalScreen extends Screen {
             }
             return true;
         }
-        if (mouseX >= closeX && mouseX <= closeX + closeW && mouseY >= closeY && mouseY <= closeY + closeH) {
+        if (this.mouseX >= closeX && this.mouseX <= closeX + closeW && this.mouseY >= closeY && this.mouseY <= closeY + closeH) {
             onClose();
             return true;
         }
@@ -336,12 +337,12 @@ public class TerminalScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mouseX >= chatX0 && mouseX <= chatX1 && mouseY >= chatY0 && mouseY <= chatY1) {
             chatRegion.scrolled(scrollY);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollY);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
@@ -374,9 +375,9 @@ public class TerminalScreen extends Screen {
         confirmDialog.setWaiting();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {
-            Networking.sendToServer(new PacketTerminalBuy(
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalBuy(
                     buyRequestId, terminalStack, TerminalOfferItems.itemFor(offer),
-                    offer.wearVal(), offer.round()));
+                    offer.wearVal(), offer.round())));
         } else {
             confirmDialog.close();
             model.dealerReconsider(now);
@@ -385,7 +386,10 @@ public class TerminalScreen extends Screen {
 
     /** Tells the server the current round was rejected (server commits the advance). */
     private void sendRejectRequest(int round) {
-        Networking.sendToServer(new PacketTerminalReject(round));
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn != null) {
+            conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalReject(round)));
+        }
     }
 
     /** Pins the session to the view we leave, so a reopen resumes identically. */
@@ -394,14 +398,18 @@ public class TerminalScreen extends Screen {
             return;
         }
         closeSynced = true;
-        Networking.sendToServer(new PacketTerminalClose(
-                terminalUid, model.round(), model.pending() != null,
-                lastOfferAtMs(), model.cap()));
-    }
-
-    private long lastOfferAtMs() {
+        ClientPacketListener conn = Minecraft.getInstance().getConnection();
+        if (conn == null) {
+            return;
+        }
+        long pendingAtMs = 0L;
         NegotiationModel.OfferEntry lastOffer = model.lastOfferEntry();
-        return lastOffer == null ? 0L : lastOffer.atMs();
+        if (lastOffer != null) {
+            pendingAtMs = lastOffer.atMs();
+        }
+        conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalClose(
+                terminalUid, model.round(), model.pending() != null,
+                pendingAtMs, model.cap())));
     }
 
     /** Server verdict for the pending buy request. */

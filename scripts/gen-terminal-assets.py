@@ -214,36 +214,63 @@ def make_weapon(name, path_d, c1, c2):
 # ---------------------------------------------------------------------------
 
 def make_round_rect():
-    # 16x16 white mask, 2px 45deg corner cuts (matches the original asset:
-    # corner triangle x+y<2 transparent, every other pixel solid white)
+    # 8x8 four-quadrant rounded-corner mask for the HD 9-slice op: each 4x4
+    # quadrant is one corner of a rounded rect (radius ~3.5, soft 1px band).
+    # Quadrants are drawn at original size by AnimRenderOps.drawRoundedRect
+    # (no down-scaling -> no aliasing); the border ring blits them 1.5x.
+    R_IN = 3.5
+    R_OUT = 4.5
+
+    def arc_alpha(x, y):
+        # distance from the quadrant's inner corner (4,4)
+        d = math.sqrt((x - 4.0) ** 2 + (y - 4.0) ** 2)
+        if d <= R_IN:
+            return 255
+        if d >= R_OUT:
+            return 0
+        return int(255 * (R_OUT - d) / (R_OUT - R_IN))
+
     def pixel(x, y):
-        cx = min(x, 15 - x)
-        cy = min(y, 15 - y)
-        if cx < 2 and cy < 2 and cx + cy < 2:
-            return (255, 255, 255, 0)
-        return (255, 255, 255, 255)
-    write_png(os.path.join(OUT, "terminal_round_rect.png"), 16, 16, pixel)
+        # quadrant centre (in 4x4 units): TL(1.5,1.5) TR(5.5,1.5) BL(1.5,5.5) BR(5.5,5.5)
+        qx = 3.5 + (1.0 if x >= 4 else -1.0) * (x + 0.5 - 4.0)
+        qy = 3.5 + (1.0 if y >= 4 else -1.0) * (y + 0.5 - 4.0)
+        a = arc_alpha(qx, qy)
+        return (255, 255, 255, a)
+    write_png(os.path.join(OUT, "rounded_corner.png"), 8, 8, pixel)
 
 
-def make_dot():
-    # 6x6 typing dot: grey-blue body (154,164,173), alpha falls linearly
-    # from the centre: a = clamp(int(255 * (2.8 - d))) with d measured from
-    # (2.5, 2.5) — reproduces the original [..,173,255,255,173,..] profile.
+def make_cap():
+    # 16x8 pill end-cap mask: left half = left-facing semicircle (flat edge
+    # at x=4), right half = mirrored for the right cap. Drawn by
+    # AnimRenderOps.drawPill at diameter ~h (8 -> 7/9 px, <=25% error);
+    # the pill body rect covers the transparent inner half.
+    R_IN = 3.5
+    R_OUT = 4.5
+
+    def alpha_at(d):
+        if d <= R_IN:
+            return 255
+        if d >= R_OUT:
+            return 0
+        return int(255 * (R_OUT - d) / (R_OUT - R_IN))
+
     def pixel(x, y):
-        d = math.sqrt((x - 2.5) ** 2 + (y - 2.5) ** 2)
-        a = max(0, min(255, int(255 * (2.8 - d))))
-        return (154, 164, 173, a)
-    write_png(os.path.join(OUT, "terminal_dot.png"), 6, 6, pixel)
+        xm = x if x < 8 else 15 - x
+        d = math.sqrt((xm + 0.5 - 4.0) ** 2 + (y + 0.5 - 4.0) ** 2)
+        a = alpha_at(d)
+        return (255, 255, 255, a)
+    write_png(os.path.join(OUT, "terminal_cap.png"), 16, 8, pixel)
 
 
 def make_dot_tile():
-    # 512x512: 21x21 grid of 2x2px dots, 24px period, alpha 22; transparent
-    # pixels keep white RGB (like the original tile).
+    # 24x24 minimal tile: one 2x2px dot at (16,17), alpha 22. The old 512x512
+    # asset was the same pattern tiled 21x21 (455x the decoded memory); the
+    # renderer tiles this 24x24 at 1:1. Transparent pixels keep white RGB.
     def pixel(x, y):
-        if (x - 16) % 24 < 2 and (y - 16) % 24 < 2 and 16 <= x < 498 and 16 <= y < 498:
+        if (x - 16) % 24 < 2 and (y - 16) % 24 < 2:
             return (255, 255, 255, 22)
         return (255, 255, 255, 0)
-    write_png(os.path.join(OUT, "terminal_dot_tile.png"), 512, 512, pixel)
+    write_png(os.path.join(OUT, "terminal_dot_tile.png"), 24, 24, pixel)
 
 
 def make_badge():
@@ -330,81 +357,13 @@ def make_avatar():
 
 # ---------------------------------------------------------------------------
 
-def make_info():
-    # 32x32 (blitted at 4x4 gui = 16px render, 2:1 downsample): the region-6
-    # info badge — light disc (#cfd6db) + dark "i" (#20242a), baked colours so
-    # the blit tint is white. Replaces the old 3-part draw (TEX_CIRCLE blit +
-    # two 1-gui fills) whose fills rendered as chunky 4px blocks at guiScale 4.
-    # Disc: centre (15.5,15.5), hard edge with a 2px soft band.
-    # "i": 2px-at-render dot + stem (4 texture units = 2 render px each), the
-    # classic info glyph centred in the disc.
-    DISC = (207, 214, 219)
-    I = (32, 36, 42)
-
-    def disc_alpha(x, y):
-        d = math.sqrt((x - 15.5) ** 2 + (y - 15.5) ** 2)
-        if d <= 14.5:
-            return 255
-        if d >= 16.5:
-            return 0
-        return int(255 * (16.5 - d))
-
-    def in_dot(x, y):
-        return 14 <= x <= 17 and 8 <= y <= 11
-
-    def in_stem(x, y):
-        return 14 <= x <= 17 and 14 <= y <= 23
-
-    def pixel(x, y):
-        a = disc_alpha(x, y)
-        if a == 0:
-            return (DISC[0], DISC[1], DISC[2], 0)
-        if in_dot(x, y) or in_stem(x, y):
-            return (I[0], I[1], I[2], 255)
-        return (DISC[0], DISC[1], DISC[2], a)
-
-    write_png(os.path.join(OUT, "terminal_info.png"), 32, 32, pixel)
-
-
-def make_chevron():
-    # 32x32 (blitted at 3x2 gui = 12x8px render): upward triangle #9aa4ad,
-    # matching the HTML .chev (border-top triangle, always pointing up).
-    # 1px AA band via signed distance to the three edges.
-    APEX = (16.0, 5.0)
-    BL = (3.0, 27.0)
-    BR = (29.0, 27.0)
-    COL = (154, 164, 173)
-
-    def sd_tri(x, y):
-        # signed distance: positive inside for the two slants, y <= base
-        d_left = 22.0 * (x - APEX[0]) + 13.0 * (y - APEX[1])  # <=0 inside
-        d_right = 22.0 * (x - APEX[0]) - 13.0 * (y - APEX[1])  # >=0 inside
-        # normalise to px distance
-        n = math.sqrt(22.0 ** 2 + 13.0 ** 2)
-        dl = d_left / n
-        dr = -d_right / n
-        db = 27.0 - y
-        return min(dl, dr, db)
-
-    def pixel(x, y):
-        d = sd_tri(x + 0.5, y + 0.5)
-        if d >= 0.5:
-            return (COL[0], COL[1], COL[2], 255)
-        if d <= -0.5:
-            return (COL[0], COL[1], COL[2], 0)
-        return (COL[0], COL[1], COL[2], int(255 * (d + 0.5)))
-    write_png(os.path.join(OUT, "terminal_chevron.png"), 32, 32, pixel)
-
-
 def main():
     print(OUT)
     make_round_rect()
-    make_dot()
+    make_cap()
     make_dot_tile()
     make_scan_band()
     make_circle_glow()
-    make_info()
-    make_chevron()
     make_badge()
     make_avatar()
     for name, path_d, c1, c2 in WEAPON_DEFS:
@@ -414,5 +373,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

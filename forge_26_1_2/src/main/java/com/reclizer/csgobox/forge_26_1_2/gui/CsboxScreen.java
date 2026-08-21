@@ -344,7 +344,7 @@ public class CsboxScreen extends Screen {
                 // to render untruncated, but longer localisation keys or
                 // modded item names would otherwise bleed into the next slot.
                 int slotVisualWidth = Math.round(this.width * 9F / 100F);
-                RenderFontTool.drawStringClamped(guiGraphics, this.font, component,
+                RenderFontTool.drawStringClampedVanilla(guiGraphics, this.font, component,
                         this.width * 4F / 100 + px * this.width * 9F / 100,
                         this.height * py / 100F, 0, 0, 0.6F,
                         slotVisualWidth, 0xFFD3D3D3);
@@ -378,7 +378,7 @@ public class CsboxScreen extends Screen {
         if (tc != null) {
             titleColor = 0xFF000000 | (tc.getValue() & 0xFFFFFF);
         }
-        RenderFontTool.drawStringClamped(guiGraphics, this.font, boxName,
+        RenderFontTool.drawStringClampedVanilla(guiGraphics, this.font, boxName,
                 boxNameX, this.height * 13F / 100F, 0, 0, boxNameScale,
                 boxNameMaxWidth, titleColor);
 
@@ -393,7 +393,7 @@ public class CsboxScreen extends Screen {
                         this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
                 renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_open_1").getVisualOrderText(),
                         this.width * 40F / 100F, this.height * 94F / 100F, 0.8F);
-                renderText(guiGraphics, itemKey.getItem().getName(itemKey).getVisualOrderText(),
+                renderTextVanilla(guiGraphics, itemKey.getItem().getName(itemKey).getVisualOrderText(),
                         this.width * 35F / 100F, this.height * 94F / 100F, 0.8F);
             }
         }
@@ -407,7 +407,7 @@ public class CsboxScreen extends Screen {
         if (boxEmpty) {
             Component warnText = Component.translatable("gui.csgobox.csgo_box.label_not_configured");
             FormattedCharSequence warnSeq = warnText.getVisualOrderText();
-            float warnWidth = this.font.width(warnSeq) * 1.2F;
+            float warnWidth = RenderFontTool.width(this.font, warnSeq, 1.2F);
             int bgX0 = Math.max(8, (int) ((this.width - warnWidth) / 2.0F) - 8);
             int bgX1 = Math.min(this.width - 8, (int) ((this.width + warnWidth) / 2.0F) + 8);
             // Banner Y: sit in the same vertical band the 3D crate would have
@@ -455,9 +455,15 @@ public class CsboxScreen extends Screen {
         RenderFontTool.drawString(guiGraphics, this.font, pText, px, py, 0, 0, scale, 0xFFD3D3D3);
     }
 
+    /** Dynamic/external text (item names) keeps the default font. */
+    private void renderTextVanilla(GuiGraphicsExtractor guiGraphics, FormattedCharSequence pText,
+                                   float px, float py, float scale) {
+        RenderFontTool.drawStringVanilla(guiGraphics, this.font, pText, px, py, 0, 0, scale, 0xFFD3D3D3);
+    }
+
     private void renderCenteredText(GuiGraphicsExtractor guiGraphics, FormattedCharSequence text,
                                     int x, int y, int w, int h, float scale, int color) {
-        float textW = this.font.width(text) * scale;
+        float textW = RenderFontTool.width(this.font, text, scale);
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, text, textX, textY, 0, 0, scale, color);

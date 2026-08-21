@@ -8,30 +8,32 @@ import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Region 9+10+11: countdown panel, the box's single random item slot and the
- * collection strip — three separate olive-bordered panels with title strips,
- * matching the HTML prototype's bottom row (see docs/TERMINAL-LAYOUT-SPEC.md).
+ * Region 9+10+11: countdown panel, random-item slot (2.5s cycle with scale
+ * pop) and the collection strip — three separate olive-bordered panels with
+ * title strips, matching the HTML prototype's bottom row.
  *
- * era: decoupled
+ * era: legacy
  */
 public final class TerminalBottomRow {
 
-    public static final ResourceLocation TEX_CIRCLE_GLOW = new ResourceLocation("csgobox:textures/gui/terminal/terminal_circle_glow.png");
-    public static final ResourceLocation TEX_BADGE = new ResourceLocation("csgobox:textures/gui/terminal/terminal_badge.png");
+    public static final ResourceLocation TEX_CIRCLE_GLOW = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_circle_glow.png");
+    public static final ResourceLocation TEX_BADGE = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_badge.png");
+
 
     /** HTML .title-strip 28px canvas -> gui. */
     private static final int STRIP_H = 8;
-    /** HTML .digits 21px canvas -> gui scale (21 * 1.253 / 32). */
+    /** HTML .digits 21px canvas -> gui scale. */
     private static final float DIGIT_SCALE = 0.72F;
     /** HTML letter-spacing 0.5px canvas -> gui. */
     private static final int DIGIT_SPACE = 1;
+    /** HTML .slot-badge 72px canvas -> gui. */
     /** HTML .slot-badge 72px canvas -> gui (17 not 18: 18's 9px half-radius
      *  pressed the badge into the panel's top border at 3x). */
     private static final int BADGE_SIZE = 17;
@@ -53,13 +55,12 @@ public final class TerminalBottomRow {
             lastCountdown = text;
             countdownFlipAtMs = nowMs;
         }
-        int digitW = Math.round(font.width("0") * DIGIT_SCALE);
-        int colonW = Math.round(font.width(":") * DIGIT_SCALE);
+        int digitW = RenderFontTool.width(font, "0", DIGIT_SCALE);
+        int colonW = RenderFontTool.width(font, ":", DIGIT_SCALE);
         int digitsW = 8 * digitW + 3 * colonW + 10 * DIGIT_SPACE;
         int countW = Math.max(46, digitsW + 8);
         int slotW = 31;
-        int gap2 = PANEL_GAP * 2;
-        int xpW = (x1 - x0) - countW - slotW - gap2;
+        int xpW = (x1 - x0) - countW - slotW - PANEL_GAP * 2;
         // HTML: slot panel top edge sits lower than 9/11 (y 0.895 vs 0.875)
         int slotY0 = y0 + 5;
 
@@ -73,13 +74,7 @@ public final class TerminalBottomRow {
         int ty = y0 + STRIP_H + (y1 - (y0 + STRIP_H) - digitH) / 2;
         // centre on the ACTUAL glyph widths (digits like "1" are narrower than
         // the "0" estimate, which skewed the row left — asymmetric gutters)
-        int renderW = 0;
-        for (int i = 0; i < text.length(); i++) {
-            renderW += Math.round(font.width(String.valueOf(text.charAt(i))) * DIGIT_SCALE);
-            if (i < text.length() - 1) {
-                renderW += DIGIT_SPACE;
-            }
-        }
+        int renderW = RenderFontTool.widthSpaced(font, text, DIGIT_SPACE, DIGIT_SCALE);
         int tx = x0 + (countW - renderW) / 2;
         String[] toks = {text.substring(0, 2), text.substring(3, 5),
                 text.substring(6, 8), text.substring(9, 11)};
@@ -106,7 +101,7 @@ public final class TerminalBottomRow {
         AnimRenderOps.blitTextured(gg, TEX_BADGE, bcx - badge / 2, bcy - badge / 2,
                 badge, badge, 72, 72);
         ItemStack slotItem = TerminalOfferItems.sessionItem();
-        // renderItem2D anchors at the icon-box TOP-LEFT: back out half
+        // 1.21.1 renderItem2D anchors at the icon-box TOP-LEFT: back out half
         // the scaled box so the icon centre lands on the badge centre.
         float slotScale = (badge * ICON_RATIO) / 16F;
         AnimRenderOps.renderItem2D(player, gg, slotItem,
@@ -143,7 +138,7 @@ public final class TerminalBottomRow {
         TextColor tc = terminalName.getStyle().getColor();
         int nameColor = tc != null ? (0xFF000000 | (tc.getValue() & 0xFFFFFF))
                 : TerminalPalette.OFFER_PRICE;
-        RenderFontTool.drawSpacedText(gg, font, xpName, xp0 + 4, pillY + 1,
+        RenderFontTool.drawSpacedTextVanilla(gg, font, xpName, xp0 + 4, pillY + 1,
                 1F, 0.59F, nameColor);
         int dotX = pillX + padX;
         int dotY = pillY + padY;
@@ -176,28 +171,24 @@ public final class TerminalBottomRow {
         AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, 0xFF66798A, TerminalPalette.TITLE);
         AnimRenderOps.fill(gg, x0, y1 - 1, x1, y1, TerminalPalette.FRAME);
         Font font = Minecraft.getInstance().font;
-        int w = 0;
-        for (int i = 0; i < label.length(); i++) {
-            w += Math.round(font.width(String.valueOf(label.charAt(i))) * 0.47F);
-            if (i < label.length() - 1) {
-                w += 1;
-            }
-        }
+        int w = RenderFontTool.widthSpaced(font, label, 1F, 0.47F);
         float lx = center ? x0 + (x1 - x0 - w) / 2F : x0 + 3F;
         RenderFontTool.drawSpacedText(gg, font, label, lx, y0 + 1, 1F, 0.47F, TerminalPalette.TEXT);
     }
 
-    /** Round dot: filled = 3px circle + glow; hollow = 1px ring (HTML .dot 10px). */
+    /** Round dot: filled = 3px disc + glow; hollow = 1px ring (HTML .dot 10px),
+     *  drawn as crisp fill geometry (no 32px -> 3px circle down-scaling). */
     private void drawDot(GuiGraphics gg, int x, int y, boolean filled, int color) {
         if (filled) {
             AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, x - 2, y - 2, 7, 7, 128, 128);
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
-                    0, 0, 32, 32, 32, 32, color);
+            AnimRenderOps.fill(gg, x + 1, y, x + 2, y + 1, color);
+            AnimRenderOps.fill(gg, x, y + 1, x + 3, y + 3, color);
+            AnimRenderOps.fill(gg, x + 1, y + 3, x + 2, y + 4, color);
         } else {
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x, y, 3, 3,
-                    0, 0, 32, 32, 32, 32, color);
-            AnimRenderOps.blitTextured(gg, TerminalChatRegion.TEX_CIRCLE, x + 1, y + 1, 1, 1,
-                    0, 0, 32, 32, 32, 32, 0xFF262C33);
+            AnimRenderOps.fill(gg, x + 1, y, x + 2, y + 1, color);
+            AnimRenderOps.fill(gg, x, y + 1, x + 3, y + 3, color);
+            AnimRenderOps.fill(gg, x + 1, y + 3, x + 2, y + 4, color);
+            AnimRenderOps.fill(gg, x + 1, y + 1, x + 2, y + 2, 0xFF262C33);
         }
     }
 }
