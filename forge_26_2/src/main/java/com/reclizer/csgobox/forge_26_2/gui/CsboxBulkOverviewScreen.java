@@ -179,7 +179,8 @@ public class CsboxBulkOverviewScreen extends Screen {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
+                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.6F)) * 0.5F,
+                this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
 
         int rowY = this.height * 28 / 100;
         int rowSpacing = this.font.lineHeight + 6;
@@ -258,7 +259,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void drawCenteredText(GuiGraphicsExtractor guiGraphics, Component text,
                                    int x, int y, int w, int h, float scale, int color) {
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = this.font.width(seq) * scale;
+        float textW = RenderFontTool.width(this.font, seq, scale);
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, scale, color);
@@ -281,7 +282,7 @@ public class CsboxBulkOverviewScreen extends Screen {
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
                 // Second step: confirmation screen restates the exact
                 // consumption before the bulk request is sent.
-                Minecraft.getInstance().setScreenAndShow(new CsboxConfirmScreen(
+                Minecraft.getInstance().setScreen(new CsboxConfirmScreen(
                         this.player, this.templateBox, this.boxCount, this.keyCount, this.openableCount));
                 return true;
             }

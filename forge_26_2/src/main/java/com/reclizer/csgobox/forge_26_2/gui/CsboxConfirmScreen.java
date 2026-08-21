@@ -73,7 +73,8 @@ public class CsboxConfirmScreen extends Screen {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.confirm_title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.22F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.4F)) * 0.5F,
+                this.height * 0.22F, 0, 0, 1.4F, 0xFFFFFFFF);
 
         Component boxName = this.templateBox.getItem().getName(this.templateBox);
         int rowY = this.height * 36 / 100;
@@ -140,7 +141,7 @@ public class CsboxConfirmScreen extends Screen {
     private void drawCenteredText(GuiGraphicsExtractor guiGraphics, Component text,
                                    int x, int y, int w, int h, float scale, int color) {
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = this.font.width(seq) * scale;
+        float textW = RenderFontTool.width(this.font, seq, scale);
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, scale, color);
@@ -166,7 +167,7 @@ public class CsboxConfirmScreen extends Screen {
                 if (conn != null) {
                     Networking.sendToServer(new PacketCsgoBulkProgress(reqId));
                 }
-                Minecraft.getInstance().setScreenAndShow(new CsboxProgressScreen(this.player, reqId));
+                Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
             if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {

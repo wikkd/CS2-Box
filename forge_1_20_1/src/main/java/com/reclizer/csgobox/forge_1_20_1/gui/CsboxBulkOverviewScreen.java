@@ -1,25 +1,24 @@
 package com.reclizer.csgobox.forge_1_20_1.gui;
 
+import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.utils.GuiRegion;
-import net.minecraft.util.FormattedCharSequence;
+import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.utils.OverlayColor;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
-import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
-
 
 
 /**
@@ -37,20 +36,25 @@ public class CsboxBulkOverviewScreen extends Screen {
     private int openableCount;
     private long lastRecountTick = -1;
 
-    private float rotX = 0;
-    private float rotY = 0;
+    /** Resolved once at construction: the box/key labels never change for
+     *  this screen's lifetime. */
+    private String cachedKeyName;
+    private Component cachedBoxName;
+
+    private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     public CsboxBulkOverviewScreen() {
         super(Component.literal("csgo_bulk_overview"));
-        // 1.20.1 Screen only injects `minecraft` in init(Minecraft,...), not in the
-        // constructor, so resolve the client singleton directly here.
-        this.player = Minecraft.getInstance().player;
+        this.minecraft = Minecraft.getInstance();
+        this.player = this.minecraft != null ? this.minecraft.player : null;
         this.templateBox = this.player != null ? this.player.getItemInHand(InteractionHand.MAIN_HAND).copy() : ItemStack.EMPTY;
         ResourceLocation resolvedKey = null;
         if (this.templateBox.getItem() instanceof ItemCsgoBox) {
             resolvedKey = ItemCsgoBox.getKey(this.templateBox);
         }
         this.keyId = resolvedKey;
+        this.cachedKeyName = resolvedKey == null ? null : keyName(resolvedKey);
+        this.cachedBoxName = this.templateBox.getItem().getName(this.templateBox);
         recount();
     }
 
@@ -70,22 +74,23 @@ public class CsboxBulkOverviewScreen extends Screen {
         }
         int totalBoxes = 0;
         int totalKeys = 0;
-        boolean noKeyRequired = this.keyId == null || this.keyId.equals(new ResourceLocation("minecraft:air"));
+        boolean noKeyRequired = this.keyId == null || this.keyId.equals(ResourceLocation.parse("minecraft:air"));
         for (ItemStack stack : this.player.getInventory().items) {
             if (stack.getItem() instanceof ItemCsgoBox
-                    && ItemStack.isSameItemSameTags(stack, this.templateBox)) {
+                    && ItemStack.isSameItemSameComponents(stack, this.templateBox)) {
                 totalBoxes += stack.getCount();
             } else if (!noKeyRequired
                     && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                 totalKeys += stack.getCount();
             }
         }
+        for (ItemStack stack : this.player.getInventory().armor) {
+            if (!noKeyRequired && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                totalKeys += stack.getCount();
+            }
+        }
         for (ItemStack stack : this.player.getInventory().offhand) {
-            if (stack.getItem() instanceof ItemCsgoBox
-                    && ItemStack.isSameItemSameTags(stack, this.templateBox)) {
-                totalBoxes += stack.getCount();
-            } else if (!noKeyRequired
-                    && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            if (!noKeyRequired && this.keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
                 totalKeys += stack.getCount();
             }
         }
@@ -128,6 +133,7 @@ public class CsboxBulkOverviewScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        this.itemDrag.tick();
         if (this.minecraft != null && this.minecraft.level != null) {
             int fill = UiBackdrop.fill();
             AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
@@ -140,57 +146,53 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void render3DBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (this.templateBox.isEmpty() || this.player == null) return;
 
-        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
-        int centerX = preview.centerX();
-        int centerY = preview.centerY();
-        int textureSize = preview.w();
-        float scale = textureSize / 16F;
+        int centerX = this.width / 2;
+        int centerY = this.height * 42 / 100;
+        float frameWidth = this.width * 22 / 100F;
+        float scale = frameWidth / 16F;
+        int half = (int) (frameWidth / 2F);
 
-        guiGraphics.fillGradient(preview.x(), preview.y(),
-                preview.right(), preview.bottom(),
+        AnimRenderOps.fillGradient(guiGraphics, centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
+                centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
-        GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
-                centerX - textureSize / 2, centerY - textureSize / 2,
-                this.rotX, this.rotY, this.templateBox, this.player, scale);
-    }
-
-    // Preview geometry shared by render3DBox and mouseDragged
-    private int previewTextureSize() {
-        return GuiRegion.preview(this.width, this.height).w();
-    }
-
-    private int previewPixelX() {
-        return GuiRegion.preview(this.width, this.height).x();
-    }
-
-    private int previewPixelY() {
-        return GuiRegion.preview(this.width, this.height).y();
+        // renderItem3D takes the TOP-LEFT of the preview square (matches
+        // v26_1_2's centerX - textureSize / 2): the square is frameWidth px
+        // wide, so back out half to keep the model centred on the panel.
+        AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
+                centerX - half, centerY - half, this.itemDrag.rotation(), scale);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        int size = previewTextureSize();
-        int x = previewPixelX();
-        int y = previewPixelY();
-        boolean isInRange = mouseX >= x && mouseX <= x + size
-                && mouseY >= y && mouseY <= y + size;
+        float frameWidth = this.width * 22F / 100F;
+        float itemCenterX = this.width / 2F;
+        float itemCenterY = this.height * 42F / 100F;
+        float range = frameWidth * 0.7F;
+        boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
+                && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
         if (button == 0 && isInRange) {
-            this.rotY = GuiItemMove.renderRotAngleY(dragX, this.rotY);
-            this.rotX = GuiItemMove.renderRotAngleX(dragY, this.rotX);
+            this.itemDrag.accumulate(dragX, dragY);
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        this.itemDrag.release();
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void renderLabels(GuiGraphics guiGraphics) {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
+                (this.width - RenderFontTool.width(this.font, title.getVisualOrderText(), 1.6F)) * 0.5F,
+                this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
 
         int rowY = this.height * 28 / 100;
         int rowSpacing = this.font.lineHeight + 6;
-        Component boxName = this.templateBox.getItem().getName(this.templateBox);
+        Component boxName = this.cachedBoxName;
         Style row = Style.EMPTY;
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_name", boxName.getString()).withStyle(row),
                 rowY, 0xFFEFEFEF);
@@ -198,7 +200,7 @@ public class CsboxBulkOverviewScreen extends Screen {
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_count", this.boxCount).withStyle(row),
                 rowY, 0xFF55FF55);
         rowY += rowSpacing;
-        String keyDisplay = (this.keyId == null) ? "—" : keyName(this.keyId);
+        String keyDisplay = (this.keyId == null) ? "—" : this.cachedKeyName;
         if (this.keyId != null && this.player.getAbilities().instabuild) {
             drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.key_count_infinite").withStyle(row),
                     rowY, 0xFF55FF55);
@@ -258,14 +260,14 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     private void drawButton(GuiGraphics guiGraphics, int x, int y, int w, int h, int fillColor, int borderColor) {
-        guiGraphics.fill(x, y, x + w, y + h, borderColor);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+        AnimRenderOps.fill(guiGraphics, x, y, x + w, y + h, borderColor);
+        AnimRenderOps.fill(guiGraphics, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     private void drawCenteredText(GuiGraphics guiGraphics, Component text,
                                    int x, int y, int w, int h, float scale, int color) {
         FormattedCharSequence seq = text.getVisualOrderText();
-        float textW = this.font.width(seq) * scale;
+        float textW = RenderFontTool.width(this.font, seq, scale);
         float textX = x + (w - textW) / 2.0F;
         float textY = y + (h - this.font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, scale, color);
@@ -299,11 +301,11 @@ public class CsboxBulkOverviewScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) {
+    public boolean keyPressed(int key, int b, int c) {
+        if (key == 256) {
             this.onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(key, b, c);
     }
 }

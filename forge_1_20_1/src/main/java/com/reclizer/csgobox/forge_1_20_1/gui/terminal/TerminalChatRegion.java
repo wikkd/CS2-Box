@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.forge_1_20_1.gui.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
-import net.minecraft.util.FormattedCharSequence;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
@@ -10,9 +9,10 @@ import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
@@ -22,17 +22,13 @@ import java.util.List;
  * {@link TerminalAnims}, state from {@link NegotiationModel}. Newest entries
  * at the bottom, only the visible window drawn (≤64 kept).
  *
- * era: decoupled
+ * era: legacy
  */
 public final class TerminalChatRegion {
 
-    public static final ResourceLocation TEX_AVATAR = new ResourceLocation("csgobox:textures/gui/terminal/terminal_avatar.png");
-    public static final ResourceLocation TEX_ROUND_RECT = new ResourceLocation("csgobox:textures/gui/terminal/terminal_round_rect.png");
-    public static final ResourceLocation TEX_DOT = new ResourceLocation("csgobox:textures/gui/terminal/terminal_dot.png");
-    public static final ResourceLocation TEX_DOT_TILE = new ResourceLocation("csgobox:textures/gui/terminal/terminal_dot_tile.png");
-    public static final ResourceLocation TEX_WEAPON = new ResourceLocation("csgobox:textures/gui/terminal/weapon");
-    /** Hard-edged white circle (32x32) — perfect pill corners (terminal_circle.png). */
-    public static final ResourceLocation TEX_CIRCLE = new ResourceLocation("csgobox:textures/gui/terminal/terminal_circle.png");
+    public static final ResourceLocation TEX_AVATAR = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_avatar.png");
+    public static final ResourceLocation TEX_DOT_TILE = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/terminal_dot_tile.png");
+    public static final ResourceLocation TEX_WEAPON = ResourceLocation.fromNamespaceAndPath("csgobox", "textures/gui/terminal/weapon");
 
     // HTML prototype px -> gui px (canvas 1356 -> gui 427, k = 427/1356).
     private static final int BUBBLE_RADIUS = 1;
@@ -62,7 +58,7 @@ public final class TerminalChatRegion {
     /** True after the user wheels away from the newest entry (re-armed at the bottom). */
     private boolean userScrolled;
 
-    /** 滚轮：scrollY>0 = 上滚（看更早），scrollOffset 向顶部（减小）。 */
+    /** 滚轮：scrollY>0 = 上滚（看更早）。范围由下一次 render 钳制。 */
     public void scrolled(double scrollY) {
         scrollOffset -= (int) Math.round(scrollY * 6);
         userScrolled = true;
@@ -176,7 +172,7 @@ public final class TerminalChatRegion {
     private int hFor(NegotiationModel.LineEntry le, int bw) {
         Font font = Minecraft.getInstance().font;
         String text = Component.translatable(le.textKey()).getString();
-        int textW = Math.round(font.width(text) * BUBBLE_SCALE);
+        int textW = RenderFontTool.width(font, text, BUBBLE_SCALE);
         int lines = textW > bw - 2 * BUBBLE_PAD_X ? 2 : 1;
         return Math.max(AVATAR_SIZE, lines * LINE_H + 2 * BUBBLE_PAD_Y);
     }
@@ -237,19 +233,23 @@ public final class TerminalChatRegion {
             RenderFontTool.drawStringClamped(gg, font, head, ix, iy + headDy,
                     0, 0, 0.47F, availW - 39 - 3, alphaColor);
         }
-        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 0.47F, textColor);
-        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 0.47F, dimColor);
+        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 0.47F, textColor, false);
+        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 0.47F, dimColor, true);
         row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 0.47F,
-                finalRound ? TerminalPalette.GREEN : TerminalPalette.OFFER_PRICE);
+                finalRound ? TerminalPalette.GREEN : TerminalPalette.OFFER_PRICE, true);
     }
 
     private void row(GuiGraphics gg, Font font, String text, int x, int y,
-                     long nowMs, long startMs, int row, float scale, int color) {
+                     long nowMs, long startMs, int row, float scale, int color, boolean hd) {
         if (TerminalAnims.flipAlpha(nowMs, startMs, row) <= 0F) {
             return;
         }
         float dy = TerminalAnims.flipSlideY(nowMs, startMs, row);
-        RenderFontTool.drawString(gg, font, fcs(text), x, y + dy, 0, 0, scale, color);
+        if (hd) {
+            RenderFontTool.drawString(gg, font, fcs(text), x, y + dy, 0, 0, scale, color);
+        } else {
+            RenderFontTool.drawStringVanilla(gg, font, fcs(text), x, y + dy, 0, 0, scale, color);
+        }
     }
 
     private String offerPrice(NegotiationModel.Offer offer) {
@@ -263,7 +263,7 @@ public final class TerminalChatRegion {
         String text = sysText(se);
         int color = se.failed() ? TerminalPalette.SYS_FAILED : TerminalPalette.SYS_MUTED;
         int textW = Math.round(font.width(text) * 0.43F) + Math.round(0.16F * (text.length() - 1));
-        RenderFontTool.drawSpacedText(gg, font, text,
+        RenderFontTool.drawSpacedTextVanilla(gg, font, text,
                 x + (availW - textW) / 2F, y + 1, 0.16F, 0.43F, color);
     }
 
@@ -283,88 +283,28 @@ public final class TerminalChatRegion {
         return FormattedCharSequence.forward(s, Style.EMPTY);
     }
 
-    /** Rounded rectangle, fixed 2px corner radius (a scaled 16x16 membrane
-     *  read as a big arc on wide cards); corners from the circle texture. */
-    public static void drawRounded(GuiGraphics gg, int x, int y, int w, int h,
-                                   int fill, int border) {
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        int r = Math.max(1, Math.min(2, Math.min(w, h) / 2));
-        int d = 2 * r;
-        // border ring (1px larger)
-        int bd = d + 2;
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x - 1, y - 1, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w + 1 - bd, y - 1, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x - 1, y + h + 1 - bd, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w + 1 - bd, y + h + 1 - bd, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.fill(gg, x + r - 1, y - 1, x + w - r + 1, y + 1, border);
-        AnimRenderOps.fill(gg, x + r - 1, y + h - 1, x + w - r + 1, y + h + 1, border);
-        AnimRenderOps.fill(gg, x - 1, y + r - 1, x + 1, y + h - r + 1, border);
-        AnimRenderOps.fill(gg, x + w - 1, y + r - 1, x + w + 1, y + h - r + 1, border);
-        // fill
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x, y, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w - d, y, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x, y + h - d, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w - d, y + h - d, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.fill(gg, x + r, y, x + w - r, y + h, fill);
-        AnimRenderOps.fill(gg, x, y + r, x + w, y + h - r, fill);
-    }
 
-    /** Pill: rectangle body + two semicircle ends from the circle texture —
-     *  no corner stair-stepping at large sizes. Border drawn 1px larger. */
-    public static void drawPill(GuiGraphics gg, int x, int y, int w, int h,
-                                int fill, int border) {
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        int r = Math.max(1, h / 2);
-        int d = 2 * r;
-        // Border caps d+2, concentric with fill caps so the 1px ring is
-        // uniform; odd heights get a flat bottom strip instead of a bulge.
-        int bd = d + 2;
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x - 1, y - 1, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w + 1 - bd, y - 1, bd, bd,
-                0, 0, 32, 32, 32, 32, border);
-        AnimRenderOps.fill(gg, x + r, y - 1, x + w - r, y + h + 1, border);
-        // fill (radius r)
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x, y, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.blitTextured(gg, TEX_CIRCLE, x + w - d, y, d, d,
-                0, 0, 32, 32, 32, 32, fill);
-        AnimRenderOps.fill(gg, x + r, y, x + w - r, y + h, fill);
-    }
 
-    /** Typing dot with alpha via the tint channel (dot.png is #9aa4ad). */
+    /** Typing dot: crisp 2x2 fill, alpha carried in the color channel. */
     private void blitDotAlpha(GuiGraphics gg, int x, int y, float alpha) {
         int a = (int) (255 * Math.max(0F, Math.min(1F, alpha)));
         int tint = (a << 24) | 0x9AA4AD;
-        AnimRenderOps.blitTextured(gg, TEX_DOT, x, y, 2, 2,
-                0, 0, 6, 6, 6, 6, tint);
+        AnimRenderOps.fill(gg, x, y, x + 2, y + 2, tint);
     }
 
     /** Dot grid: one 24x24 tile blit per point (replaces drawDotGrid fills). */
     public static void drawDotGrid(GuiGraphics gg, int x0, int y0, int w, int h) {
-        int period = 8;
+        int period = 24;
         int ox = x0 - (x0 % period + period) % period;
         int oy = y0 - (y0 % period + period) % period;
         for (int y = oy; y < y0 + h; y += period) {
             for (int xx = ox; xx < x0 + w; xx += period) {
-                AnimRenderOps.blitTextured(gg, TEX_DOT_TILE, xx, y, period, period, 512, 512);
+                AnimRenderOps.blitTextured(gg, TEX_DOT_TILE, xx, y, period, period, 24, 24);
             }
         }
     }
 
-    /** Rarity stripe colour for the offer's actual item (tier by grade). */
+    /** Rarity stripe colour for a skin index (HTML --rarity-*). */
     public static int rarityColor(NegotiationModel.Offer offer) {
         return TerminalPalette.rarityColorForGrade(TerminalOfferItems.gradeFor(offer));
     }
