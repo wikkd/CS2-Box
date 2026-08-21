@@ -179,9 +179,17 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        if (CONFIG.enableHotReload()) {
-            event.enqueueWork(this::startBoxWatcher);
-        }
+        event.enqueueWork(() -> {
+            // Load box definitions early (registry phase is done, all items —
+            // including TACZ guns — are registered). This populates BoxRegistry
+            // before the creative tab is first built, so dynamic boxes always
+            // appear there even before a server/world has started. onServerStarting
+            // re-runs loadAll() per world, which is idempotent (re-register).
+            BoxJsonLoader.loadAll();
+            if (CONFIG.enableHotReload()) {
+                startBoxWatcher();
+            }
+        });
         LOGGER.info("CS2 Box initialized successfully");
     }
 

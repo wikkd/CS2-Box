@@ -2,7 +2,12 @@ plugins {
     id 'java'
     id 'idea'
     id 'eclipse'
-    id 'net.minecraftforge.gradle' version '[7.0.17,8)'
+    // Pinned to a concrete version instead of the dynamic range [7.0.17,8):
+    // in offline / maven.minecraftforge.net-blocked environments the range
+    // resolves to the newest plugin marker (e.g. 7.0.35) whose implementation
+    // artifact may not be cached, breaking the build. 7.0.31 is the version
+    // declared in gradle.properties (forgegradle_version).
+    id 'net.minecraftforge.gradle' version '7.0.31'
 }
 
 group = mod_group_id
@@ -86,6 +91,14 @@ dependencies {
     // scripts/download-tacz-1201.sh to populate local-repo first. Guarded at
     // runtime via ModList.isLoaded("tacz").
     compileOnly 'com.tacz:tacz:1.1.8-hotfix'
+    // NOTE: TACZ is intentionally NOT a runtime dependency in the userdev run.
+    // ForgeGradle 7 (mavenizer) runs the dev client with official-mapped names
+    // (e.g. LivingEntity.tick()), but the production TACZ jar's mixin refmap
+    // targets SRG names (LivingEntity.m_8119_) and FG7 has no fg.deobf to
+    // remap dependency jars — the un-remapped jar crashes runClient with
+    // "Critical injection failure" in tacz.mixins.json. To test TACZ in the
+    // dev client, deploy the official-mapped copy produced by
+    // scripts/remap-tacz-1201.sh into forge_1_20_1/run/mods instead.
     // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer; extracted
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.2-forge+mc1.20.1'

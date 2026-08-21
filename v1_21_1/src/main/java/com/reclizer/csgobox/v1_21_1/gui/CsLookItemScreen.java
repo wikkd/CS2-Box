@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v1_21_1.gui;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
+import com.reclizer.csgobox.v1_21_1.event.FirstPersonInspectHandler;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
@@ -34,6 +35,9 @@ public class CsLookItemScreen extends Screen {
     private float infoPanelAnim = 0F;
     /** TACZ inspect viewport visibility, toggled by the gloves toolbar button. */
     private boolean taczViewportActive = false;
+    /** Skips the entry finish chime when the screen is reopened by
+     *  {@link #openQuietly} right after a first-person inspect finishes. */
+    private static boolean quietReopen = false;
     private final float wearValue;
     private final int patternSeed;
     private final int skinId;
@@ -109,12 +113,23 @@ public class CsLookItemScreen extends Screen {
         this.patternSeed = rnd.nextInt(1000);
         this.skinId = rnd.nextInt(100, 1301);
         this.skinStyleIndex = rnd.nextInt(SKIN_STYLES.length);
-        if (this.player != null && !this.openItem.isEmpty()) {
+        boolean silent = quietReopen;
+        quietReopen = false;
+        if (this.player != null && !this.openItem.isEmpty() && !silent) {
             float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }
         }
+    }
+
+    /**
+     * Reopen this screen without the entry finish chime, used after a
+     * first-person inspect finishes so the return doesn't replay the chime.
+     */
+    public static void openQuietly(ItemStack item, int grade, Minecraft mc) {
+        quietReopen = true;
+        mc.setScreen(new CsLookItemScreen(item, grade));
     }
 
     private int backButtonWidth() {
@@ -490,14 +505,14 @@ public class CsLookItemScreen extends Screen {
         int glovesX = toolbarButtonX(1);
         int glovesY = toolbarButtonY() + toolbarEnterRise(1);
         if (button == 0 && isInside(mouseX, mouseY, glovesX, glovesY, infoSize, infoSize)) {
+            // First-person inspect: close the GUI first, then let TACZ play its
+            // native first-person inspect behind a transparent input-lock
+            // screen; FirstPersonInspectHandler reopens this screen when the
+            // animation finishes or the player presses Esc.
             if (this.minecraft != null && this.minecraft.player != null
                     && TaczInspectViewport.isAvailable(this.openItem)) {
-                if (this.taczViewportActive) {
-                    // Viewport already showing the 3D model: replay inspect.
-                    TaczInspectViewport.triggerInspect(this.openItem, this.minecraft.player);
-                } else if (TaczInspectViewport.enter(this.openItem, this.minecraft.player)) {
-                    this.taczViewportActive = true;
-                }
+                this.onClose();
+                FirstPersonInspectHandler.start(this.minecraft.player, this.openItem, this.grade);
             }
             return true;
         }

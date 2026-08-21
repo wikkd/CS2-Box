@@ -121,4 +121,42 @@ public final class TaczInspectViewport {
         }
         invoke("exit", stack);
     }
+
+    public static boolean startFirstPersonInspect(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        Object r = invoke("startFirstPersonInspect", stack, player);
+        return Boolean.TRUE.equals(r);
+    }
+
+    public static void retryFirstPersonInspect(LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return;
+        }
+        invoke("retryFirstPersonInspect", player);
+    }
+
+    public static boolean isReadyForInspect(LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        Object r = invoke("isReadyForInspect", player);
+        return Boolean.TRUE.equals(r);
+    }
+
+    public static boolean isInspectPlaying(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        Object r = invoke("isInspectPlaying", stack, player);
+        return Boolean.TRUE.equals(r);
+    }
+
+    public static void endFirstPersonInspect(ItemStack stack, LocalPlayer player, ItemStack restoreHand) {
+        if (!isTaczLoaded()) {
+            return;
+        }
+        invoke("endFirstPersonInspect", stack, player, restoreHand);
+    }
 }

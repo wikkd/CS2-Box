@@ -5,7 +5,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
 import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.api.client.animation.AnimationController;
+import com.tacz.guns.api.client.animation.ObjectAnimationRunner;
 import com.tacz.guns.api.client.animation.statemachine.LuaAnimationStateMachine;
+import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.client.animation.statemachine.GunAnimationConstant;
 import com.tacz.guns.client.animation.statemachine.ItemAnimationStateContext;
@@ -23,8 +26,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.Locale;
 import com.mojang.math.Axis;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraftforge.fml.ModList;
@@ -335,6 +341,125 @@ public final class TaczInspectViewportImpl {
         LuaAnimationStateMachine<?> stateMachine = renderer.getStateMachine(stack);
         if (stateMachine != null && stateMachine.isInitialized()) {
             stateMachine.exit();
+        }
+    }
+
+    /**
+     * Start the REAL first-person TACZ inspect: inject the drawn gun into the
+     * player's main hand (client-side render only) and trigger TACZ's native
+     * inspect. Caller closes the look screen so the native animation plays.
+     */
+    public static boolean startFirstPersonInspect(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        try {
+            if (player == null || stack.isEmpty() || !(stack.getItem() instanceof IGun)) {
+                return false;
+            }
+            player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+            // Equip through TACZ's own draw path (NOT inspect directly): the
+            // native inspect() is silently dropped while clientStateLock is
+            // true, and injecting a gun sets that lock while the draw plays.
+            // Once the draw finishes (state unlocked), the handler fires the
+            // genuine inspect().
+            IClientPlayerGunOperator.fromLocalPlayer(player).draw(stack);
+            return true;
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ first-person inspect start failed", t);
+            return false;
+        }
+    }
+
+    /** True once TACZ's client state lock is released (draw/put-away done),
+     *  i.e. the operator is idle and ready to accept a native inspect input. */
+    public static boolean isReadyForInspect(LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        try {
+            if (player == null) {
+                return false;
+            }
+            return !IClientPlayerGunOperator.fromLocalPlayer(player).getDataHolder().clientStateLock;
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ inspect readiness check failed", t);
+            return false;
+        }
+    }
+
+    /** Fire the native inspect input; only meaningful once the gun is drawn
+     *  and the client state lock is released (see {@link #isReadyForInspect}). */
+    public static void retryFirstPersonInspect(LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return;
+        }
+        try {
+            if (player != null) {
+                IClientPlayerGunOperator.fromLocalPlayer(player).inspect();
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ first-person inspect retry failed", t);
+        }
+    }
+
+    /** Whether TACZ's inspect animation is currently playing for this gun. */
+    public static boolean isInspectPlaying(ItemStack stack, LocalPlayer player) {
+        if (!isTaczLoaded()) {
+            return false;
+        }
+        try {
+            AnimateGeoItemRenderer<?, ?> renderer = taczRenderer(stack);
+            if (renderer == null) {
+                return false;
+            }
+            LuaAnimationStateMachine<?> stateMachine = renderer.getStateMachine(stack);
+            if (stateMachine == null || !stateMachine.isInitialized()) {
+                return false;
+            }
+            AnimationController controller = stateMachine.getAnimationController();
+            if (controller == null) {
+                return false;
+            }
+            for (Integer track : controller.getUpdatingTrackArray()) {
+                ObjectAnimationRunner runner = controller.getAnimation(track);
+                // Active includes running, holding and paused runners: the
+                // inspect state stays "active" across its sub-animation gaps,
+                // so we must not treat a brief hold/pause as "finished".
+                if (runner != null && (runner.isRunning() || runner.isHolding() || runner.isPausing())
+                        && runner.getAnimation() != null) {
+                    String name = runner.getAnimation().name;
+                    if (name != null && name.toLowerCase(Locale.ROOT).contains("inspect")) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ inspect playing check failed", t);
+            return false;
+        }
+    }
+
+    /** End the session: stop sounds, exit the state machine, restore hand. */
+    public static void endFirstPersonInspect(ItemStack stack, LocalPlayer player, ItemStack restoreHand) {
+        if (!isTaczLoaded()) {
+            return;
+        }
+        try {
+            SoundPlayManager.stopPlayGunSound();
+            AnimateGeoItemRenderer<?, ?> renderer = taczRenderer(stack);
+            if (renderer != null) {
+                LuaAnimationStateMachine<?> stateMachine = renderer.getStateMachine(stack);
+                if (stateMachine != null && stateMachine.isInitialized()) {
+                    stateMachine.exit();
+                }
+            }
+            if (player != null) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, restoreHand);
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("TACZ first-person inspect end failed", t);
         }
     }
 }

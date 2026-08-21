@@ -45,6 +45,8 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 ## 4. 运行时 E2E 清单（L4，人工）
 
 ```bash
+# 先部署 TACZ 的 official-mapped 副本（见下方"TACZ 运行时"一节）
+./scripts/remap-tacz-1201.sh
 ./gradlew :forge_1_20_1:runClient -Pactive_versions=forge-1.20.1
 ```
 
@@ -60,6 +62,42 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 6. **村民**：`arms_dealer` 职业与交易（结构生成数据在 common 资源内共享）；
 7. **命令**：`/csbox info` / `/csbox nbt hand` / `/csbox reload`；
 8. **配置**：`csbox-common.toml` 生成且默认值与 `CsboxConfigDefaults` 一致。
+
+### 4.1 TACZ 运行时（重要）
+
+ForgeGradle 7（mavenizer）的 dev 客户端以 **official-mapped** 名称运行
+（如 `LivingEntity.tick()`），而 TACZ 1.20.1 **生产 jar 是 SRG-mapped**（mixin
+refmap 目标为 `LivingEntity.m_8119_`），且 FG7 **没有 `fg.deobf`** 对依赖 jar
+做重映射——直接把生产 TACZ jar 丢进 `run/mods` 会在启动时崩溃：
+
+```
+Critical injection failure ... could not find any targets matching
+'Lnet/minecraft/world/entity/LivingEntity;m_8119_()V'
+```
+
+因此 dev 环境测试 TACZ 前，先跑一次：
+
+```bash
+./scripts/remap-tacz-1201.sh
+```
+
+该脚本离线完成（全部依赖在 Gradle 缓存内）：
+1. `scripts/TaczDeobf.java`（ASM + srgutils）把 TACZ jar 整包从 SRG 重映射为
+   official：**方法/字段引用 + 声明全部**（含 mixin `@Shadow` 成员与覆写方法
+   如 `createBlockStateDefinition`）。SpecialSource 只能部分重映射这类 jar
+   （会漏 `BlockState.m_61124_`、继承字段 `f_49792_`、覆写声明 `m_7926_`），
+   故不用它。另外还处理 **lambda / 方法引用**：`invokedynamic` 调用点的
+   SAM 方法名（如 `Pack$ResourcesSupplier.open` 的 `m_247679_`）与 bootstrap
+   句柄里的方法/字段引用必须同步改，否则启动时抛
+   `AbstractMethodError: ... does not define or inherit an implementation of ...`
+   （lambda 类没实现已改名后的接口方法）；
+2. 同样重映射 TACZ jarjar 内嵌的 `simplebedrockmodel` 并回填；
+3. `scripts/remap-tacz-1201.py` 把两个 jar 的 mixin refmap 目标从 SRG 改写为
+   official 名称。
+
+产物：`local-repo/com/tacz/tacz/1.1.8-hotfix/tacz-1.1.8-hotfix-official.jar`，
+并自动部署到 `forge_1_20_1/run/mods/tacz-1.20.1-1.1.8-hotfix-official.jar`
+（该文件 gitignore，不提交）。之后 `runClient` 即可正常加载 TACZ。
 
 ## 5. 已知待办
 
