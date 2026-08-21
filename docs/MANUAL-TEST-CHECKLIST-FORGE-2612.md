@@ -76,7 +76,7 @@
       2026-08-11 修复，详见 `TEST-REPORT-FORGE-2612-2026-08-11.md` §2.1）
 - [ ] 版本四同步 OK（S3 已自动覆盖）
 - [ ] `mods.toml`：forge 版本区间 `[64,)`、MC 区间 `[26.1.2,26.2)` 与目标环境匹配
-- [ ] jar 内无 1.0.7 线内容（terminal / armory / villager_trade / 回收机）
+- [ ] jar 内无 2.0.0 线内容（terminal / armory / villager_trade / 回收机）
 
 ## 5. IDE 启动配置（本次新增，供回归用）
 

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * renames, and version-drift that silently break the module while
  * compileJava still passes.</p>
  *
- * <p>Sync note: this module was brought up to the 1.0.7 line (terminal /
+ * <p>Sync note: this module was brought up to the 2.0.0 line (terminal /
  * armory-point items), so those item fields are now ASSERTED present, not
  * asserted absent, as the old 1.0.6 baseline guard did.</p>
  */
@@ -53,7 +53,7 @@ class PlatformSmokeTest {
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY1"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY2"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_CSGO_KEY3"));
-        // 1.0.7-line statically-registered items.
+        // 2.0.0-line statically-registered items.
         assertNotNull(ModItems.class.getDeclaredField("ITEM_ARMORY_POINT"));
         assertNotNull(ModItems.class.getDeclaredField("ITEM_TERMINAL"));
     }

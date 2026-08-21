@@ -149,7 +149,7 @@ public final class BoxJsonLoader {
 
         // First-run defaults, before scanning existing configs.
         BoxDefaults.writeDefaultTerminalIfMissing(BOXES_DIR);
-        // Pre-v1.0.8 terminal.json migration (no "type" field); must run before parsing.
+        // Pre-v2.0.0 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
         // Background download: network timeouts must not block the server thread.
@@ -380,12 +380,12 @@ public final class BoxJsonLoader {
             if (!"csbox".equals(type) && !"terminal".equals(type)) {
                 type = "csbox";
             }
-            // v1.0.8: "type" is the single source of truth; a terminal.json
+            // v2.0.0: "type" is the single source of truth; a terminal.json
             // without "type":"terminal" would silently become a keyless
             // crate, so refuse to load it.
             if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
                 String msg = "terminal.json must declare \"type\": \"terminal\" "
-                        + "(v1.0.8+: type is the single registration source; terminals have no key field)";
+                        + "(v2.0.0+: type is the single registration source; terminals have no key field)";
                 CsgoBox.LOGGER.error("Skipping {}: {}", file, msg);
                 recordLoadError(file, fileName, msg);
                 return Optional.empty();

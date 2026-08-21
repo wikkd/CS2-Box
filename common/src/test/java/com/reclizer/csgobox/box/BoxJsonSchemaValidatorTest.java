@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Covers the structural rules:</p>
  * <ol>
- *   <li>type (v1.0.8): must be "csbox" or "terminal"; a terminal must not declare key</li>
+ *   <li>type (v2.0.0): must be "csbox" or "terminal"; a terminal must not declare key</li>
  *   <li>random: array length must be 5; each element must be a number</li>
  *   <li>drop: must be a number</li>
  *   <li>grade1..grade5: must be arrays</li>
@@ -286,7 +286,7 @@ final class BoxJsonSchemaValidatorTest {
     }
 
     @Nested
-    @DisplayName("type field (v1.0.8 strict separation)")
+    @DisplayName("type field (v2.0.0 strict separation)")
     class Type {
 
         @Test

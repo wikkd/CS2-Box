@@ -272,7 +272,7 @@ public final class BoxJsonLoader {
             }
             if (boxIdStr.equals("terminal") && !"terminal".equals(type)) {
                 String msg = "terminal.json must declare \"type\": \"terminal\" "
-                        + "(v1.0.8+: type is the single registration source; terminals have no key field)";
+                        + "(v2.0.0+: type is the single registration source; terminals have no key field)";
                 CsgoBox.LOGGER.error("Skipping {}: {}", file, msg);
                 recordLoadError(file, fileName, msg);
                 return Optional.empty();

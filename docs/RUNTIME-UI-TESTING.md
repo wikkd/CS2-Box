@@ -183,5 +183,5 @@ python3 scripts/test_animation_aesthetics.py        # 聚光灯/透镜审美断�
     工具栏 tint 循环（有意保留）
   - 门面 13 个公开 op 三平台签名一致（`scripts/check-animops-drift.sh` 全 OK，CI 已接线）
   - 三平台 clean 编译 + common 测试通过
-  - **运行时回归仍未执行**（上述勾选清单 + 批量开箱恢复 1.0.7 链路 + 音效重编码听感），
+  - **运行时回归仍未执行**（上述勾选清单 + 批量开箱恢复 2.0.0 链路 + 音效重编码听感），
     待具备 GUI 权限的会话人工/自动化执行

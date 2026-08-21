@@ -117,7 +117,7 @@ public record BoxDefinition(
     }
 
     /** Whether this definition is a terminal machine: the JSON {@code type}
-     *  field is the single source of truth (v1.0.8 strict separation) — only
+     *  field is the single source of truth (v2.0.0 strict separation) — only
      *  {@code "type": "terminal"} is a terminal, and terminals carry no
      *  {@code key} field at all. */
     public boolean isTerminal() {

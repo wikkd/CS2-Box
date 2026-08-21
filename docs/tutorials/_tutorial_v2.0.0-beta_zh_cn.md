@@ -1,6 +1,6 @@
 # CS2-Box 配置文件参考
 
-> 本文件由模组自动从 `https://gitee.com/hou-xiangling/CS2-Box/docs/tutorials/` 下载。英文版见 [`_tutorial_v1.0.7.md`](./_tutorial_v1.0.7.md)。
+> 本文件由模组自动从 `https://gitee.com/hou-xiangling/CS2-Box/docs/tutorials/` 下载。英文版见 [`_tutorial_v2.0.0-beta.md`](./_tutorial_v2.0.0-beta.md)。
 
 ## 概述
 
@@ -166,7 +166,7 @@
 | `csgobox:csgo_key1`     | 3 个金锭              |
 | `csgobox:csgo_key2`     | 3 个钻石              |
 
-## 批量开箱(1.0.7)
+## 批量开箱(2.0.0)
 
 手持 `csgobox:csgo_box` **Shift+右键**打开批量总览屏,而不是单开预览界面。总览屏显示你拥有的箱子数、钥匙数和本次可开数量,并在服务器开启整批前要求二次确认。
 
@@ -175,7 +175,7 @@
 - 单批数量上限由 `config/csgobox.toml` 的 `[advanced]` 下 `bulkOpenCount` 控制(`0` = 无上限,默认值)。上限由服务端强制执行,总览屏会镜像显示该限制。
 - 终端机物品始终打开自己的界面,不支持批量开箱。
 
-## 终端机(1.0.7)
+## 终端机(2.0.0)
 
 终端机(`csgobox:terminal`)是一种独立的箱子类物品,拥有独立掉落池:`config/csbox/terminal.json` 中的 `type: terminal` 箱子定义。右键终端机打开终端机界面,而不是宝箱界面。
 
@@ -187,7 +187,7 @@
 - 获取途径:创造模式物品栏,或军火商村民(4 级)用 12 武库点数兑换。
 - 终端机箱子中物品的 `price` 字段(可选)即该物品的成交价:设了就按它收点数,没设就回退到上面的档位默认价。
 
-## 武库经济(1.0.7)
+## 武库经济(2.0.0)
 
 武库点数(`csgobox:armory_point`)是模组的货币。把该物品加入任意箱子的等级池即可让箱子掉落它,军火商村民也会奖励武库点数。
 

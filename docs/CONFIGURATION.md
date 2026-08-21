@@ -69,14 +69,14 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `name` | 字符串 | 是 | 宝箱在界面显示的名称 |
-| `type` | 字符串 | 否 | 箱子类型:**`csbox`**(默认,普通宝箱)/ `terminal`(终端机)。v1.0.8 起为唯一判定字段,决定物品注册为 `ItemCsgoBox` 还是 `ItemTerminal` |
+| `type` | 字符串 | 否 | 箱子类型:**`csbox`**(默认,普通宝箱)/ `terminal`(终端机)。v2.0.0 起为唯一判定字段,决定物品注册为 `ItemCsgoBox` 还是 `ItemTerminal` |
 | `key` | 字符串 | 仅普通箱 | 所需钥匙物品 ID;`minecraft:air` 免钥匙。**终端机禁止使用 `key` 字段**(严格分离,出现即报 schema 错误) |
 | `drop` | 浮点数 | 否 | 默认实体掉落概率(0.0 到 1.0)。**当 `entity` 为纯实体 ID 列表时,本值是每个实体的掉落概率;若 `entity` 用 ID/概率交替数组,本值作为未显式指定概率实体的兜底** |
 | `random` | 浮点数组[5] | 否 | 5 个等级权重(grade1 到 grade5 顺序) |
 | `entity` | 数组 | 否 | 掉落该宝箱的实体 ID 列表(或 ID/概率 交替数组)。玩家自建 `terminal.json` 时可给终端机配置危险生物掉落 |
 | `grade1` ~ `grade5` | 数组 | 否 | 各等级物品清单(industry / consumer / mil_spec / restricted / classified) |
 
-> **箱子类型判定（v1.0.8 起）**：`type` 字段是**唯一**判定机制——`"type": "terminal"` 注册为终端机物品（`ItemTerminal`，打开终端谈判屏），`"type": "csbox"` 或省略为普通宝箱。终端机与普通箱**字段严格分离**：终端机不持有 `key` 字段（旧版 v1.0.7 配置里的 `key: "minecraft:air"` 已在升级时自动迁移删除），普通箱的 `key: "minecraft:air"` 仅表示免钥匙、绝不会把宝箱变成终端机。`terminal.json` 缺少 `type` 会被拒绝加载并给出明确报错（防止静默退化成免费开箱）。
+> **箱子类型判定（v2.0.0 起）**：`type` 字段是**唯一**判定机制——`"type": "terminal"` 注册为终端机物品（`ItemTerminal`，打开终端谈判屏），`"type": "csbox"` 或省略为普通宝箱。终端机与普通箱**字段严格分离**：终端机不持有 `key` 字段（旧版（v2.0.0 之前）配置里的 `key: "minecraft:air"` 已在升级时自动迁移删除），普通箱的 `key: "minecraft:air"` 仅表示免钥匙、绝不会把宝箱变成终端机。`terminal.json` 缺少 `type` 会被拒绝加载并给出明确报错（防止静默退化成免费开箱）。
 
 > **多终端支持**：终端机与普通宝箱一样，**一个 JSON 文件注册一个物品**——任意文件（如 `terminal2.json`、`armory_shop.json`）只要声明 `"type": "terminal"`，就会注册为对应 id 的终端机（`csgobox:terminal2` 等），拥有自己独立的谈判掉落池，互不干扰。`csgobox:terminal` 本身是**静态注册**的（与 `csgobox:csgo_box` 同机制）：即使 `terminal.json` 不存在，物品也始终存在（打开显示空谈判屏），`terminal.json` 存在时为其提供默认奖池。额外终端机通过 `/give` 或创作模式标签获取；军火商村民交易固定出售 `csgobox:terminal`。完整示例见 `docs/examples/`（`weapon_dealer.json` / `enchant_vendor.json` / `supply_outpost.json`）。
 
@@ -103,7 +103,7 @@
 
 首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
 
-- **自动生成 `terminal.json`**（v1.0.8 起恢复）：内置默认配置且含 `"type": "terminal"`，终端机开箱即用；用户已存在的 `terminal.json` 不会被覆盖，旧版（无 `type` 且带遗留 `key`）配置会自动迁移。
+- **自动生成 `terminal.json`**（v2.0.0 起恢复）：内置默认配置且含 `"type": "terminal"`，终端机开箱即用；用户已存在的 `terminal.json` 不会被覆盖，旧版（无 `type` 且带遗留 `key`）配置会自动迁移。
 - 异步下载 `_tutorial_v<版本>.md` 教程文档（联网时）。
 
 **普通箱子没有内置默认配置**：`weapon_supply_box.json` 等普通箱文件需要由玩家/服主自行创建（或从教程文档中复制示例），创建后才会出现在创造物品栏。

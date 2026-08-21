@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the terminal.json default-write and legacy migration paths
- * in {@link BoxDefaults} (v1.0.8 strict type separation).
+ * in {@link BoxDefaults} (v2.0.0 strict type separation).
  */
 class BoxDefaultsTest {
 

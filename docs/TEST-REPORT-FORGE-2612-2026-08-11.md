@@ -48,7 +48,7 @@ E2E 无此崩溃。
 - 新增 `forge_26_1_2/src/main/resources/assets/csgobox/items/` 下 5 个 1.0.6 基线
   物品定义：`csgo_box.json`、`csgo_key0-3.json`（内容与 v26_1_2 一致，
   `{"model":{"type":"minecraft:model","model":"csgobox:item/<name>"}}`）。
-- `forge_26_1_2/build.gradle` 排除清单追加 1.0.7 专有定义
+- `forge_26_1_2/build.gradle` 排除清单追加 2.0.0 专有定义
   `assets/csgobox/items/{terminal,armory_point}.json`，
   维持 1.0.6 特性基线。
 
@@ -125,8 +125,8 @@ E2E 无此崩溃。
 ### ⚪ E8a-f — 预期失败：1.0.6 基线屏蔽批量开箱
 
 `forge_26_1_2/.../event/ClickEvent.java`：
-`boolean shift = false; // 1.0.6 屏蔽批量开箱（1.0.7 恢复）`。
-Shift+右键不触发批量总览屏属**设计行为**，套件 E8 断言的是 1.0.7 特性，预期 FAIL。
+`boolean shift = false; // 1.0.6 屏蔽批量开箱（2.0.0 恢复）`。
+Shift+右键不触发批量总览屏属**设计行为**，套件 E8 断言的是 2.0.0 特性，预期 FAIL。
 
 ### 🟡 E10a / E11a / E11b / E11d — 视觉 OCR 误判（非 mod bug）
 

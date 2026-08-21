@@ -46,11 +46,11 @@ public final class BoxJsonSchemaValidator {
 
     /**
      * The {@code type} field is the single source of truth for box kind
-     * (v1.0.8): {@code "terminal"} registers an {@code ItemTerminal},
+     * (v2.0.0): {@code "terminal"} registers an {@code ItemTerminal},
      * {@code "csbox"} (or absent) a regular crate. Fields are strictly
      * separated between the two kinds — a terminal must NOT declare a
      * {@code key} field (terminals have no key concept), so a leftover
-     * {@code "key": "minecraft:air"} from the pre-v1.0.8 format surfaces
+     * {@code "key": "minecraft:air"} from the pre-v2.0.0 format surfaces
      * here instead of silently changing behavior.
      */
     private static void validateType(JsonObject json, List<SchemaIssue> issues) {

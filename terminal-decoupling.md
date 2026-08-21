@@ -25,12 +25,12 @@
 
 ---
 
-## 0.5 v1.0.8 修订（2026-08-13）：type 字段回归为唯一判定
+## 0.5 v2.0.0 修订（2026-08-13，原 v1.0.8 线）：type 字段回归为唯一判定
 
-本节之后的内容（第 2~12 节）记录的是 v1.0.7 演化；v1.0.8 按「严格分离」设计
+本节之后的内容（第 2~12 节）记录的是 2.0.0 开发线演化；按「严格分离」设计
 **反转了第 6 节的派生判定**，现状以本节为准：
 
-| 主题 | v1.0.8 状态 |
+| 主题 | v2.0.0 状态 |
 |---|---|
 | 箱子类型判定 | JSON `type` 字段是**唯一**判定机制：`"type": "terminal"` → `ItemTerminal`；`"type": "csbox"`（或省略）→ `ItemCsgoBox`。`BoxDefinition` 重新持有 `type` 字段（record/CODEC/STREAM_CODEC/Builder），`isTerminal()` / `type()` 直接读它 |
 | 字段分离 | **终端机不再有 `key` 字段**：默认 `terminal.json` 删除 `key`；schema 验证器对「terminal + key」报错；`/csbox info` 不再显示终端机钥匙行。`BoxJsonLoader` 只在非终端机时解析 `key` |

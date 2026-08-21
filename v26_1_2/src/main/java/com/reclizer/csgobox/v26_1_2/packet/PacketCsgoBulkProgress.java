@@ -70,7 +70,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (!(templateBox.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
-            // Strict separation (v1.0.8): terminals are only buyable through
+            // Strict separation (v2.0.0): terminals are only buyable through
             // the terminal negotiation protocol — never through the classic
             // crate pipeline, which would open them for free (no key, no
             // Armory Points). A crafted packet holding a terminal is refused.

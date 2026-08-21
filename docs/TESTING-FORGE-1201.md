@@ -1,6 +1,6 @@
 # forge_1_20_1 (MinecraftForge 1.20.1) 测试流程
 
-> 适用范围：`forge_1_20_1` 平台模块——1.0.7 线功能向 MC 1.20.1 / MinecraftForge
+> 适用范围：`forge_1_20_1` 平台模块——2.0.0 线功能向 MC 1.20.1 / MinecraftForge
 > 47.x 的回移实验模块（2026-08-18 首建，计划见
 > `.opencode/plans/2026-08-18-forge-1-20-1-port.md`）。
 > **不在 CI 矩阵**，不参与 3 平台镜像纪律与 AnimRenderOps 漂移门禁

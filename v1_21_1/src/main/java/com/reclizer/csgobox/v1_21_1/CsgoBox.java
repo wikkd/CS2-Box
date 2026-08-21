@@ -270,7 +270,7 @@ public class CsgoBox {
         }
         // Default terminal.json must exist before the scan (BoxJsonLoader
         // writes it only at server start, after the registry freezes).
-        // Pre-v1.0.8 files (no "type") are upgraded here first.
+        // Pre-v2.0.0 files (no "type") are upgraded here first.
         BoxDefaults.upgradeLegacyTerminalConfig(configDir);
         BoxDefaults.writeDefaultTerminalIfMissing(configDir);
         int registered = 0;
@@ -302,7 +302,7 @@ public class CsgoBox {
                     continue;
                 }
                 final ResourceLocation boxId = itemId;
-                // "type" is the single source of truth (v1.0.8): terminal
+                // "type" is the single source of truth (v2.0.0): terminal
                 // registers an ItemTerminal (client dispatch is by instanceof,
                 // remote clients never see the type field); everything else a
                 // plain ItemCsgoBox. The terminal model resolves by registry

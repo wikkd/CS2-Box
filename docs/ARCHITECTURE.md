@@ -9,7 +9,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 
 **关键事实**:
 
-- 模组 ID:`csgobox`,当前版本 `1.0.6`(开发线 1.0.8)
+- 模组 ID:`csgobox`,当前版本 `2.0.0-beta`（1.0.7/1.0.8 开发线合并发行）
 - Java toolchain:`v1_21_1` 用 Java 21,`v26_1_2` 用 Java 25 + `--enable-preview`(NeoForm 重编译要求)
 - 共享资源:`common/src/main/resources/` 由四个平台通过 `srcDir project(':common').file('src/main/resources')` 引入(平台侧 `duplicatesStrategy = EXCLUDE`,平台 srcDir 在前、同名文件平台副本优先)
 - 依赖方向约束:**`common/` 不得直接 `import net.minecraft.*` 或 `import net.neoforged.*` / `net.minecraftforge.*`**(由 `:common:checkCommonArchitecture` Gradle task 自动拦截)
@@ -42,7 +42,7 @@ CS2-Box 是用 Java 21 / 25 编写的 NeoForge/Forge 模组,把 CS:GO 的开箱�
 - **`BoxGrades`** — 5 档等级名→等级号映射、默认权重 `{625,125,25,6,4}`、drop rate 夹取与各 schema 上限常量（2026-08 重构下沉）
 - **`BoxRegistryStore<K,V>`** — 泛型注册表容器（register/remove 无条件触发变更回调、clear 触发清空回调）；平台 `BoxRegistry` 是提供键型（`ResourceLocation`/`Identifier`）与 `GradeMapCache` 失效回调的薄壳
 - **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items/grades/winningIndex，经 `GradeMap.isValid` 定位中奖位）；平台传 `ItemStack.EMPTY` 作空值
-- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` 默认配置**(v1.0.8 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
+- **`BoxJsonLoader`**（平台） — 加载 `config/csbox/*.json`;首次启动保证目录存在、异步下载教程 md(`BoxDefaults`),并**自动生成 `terminal.json` 默认配置**(v2.0.0 恢复自动生成,用户文件不覆盖;普通箱仍由玩家自建 JSON);在 `ServerStartingEvent` 触发 `loadAll()`
 - **`GradeGroup` / `RandomItem`** — 5 档物品 + 加权随机选择(long 类型总权重避免溢出)
 - **物品 schema**:`{ "id": "...", "count": 1, "components": {...} }`(1.21+ components),旧版 `tag` 字符串仍可加载
 

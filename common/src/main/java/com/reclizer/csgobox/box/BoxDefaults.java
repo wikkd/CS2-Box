@@ -301,11 +301,11 @@ public final class BoxDefaults {
     }
 
     /**
-     * Upgrades a pre-v1.0.8 {@code terminal.json} to the type-driven format.
-     * Since v1.0.8 the JSON {@code type} field is the single source of truth
+     * Upgrades a pre-v2.0.0 {@code terminal.json} to the type-driven format.
+     * Since v2.0.0 the JSON {@code type} field is the single source of truth
      * for item registration, and the terminal machine no longer has a
      * {@code key} field (strict separation from regular crates). Configs
-     * written against the v1.0.7 schema have neither: this one-time migration
+     * written against the pre-v2.0.0 schema have neither: this one-time migration
      * adds {@code "type": "terminal"} and drops a legacy {@code key} (e.g.
      * {@code minecraft:air}) so existing servers keep their terminal without
      * manual edits. Only the exact {@code terminal.json} file is touched;

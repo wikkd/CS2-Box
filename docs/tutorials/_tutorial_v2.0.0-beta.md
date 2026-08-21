@@ -1,6 +1,6 @@
 # CS2-Box Configuration Reference
 
-> Auto-generated reference for the box JSON files in `config/csbox/`. The companion Simplified Chinese version is at [`_tutorial_v1.0.7_zh_cn.md`](./_tutorial_v1.0.7_zh_cn.md).
+> Auto-generated reference for the box JSON files in `config/csbox/`. The companion Simplified Chinese version is at [`_tutorial_v2.0.0-beta_zh_cn.md`](./_tutorial_v2.0.0-beta_zh_cn.md).
 
 ## Overview
 
@@ -168,7 +168,7 @@ Points (see [Armory economy](#armory-economy-107)), or crafted:
 | `csgobox:csgo_key1` | 3 gold ingots                    |
 | `csgobox:csgo_key2` | 3 diamonds                       |
 
-## Bulk opening (1.0.7)
+## Bulk opening (2.0.0)
 
 Hold a `csgobox:csgo_box` and **Shift + right-click** to open the bulk overview
 screen instead of the single-open preview. It shows how many boxes and keys you
@@ -184,7 +184,7 @@ opens the whole batch.
   the server; the overview screen mirrors it.
 - Terminal items always open their own screen and cannot be bulk-opened.
 
-## Terminal machine (1.0.7)
+## Terminal machine (2.0.0)
 
 The terminal (`csgobox:terminal`) is a box-type item with its own loot
 pool: the `type: terminal` box definition in `config/csbox/terminal.json`.
@@ -215,7 +215,7 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
 - Sources: creative tab, or the arms-dealer villager (level 4) for 12 Armory
   Points.
 
-## Armory economy (1.0.7)
+## Armory economy (2.0.0)
 
 Armory Points (`csgobox:armory_point`) are the mod's currency. They drop from
 boxes when you add the item to a grade pool, and are rewarded by the

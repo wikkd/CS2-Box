@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * renames, and version-drift that silently break the module while
  * compileJava still passes.</p>
  *
- * <p>Sync note: the module tracks the v26_1_2 baseline as of the 1.0.7 dev
+ * <p>Sync note: the module tracks the v26_1_2 baseline as of the 2.0.0 dev
  * line (terminal / armory-point items are now expected). The
  * declared-field assertions below guard against accidental field removal or
  * mirror overwrites that drop the synced registrations.</p>

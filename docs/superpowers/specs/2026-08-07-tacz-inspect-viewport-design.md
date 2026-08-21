@@ -6,7 +6,7 @@
 
 ## 背景
 
-1.0.7 引入"检视"功能：开箱抽出物品界面（`CsLookItemScreen`）的底部工具栏"手套"按钮
+2.0.0 引入"检视"功能：开箱抽出物品界面（`CsLookItemScreen`）的底部工具栏"手套"按钮
 （index 1）作为 TACZ 第一人称检视入口。兼容
 [TaCZ]永恒枪械工坊：零（v1_21_1 为非官方移植 https://github.com/MUKSC/TACZ-1.21.1，
 forge_1_20_1 为官方 1.20.1 构建，mod id 均为 `tacz`）自带的检视动画。
