@@ -76,10 +76,15 @@ public final class GuiRegion {
         return new Region(0, pctH(height, 10), width, pctH(height, 8));
     }
 
-    /** Main preview area (held box 3D view). */
+    /**
+     * Main preview area (held box 3D view). Sits between the title (10%)
+     * and the info rows (50%): the rotated 3D model overflows its square
+     * by ~20%, so the region is capped at 24% of the screen height to keep
+     * the model clear of the box/key count labels below.
+     */
     public static Region preview(int width, int height) {
-        int size = Math.max(144, Math.min(pctW(width, 22), pctH(height, 30)));
-        return new Region(centerX(width, size), pctH(height, 42) - size / 2, size, size);
+        int size = Math.max(96, Math.min(pctW(width, 18), pctH(height, 24)));
+        return new Region(centerX(width, size), pctH(height, 28) - size / 2, size, size);
     }
 
     /** Item list / grade grid area. */

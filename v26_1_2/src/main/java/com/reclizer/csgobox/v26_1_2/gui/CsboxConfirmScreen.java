@@ -72,8 +72,10 @@ public class CsboxConfirmScreen extends Screen {
     private void renderLabels(GuiGraphicsExtractor guiGraphics) {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.confirm_title").withStyle(titleStyle);
+        float titleScale = 1.4F;
+        float titleW = this.font.width(title) * titleScale;
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.22F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - titleW) * 0.5F, this.height * 0.22F, 0, 0, titleScale, 0xFFFFFFFF);
 
         Component boxName = this.templateBox.getItem().getName(this.templateBox);
         int rowY = this.height * 36 / 100;

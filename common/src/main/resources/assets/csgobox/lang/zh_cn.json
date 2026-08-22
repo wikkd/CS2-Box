@@ -38,6 +38,7 @@
   "gui.csgobox.bulk.confirm": "全部开启",
   "gui.csgobox.bulk.collect": "收集",
   "gui.csgobox.bulk.skip": "跳过",
+  "gui.csgobox.bulk.close": "关闭",
   "gui.csgobox.bulk.show_all": "显示全部",
   "gui.csgobox.bulk.all_rewards_title": "全部奖励",
   "gui.csgobox.bulk.waterfall_empty": "等待结果中...",

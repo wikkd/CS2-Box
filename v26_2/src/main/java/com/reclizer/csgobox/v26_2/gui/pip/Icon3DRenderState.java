@@ -47,7 +47,9 @@ public record Icon3DRenderState(
 
     @Override
     public @Nullable ScreenRectangle scissorArea() {
-        return null;
+        // Clip 3D model rendering to the preview bounds so the dark
+        // render-target background does not overflow and cover UI elements.
+        return new ScreenRectangle(x0, y0, x1 - x0, y1 - y0);
     }
 
     @Override

@@ -146,31 +146,26 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void render3DBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (this.templateBox.isEmpty() || this.player == null) return;
 
-        int centerX = this.width / 2;
-        int centerY = this.height * 42 / 100;
-        float frameWidth = this.width * 22 / 100F;
-        float scale = frameWidth / 16F;
-        int half = (int) (frameWidth / 2F);
+        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
+        int centerX = preview.centerX();
+        int centerY = preview.centerY();
+        int textureSize = preview.w();
+        float scale = textureSize / 16F;
 
-        AnimRenderOps.fillGradient(guiGraphics, centerX - (int) frameWidth, centerY - (int) (frameWidth * 0.8F),
-                centerX + (int) frameWidth, centerY + (int) (frameWidth * 0.8F),
+        AnimRenderOps.fillGradient(guiGraphics, preview.x(), preview.y(),
+                preview.right(), preview.bottom(),
                 OverlayColor.panel(), OverlayColor.panelHover());
 
-        // renderItem3D takes the TOP-LEFT of the preview square (matches
-        // v26_1_2's centerX - textureSize / 2): the square is frameWidth px
-        // wide, so back out half to keep the model centred on the panel.
         AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
-                centerX - half, centerY - half, this.itemDrag.rotation(), scale);
+                centerX - textureSize / 2, centerY - textureSize / 2,
+                this.itemDrag.rotation(), scale);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        float frameWidth = this.width * 22F / 100F;
-        float itemCenterX = this.width / 2F;
-        float itemCenterY = this.height * 42F / 100F;
-        float range = frameWidth * 0.7F;
-        boolean isInRange = mouseX >= itemCenterX - range && mouseX <= itemCenterX + range
-                && mouseY >= itemCenterY - range && mouseY <= itemCenterY + range;
+        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
+        boolean isInRange = mouseX >= preview.x() && mouseX <= preview.right()
+                && mouseY >= preview.y() && mouseY <= preview.bottom();
         if (button == 0 && isInRange) {
             this.itemDrag.accumulate(dragX, dragY);
         }
@@ -186,11 +181,21 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void renderLabels(GuiGraphics guiGraphics) {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
+        float titleScale = 1.6F;
+        float titleW = this.font.width(title) * titleScale;
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
+                (this.width - titleW) * 0.5F, this.height * 0.10F, 0, 0, titleScale, 0xFFFFFFFF);
 
-        int rowY = this.height * 28 / 100;
+        // Info rows start below the 3D preview region (GuiRegion.preview).
+        // Use a more compact starting position to avoid overlapping with buttons.
+        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
+        int rowY = preview.bottom() + 12;
         int rowSpacing = this.font.lineHeight + 6;
+        // Ensure rowY doesn't go below 45% of height to leave room for buttons
+        int minRowY = this.height * 45 / 100;
+        if (rowY < minRowY) {
+            rowY = minRowY;
+        }
         Component boxName = this.cachedBoxName;
         Style row = Style.EMPTY;
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_name", boxName.getString()).withStyle(row),

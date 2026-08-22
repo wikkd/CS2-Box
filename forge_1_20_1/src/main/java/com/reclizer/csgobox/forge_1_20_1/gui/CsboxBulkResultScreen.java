@@ -117,6 +117,11 @@ public class CsboxBulkResultScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+        // Advancement/recipe toasts would stack over this screen; suppress
+        // them for the whole time it is open (they are transient notices).
+        if (this.minecraft != null) {
+            this.minecraft.getToasts().clear();
+        }
         if (this.minecraft == null || this.minecraft.level == null) {
             return;
         }
@@ -147,6 +152,11 @@ public class CsboxBulkResultScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        // Hide the HUD (hotbar/crosshair) behind the overlay while it is open;
+        // restored in onClose()/removed().
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = true;
+        }
         if (this.minecraft != null && this.minecraft.level != null) {
             int fill = UiBackdrop.fill();
             AnimRenderOps.fillGradient(guiGraphics, 0, 0, this.width, this.height, fill, fill);
@@ -159,8 +169,10 @@ public class CsboxBulkResultScreen extends Screen {
     private void renderHeader(GuiGraphics guiGraphics) {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
+        float titleScale = 1.4F;
+        float titleW = this.font.width(title) * titleScale;
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.4F, 0xFFFFFFFF);
+                (this.width - titleW) * 0.5F, this.height * 0.06F, 0, 0, titleScale, 0xFFFFFFFF);
         int shown = cursor;
         int total = allItems.size();
         Component progress = Component.literal(shown + " / " + total);
@@ -175,7 +187,7 @@ public class CsboxBulkResultScreen extends Screen {
         long now = this.minecraft.level.getGameTime();
 
         int rowH = this.height / 22;
-        int baseY = this.height * 92 / 100;
+        int baseY = this.height * 60 / 100;
         int colW = Math.min(this.width * 35 / 100, 360);
         int x = (this.width - colW) / 2;
 
@@ -218,20 +230,20 @@ public class CsboxBulkResultScreen extends Screen {
             renderAllItemsGrid(guiGraphics, mouseX, mouseY);
             return;
         }
-        if (cursor < allItems.size()) {
-            Component waiting = Component.translatable("gui.csgobox.bulk.waterfall_empty");
-            RenderFontTool.drawString(guiGraphics, this.font, waiting.getVisualOrderText(),
-                    (this.width - this.font.width(waiting)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
-            return;
-        }
-        if (!visible.isEmpty()) {
+        if (cursor < allItems.size() || !visible.isEmpty()) {
+            if (cursor < allItems.size()) {
+                Component waiting = Component.translatable("gui.csgobox.bulk.waterfall_empty");
+                RenderFontTool.drawString(guiGraphics, this.font, waiting.getVisualOrderText(),
+                        (this.width - this.font.width(waiting)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
+            }
+            renderPlaybackButtons(guiGraphics, mouseX, mouseY);
             return;
         }
         int btnW = Math.max(120, this.width * 14 / 100);
         int btnH = this.height * 5 / 100;
         int btnSpacing = 16;
         int totalBtnWidth = btnW * 2 + btnSpacing;
-        int btnY = this.height * 86 / 100;
+        int btnY = this.height * 80 / 100;
 
         int showAllX = (this.width - totalBtnWidth) / 2;
         boolean showAllHover = isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH);
@@ -259,6 +271,38 @@ public class CsboxBulkResultScreen extends Screen {
         float collectTextX = collectX + (btnW - collectTextW) / 2.0F;
         float collectTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, collectSeq, collectTextX, collectTextY, 0, 0, 0.95F, 0xFFFFFFFF);
+    }
+
+    /** Action row below the waterfall while the feed plays: SKIP drains the
+     *  feed so the result buttons appear, CLOSE exits the screen right away.
+     *  Rewards are already granted server-side, so neither loses anything. */
+    private void renderPlaybackButtons(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int w = Math.max(96, this.width * 9 / 100);
+        int h = this.height * 4 / 100;
+        int spacing = 16;
+        int y = this.height * 80 / 100;
+        int skipX = (this.width - (w * 2 + spacing)) / 2;
+        int closeX = skipX + w + spacing;
+        drawPlaybackButton(guiGraphics, mouseX, mouseY, skipX, y, w, h,
+                Component.translatable("gui.csgobox.bulk.skip"));
+        drawPlaybackButton(guiGraphics, mouseX, mouseY, closeX, y, w, h,
+                Component.translatable("gui.csgobox.bulk.close"));
+    }
+
+    private void drawPlaybackButton(GuiGraphics guiGraphics, int mouseX, int mouseY,
+                                    int x, int y, int w, int h, Component text) {
+        boolean hover = isInside(mouseX, mouseY, x, y, w, h);
+        int fill = hover ? OverlayColor.panelHover() : OverlayColor.panel();
+        int border = hover ? 0xFF00DDFF : 0xFF00AACC;
+        guiGraphics.fill(x, y, x + w, y + h, border);
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
+        Style style = Style.EMPTY.withBold(true);
+        FormattedCharSequence seq = text.copy().withStyle(style).getVisualOrderText();
+        float textW = this.font.width(seq) * 0.9F;
+        float textX = x + (w - textW) / 2.0F;
+        float textY = y + (h - this.font.lineHeight * 0.9F) / 2.0F + 1;
+        int textColor = hover ? 0xFFFFFFFF : 0xFF00CCEE;
+        RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.9F, textColor);
     }
 
     private void renderAllItemsGrid(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -330,12 +374,29 @@ public class CsboxBulkResultScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && (cursor < allItems.size() || !visible.isEmpty())) {
+            int w = Math.max(96, this.width * 9 / 100);
+            int h = this.height * 4 / 100;
+            int spacing = 16;
+            int y = this.height * 80 / 100;
+            int skipX = (this.width - (w * 2 + spacing)) / 2;
+            int closeX = skipX + w + spacing;
+            if (isInside(mouseX, mouseY, skipX, y, w, h)) {
+                this.cursor = allItems.size();
+                this.visible.clear();
+                return true;
+            }
+            if (isInside(mouseX, mouseY, closeX, y, w, h)) {
+                this.onClose();
+                return true;
+            }
+        }
         if (button == 0 && cursor >= allItems.size() && visible.isEmpty()) {
             int btnW = Math.max(120, this.width * 14 / 100);
             int btnH = this.height * 5 / 100;
-            int btnY = this.height * 86 / 100;
 
             if (showAllItems) {
+                int btnY = this.height * 92 / 100;
                 int btnX = (this.width - btnW) / 2;
                 if (isInside(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
                     this.onClose();
@@ -343,6 +404,7 @@ public class CsboxBulkResultScreen extends Screen {
                 }
             } else {
                 // Show both buttons
+                int btnY = this.height * 80 / 100;
                 int btnSpacing = 16;
                 int totalBtnWidth = btnW * 2 + btnSpacing;
                 int showAllX = (this.width - totalBtnWidth) / 2;
@@ -368,5 +430,24 @@ public class CsboxBulkResultScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        // Same protection as onClose(): death/respawn replaces this screen via
+        // setScreen() -> Screen.removed(), which would otherwise leave
+        // hideGui=true and hide the HUD permanently.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.removed();
     }
 }

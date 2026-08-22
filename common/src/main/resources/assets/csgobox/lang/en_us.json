@@ -38,6 +38,7 @@
   "gui.csgobox.bulk.confirm": "OPEN ALL",
   "gui.csgobox.bulk.collect": "COLLECT",
   "gui.csgobox.bulk.skip": "SKIP",
+  "gui.csgobox.bulk.close": "CLOSE",
   "gui.csgobox.bulk.show_all": "SHOW ALL",
   "gui.csgobox.bulk.all_rewards_title": "All Rewards",
   "gui.csgobox.bulk.waterfall_empty": "Waiting for results...",

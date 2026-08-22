@@ -183,11 +183,21 @@ public class CsboxBulkOverviewScreen extends Screen {
     private void renderLabels(GuiGraphicsExtractor guiGraphics) {
         Style titleStyle = Style.EMPTY.withBold(true);
         Component title = Component.translatable("gui.csgobox.bulk.title").withStyle(titleStyle);
+        float titleScale = 1.6F;
+        float titleW = this.font.width(title) * titleScale;
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
-                (this.width - this.font.width(title)) * 0.5F, this.height * 0.10F, 0, 0, 1.6F, 0xFFFFFFFF);
+                (this.width - titleW) * 0.5F, this.height * 0.10F, 0, 0, titleScale, 0xFFFFFFFF);
 
-        int rowY = this.height * 28 / 100;
+        // Info rows start below the 3D preview region (GuiRegion.preview).
+        // Use a more compact starting position to avoid overlapping with buttons.
+        GuiRegion.Region preview = GuiRegion.preview(this.width, this.height);
+        int rowY = preview.bottom() + 12;
         int rowSpacing = this.font.lineHeight + 6;
+        // Ensure rowY doesn't go below 45% of height to leave room for buttons
+        int minRowY = this.height * 45 / 100;
+        if (rowY < minRowY) {
+            rowY = minRowY;
+        }
         Component boxName = this.templateBox.getItem().getName(this.templateBox);
         Style row = Style.EMPTY;
         drawCentered(guiGraphics, Component.translatable("gui.csgobox.bulk.box_name", boxName.getString()).withStyle(row),

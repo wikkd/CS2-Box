@@ -63,10 +63,11 @@ final class GuiRegionTest {
     @Test
     void previewRegionIsSquareAndCentered() {
         GuiRegion.Region r = GuiRegion.preview(1000, 800);
-        // size = max(144, min(22%*1000=220, 30%*800=240)) = 220
-        assertEquals(220, r.w());
-        assertEquals(220, r.h());
-        assertEquals((1000 - 220) / 2, r.x()); // centered
+        // size = max(96, min(18%*1000=180, 24%*800=192)) = 180
+        assertEquals(180, r.w());
+        assertEquals(180, r.h());
+        assertEquals((1000 - 180) / 2, r.x()); // centered
+        assertEquals(134, r.y());             // 28% of 800 (224) minus half the size
     }
 
     @Test
