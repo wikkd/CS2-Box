@@ -1,6 +1,6 @@
 # CS2-Box
 
-> CS:GO 风格开箱体验的 Minecraft NeoForge 模组 —— 同时支持 MC 1.21.1 和 MC 26.x 共 3 个平台。
+> CS:GO 风格开箱体验的 Minecraft 模组 —— 同时支持 NeoForge 与 Forge，覆盖 MC 1.20.1 / 1.21.1 / 26.1.2 / 26.2 共 6 个平台（详见「多平台支持」）。
 
 CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打开预览，放入钥匙点开启按钮，服务端授权 RNG 决定结果，客户端播放滚动动画，揭晓稀有度分级物品。当前版本 `2.0.0-beta`，仓库 License MIT（`LICENSE`）。
 
