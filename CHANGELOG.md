@@ -13,6 +13,7 @@
 - **总览屏布局**：信息行改为从预览区下缘动态起排（`preview.bottom() + 12`，45% 屏高下限），标题按缩放字号居中（`titleW = font.width(title) * scale`），六平台统一。
 - **标题居中修正**：流水结果屏头部标题按缩放字号计算宽度后再居中（`titleScale` 1.4），消除长标题在缩放下的视觉偏移。
 - **附带修复**：Forge 分支流水结果屏「收集」按钮原先渲染在 92% 但点击判定在 86%（hitbox 错位），现已统一为 92%；新增 `gui.csgobox.bulk.close` 中英文案。
+- **「显示全部」网格可滚动**：结果屏「显示全部」视图重做——图标从 64px 上限缩至 44px、单元格间距加大（排版不再紧凑），网格限定在独立视口内（`scissor` 裁剪到「收集」按钮上方），**滚轮 / ↑↓ 方向键滚动浏览**全部合并条目（不再 64 项截断），右侧显示滚动条指示器，内容溢出时显示「滚轮 / ▲▼ 浏览」提示；新增 `gui.csgobox.bulk.scroll_hint` 文案、移除已废弃的 `gui.csgobox.bulk.more_items`。
 - 验证：六平台 `clean compileJava` 通过、`:common:test` 全绿（含更新后的 `GuiRegionTest`）、`check-animops-drift.sh` 三 NeoForge 平台无漂移。
 
 ## [2.0.0-beta] - 2026-08-22

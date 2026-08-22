@@ -43,6 +43,9 @@ public class CsboxBulkResultScreen extends Screen {
     private long lastTickTime = 0;
     private boolean showAllItems = false;
 
+    /** Rows scrolled down in the show-all grid (0 = top). */
+    private int gridScroll = 0;
+
     // Lazy caches for the show-all grid. allItems/allGrades are fixed after
     // construction, so the O(n^2) consolidation is computed once and reused
     // across frames instead of every render (forge build has no sort).
@@ -314,23 +317,41 @@ public class CsboxBulkResultScreen extends Screen {
         Map<ItemStack, Integer> consolidated = gridConsolidated;
         Map<ItemStack, Integer> gradeMap = gridGradeMap;
 
-        int cols = Math.min(8, this.width / 80);
-        int itemSize = Math.min(64, this.width / cols - 12);
-        int rows = (int) Math.ceil((double) consolidated.size() / cols);
-        int gridWidth = cols * (itemSize + 8);
+        // Comfortable layout: smaller cells with more breathing room.
+        int cols = Math.max(1, Math.min(8, this.width / 90));
+        int itemSize = Math.min(44, this.width / cols - 14);
+        int cellPitch = itemSize + 12;
+        int gridWidth = cols * cellPitch;
         int startX = (this.width - gridWidth) / 2;
         int startY = this.height * 18 / 100;
+
+        // Viewport ends well above the collect button so no cell can ever
+        // cover it (also enforced by scissor below).
+        int viewBottom = this.height * 80 / 100;
+        int visibleRows = Math.max(1, (viewBottom - startY) / cellPitch);
 
         Component title = Component.translatable("gui.csgobox.bulk.all_rewards_title");
         RenderFontTool.drawString(guiGraphics, this.font, title.getVisualOrderText(),
                 (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
 
+        int totalRows = (int) Math.ceil((double) consolidated.size() / cols);
+        int maxScroll = Math.max(0, totalRows - visibleRows);
+        this.gridScroll = Math.max(0, Math.min(this.gridScroll, maxScroll));
+
+        // Clip the whole grid to the viewport so scrolled-out cells and the
+        // scrollbar never draw over the collect button below.
+        AnimRenderOps.scissor(guiGraphics, 0, startY - 4, this.width, viewBottom - startY + 4);
+
         int idx = 0;
         for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
             int col = idx % cols;
             int row = idx / cols;
-            int x = startX + col * (itemSize + 8);
-            int y = startY + row * (itemSize + 8);
+            if (row < this.gridScroll || row >= this.gridScroll + visibleRows + 1) {
+                idx++;
+                continue;
+            }
+            int x = startX + col * cellPitch;
+            int y = startY + (row - this.gridScroll) * cellPitch;
             ItemStack stack = entry.getKey();
             int count = entry.getValue();
             int grade = gradeMap.getOrDefault(stack, 1);
@@ -351,11 +372,31 @@ public class CsboxBulkResultScreen extends Screen {
             }
             idx++;
         }
+        AnimRenderOps.scissorDisable(guiGraphics);
+
+        // Scrollbar indicator on the right edge when content overflows.
+        if (maxScroll > 0) {
+            int barX = this.width - 10;
+            int barW = 4;
+            int barTop = startY;
+            int barHeight = Math.max(12, (int) ((double) visibleRows / totalRows * (viewBottom - startY)));
+            int trackHeight = viewBottom - startY - barHeight;
+            int barY = barTop + (trackHeight > 0 ? Math.round(trackHeight * (float) this.gridScroll / maxScroll) : 0);
+            guiGraphics.fill(barX, barTop, barX + barW, viewBottom, 0x40FFFFFF);
+            guiGraphics.fill(barX, barY, barX + barW, barY + barHeight, 0xCC00DDFF);
+        }
+
+        if (maxScroll > 0) {
+            Component scrollHint = Component.translatable("gui.csgobox.bulk.scroll_hint");
+            float hintW = this.font.width(scrollHint) * 0.7F;
+            RenderFontTool.drawString(guiGraphics, this.font, scrollHint.getVisualOrderText(),
+                    (this.width - hintW) / 2.0F, viewBottom + 6, 0, 0, 0.7F, 0xFFAAAAAA);
+        }
 
         int btnW = Math.max(120, this.width * 14 / 100);
         int btnH = this.height * 5 / 100;
         int btnX = (this.width - btnW) / 2;
-        int btnY = this.height * 92 / 100;
+        int btnY = this.height * 84 / 100;
         boolean hover = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
         int fill = hover ? 0xFF00CC00 : 0xFF008800;
         int border = hover ? 0xFF00FF00 : 0xFF00AA00;
@@ -369,6 +410,25 @@ public class CsboxBulkResultScreen extends Screen {
         float textY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
         RenderFontTool.drawString(guiGraphics, this.font, seq, textX, textY, 0, 0, 0.95F, 0xFFFFFFFF);
     }
+
+    /** Scroll the show-all grid (rows) when the mouse wheel is used over it. */
+    private void scrollGrid(double scrollY) {
+        if (!this.showAllItems || scrollY == 0) {
+            return;
+        }
+        buildGridCacheIfNeeded();
+        int cols = Math.max(1, Math.min(8, this.width / 90));
+        int itemSize = Math.min(44, this.width / cols - 14);
+        int cellPitch = itemSize + 12;
+        int startY = this.height * 18 / 100;
+        int viewBottom = this.height * 80 / 100;
+        int visibleRows = Math.max(1, (viewBottom - startY) / cellPitch);
+        int totalRows = (int) Math.ceil((double) this.gridConsolidated.size() / cols);
+        int maxScroll = Math.max(0, totalRows - visibleRows);
+        int dir = scrollY > 0 ? -1 : 1; // wheel up = scroll up
+        this.gridScroll = Math.max(0, Math.min(maxScroll, this.gridScroll + dir));
+    }
+
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
         return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
@@ -416,6 +476,7 @@ public class CsboxBulkResultScreen extends Screen {
 
                 if (isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH)) {
                     showAllItems = true;
+                    this.gridScroll = 0;
                     return true;
                 }
                 if (isInside(mouseX, mouseY, collectX, btnY, btnW, btnH)) {
@@ -428,9 +489,23 @@ public class CsboxBulkResultScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.showAllItems) {
+            this.scrollGrid(scrollY);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
             this.onClose();
+            return true;
+        }
+        // Arrow-key scrolling inside the show-all grid.
+        if (this.showAllItems && (event.key() == 264 || event.key() == 265)) {
+            this.scrollGrid(event.key() == 264 ? -1.0 : 1.0);
             return true;
         }
         return super.keyPressed(event);
