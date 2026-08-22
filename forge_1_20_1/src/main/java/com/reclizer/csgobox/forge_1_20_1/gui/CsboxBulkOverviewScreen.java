@@ -19,6 +19,10 @@ import net.minecraft.world.item.ItemStack;
 
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
+import com.reclizer.csgobox.forge_1_20_1.packet.PacketCsgoBulkProgress;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 
 
@@ -294,10 +298,12 @@ public class CsboxBulkOverviewScreen extends Screen {
             int backX = backButtonX();
             int w = buttonWidth();
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
-                // Second step: confirmation screen restates the exact
-                // consumption before the bulk request is sent.
-                Minecraft.getInstance().setScreen(new CsboxConfirmScreen(
-                        this.player, this.templateBox, this.boxCount, this.keyCount, this.openableCount));
+                // Directly request the bulk open. The server re-validates
+                // inventory and consumption authoritatively; no separate
+                // confirmation screen is shown.
+                long reqId = ThreadLocalRandom.current().nextLong();
+                Networking.sendToServer(new PacketCsgoBulkProgress(reqId));
+                Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
             if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {

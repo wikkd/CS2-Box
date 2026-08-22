@@ -4,7 +4,6 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.gui.CsLookItemScreen;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxBulkOverviewScreen;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxBulkResultScreen;
-import com.reclizer.csgobox.v1_21_1.gui.CsboxConfirmScreen;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxProgressScreen;
 import com.reclizer.csgobox.v1_21_1.gui.CsboxScreen;
 import net.minecraft.client.Minecraft;
@@ -74,7 +73,6 @@ public final class ScreenBlurBoost {
                 || screen instanceof CsboxProgressScreen
                 || screen instanceof CsboxBulkOverviewScreen
                 || screen instanceof CsboxBulkResultScreen
-                || screen instanceof CsboxConfirmScreen
                 || screen instanceof CsLookItemScreen;
     }
 }

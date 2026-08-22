@@ -62,7 +62,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `CsboxConfig.java` — NeoForge `ModConfigSpec`，builder 每个 `define*` 用 `.get()`；`bulkOpenCount`（0=无上限）服务端权威
 - `packet/PacketCsgoProgress.java` — 服务端权威 RNG + `OPEN_BLOCKED_UNTIL_TICK`（ConcurrentHashMap，`tickOpenBlockMap` 每 100 tick 清理）
 - `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize）
-- `gui/CsboxConfirmScreen.java` — 批量开箱二次确认屏（总览屏 → 确认屏 → 发包）
+- `gui/CsboxBulkOverviewScreen.java` — 批量开箱总览屏（Shift+右键进入；点「开启」直接发包 `PacketCsgoBulkProgress` 并进 `CsboxProgressScreen`，无二次确认屏；服务端权威复核库存与扣减）
 - `common/box/BoxDefaults.java` — 教程下载（`writeTutorialIfMissing` + `refreshTutorials`，版本不匹配时按 `^_tutorial_v.*\.md$` 白名单直接删除旧版教程，无回收站）
 - `common/box/BoxGrades.java` / `BoxRegistryStore.java` / `BoxStripGenerator.java` — 等级常量与纯函数 / 泛型注册表容器（回调契约固化）/ 泛型开箱滚动条（2026-08 重构下沉，平台 `BoxDefinition`/`BoxRegistry`/packet 引用指向 common）
 - `common/logic/OpenBlockGuard.java` — 服务端权威开箱冷却（10 tick，`isBlocked`/`block`/`tick`），四平台 packet 与 `ModEvents#serverTick` 共用

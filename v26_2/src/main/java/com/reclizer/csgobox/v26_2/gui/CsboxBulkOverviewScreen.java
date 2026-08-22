@@ -11,9 +11,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
@@ -21,6 +23,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_2.packet.PacketCsgoBulkProgress;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 
 
@@ -294,10 +299,15 @@ public class CsboxBulkOverviewScreen extends Screen {
             int backX = backButtonX();
             int w = buttonWidth();
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
-                // Second step: confirmation screen restates the exact
-                // consumption before the bulk request is sent.
-                Minecraft.getInstance().setScreenAndShow(new CsboxConfirmScreen(
-                        this.player, this.templateBox, this.boxCount, this.keyCount, this.openableCount));
+                // Directly request the bulk open. The server re-validates
+                // inventory and consumption authoritatively; no separate
+                // confirmation screen is shown.
+                long reqId = ThreadLocalRandom.current().nextLong();
+                ClientPacketListener conn = Minecraft.getInstance().getConnection();
+                if (conn != null) {
+                    conn.send(new ServerboundCustomPayloadPacket(new PacketCsgoBulkProgress(reqId)));
+                }
+                Minecraft.getInstance().setScreenAndShow(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
             if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {

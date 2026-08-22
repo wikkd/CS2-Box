@@ -290,10 +290,13 @@ public class CsboxBulkOverviewScreen extends Screen {
             int backX = backButtonX();
             int w = buttonWidth();
             if (isInside(mouseX, mouseY, openX, btnY, w, btnH) && this.openableCount > 0 && this.player != null) {
-                // Second step: confirmation screen restates the exact
-                // consumption before the bulk request is sent.
-                Minecraft.getInstance().setScreen(new CsboxConfirmScreen(
-                        this.player, this.templateBox, this.boxCount, this.keyCount, this.openableCount));
+                // Directly request the bulk open. The server re-validates
+                // inventory and consumption authoritatively; no separate
+                // confirmation screen is shown.
+                long reqId = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.reclizer.csgobox.v1_21_1.packet.PacketCsgoBulkProgress(reqId));
+                Minecraft.getInstance().setScreen(new CsboxProgressScreen(this.player, reqId));
                 return true;
             }
             if (isInside(mouseX, mouseY, backX, btnY, w, btnH)) {

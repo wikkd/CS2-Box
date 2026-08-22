@@ -57,7 +57,6 @@ public final class ScreenBlurBoost {
         //         || screen instanceof CsboxProgressScreen
         //         || screen instanceof CsboxBulkOverviewScreen
         //         || screen instanceof CsboxBulkResultScreen
-        //         || screen instanceof CsboxConfirmScreen
         //         || screen instanceof CsLookItemScreen;
         return false;
     }
