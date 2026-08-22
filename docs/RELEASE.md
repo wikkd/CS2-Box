@@ -18,36 +18,36 @@
 NeoGradle userdev 无法在同一次 Gradle 调用中并行加载多个 MC 版本（IDEA 扩展冲突，历史限制），因此**每次 Gradle 调用只构建一个版本**：
 
 ```bash
-# 3 个平台逐个编译（Linux/macOS 环境变量改为 -Pactive_versions=）
-for v in 1.21.1 26.1.2 26.2; do
+# 6 个平台逐个打包（NeoGradle/ForgeGradle 每次只能构建一个版本）
+for v in 1.21.1 26.1.2 26.2 forge-26.1.2 forge-26.2 forge-1.20.1; do
   case $v in
-    1.21.1) ./gradlew :v1_21_1:jar -Pactive_versions=$v ;;
-    26.1.2) ./gradlew :v26_1_2:jar -Pactive_versions=$v ;;
-    26.2)   ./gradlew :v26_2:jar -Pactive_versions=$v ;;
+    1.21.1)         ./gradlew :v1_21_1:jar -Pactive_versions=$v ;;
+    26.1.2)         ./gradlew :v26_1_2:jar -Pactive_versions=$v ;;
+    26.2)           ./gradlew :v26_2:jar -Pactive_versions=$v ;;
+    forge-26.1.2)   ./gradlew :forge_26_1_2:jar -Pactive_versions=$v ;;
+    forge-26.2)     ./gradlew :forge_26_2:jar -Pactive_versions=$v ;;
+    forge-1.20.1)   ./gradlew :forge_1_20_1:jar -Pactive_versions=$v ;;
   esac
 done
 ```
 
 > 已归档（EOL）平台 v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 自 2026-08-09 起不再构建发布，最后状态见 tag `eol-legacy-21x-1.0.6`。
 
-> `forge_26_1_2`（MinecraftForge，实验模块）与 `v26_1_2` 保持特性同步（同一
-> `mod_version`，同步纪律见 AGENTS.md「forge_26_1_2 同步」），**不进入本构建矩阵**
-> 与 CI；其发布门禁独立运行 `scripts/test-forge-2612.sh`（L0-L3）+ L4 运行时 E2E，
-> 流程见 `docs/TESTING-FORGE-2612.md` §6。
+> Forge 三模块（`forge_26_1_2` / `forge_26_2` / `forge_1_20_1`）自 2.0.0-beta 起纳入
+> **正式发布**（与对应 NeoForge 平台保持特性同步，同步纪律见 AGENTS.md「forge_26_1_2 同步」）；
+> 不在 CI 构建矩阵，发布门禁独立运行 `scripts/test-forge-2612.sh` /
+> `scripts/test-forge-262.sh` / `docs/TESTING-FORGE-1201.md` 对应的门禁脚本（L0-L3）
+> + L4 运行时 E2E。
 
-> `forge_26_2`（MinecraftForge 26.2，实验模块）2.0.0 线已追平（2026-08-18），
-> **不进入本构建矩阵**与 CI；发布门禁独立运行 `scripts/test-forge-262.sh`（L0-L3）
-> + L4 运行时 E2E，流程见 `docs/TESTING-FORGE-262.md`。
-
-产物命名：`<module>/build/libs/csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-1.0.6.jar`）。
+产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.0-beta.jar` / `csgobox-forge-26.1.2-2.0.0-beta.jar`）。
 
 ## 3. 质量门（发布前必须全绿）
 
-1. **3 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
+1. **6 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
 2. **common 单元测试**：`./gradlew :common:test`
 3. **运行时回归**（至少 26.1.2 + 1.21.1 两个代表平台）：
    - 开箱动画 + 3D 拖拽旋转（PIP）
-   - 批量开箱（Shift+右键 → 确认屏 → 流水结果屏）
+   - 批量开箱（Shift+右键 → 总览屏点「开启」直接开箱 → 流水结果屏；「显示全部」网格滚轮 / ↑↓ 滚动浏览，不被收集按钮遮挡）
    - 磨损耐久：单开有耐久物品按磨损值扣耐久（查看界面 wear 显示=实际扣损率，无耐久物品仍为随机磨损率）；`damageItemByWear=false` 时关闭
    - 成就触发（`csgobox:opened_boxes` 累计）
    - `/csbox reload`、`/csbox reload tutorial`、`/csbox info error`（加载错误）
@@ -62,7 +62,7 @@ done
 
 ## 4. 发布产物
 
-- CI：`.github/workflows/build.yml` 的 matrix 自动产出 3 个平台 jar（artifacts）
+- CI：`.github/workflows/build.yml` 的 matrix 自动产出 3 个 NeoForge 平台 jar（artifacts）；Forge 三模块为手工/门禁脚本产出
 - 手动：见上文构建矩阵脚本
 - 可选项：`./gradlew :<module>:minifyJar -Pactive_versions=<v>` 产出 ProGuard 混淆版（`-minified.jar`），`proguard-rules.pro` 需与新增反射面同步
 

@@ -24,9 +24,9 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
 | `v1_21_1/` | 1.21.1 | 21.1.248 | 21 | 旧 API 平台实现 |
 | `v26_1_2/` | 26.1.2 | 26.1.2.95 | 25 `--enable-preview` | decoupled rendering API + PIP 3D |
 | `v26_2/` | 26.2 | 26.2.0.59 | 25 `--enable-preview` | 最新版；decoupled API + PIP 3D 重写 |
-| `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | 实验模块：随 v26_1_2 同步开发，不入正式发行矩阵 |
-| `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | 实验模块：2.0.0 线已追平，不入正式发行矩阵 |
-| `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | 实验模块：1.20.1 回移（ForgeGradle 7.x），不入正式发行矩阵 |
+| `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | 正式发布：随 v26_1_2 同步开发 |
+| `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | 正式发布：2.0.0 线已追平 |
+| `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | 正式发布：1.20.1 回移（ForgeGradle 7.x） |
 
 > **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库，最后状态保留在 tag `eol-legacy-21x-1.0.6`；旧版本玩家仍可下载既有发布产物。
 
@@ -40,13 +40,14 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
    - MC 1.21.1 → NeoForge **21.1.248+**
    - MC 26.1.2 → NeoForge **26.1.2.95**（loader 11+）
    - MC 26.2 → NeoForge **26.2.0.59**
-   - Forge 版（实验模块）→ MinecraftForge **26.1.2-64.1.0**，jar 名为 `csgobox-forge-26.1.2-<mod_version>.jar`
-   - Forge 1.20.1 版（实验模块）→ MinecraftForge **47.4.22**，jar 名为 `csgobox-forge-1.20.1-<mod_version>.jar`
-2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：`csgobox-<mc>-2.0.0-beta.jar`（如 `csgobox-26.1.2-2.0.0-beta.jar`）。
+   - Forge 版 → MinecraftForge **26.1.2-64.1.0**，jar 名为 `csgobox-forge-26.1.2-<mod_version>.jar`
+   - Forge 26.2 版 → MinecraftForge **26.2-65.1.1**，jar 名为 `csgobox-forge-26.2-<mod_version>.jar`
+   - Forge 1.20.1 版 → MinecraftForge **47.4.22**，jar 名为 `csgobox-forge-1.20.1-<mod_version>.jar`
+2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：NeoForge 用 `csgobox-<mc>-2.0.0-beta.jar`（如 `csgobox-26.1.2-2.0.0-beta.jar`），Forge 用 `csgobox-forge-<mc>-2.0.0-beta.jar`。
 3. 将 jar 放入 Minecraft 客户端的 `mods/` 文件夹。
 4. 启动游戏，世界内用 `/give @p csgobox:csgo_box` 获取箱子即可开箱。
 
-> 三个平台共享同一 `mod_version`，jar 命名规则为 `csgobox-<mc>-<mod_version>.jar`。已归档（EOL）的 1.21.0/3/4/5/8/10/11 旧版玩家可继续使用既有发布产物。
+> 全部平台共享同一 `mod_version`，jar 命名规则为 NeoForge `csgobox-<mc>-<mod_version>.jar`、Forge `csgobox-forge-<mc>-<mod_version>.jar`。已归档（EOL）的 1.21.0/3/4/5/8/10/11 旧版玩家可继续使用既有发布产物。
 
 ### 开发者构建（从源码）
 
@@ -110,7 +111,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 1. 手持箱子 **右键** 打开预览界面（2 行 × 10 列物品网格）。
 2. 将对应钥匙放入钥匙槽，点击 **开启** 按钮。
 3. 服务端权威 RNG 决定结果 → 客户端播放滚动动画 → 揭晓稀有度分级物品。
-4. **批量开箱**：手持箱子 **Shift+右键** 进入批量开箱总览屏，设定数量并二次确认后流水揭晓（2.0.0 恢复）。
+4. **批量开箱**：手持箱子 **Shift+右键** 进入批量开箱总览屏，点「开启」直接开箱（无二次确认屏），结果以流水屏展示并可滚动查看全部（2.0.0 恢复 + UI 打磨）。
 
 ### `/csbox` 命令参考
 
@@ -222,7 +223,7 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 
 ## 项目状态
 
-**当前发布版本**： `2.0.0-beta`（1.0.6 之后的 1.0.7 / 1.0.8 内部开发线合并为 2.0.0-beta 一次性发行；维护中 3 平台：v1_21_1 / v26_1_2 / v26_2，共享同一 `mod_version`，jar 名 `csgobox-<mc>-<mod_version>.jar`；另有 `forge_26_1_2` / `forge_26_2` 实验模块分别随 v26_1_2 / v26_2 同步开发、不入正式发行矩阵；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
+**当前发布版本**： `2.0.0-beta`（1.0.6 之后的 1.0.7 / 1.0.8 内部开发线合并为 2.0.0-beta 一次性发行；正式发布 6 平台：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`，NeoForge jar 名 `csgobox-<mc>-<mod_version>.jar`、Forge 名 `csgobox-forge-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
 
 **近期进度**（详见 [CHANGELOG.md](./CHANGELOG.md)）：
 
@@ -230,6 +231,6 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 - ✅ AnimRenderOps 渲染门面：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op，`// era:` 头标注），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护（CI 已接线）；三平台 clean 编译 + common 测试通过，运行时回归清单见 docs/RUNTIME-UI-TESTING.md
 - ✅ v26_2 已落地：`neo_version=26.2.0.59`，`neogradle=7.1.38`，`pack_format=81`。PIP 3D 旋转已重写适配；运行时回归（开箱/进度/查看动画 + 成就触发）用户在 26.2 客户端验证通过。**HUD 提示**：MC 26.2 移除了 `Options.hideGui` 字段，已修复：通过 `Minecraft.gui.hud.toggle()/isHidden()` 包装为 `HudVisibility` 工具类，开箱动画屏自动隐藏 HUD。
 - ✅ forge_26_2 追平 2.0.0 线：以 `forge_26_1_2` 为基准迁移，5 平台 `clean compileJava` 全通过，门禁 7/7 PASS，资源一致性已补齐。
-- ✅ 2.0.0-beta（[2.0.0-beta] 发行）：批量开箱恢复、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊等
+- ✅ 2.0.0-beta（[2.0.0-beta] 发行）：批量开箱恢复 + UI 打磨（无二次确认、可滚动「显示全部」网格）、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊等；6 平台（NeoForge 3 + Forge 3）同步正式发布
 
-**已禁用范围**（显式延期）：Cloth Config 回归、Forge 1.20.1 backport、玩家间交易（loot bind-on-open）。
+**已禁用范围**（显式延期）：Cloth Config 回归、玩家间交易（loot bind-on-open）。

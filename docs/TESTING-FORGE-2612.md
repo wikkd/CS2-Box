@@ -119,7 +119,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | F2 | 动态箱子注册 | `/give @p csgobox:weapon_supply_box 5`（文件名与 `config/csbox/` 中 json 一致）→ 获得物品，图标**非紫黑** |
 | F3 | 开箱主流程 | 手持箱子右键 → 开箱确认/进度屏 → 动画（CS2 风格滚动）→ 结果屏；无卡屏、无异常日志 |
 | F4 | 消耗与产出 | 开箱后钥匙 `-1`；结果屏物品进入背包；关闭 GUI 回世界正常 |
-| F5 | 批量开箱 | 配置 `bulkOpenCount`（如 10）→ Shift+右键 → 总览屏 → 确认屏 → 流水结果屏（2.0.0 线已恢复，随 forge 同步生效） |
+| F5 | 批量开箱 | 配置 `bulkOpenCount`（如 10）→ Shift+右键 → 总览屏点「开启」直接开箱 → 流水结果屏（2.0.0 线已恢复，无二次确认屏，随 forge 同步生效） |
 | F6 | 配置热重载 | 修改 `config/csbox/*.json`（权重/分级）→ `/csbox reload` → `mc_status` 等价的开箱结果变化；`enableHotReload=true` 时文件改动自动生效 |
 | F7 | 磨损耐久 | 开出有耐久物品 → 查看界面 `wear` 显示与实际扣损一致；`damageItemByWear=false` 时不扣 |
 | F8 | 成就/统计 | 开箱后 `csgobox:opened_box` 自定义统计累计；成就页 CS2 Box 标签出现 |
@@ -187,7 +187,7 @@ forge **不参与** 3 平台镜像纪律与 `build.yml` 构建矩阵（保持实
 > **同步记录（2026-08-12，2.0.0 线第二轮）**：Blur 软适配合入 forge 全部 6 屏
 > （CsboxScreen 删除 `extractBackground` override、背景 fill 移入 `renderBg` 走
 > `UiBackdrop.fill()` + `AnimRenderOps.fillGradient`；CsLookItemScreen /
-> CsboxConfirmScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen 同管线；
+> CsboxBulkOverviewScreen / CsboxBulkResultScreen 同管线；
 > CsboxProgressScreen `extractBlurredBackground` 在 forge `ModList.isLoaded("blur")`
 > 时走 vanilla、否则 `AnimRenderOps.renderBlurredBackground`），并顺带并入
 > CsLookItemScreen 进入淡出 + `ItemDrag3D` 拖拽、CsboxProgressScreen 拒绝横幅

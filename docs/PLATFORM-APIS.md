@@ -50,7 +50,6 @@
 | `gui/CsboxScreen.java` | 全部（1.21.3 渲染 / 1.21.8 发包 / 1.21.10 事件对象 / 1.21.11 Screen 构造+玩法 / 26 PIP、Hud相关） |
 | `gui/CsboxBulkOverviewScreen.java` | 全部 |
 | `gui/CsboxBulkResultScreen.java` | 1.21.8 发包、1.21.10、1.21.11、26.x |
-| `gui/CsboxConfirmScreen.java` | 1.21.8 发包、1.21.11、26.x |
 | `gui/CsLookItemScreen.java` | 全部 |
 | `gui/CsboxProgressScreen.java` | 渲染相关全部 + 26.x Hud |
 | `utils/IconListTools.java` | 1.21.3 渲染、1.21.8 per-item 居中、1.21.11 矩阵栈、26.x |
@@ -156,7 +155,7 @@ HudVisibility.hide();   // mc.gui.hud.toggle() / isHidden() 包装
 HudVisibility.show();
 ```
 
-**文件指引**：`gui/CsboxScreen.java`、`gui/CsboxProgressScreen.java`、`gui/CsboxBulkOverviewScreen.java`、`gui/CsboxConfirmScreen.java`、`gui/CsLookItemScreen.java`、`event/ClickEvent.java`、`utils/HudVisibility.java`（仅 v26_2）
+**文件指引**：`gui/CsboxScreen.java`、`gui/CsboxProgressScreen.java`、`gui/CsboxBulkOverviewScreen.java`、`gui/CsLookItemScreen.java`、`event/ClickEvent.java`、`utils/HudVisibility.java`（仅 v26_2）
 
 ### 3. 渲染管线 / 物品渲染
 
@@ -229,7 +228,7 @@ PacketDistributor.sendToPlayer(player, new PacketBoxOpenResult(...));
 context.reply(new PacketBoxOpenResult(...));
 ```
 
-**文件指引**：`packet/PacketCsgoProgress.java`、`packet/PacketCsgoBulkProgress.java`、`packet/PacketRequestBoxItems.java`、`gui/CsboxScreen.java`、`gui/CsboxBulkOverviewScreen.java`、`gui/CsboxConfirmScreen.java`
+**文件指引**：`packet/PacketCsgoProgress.java`、`packet/PacketCsgoBulkProgress.java`、`packet/PacketRequestBoxItems.java`、`gui/CsboxScreen.java`、`gui/CsboxBulkOverviewScreen.java`
 
 ### 5. Attachment / 序列化
 
@@ -390,7 +389,7 @@ TagParser.parseTag(tagStr) → TagParser.parseCompoundFully(tagStr);
 
 > 每个平台的 `utils/AnimRenderOps.java` 是**唯一的渲染原语适配点**：屏（CsboxScreen /
 > CsboxProgressScreen / CsboxBulkOverviewScreen / CsboxBulkResultScreen / CsboxLookItemScreen /
-> CsboxConfirmScreen）与逻辑助手（IconListTools / GuiItemMove / ButtonPalette）只经它调用渲染 API。
+> CsboxBulkResultScreen）与逻辑助手（IconListTools / GuiItemMove / ButtonPalette）只经它调用渲染 API。
 
 | 平台 | era | 说明 |
 |---|---|---|

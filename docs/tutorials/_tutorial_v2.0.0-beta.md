@@ -172,8 +172,8 @@ Points (see [Armory economy](#armory-economy-107)), or crafted:
 
 Hold a `csgobox:csgo_box` and **Shift + right-click** to open the bulk overview
 screen instead of the single-open preview. It shows how many boxes and keys you
-have, how many can be opened, and asks for a confirmation before the server
-opens the whole batch.
+have, and how many can be opened. Click the open button to start the batch
+directly (there is no separate confirmation screen).
 
 - Results stream in on a rising ticker; the server computes the batch
   asynchronously so the game thread is not blocked.

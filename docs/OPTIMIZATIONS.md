@@ -273,7 +273,7 @@ v26_1_2 `CsboxBulkResultScreen.renderAllItemsGrid`：原每帧重建 consolidate
 系统扫描各屏幕渲染循环的每帧 Component/String 重建：
 - show-all 网格（CsboxBulkResultScreen）已缓存（5 平台）、renderEntries label 已预渲染。
 - CsLookItemScreen.formatWear 在组件数组初始化时调用（非每帧）+ 文件脏 → 不改。
-- CsboxConfirmScreen 文件脏、模式少 → 不改。
+- CsboxConfirmScreen 已随 2.0.0 批量开箱改版删除（无二次确认屏），不再存在该热点。
 无其他遗留的渲染每帧热点。
 
 

@@ -1,21 +1,5 @@
 # 更新日志
 
-## [Unreleased]
-
-### 批量开箱 UI 打磨
-
-对批量开箱（总览屏 / 流水揭晓屏）的一轮客户端 UI 打磨，六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）：
-
-- **删除二次确认机制**：批量开箱不再经过独立的确认屏——总览屏点「开启」直接发送 `PacketCsgoBulkProgress` 并进入流水揭晓屏（`CsboxProgressScreen`）。扣减与库存复核仍由服务端权威执行，客户端少一步点击；确认屏 `CsboxConfirmScreen` 已从六平台删除，相关 `gui.csgobox.bulk.confirm_*` 文案与 `ScreenBlurBoost` 引用一并清理。
-- **结果屏沉浸化**：揭晓屏打开期间隐藏 HUD（热键栏 / 准星，26.2 走 `HudVisibility`、其余 `options.hideGui`），并在 `onClose()` / `removed()` 双路径恢复——防死亡 / 重生（`setScreen` 只走 `removed()`）把 HUD 永久隐藏；同时每 tick 清空成就 / 配方 toast，避免其堆叠盖在揭晓屏上。
-- **播放期按钮**：流水播放期间新增 **CLOSE** 按钮与 **SKIP** 并排（奖励已服务端发放，两者都不丢东西）；流水条目基线从 92% 屏高上移至 60%，按钮区上移至 80%，为下方内容留白。
-- **3D 预览区重构**：`GuiRegion.preview` 缩小重排（宽 22%→18%、高上限 30%→24%、居中 42%→28%），并给 `Icon3DRenderState` 补 scissor 裁剪到预览边界——旋转模型不再溢出压到下方信息行，深色渲染目标背景不再盖住 UI。
-- **总览屏布局**：信息行改为从预览区下缘动态起排（`preview.bottom() + 12`，45% 屏高下限），标题按缩放字号居中（`titleW = font.width(title) * scale`），六平台统一。
-- **标题居中修正**：流水结果屏头部标题按缩放字号计算宽度后再居中（`titleScale` 1.4），消除长标题在缩放下的视觉偏移。
-- **附带修复**：Forge 分支流水结果屏「收集」按钮原先渲染在 92% 但点击判定在 86%（hitbox 错位），现已统一为 92%；新增 `gui.csgobox.bulk.close` 中英文案。
-- **「显示全部」网格可滚动**：结果屏「显示全部」视图重做——图标从 64px 上限缩至 44px、单元格间距加大（排版不再紧凑），网格限定在独立视口内（`scissor` 裁剪到「收集」按钮上方），**滚轮 / ↑↓ 方向键滚动浏览**全部合并条目（不再 64 项截断），右侧显示滚动条指示器，内容溢出时显示「滚轮 / ▲▼ 浏览」提示；新增 `gui.csgobox.bulk.scroll_hint` 文案、移除已废弃的 `gui.csgobox.bulk.more_items`。
-- 验证：六平台 `clean compileJava` 通过、`:common:test` 全绿（含更新后的 `GuiRegionTest`）、`check-animops-drift.sh` 三 NeoForge 平台无漂移。
-
 ## [2.0.0-beta] - 2026-08-22
 
 > 版本说明：此前内部开发的 1.0.7 / 1.0.8 线不再单独发行，以下全部功能合并为 **2.0.0-beta** 一次性发布。
@@ -200,6 +184,20 @@
 - **终端机屏幕关闭逻辑修正**：移除两个终端屏 `onClose` 中无条件的 `hideGui = false`（v26_2 为 `HudVisibility.show()`，屏幕从未隐藏 HUD，此前会破坏玩家 F1 隐藏 HUD 状态）；新增 `removed()` 清理静态 `OPEN_INSTANCE` 单例（被 `setScreen` 顶替/死亡时 MC 只调 `removed()`，此前残留脏引用会命中迟到的购买回包）；长按「接受/拒绝」胶囊后拖出胶囊再松手不再触发（`TerminalActionBar.mouseUp` 校验释放点仍在胶囊内）。
 - 以上四处修复四平台同步（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2），各平台 `clean compileJava` 通过，`:common:test` 与 v26_1_2 `PlatformSmokeTest` 通过，forge L0-L3 门禁 7/7 PASS。
 
+
+### 批量开箱 UI 打磨
+
+对批量开箱（总览屏 / 流水揭晓屏）的一轮客户端 UI 打磨，六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）：
+
+- **删除二次确认机制**：批量开箱不再经过独立的确认屏——总览屏点「开启」直接发送 `PacketCsgoBulkProgress` 并进入流水揭晓屏（`CsboxProgressScreen`）。扣减与库存复核仍由服务端权威执行，客户端少一步点击；确认屏 `CsboxConfirmScreen` 已从六平台删除，相关 `gui.csgobox.bulk.confirm_*` 文案与 `ScreenBlurBoost` 引用一并清理。
+- **结果屏沉浸化**：揭晓屏打开期间隐藏 HUD（热键栏 / 准星，26.2 走 `HudVisibility`、其余 `options.hideGui`），并在 `onClose()` / `removed()` 双路径恢复——防死亡 / 重生（`setScreen` 只走 `removed()`）把 HUD 永久隐藏；同时每 tick 清空成就 / 配方 toast，避免其堆叠盖在揭晓屏上。
+- **播放期按钮**：流水播放期间新增 **CLOSE** 按钮与 **SKIP** 并排（奖励已服务端发放，两者都不丢东西）；流水条目基线从 92% 屏高上移至 60%，按钮区上移至 80%，为下方内容留白。
+- **3D 预览区重构**：`GuiRegion.preview` 缩小重排（宽 22%→18%、高上限 30%→24%、居中 42%→28%），并给 `Icon3DRenderState` 补 scissor 裁剪到预览边界——旋转模型不再溢出压到下方信息行，深色渲染目标背景不再盖住 UI。
+- **总览屏布局**：信息行改为从预览区下缘动态起排（`preview.bottom() + 12`，45% 屏高下限），标题按缩放字号居中（`titleW = font.width(title) * scale`），六平台统一。
+- **标题居中修正**：流水结果屏头部标题按缩放字号计算宽度后再居中（`titleScale` 1.4），消除长标题在缩放下的视觉偏移。
+- **附带修复**：Forge 分支流水结果屏「收集」按钮原先渲染在 92% 但点击判定在 86%（hitbox 错位），现已统一为 92%；新增 `gui.csgobox.bulk.close` 中英文案。
+- **「显示全部」网格可滚动**：结果屏「显示全部」视图重做——图标从 64px 上限缩至 44px、单元格间距加大（排版不再紧凑），网格限定在独立视口内（`scissor` 裁剪到「收集」按钮上方），**滚轮 / ↑↓ 方向键滚动浏览**全部合并条目（不再 64 项截断），右侧显示滚动条指示器，内容溢出时显示「滚轮 / ▲▼ 浏览」提示；新增 `gui.csgobox.bulk.scroll_hint` 文案、移除已废弃的 `gui.csgobox.bulk.more_items`。
+- 验证：六平台 `clean compileJava` 通过、`:common:test` 全绿（含更新后的 `GuiRegionTest`）、`check-animops-drift.sh` 三 NeoForge 平台无漂移。
 
 ### 移除
 - **终端机聊天区 ♞ 水印**（按玩家反馈，三平台 + forge 同步）：删除 `TerminalChatRegion.render()` 中象棋棋子字符（`U+265E`）水印绘制——该水印源自 `design/terminal-chat.html` 原型 `.watermark`（2.0.0 演示对齐 Task 5 落地），移除后聊天区保留点阵网格与标题条；`design/terminal-chat.html` 原型同步删除水印元素与样式，保持设计源与实现一致

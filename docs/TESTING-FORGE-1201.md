@@ -54,7 +54,7 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 
 1. **物品注册**：`/give @p csgobox:csgo_box`、`csgo_key0`~`csgo_key3`、
    `terminal`、`armory_point`、`armory_recycler` 全部可给予；
-2. **开箱**：单开（右键）滚动条动画 → 出货屏；Shift+右键批量总览 → 确认屏 → 批量结果；
+2. **开箱**：单开（右键）滚动条动画 → 出货屏；Shift+右键批量总览 → 点「开启」直接开箱 → 批量结果（无二次确认屏）；
 3. **数据持久化**：开箱后物品 NBT 正确读写（1.20.1 走 tag，非 DataComponent）；
 4. **终端机**：打开 → 启动屏 → 谈判（5 轮报价 / 接受长按 / 拒绝 / 上限下拉 /
    倒计时 / 超时自毁 / 会话锁续谈）——**物品预览为 2D**（无 PIP 属预期）；

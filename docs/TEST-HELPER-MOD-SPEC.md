@@ -128,7 +128,7 @@
 | 2 | `/give @s csgobox:csgo_box` → `/cst status` | `mainhand=csgobox:csgo_box count=1` |
 | 3 | 外部发 `key code 53`(Esc) → grep 日志 | 出现 `key down code=53`，随后 `screen=<null>` |
 | 4 | `/cst shot` → glob 截图目录 | 新文件出现，尺寸 = 帧缓冲 |
-| 5 | 打开批量开箱确认屏 → `/cst widgets` | 输出按钮类名 + rect（若 Screen 用组件） |
+| 5 | 打开批量开箱总览屏 → `/cst widgets` | 输出按钮类名 + rect（若 Screen 用组件） |
 | 6 | 无 csgobox 时 `/cst status` | 不崩，缺的字段留空 |
 
 ---

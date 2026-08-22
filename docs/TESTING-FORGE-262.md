@@ -21,7 +21,7 @@
 |---|---|---|
 | A | `utils/HudVisibility.java`（新增） | MC 26.2 删除 `Options.hideGui`；包装 `Minecraft.gui.hud.toggle()/isHidden()`（自 v26_2 移植，纯 Mojang API，直接可用） |
 | B | `gui/CsboxScreen.java` / `CsboxProgressScreen.java` / `CsLookItemScreen.java` | 全部 10 处 `options.hideGui = true/false` → `HudVisibility.hide()/show()`（原 `if (this.minecraft != null)` 守卫由包装器内部空判取代） |
-| C | `gui/BoxScreenOpener.java` / `CsboxConfirmScreen.java` / `CsboxBulkOverviewScreen.java` / `CsboxScreen.java` / `CsboxProgressScreen.java` | 全部 8 处 `setScreen(...)` → `setScreenAndShow(...)`（26.2 重命名，镜像 v26_2） |
+| C | `gui/BoxScreenOpener.java` / `CsboxBulkOverviewScreen.java` / `CsboxScreen.java` / `CsboxProgressScreen.java` | 全部 8 处 `setScreen(...)` → `setScreenAndShow(...)`（26.2 重命名，镜像 v26_2） |
 | D | `advancement/ModLoadedTrigger.java` / `OpenedBoxTrigger.java` | import 包迁移 `advancements.criterion.*` → `advancements.predicates.*` / `advancements.triggers.*`；`trigger(player, ...)` lambda 需显式 `Predicate<TriggerInstance>` 转型（26.2 重载解析变化） |
 | E | `gui/pip/Icon3DRenderState.java` | 删除 `pose()` override 与 `Matrix3x2f` import（26.2 接口自带默认实现） |
 | F | `gui/pip/Icon3DRenderer.java` | 26.2 API：父类 `PictureInPictureRenderer` 变为注解式（无 BufferSource 构造器）；`renderToTexture(renderState, poseStack, SubmitNodeCollector)`；`gameRenderer.lighting()` 取代 `getLighting()`；不再自调 `FeatureRenderDispatcher.renderAllFeatures()`（父类负责）。**保留 1.0.6 euler 旋转 API**（`rotXDeg/rotYDeg/rotZDeg`，不引入 2.0.0 的 Quat 漂移） |
