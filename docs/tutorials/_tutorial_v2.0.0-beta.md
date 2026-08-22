@@ -34,13 +34,13 @@ To create a new box:
 
 The `entity` field accepts two formats.
 
-**Plain list** — every entity uses the default `drop` rate:
+Plain list: every entity uses the default `drop` rate.
 
 ```json
 "entity": ["minecraft:zombie", "minecraft:skeleton", "minecraft:creeper"]
 ```
 
-**Alternating pairs** — each entity has its own drop rate:
+Alternating pairs: each entity has its own drop rate.
 
 ```json
 "entity": ["minecraft:zombie", 0.25, "minecraft:skeleton", 0.10, "minecraft:creeper", 0.05]
@@ -53,7 +53,7 @@ Rates must be between 0.0 and 1.0. Values outside this range are accepted as-is 
 The `type` field selects which screen and rules the box uses:
 
 - `csbox` (default) — the classic crate. Right-click opens the item-grid preview, a key is required, and opening plays the rolling animation.
-- `terminal` — terminal machine loot. Used by the `csgobox:terminal` item: right-clicking a terminal opens the terminal UI instead of the crate screen. Terminal boxes need no key and their offers are priced in Armory Points — see [Terminal machine](#terminal-machine-107).
+- `terminal` — terminal machine loot. Used by the `csgobox:terminal` item: right-clicking a terminal opens the terminal UI instead of the crate screen. Terminal boxes need no key and their offers are priced in Armory Points — see [Terminal machine](#terminal-machine-200).
 
 ## Box name colors
 
@@ -87,7 +87,7 @@ Each entry inside a `grade*` array is an item object.
 |--------------|-------------------|----------|---------|----------------------------------------------------------------------|
 | `id`         | resource_location | yes      | -       | Item id, e.g. `minecraft:diamond_sword`. Unknown ids are skipped.    |
 | `count`      | integer           | no       | `1`     | Stack size. Most items accept 1-64.                                  |
-| `price`      | integer           | no       | -       | The item's terminal purchase price in Armory Points (falls back to the grade-default price if unset). Must be a non-negative integer — see [Terminal machine](#terminal-machine-107). |
+| `price`      | integer           | no       | -       | The item's terminal purchase price in Armory Points (falls back to the grade-default price if unset). Must be a non-negative integer — see [Terminal machine](#terminal-machine-200). |
 | `components` | object            | no       | -       | Minecraft 1.21+ data components (preferred over `tag`).              |
 | `tag`        | string            | no       | -       | Legacy NBT tag string. Kept for backwards compatibility with 1.20.x. |
 
@@ -160,7 +160,7 @@ reveal screen, and the bulk-result screen.
 Use `minecraft:air` as the `key` field for a box that requires no key. `csgobox:csgo_key3` is only obtainable via the smithing table by upgrading `csgobox:csgo_key2` with a netherite upgrade template.
 
 Keys can also be obtained from the arms-dealer villager in exchange for Armory
-Points (see [Armory economy](#armory-economy-107)), or crafted:
+Points (see [Armory economy](#armory-economy-200)), or crafted:
 
 | Key               | Crafting recipe                  |
 |-------------------|----------------------------------|
@@ -200,8 +200,8 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
 > arms-dealer villager always sells `csgobox:terminal`, extra terminals are
 > obtained via `/give`.
 
-- **No key required** — terminals have no `key` field at all; opening one never consumes a key.
-- **Offers are priced in Armory Points**. The price is the per-item `price`
+- No key required: terminals have no `key` field at all, so opening one never consumes a key.
+- Offers are priced in Armory Points. The price is the per-item `price`
   field in the box JSON if set, otherwise it falls back to the default
   grade-level price (grade1 = 6, grade2 = 10, grade3 = 16, grade4 = 22,
   grade5 = 30). Accepted items carry a **random wear value** (rolled like box
@@ -210,7 +210,7 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
   penalty instead: every 5% of wear adds 1 Armory Point on top of the item
   price (up to +20 at Battle-Scarred), so the more worn the item, the more it
   costs.
-- Each session runs a 5-round negotiation; every offer carries a ~3-day
+- Each session runs a 5-round negotiation; every offer carries a 3-hour
   countdown, and the offered item is sampled from the terminal box's grade
   pools.
 - Sources: creative tab, or the arms-dealer villager (level 4) for 12 Armory
@@ -222,15 +222,15 @@ Armory Points (`csgobox:armory_point`) are the mod's currency. They drop from
 boxes when you add the item to a grade pool, and are rewarded by the
 arms-dealer villager.
 
-- **Armory recycler** (`csgobox:armory_recycler`, crafted with iron ingots, a
+- Armory recycler (`csgobox:armory_recycler`, crafted with iron ingots, a
   hopper, copper, and redstone): right-click it while holding an item that was
   opened from a box to recycle the whole stack. Only items stamped with a grade
   by the box-opening code are accepted, so raw loot cannot be recycled. Yield
   per grade: grade1 = 3, grade2 = 5, grade3 = 8, grade4 = 11, grade5 = 15
   points. Hoppers can also push graded items in for automatic recycling.
-- **Exchange recipe**: a 3x3 grid filled with 64 Armory Points each crafts 1
+- Exchange recipe: a 3x3 grid filled with 64 Armory Points each crafts 1
   `csgobox:csgo_key0`.
-- **Arms-dealer villager** (profession `arms_dealer`, work site: the armory
+- Arms-dealer villager (profession `arms_dealer`, work site: the armory
   recycler block) trades materials for points and points for items:
 
 | Level | Trades |
@@ -251,7 +251,7 @@ arms-dealer villager.
 | `/csbox info error` | OP | Shows load errors only (green confirmation when there are none). |
 | `/csbox reload` | OP | Re-reads every `config/csbox/*.json` file. |
 | `/csbox reload tutorial` | OP | Also forces re-download of the tutorial markdown files. |
-| `/csbox nbt hand` | any player | Prints the held item as serialized JSON, ready to paste into a box `items` entry. |
+| `/csbox nbt hand` | any player | Prints the held item as serialized JSON, ready to paste into a box JSON grade array. |
 | `/give @p csgobox:csgo_box[csgobox:box_id="csgobox:my_custom_box"]` | OP | Gives a specific dynamic box (vanilla command). |
 
 ## Validation rules

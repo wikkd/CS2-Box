@@ -99,13 +99,11 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | JEI (4 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `PacketSyncBoxDefinitions` | — | ✅ | ✅ | — | — | — |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
-| `BoxJsonSchemaValidator` | — | — | — | — | ✅ | — |
-| `TutorialFetcher` + `TutorialSources` | — | — | — | — | ✅ | — |
-| **文件数** | **80** | **81** | **82** | **77** | **81** | **77** |
+| **文件数** | **80** | **79** | **80** | **75** | **76** | **77** |
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）与 `forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）
 - JEI：NeoForge 3 平台已同步；**Forge 2 平台均缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
 - Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）
-- Tutorial/Validator：`forge_26_2` 有 3 个教程系统文件（从 `forge_26_1_2` 1.0.6 带入），其它平台还未同步
+- Tutorial/Validator：`TutorialSources` / `TutorialFetcher` / `BoxJsonSchemaValidator` 全部走 `common/` 唯一实现（六平台共用，无平台本地副本）；教程下载六平台统一为后台线程异步执行
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`

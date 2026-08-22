@@ -31,6 +31,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,6 +54,17 @@ public final class BoxJsonLoader {
      * so a CopyOnWriteArrayList keeps it safe under that cross-thread access.
      */
     private static final List<LoadError> LAST_LOAD_ERRORS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Background executor for the startup tutorial download: network timeouts
+     * must not block the server thread. Failure-safe — a shutdown mid-download
+     * just leaves the tutorial missing and the next launch retries.
+     */
+    private static final ExecutorService TUTORIAL_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "csgobox-tutorial");
+        t.setDaemon(true);
+        return t;
+    });
 
     /** Matches an optional leading hex color in the box "name" field, e.g.
      *  {@code "#FF5555 高级补给箱"}. Group 1 = 6 hex digits, group 2 = display text. */
@@ -123,7 +136,8 @@ public final class BoxJsonLoader {
         // Pre-v2.0.0 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
-        BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
+        // Background download: network timeouts must not block the server thread.
+        TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};

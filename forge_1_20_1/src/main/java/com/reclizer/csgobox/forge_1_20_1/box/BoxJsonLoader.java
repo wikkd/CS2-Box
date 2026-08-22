@@ -33,6 +33,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,6 +48,17 @@ public final class BoxJsonLoader {
     private static final int[] GRADE_COLORS = {0xFFD32CE6, 0xFF8847FF, 0xFF4B69FF, 0xFF5E98D9, 0xFFB0C3D9};
 
     private static final List<LoadError> LAST_LOAD_ERRORS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Background executor for the startup tutorial download: network timeouts
+     * must not block the server thread. Failure-safe — a shutdown mid-download
+     * just leaves the tutorial missing and the next launch retries.
+     */
+    private static final ExecutorService TUTORIAL_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "csgobox-tutorial");
+        t.setDaemon(true);
+        return t;
+    });
 
     private static final Pattern NAME_COLOR_PREFIX =
             Pattern.compile("^#([0-9A-Fa-f]{6}) (.*)$");
@@ -103,7 +116,8 @@ public final class BoxJsonLoader {
         }
 
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
-        BoxDefaults.writeTutorialIfMissing(BOXES_DIR);
+        // Background download: network timeouts must not block the server thread.
+        TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};
