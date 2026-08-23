@@ -182,6 +182,7 @@
   "gui.csgobox.armory_recycler.full": "Inventory full, Armory Points dropped",
   "gui.csgobox.bulk.rewards_granted": "Rewards already in your inventory",
   "gui.csgobox.progress.rejected": "Request rejected, try again shortly",
+  "gui.csgobox.progress.skip": "Skip",
   "gui.csgobox.box.no_key": "No key found",
   "csgobox.terminal.rarity.mil_spec": "Mil-Spec",
   "csgobox.terminal.rarity.restricted": "Restricted",

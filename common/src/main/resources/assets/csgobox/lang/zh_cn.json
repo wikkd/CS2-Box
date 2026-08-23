@@ -182,6 +182,7 @@
   "gui.csgobox.armory_recycler.full": "背包已满，武库点数已掉落",
   "gui.csgobox.bulk.rewards_granted": "奖励已发放至背包",
   "gui.csgobox.progress.rejected": "开箱请求被拒绝，请稍后再试",
+  "gui.csgobox.progress.skip": "跳过",
   "gui.csgobox.box.no_key": "未找到钥匙",
   "csgobox.terminal.rarity.mil_spec": "军规级",
   "csgobox.terminal.rarity.restricted": "受限级",

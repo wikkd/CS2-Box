@@ -82,6 +82,13 @@ public class CsboxProgressScreen extends Screen {
     private List<ItemStack> bulkItems = List.of();
     private List<Integer> bulkGrades = List.of();
 
+    /**
+     * ESC-skip: while the scroll is playing, pressing ESC jumps straight to
+     * the reveal instead of closing the screen. The box is already opened
+     * server-side; this only skips the decorative rolling strip.
+     */
+    private boolean skipRequested = false;
+
     public CsboxProgressScreen(Player player, long requestId) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("cs_progress"));
         this.player = player;
@@ -121,6 +128,45 @@ public class CsboxProgressScreen extends Screen {
         }
     }
 
+    /**
+     * Top-right "ESC 跳过" hint shown while the opening scroll is running and
+     * skippable (the server result has arrived and the strip has not yet
+     * reached the reveal). A small slate keycap with "ESC" plus the localised
+     * skip label, so the player knows they can press ESC to skip.
+     */
+    private void renderSkipHint(GuiGraphicsExtractor guiGraphics) {
+        if (this.serverWinningIndex == null || this.startTime >= this.totalTicks) {
+            return;
+        }
+        Component label = Component.translatable("gui.csgobox.progress.skip");
+        String key = "ESC";
+        float labelScale = 0.7F;
+        float keyScale = 0.6F;
+        int keyH = 18;
+        int keyW = Math.round(this.font.width(key) * keyScale) + 12;
+        int marginRight = 14;
+        int marginTop = 12;
+
+        int keyX = this.width - marginRight - keyW;
+        int keyY = marginTop;
+
+        // Localised label sits to the left of the keycap, vertically centred.
+        int labelW = Math.round(this.font.width(label) * labelScale);
+        int labelX = keyX - 8 - labelW;
+        int labelY = keyY + Math.round((keyH - this.font.lineHeight * labelScale) / 2.0F);
+        RenderFontTool.drawString(guiGraphics, this.font, label.getVisualOrderText(),
+                labelX, labelY, 0, 0, labelScale, 0xFFE6EAEE);
+
+        // Keycap: slate border + inner fill (ButtonPalette.CLOSE family).
+        AnimRenderOps.fill(guiGraphics, keyX, keyY, keyX + keyW, keyY + keyH, 0xFF6C7680);
+        AnimRenderOps.fill(guiGraphics, keyX + 1, keyY + 1, keyX + keyW - 1, keyY + keyH - 1, 0xFF3A4148);
+        float textX = keyX + (keyW - this.font.width(key) * keyScale) / 2.0F;
+        float textY = keyY + (keyH - this.font.lineHeight * keyScale) / 2.0F + 1;
+        RenderFontTool.drawString(guiGraphics, this.font,
+                net.minecraft.network.chat.Component.literal(key).getVisualOrderText(),
+                textX, textY, 0, 0, keyScale, 0xFFE6EAEE);
+    }
+
     private void renderBg(GuiGraphicsExtractor guiGraphics, float partialTicks) {
         if (this.minecraft == null) return;
         HudVisibility.hide();
@@ -136,6 +182,9 @@ public class CsboxProgressScreen extends Screen {
             RenderFontTool.drawString(guiGraphics, this.font, msg.getVisualOrderText(),
                     (this.width - w) / 2.0F, this.height * 40 / 100, 0, 0, scale, 0xFFFF5555);
         }
+
+        // Top-right "ESC 跳过" hint while the scroll is running.
+        renderSkipHint(guiGraphics);
 
         if (openTime < 5) return;
 
@@ -470,10 +519,38 @@ public class CsboxProgressScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
-            this.onClose();
+            if (this.serverWinningIndex != null) {
+                // ESC during the scroll → skip straight to the reveal.
+                this.requestSkip();
+            } else {
+                // Result not in yet — nothing to reveal, close as before.
+                this.onClose();
+            }
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    /**
+     * ESC-skip: end the scroll immediately and reveal the result. The server
+     * result has already arrived (guarded by {@link #serverWinningIndex}), so
+     * we jump the strip to its final position and finish after one more bulk
+     * drain pass, so in-flight bulk chunks are still collected.
+     */
+    private void requestSkip() {
+        if (this.serverWinningIndex == null) {
+            return;
+        }
+        this.skipRequested = true;
+        this.startTime = this.totalTicks;
+        if (this.waitingBulkTicks < 0) {
+            this.waitingBulkTicks = 0;
+            this.quietBulkTicks = 0;
+            this.bulkItems = new ArrayList<>();
+            this.bulkGrades = new ArrayList<>();
+        }
+        // Reveal on the next tick after one more drain pass.
+        this.waitingBulkTicks = MAX_BULK_WAIT_TICKS - 1;
     }
 
     @Override
