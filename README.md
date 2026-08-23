@@ -199,7 +199,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 1. 从目标分支（通常是 `main`）切出功能分支。
 2. 改动涉及的模块运行 `./gradlew :<module>:build` 确保编译通过。
 3. 用 `./gradlew :<module>:runClient` 在游戏内手动验证。
-4. 若改动 `common/`，**必须三平台都验证**（默认 `active_versions` 只构建一个，增量缓存可能造假象，必要时 `clean` 编译确认）。
+4. 若改动 `common/`，**必须各平台模块都验证**（CI 仅覆盖 3 个 NeoForge 平台，Forge 模块另有各自门禁，详见 `docs/CODE-REVIEW.md`；默认 `active_versions` 只构建一个，增量缓存可能造假象，必要时 `clean` 编译确认）。
 5. 同步更新文档（`docs/*.md`、`README.md`）与 `CHANGELOG.md`。
 6. 提交 PR，附改动说明、测试方式、影响的 MC 版本。
 
@@ -224,6 +224,8 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 ## 项目状态
 
 **当前发布版本**： `2.0.0-beta`（1.0.6 之后的 1.0.7 / 1.0.8 内部开发线合并为 2.0.0-beta 一次性发行；正式发布 6 平台：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`，NeoForge jar 名 `csgobox-<mc>-<mod_version>.jar`、Forge 名 `csgobox-forge-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
+
+**开发中版本**： `2.0.0beta-1`（`2.0.0-beta` 之后的下一迭代，当前处于开发中）
 
 **近期进度**（详见 [CHANGELOG.md](./CHANGELOG.md)）：
 

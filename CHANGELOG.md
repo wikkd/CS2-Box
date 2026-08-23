@@ -1,5 +1,9 @@
 # 更新日志
 
+## [2.0.0beta-1] - Unreleased
+
+> 当前开发迭代：`2.0.0-beta` 之后的下一版本线（开发中），版本号已正式写入 `gradle.properties` 的 `mod_version`。功能条目随开发推进逐步补充。
+
 ## [2.0.0-beta] - 2026-08-22
 
 > 版本说明：此前内部开发的 1.0.7 / 1.0.8 线不再单独发行，以下全部功能合并为 **2.0.0-beta** 一次性发布。
@@ -101,7 +105,7 @@
 
 #### KubeJS / Java 扩展
 
-- **KubeJS/Java 扩展事件三件套（v2.0.0）**：新增 `BoxOpeningEvent`（开箱前、RNG/消耗之前，**可取消**——权限门槛 / 任务解锁 / 每日限量 / 活动箱直接脚本化，单开 count=1、批量按服务端授权批次触发一次，取消整批中止且不设冷却）、`TerminalBuyEvent`（终端机成交后通知：grade / price（含磨损惩罚）/ wearVal / item / round，覆盖「终端购买不触发 BoxOpenedEvent」的独立管线，支撑首次获得登记与军械点经济记账）、`ArmoryRecycleEvent`（武库拆解台消耗物品前，**可取消**——物品黑名单刷点屏蔽，取消后输入保留、零产出）。三事件四平台同步（v1_21_1 / v26_1_2 / v26_2 走 NeoForge 事件总线 + `ICancellableEvent`，KubeJS 脚本 `event.cancel()` 原生可用；forge_26_1_2 走 Forge `MutableEvent` + 实例取消标志 + 自有 `BUS`），`docs/KUBEJS-EVENTS.md` 新增事件一览表、脚本示例与边界契约（RNG 后/发包前仍为禁区），并补充 `Java.loadClass` 只读访问配方（`BoxRegistry` / `BoxDefinition` / `CsgoBox.CONFIG` / `BoxJsonLoader.getLastLoadErrors`）。各平台 `compileJava` 通过、`:common:test` 通过、`check-animops-drift.sh` 无漂移。
+- **KubeJS/Java 扩展事件三件套（v2.0.0）**：新增 `BoxOpeningEvent`（开箱前、RNG/消耗之前，**可取消**——权限门槛 / 任务解锁 / 每日限量 / 活动箱直接脚本化，单开 count=1、批量按服务端授权批次触发一次，取消整批中止且不设冷却）、`TerminalBuyEvent`（终端机成交后通知：grade / price（含磨损惩罚）/ wearVal / item / round，覆盖「终端购买不触发 BoxOpenedEvent」的独立管线，支撑首次获得登记与武库点数经济记账）、`ArmoryRecycleEvent`（武库拆解台消耗物品前，**可取消**——物品黑名单刷点屏蔽，取消后输入保留、零产出）。三事件四平台同步（v1_21_1 / v26_1_2 / v26_2 走 NeoForge 事件总线 + `ICancellableEvent`，KubeJS 脚本 `event.cancel()` 原生可用；forge_26_1_2 走 Forge `MutableEvent` + 实例取消标志 + 自有 `BUS`），`docs/KUBEJS-EVENTS.md` 新增事件一览表、脚本示例与边界契约（RNG 后/发包前仍为禁区），并补充 `Java.loadClass` 只读访问配方（`BoxRegistry` / `BoxDefinition` / `CsgoBox.CONFIG` / `BoxJsonLoader.getLastLoadErrors`）。各平台 `compileJava` 通过、`:common:test` 通过、`check-animops-drift.sh` 无漂移。
 
 #### 平台矩阵（新增 1.20.1，forge 线追平）
 
