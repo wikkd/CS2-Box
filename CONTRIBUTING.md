@@ -7,11 +7,11 @@
 
 ### 快速配置
 
-1. 安装 **Java 21**(v1_21_1 工作)+ **Java 25**(v26_1_2 / v26_2,需要 `--enable-preview`)
-2. 克隆仓库:`git clone https://github.com/wikkd/CS2-Box.git && cd CS2-Box`
-3. 配置活动版本(默认 `26.1.2`):编辑 `gradle.properties` 中的 `active_versions`,可选值 `1.21.1` / `26.1.2` / `26.2` / `forge-26.1.2`
-4. 验证构建:`./gradlew :v26_1_2:build` 或 `./gradlew :v1_21_1:build`(v26_2 已用 NeoForge 26.2.0.59 正常构建)
-5. 启动开发客户端:`./gradlew :v26_1_2:runClient`(或 `:v1_21_1:runClient` / `:v26_2:runClient`)
+1. 安装 **Java 21**（v1_21_1 工作）+ **Java 25**（v26_1_2 / v26_2，需要 `--enable-preview`）
+2. 克隆仓库：`git clone https://github.com/wikkd/CS2-Box.git && cd CS2-Box`
+3. 配置活动版本（默认 `26.1.2`）：编辑 `gradle.properties` 中的 `active_versions`，可选值 `1.21.1` / `26.1.2` / `26.2` / `forge-26.1.2` / `forge-26.2` / `forge-1.20.1`
+4. 验证构建：`./gradlew :v26_1_2:build` 或 `./gradlew :v1_21_1:build`（v26_2 已用 NeoForge 26.2.0.59 正常构建）
+5. 启动开发客户端：`./gradlew :v26_1_2:runClient`（或 `:v1_21_1:runClient` / `:v26_2:runClient`）
 
 ### 构建矩阵
 
@@ -21,8 +21,10 @@
 | `26.1.2`(默认) | `:v26_1_2` | `./gradlew :v26_1_2:compileJava` | `./gradlew :v26_1_2:runClient` |
 | `26.2` | `:v26_2` | `./gradlew :v26_2:compileJava` | `./gradlew :v26_2:runClient` |
 | `forge-26.1.2` | `:forge_26_1_2` | `./gradlew :forge_26_1_2:compileJava` | `./gradlew :forge_26_1_2:runClient` |
+| `forge-26.2` | `:forge_26_2` | `./gradlew :forge_26_2:compileJava` | `./gradlew :forge_26_2:runClient` |
+| `forge-1.20.1` | `:forge_1_20_1` | `./gradlew :forge_1_20_1:compileJava` | `./gradlew :forge_1_20_1:runClient` |
 
-由于 NeoGradle 7.x 在同一 Gradle invocation 中只能加载一个版本(参考 `settings.gradle` 注释),每次构建只启用一个 `active_versions`。CI / 手工 build 需要串行切换各版本。
+由于 NeoGradle 7.x 在同一 Gradle invocation 中只能加载一个版本（参考 `settings.gradle` 注释），每次构建只启用一个 `active_versions`。CI / 手工 build 需要串行切换各版本。
 
 ### 项目结构
 
@@ -65,6 +67,12 @@ CS2-Box/
 ├── forge_26_1_2/                    # MC 26.1.2 / MinecraftForge 26.1.2-64.1.0 / Java 25(实验模块)
 │   └── src/main/java/com/reclizer/csgobox/forge_26_1_2/
 │       └── (与 v26_1_2 特性同步,loader 为 MinecraftForge;经 scripts/port-forge-2612.py + 手工适配)
+├── forge_26_2/                      # MC 26.2 / MinecraftForge 26.2-65.1.1 / Java 25（正式发布模块）
+│   └── src/main/java/com/reclizer/csgobox/forge_26_2/
+│       └── (以 forge_26_1_2 为基准迁移，loader 为 MinecraftForge；经 scripts/port-forge-262.py + 手工适配)
+├── forge_1_20_1/                    # MC 1.20.1 / MinecraftForge 47.4.22 / Java 17（正式发布模块，1.20.1 回移）
+│   └── src/main/java/com/reclizer/csgobox/forge_1_20_1/
+│       └── (以 forge_26_1_2 为基准回移，复用 common/ 纯 Java 逻辑；Networking/Capability/渲染三大重写)
 ├── settings.gradle                  # 模块注册 + active_versions 动态 include
 ├── gradle.properties                # mod_version / pack_format / active_versions / 26.2 占位块
 ├── settings.gradle                  # 模块注册 + active_versions 切换
@@ -74,7 +82,7 @@ CS2-Box/
 
 ## 代码规范
 
-- **语言**:Java 21 / 25(由 toolchain 强制)
+- **语言**:Java 21 / 25（由 toolchain 强制）
 - **构建系统**:Gradle + NeoForged userdev 插件
 - **代码风格**:
   - 遵循标准 Java 命名规范
@@ -163,7 +171,7 @@ v26_1_2/src/test/java/     (26.1.2 平台特化)
 
 添加新配置选项时:
 
-1. 在 `common/.../config/CsboxConfig.java` 与 `v1_21_1/.../config/CsboxConfig.java` 与 `v26_1_2/.../config/CsboxConfig.java` 三处同步添加字段
+1. 在 common 与各平台模块的 `CsboxConfig.java` 中同步添加字段（common 为默认值唯一来源，见 `CsboxConfigDefaults.java`）
 2. 通过 `builder.define*().get()` 内联求值(扁平化访问,不用 `init()` 延迟填充)
 3. 在 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) 中记录
 4. `CONFIG` 是 `public static final` —— **不要写 `CONFIG != null` 守卫**
@@ -181,7 +189,7 @@ v26_1_2/src/test/java/     (26.1.2 平台特化)
 
 ## Multiloader 开发注意事项
 
-- 修改 `common/` 后需在两个平台都重新构建验证
+- 修改 `common/` 后需在各平台模块重新构建验证
 - GUI 代码改动先在 v1_21_1 落地(legacy `GuiGraphics`),再迁移到 v26_1_2(`GuiGraphicsExtractor` decoupled API)
 - v26_1_2 渲染管线变更:用 `nextStratum()` 分层、用 `RenderPipelines.GUI_TEXTURED` 替换静态 `RenderSystem` 调用、用 `Lighting` instance API
 

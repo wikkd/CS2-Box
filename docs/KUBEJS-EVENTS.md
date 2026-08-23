@@ -13,7 +13,7 @@ CS2-Box 通过 **NeoForge 原生事件总线**（forge 实验模块为 Forge 事
 |------|------|--------|------|
 | `BoxOpeningEvent` | RNG 之前、消耗之前 | ✅ | 拒绝/放行开箱（权限、任务、活动门槛） |
 | `BoxOpenedEvent` | 开箱成功、物品已发放 | ❌ | 广播、统计、追加奖励 |
-| `TerminalBuyEvent` | 终端机成交后 | ❌ | 首次获得登记、军械点经济记录 |
+| `TerminalBuyEvent` | 终端机成交后 | ❌ | 首次获得登记、武库点数经济记录 |
 | `ArmoryRecycleEvent` | 回收站消耗物品前 | ✅ | 物品黑名单（刷点屏蔽） |
 
 ---
@@ -144,13 +144,13 @@ NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.BoxOpenedEvent', eve
 
 ## TerminalBuyEvent（终端机成交后，通知）
 
-终端机谈判成交后触发：军械点已扣除、物品已发放、终端机物品已消耗。终端机购买**不会**触发 `BoxOpenedEvent`（是独立管线），需要同时覆盖开箱与终端两条路径的监听器应同时订阅两个事件。
+终端机谈判成交后触发：武库点数已扣除、物品已发放、终端机物品已消耗。终端机购买**不会**触发 `BoxOpenedEvent`（是独立管线），需要同时覆盖开箱与终端两条路径的监听器应同时订阅两个事件。
 
 | 属性 | 类型 | 说明 |
 |------|------|------|
 | `getEntity()` | `Player` | 购买玩家（继承自 `PlayerEvent`） |
 | `getGrade()` | `int` | 成交物品等级 1–5 |
-| `getPrice()` | `int` | 实际扣除的军械点数（含磨损惩罚，服务端权威） |
+| `getPrice()` | `int` | 实际扣除的武库点数数（含磨损惩罚，服务端权威） |
 | `getWearVal()` | `float` | 该报价的磨损值（已应用到物品） |
 | `getItem()` | `ItemStack` | 成交物品（数量恒为 1） |
 | `getRound()` | `int` | 成交发生的谈判轮次 1–5 |
@@ -173,21 +173,21 @@ NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.TerminalBuyEvent', e
 
 ## ArmoryRecycleEvent（回收站消耗前，可取消）
 
-武库拆解台（回收站）即将消耗输入物品并产出军械点之前触发。取消后**输入物品保留在机器内**、不产出任何点数（进度重置，玩家可自行取回）。适用于刷点屏蔽与物品黑名单。
+武库拆解台（回收站）即将消耗输入物品并产出武库点数之前触发。取消后**输入物品保留在机器内**、不产出任何点数（进度重置，玩家可自行取回）。适用于刷点屏蔽与物品黑名单。
 
 | 属性 | 类型 | 说明 |
 |------|------|------|
 | `getBlockEntity()` | `ArmoryRecyclerBlockEntity` | 拆解台机器 |
 | `getInputItem()` | `ItemStack` | 即将被消耗的物品（**副本**，修改无效） |
 | `getGrade()` | `int` | 输入物品等级 1–5 |
-| `getYield()` | `int` | 本将产出的军械点数 |
+| `getYield()` | `int` | 本将产出的武库点数数 |
 | `isCanceled()` / `setCanceled(boolean)` | — | 取消则跳过本次回收（KubeJS 脚本用 `event.cancel()`） |
 
 ```js
 // kubejs/server_scripts/recycle_blacklist.js
 NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.ArmoryRecycleEvent', event => {
     let id = event.getInputItem().getId().toString()
-    // 被刷点路径污染的物品：禁止回收成军械点
+    // 被刷点路径污染的物品：禁止回收成武库点数
     if (global.csboxRecycleBlacklist?.includes(id)) {
         event.cancel()
     }
@@ -297,7 +297,7 @@ dependencies {
   （如数据库写入）。可通过 `isBulk()` 判断并跳过。
 
 - **终端机是独立管线**
-  终端购买（`TerminalBuyEvent`）与武库拆解（`ArmoryRecycleEvent`）都使用军械点
+  终端购买（`TerminalBuyEvent`）与武库拆解（`ArmoryRecycleEvent`）都使用武库点数
   经济，但不经过开箱管线；做经济统计时请订阅三个事件各自记账，避免重复。
 
 ---

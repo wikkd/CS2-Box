@@ -217,7 +217,7 @@ API；用 Python zipfile `compresslevel=9` 后处理实测与 level 6 **零收�
   `AnimRenderOps` / `CsgoBox` / `CsboxProgressScreen`），全仓 Java 净 -1,200 行，
   **保留技术要点与版权语义，删除 AI 味措辞**（`deliberately` / `Note:` /
   `We deliberately` / `This commit` 全仓清零）。
-  工具：`scripts/slim-prop-comments.py`（注释 hunk 同步镜像）+ 
+  工具：`scripts/slim-prop-comments.py`（注释 hunk 同步镜像）+
   `scripts/slim_comments_lib.py`（marker 块替换）。
 
 **固定结论**（评估后不做）：

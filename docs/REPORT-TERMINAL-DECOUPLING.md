@@ -4,6 +4,8 @@
 **范围**: 全部 4 平台（v26_1_2 / v26_2 / v1_21_1 / forge_26_1_2）+ common 共享模块
 **方式**: 全部改动均经 4 平台 `clean compileJava` + `:common:test` + forge L0-L3 门禁验证
 
+> **阅读提示（归档说明）**：本文是一份**按时间顺序记录的演进报告**，非当前设计定稿。其中「§0 最终状态一览」与「第 6 节」描述的是 2026-08-12 时的中间决策（`type` 字段曾被移除、改以 `csgobox:terminal` + `key == air` 判定）。该决策在 **§0.5（2026-08-13 v2.0.0 修订）** 已被推翻——`type` 字段**回归为唯一判定机制**（`"type": "terminal"` / `"type": "csbox"`）。**当前权威状态以 `AGENTS.md` 与现行代码为准：`type` 字段是箱型判定的唯一依据。**
+
 ---
 
 ## 0. 最终状态一览（先读这里）
@@ -311,7 +313,7 @@ forge L0-L3 门禁 7/7 PASS；`check-animops-drift.sh` 3 平台 OK（未改渲�
   上报会变成「回填时间复活已过期会话」的作弊口。
 - `PacketTerminalState` 增补 `boxId`：屏侧 `onTerminalState` 校验快照归属，
   修复「快速切换两个终端机时，上一台的迟到快照误入新屏」竞态。
-- 会话超时自毁后：`PacketTerminalReject` / `PacketTerminalBuy` / 
+- 会话超时自毁后：`PacketTerminalReject` / `PacketTerminalBuy` /
   `PacketTerminalClose` 查表得 null → 安全 no-op；下次 `PacketTerminalOpen`
   创建全新会话。
 
@@ -343,7 +345,7 @@ v26_1_2 `PlatformSmokeTest` 与 forge L0-L3 门禁 7/7 PASS；
 
 ### 销毁路径
 
-1. **超时瞬间（在线）**：`tickSessions` 检测 `tickServer` 过期 → 
+1. **超时瞬间（在线）**：`tickSessions` 检测 `tickServer` 过期 →
    `destroyTerminal`：uid 记入 `DESTROYED_UIDS`，并在玩家背包（主栏 + 护甲 +
    副手，`Inventory.getContainerSize()` 全覆盖）按 uid 精确销毁对应物品，
    热栏提示「终端机已超时自毁。」。

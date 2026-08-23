@@ -166,7 +166,7 @@ runs/server/
 ## 11. 终端机谈判子系统
 
 终端机（`ItemTerminal` 物品）走独立的服务端权威谈判会话,与普通宝箱的 RNG 开箱
-流水线完全隔离。完整演进与边界见仓库根目录 `terminal-decoupling.md`。
+流水线完全隔离。完整演进与边界见 `docs/REPORT-TERMINAL-DECOUPLING.md`（含 §0.5 的 `type` 字段回归说明）。
 
 ### 11.1 会话锁
 
