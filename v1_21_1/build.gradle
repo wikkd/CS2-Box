@@ -116,7 +116,8 @@ dependencies {
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.1-neoforge+mc1.21.1'
 
     // JEI integration (optional client mod). compileOnly for the plugin API,
-    // runtimeOnly so dev runs actually ship the JEI jar.
+    // runtimeOnly so dev runs actually ship the JEI jar. Plugin discovery is
+    // FML annotation scanning (@JeiPlugin), no ServiceLoader entry needed.
     compileOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
     runtimeOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
 

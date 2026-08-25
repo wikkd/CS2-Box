@@ -103,8 +103,11 @@ dependencies {
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.2-forge+mc1.20.1'
 
-    // JEI (compileOnly — optional at runtime)
+    // JEI (compileOnly — optional at runtime). The plugin code in the jei/
+    // package compiles against common-api (forge-api only ships ForgeTypes).
+    // Discovery at runtime is FML annotation scanning of @JeiPlugin.
     compileOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge-api:${jei_version_forge_1_20_1}"
+    compileOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-common-api:${jei_version_forge_1_20_1}"
     // runtimeOnly 需显式 -PwithJei：userdev 环境下 JEI 构造报 NoSuchMethodError（I18n SRG 名未重映射），E2E 测试不需要 JEI
     if (project.hasProperty('withJei')) {
         runtimeOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge:${jei_version_forge_1_20_1}"

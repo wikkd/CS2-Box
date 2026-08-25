@@ -10,6 +10,7 @@ import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.BoxJsonSchemaValidator;
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
+import com.reclizer.csgobox.forge_1_20_1.jei.BoxJeiSync;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
@@ -151,6 +152,8 @@ public final class BoxJsonLoader {
         CsgoBox.LOGGER.info(
                 "Scanned {} JSON file(s) in {}; loaded {}, skipped {}",
                 scannedFiles.size(), BOXES_DIR, loaded[0], skipped[0]);
+        // Notify the JEI plugin (no-op when JEI is absent).
+        BoxJeiSync.onBoxRegistryChanged();
     }
 
     public static void reloadPreserving() {
@@ -221,6 +224,8 @@ public final class BoxJsonLoader {
         CsgoBox.LOGGER.info(
                 "Reload preserving: scanned {} (of {} previously registered); loaded {}, skipped {}, removed {}",
                 seenIds.size(), previousIds.size(), loaded[0], skipped[0], removed);
+        // Notify the JEI plugin (no-op when JEI is absent).
+        BoxJeiSync.onBoxRegistryChanged();
     }
 
     public static List<LoadError> getLastLoadErrors() {
