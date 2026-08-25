@@ -1,0 +1,25 @@
+{
+  "parent": "csgobox:first_box",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.collector_10.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.collector_10.description"
+    },
+    "icon": {
+      "id": "csgobox:csgo_box"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "open_10_boxes": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "count": 10
+      }
+    }
+  },
+  "rewards": {}
+}

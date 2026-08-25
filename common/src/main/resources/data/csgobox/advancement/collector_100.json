@@ -1,0 +1,26 @@
+{
+  "parent": "csgobox:collector_50",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.collector_100.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.collector_100.description"
+    },
+    "icon": {
+      "id": "csgobox:csgo_key1"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "open_100_boxes": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "count": 100
+      }
+    }
+  },
+  "rewards": {}
+}

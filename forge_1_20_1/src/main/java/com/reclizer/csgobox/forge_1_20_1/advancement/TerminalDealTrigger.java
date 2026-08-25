@@ -12,14 +12,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 import net.minecraft.util.GsonHelper;
 
-public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.TriggerInstance> {
+/**
+ * Triggered when a player closes a deal on a terminal machine (accepted an
+ * offer and paid armory points). The {@code count} field is optional: when
+ * absent or 0, the instance matches every deal (drives the "first deal"
+ * advancement). When positive, it only matches once the player's
+ * {@code csgobox:terminal_buys} custom stat has reached that threshold.
+ */
+public class TerminalDealTrigger extends SimpleCriterionTrigger<TerminalDealTrigger.TriggerInstance> {
 
-    public static final OpenedBoxTrigger INSTANCE = new OpenedBoxTrigger();
+    public static final TerminalDealTrigger INSTANCE = new TerminalDealTrigger();
     public static final ResourceLocation ID =
-            new ResourceLocation(CsgoBox.MODID, "opened_box");
-
-    public static final ResourceLocation STAT_ID =
-            new ResourceLocation(CsgoBox.MODID, "opened_boxes");
+            new ResourceLocation(CsgoBox.MODID, "terminal_deal");
 
     @Override
     public ResourceLocation getId() {
@@ -30,36 +34,26 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
     public TriggerInstance createInstance(JsonObject json, ContextAwarePredicate player,
                                           DeserializationContext context) {
         int count = GsonHelper.getAsInt(json, "count", 0);
-        int grade = GsonHelper.getAsInt(json, "grade", 0);
-        return new TriggerInstance(player, count, grade);
+        return new TriggerInstance(player, count);
     }
 
     public void trigger(ServerPlayer player) {
-        trigger(player, 0);
-    }
-
-    public void trigger(ServerPlayer player, int grade) {
-        this.trigger(player, instance -> instance.matches(player, grade));
+        this.trigger(player, instance -> instance.matches(player));
     }
 
     public static class TriggerInstance extends AbstractCriterionTriggerInstance {
         private final int count;
-        private final int grade;
 
-        public TriggerInstance(ContextAwarePredicate player, int count, int grade) {
+        public TriggerInstance(ContextAwarePredicate player, int count) {
             super(ID, player);
             this.count = count;
-            this.grade = grade;
         }
 
-        public boolean matches(ServerPlayer player, int actualGrade) {
-            if (grade > 0 && grade != actualGrade) {
-                return false;
-            }
+        public boolean matches(ServerPlayer player) {
             if (count <= 0) {
                 return true;
             }
-            Stat<ResourceLocation> stat = CsgoBox.OPENED_BOXES_STAT;
+            Stat<ResourceLocation> stat = CsgoBox.TERMINAL_BUYS_STAT;
             if (stat == null) {
                 return false;
             }
@@ -71,9 +65,6 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
             JsonObject json = super.serializeToJson(context);
             if (count > 0) {
                 json.addProperty("count", count);
-            }
-            if (grade > 0) {
-                json.addProperty("grade", grade);
             }
             return json;
         }

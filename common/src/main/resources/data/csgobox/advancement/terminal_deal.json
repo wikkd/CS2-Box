@@ -1,0 +1,22 @@
+{
+  "parent": "csgobox:root",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.terminal_deal.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.terminal_deal.description"
+    },
+    "icon": {
+      "id": "csgobox:terminal"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "first_deal": {
+      "trigger": "csgobox:terminal_deal"
+    }
+  },
+  "rewards": {}
+}

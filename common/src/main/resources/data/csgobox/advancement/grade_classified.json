@@ -1,24 +1,24 @@
 {
-  "parent": "csgobox:collector_100",
+  "parent": "csgobox:grade_restricted",
   "display": {
     "title": {
-      "translate": "advancement.csgobox.shopper.title"
+      "translate": "advancement.csgobox.grade_classified.title"
     },
     "description": {
-      "translate": "advancement.csgobox.shopper.description"
+      "translate": "advancement.csgobox.grade_classified.description"
     },
     "icon": {
-      "id": "minecraft:emerald"
+      "id": "minecraft:nether_star"
     },
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true
   },
   "criteria": {
-    "open_200_boxes": {
+    "open_classified": {
       "trigger": "csgobox:opened_box",
       "conditions": {
-        "count": 200
+        "grade": 5
       }
     }
   },

@@ -12,7 +12,7 @@
       "translate": "advancement.csgobox.root.description"
     },
     "icon": {
-      "id": "minecraft:chest"
+      "id": "csgobox:csgo_box"
     },
     "show_toast": false,
     "announce_to_chat": false,

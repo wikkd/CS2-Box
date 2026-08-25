@@ -390,8 +390,19 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
 
         sp.awardStat(CsgoBox.OPENED_BOXES_STAT, actualK);
         if (CsgoBox.CONFIG.enableAchievements()) {
-            for (int i = 0; i < actualK; i++) {
-                OpenedBoxTrigger.INSTANCE.trigger(sp);
+            // Grade-aware: pass each result's grade through so the grade-line
+            // advancements can match; pad with grade 0 to keep the historical
+            // call count (one trigger per box) intact for count criteria.
+            int fired = 0;
+            for (BulkOpenResult r : truncated) {
+                if (r.resultItem().isEmpty()) {
+                    continue;
+                }
+                OpenedBoxTrigger.INSTANCE.trigger(sp, r.resultGrade());
+                fired++;
+            }
+            for (; fired < actualK; fired++) {
+                OpenedBoxTrigger.INSTANCE.trigger(sp, 0);
             }
         }
 

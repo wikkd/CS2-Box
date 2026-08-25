@@ -13,6 +13,8 @@ import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import com.reclizer.csgobox.v26_1_2.menu.ModMenus;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.advancement.ModLoadedTrigger;
+import com.reclizer.csgobox.v26_1_2.advancement.TerminalBrokeTrigger;
+import com.reclizer.csgobox.v26_1_2.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_1_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_1_2.packet.PacketCsgoBulkProgress;
@@ -143,6 +145,8 @@ public class CsgoBox {
             } else if (registryKey.equals(Registries.TRIGGER_TYPE)) {
                 event.register(Registries.TRIGGER_TYPE, OpenedBoxTrigger.ID, () -> OpenedBoxTrigger.INSTANCE);
                 event.register(Registries.TRIGGER_TYPE, ModLoadedTrigger.ID, () -> ModLoadedTrigger.INSTANCE);
+                event.register(Registries.TRIGGER_TYPE, TerminalDealTrigger.ID, () -> TerminalDealTrigger.INSTANCE);
+                event.register(Registries.TRIGGER_TYPE, TerminalBrokeTrigger.ID, () -> TerminalBrokeTrigger.INSTANCE);
             }
         });
 

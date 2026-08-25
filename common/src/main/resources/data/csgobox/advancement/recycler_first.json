@@ -1,0 +1,29 @@
+{
+  "parent": "csgobox:root",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.recycler_first.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.recycler_first.description"
+    },
+    "icon": {
+      "id": "csgobox:armory_recycler"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "get_armory_point": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "csgobox:armory_point"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {}
+}

@@ -190,7 +190,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             if (player instanceof ServerPlayer sp) {
                 sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
                 if (CsgoBox.CONFIG.enableAchievements()) {
-                    OpenedBoxTrigger.INSTANCE.trigger(sp);
+                    OpenedBoxTrigger.INSTANCE.trigger(sp, finalGrade);
                 }
             }
 

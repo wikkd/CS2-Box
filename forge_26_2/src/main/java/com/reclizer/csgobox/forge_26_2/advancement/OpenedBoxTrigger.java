@@ -17,7 +17,9 @@ import java.util.Optional;
  * unconditionally (drives the "first box" advancement). When set to a
  * positive integer, the instance only matches once the player's
  * {@code csgobox:opened_boxes} custom stat has reached that threshold
- * (drives the "shopper" advancement at count=200).
+ * (drives the "shopper" advancement at count=200). The {@code grade}
+ * field is also optional: when positive, the instance only matches when
+ * the unboxed item's grade equals it (drives the grade-line advancements).
  */
 public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.TriggerInstance> {
 
@@ -34,20 +36,29 @@ public class OpenedBoxTrigger extends SimpleCriterionTrigger<OpenedBoxTrigger.Tr
     }
 
     public void trigger(ServerPlayer player) {
-        this.trigger(player, instance -> instance.matches(player));
+        trigger(player, 0);
     }
 
-    public record TriggerInstance(Optional<ContextAwarePredicate> player, int count) implements SimpleInstance {
+    public void trigger(ServerPlayer player, int grade) {
+        this.trigger(player, instance -> instance.matches(player, grade));
+    }
+
+    public record TriggerInstance(Optional<ContextAwarePredicate> player, int count, int grade) implements SimpleInstance {
         public static final Codec<TriggerInstance> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
                         ContextAwarePredicate.CODEC.optionalFieldOf("player")
                                 .forGetter(TriggerInstance::player),
                         Codec.INT.optionalFieldOf("count", 0)
-                                .forGetter(TriggerInstance::count)
+                                .forGetter(TriggerInstance::count),
+                        Codec.INT.optionalFieldOf("grade", 0)
+                                .forGetter(TriggerInstance::grade)
                 ).apply(instance, TriggerInstance::new)
         );
 
-        public boolean matches(ServerPlayer player) {
+        public boolean matches(ServerPlayer player, int actualGrade) {
+            if (grade > 0 && grade != actualGrade) {
+                return false;
+            }
             if (count <= 0) {
                 return true;
             }

@@ -180,7 +180,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
             if (CsgoBox.CONFIG.enableAchievements()) {
-                OpenedBoxTrigger.INSTANCE.trigger(sp);
+                OpenedBoxTrigger.INSTANCE.trigger(sp, finalGrade);
             }
 
             NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, boxId, giveItem.copy(), finalGrade, false));

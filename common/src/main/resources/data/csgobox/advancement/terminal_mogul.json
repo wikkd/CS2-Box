@@ -1,0 +1,26 @@
+{
+  "parent": "csgobox:terminal_deal",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.terminal_mogul.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.terminal_mogul.description"
+    },
+    "icon": {
+      "id": "csgobox:armory_point"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "deal_10_times": {
+      "trigger": "csgobox:terminal_deal",
+      "conditions": {
+        "count": 10
+      }
+    }
+  },
+  "rewards": {}
+}

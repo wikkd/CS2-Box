@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_1_2.packet;
 
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
+import com.reclizer.csgobox.forge_26_1_2.advancement.TerminalBrokeTrigger;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
 import com.reclizer.csgobox.terminal.NegotiationModel;
@@ -78,6 +79,9 @@ public record PacketTerminalReject(int round) implements CustomPacketPayload {
                 TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
                 held.setCount(0);
                 sp.sendSystemMessage(Component.translatable("csgobox.terminal.sys.broke"));
+                if (CsgoBox.CONFIG.enableAchievements()) {
+                    TerminalBrokeTrigger.INSTANCE.trigger(sp);
+                }
             } else {
                 TerminalSessionManager.markDirty();
             }

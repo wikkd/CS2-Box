@@ -1,0 +1,26 @@
+{
+  "parent": "csgobox:grade_mil_spec",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.grade_restricted.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.grade_restricted.description"
+    },
+    "icon": {
+      "id": "minecraft:amethyst_shard"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "open_restricted": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "grade": 4
+      }
+    }
+  },
+  "rewards": {}
+}

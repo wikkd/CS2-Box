@@ -1,0 +1,25 @@
+{
+  "parent": "csgobox:first_box",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.grade_mil_spec.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.grade_mil_spec.description"
+    },
+    "icon": {
+      "id": "minecraft:lapis_lazuli"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "open_mil_spec": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "grade": 3
+      }
+    }
+  },
+  "rewards": {}
+}

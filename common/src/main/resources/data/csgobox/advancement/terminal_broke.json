@@ -1,0 +1,23 @@
+{
+  "parent": "csgobox:root",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.terminal_broke.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.terminal_broke.description"
+    },
+    "icon": {
+      "id": "csgobox:terminal"
+    },
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "negotiation_failed": {
+      "trigger": "csgobox:terminal_broke"
+    }
+  },
+  "rewards": {}
+}

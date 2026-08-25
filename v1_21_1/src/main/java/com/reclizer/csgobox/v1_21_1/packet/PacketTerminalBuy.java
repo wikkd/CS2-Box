@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v1_21_1.packet;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.WearPenalty;
+import com.reclizer.csgobox.v1_21_1.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.event.TerminalBuyEvent;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
@@ -166,6 +167,9 @@ public record PacketTerminalBuy(
         }
         session.model().buyForced(worldMs);
         sp.awardStat(CsgoBox.TERMINAL_BUYS_STAT, 1);
+        if (CsgoBox.CONFIG.enableAchievements()) {
+            TerminalDealTrigger.INSTANCE.trigger(sp);
+        }
         // A purchase consumes the terminal machine: the item and its uid are
         // destroyed, and the session lock is released immediately.
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
