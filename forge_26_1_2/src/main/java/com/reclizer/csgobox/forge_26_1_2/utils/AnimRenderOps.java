@@ -10,8 +10,13 @@ import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.server.packs.resources.ReloadableResourceManager;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -24,6 +29,57 @@ import org.joml.Vector3f;
 public final class AnimRenderOps {
 
     private AnimRenderOps() {
+    }
+
+    // --- Perf: cache per-item model geometry so the open-box animation does
+    // not re-resolve the item model every frame. updateForLiving() is the
+    // expensive call; the bounding box it yields is pure geometry and static
+    // for a given (item, component set), so caching is safe. The key excludes
+    // item count (getComponentsPatch() does not carry count), so two stacks of
+    // the same item with different counts share one entry. The client render
+    // thread is single-threaded, so no locking is needed.
+    private record ModelKey(net.minecraft.world.item.Item item, int componentHash) {
+    }
+
+    private record CachedModel(float offsetX, float offsetY,
+                               TrackingItemStackRenderState trackedState,
+                               float span, float cx, float cy, float cz) {
+    }
+
+    private static final int MODEL_CACHE_CAP = 256;
+    private static final LinkedHashMap<ModelKey, CachedModel> MODEL_CACHE = new LinkedHashMap<>(MODEL_CACHE_CAP + 1, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<ModelKey, CachedModel> eldest) {
+            return size() > MODEL_CACHE_CAP;
+        }
+    };
+
+    private static final ResourceManagerReloadListener MODEL_CACHE_CLEARER = new ResourceManagerReloadListener() {
+        @Override
+        public void onResourceManagerReload(ResourceManager resourceManager) {
+            clearModelCache();
+        }
+    };
+
+    private static volatile boolean modelCacheClearerRegistered = false;
+
+    private static ModelKey modelKey(ItemStack stack) {
+        return new ModelKey(stack.getItem(), stack.getComponentsPatch().hashCode());
+    }
+
+    /** Clears cached model geometry (e.g. after a resource-pack / model reload). */
+    private static void clearModelCache() {
+        MODEL_CACHE.clear();
+    }
+
+    private static void ensureModelCacheClearer() {
+        if (!modelCacheClearerRegistered) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                ((ReloadableResourceManager) mc.getResourceManager()).registerReloadListener(MODEL_CACHE_CLEARER);
+                modelCacheClearerRegistered = true;
+            }
+        }
     }
 
     /** RenderPipelines carry their own blend state — no flush/state juggling
@@ -90,27 +146,42 @@ public final class AnimRenderOps {
         float offsetX = 0;
         float offsetY = 0;
         if (mc != null) {
-            try {
-                TrackingItemStackRenderState tracked = new TrackingItemStackRenderState();
-                mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
-                AABB bounds = tracked.getModelBoundingBox();
-                if (bounds != null) {
-                    // The 16x16 GUI icon pins the model origin at (8,8) with
-                    // 1 block unit = 16px, so the visual centre lands at
-                    // (8 + 16*centreX, 8 + 16*centreY); negate to pin (pX,pY).
-                    offsetX = -16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F;
-                    offsetY = -16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F;
-                } else {
-                    // Some flat items (armour leggings etc.) report no bounds;
-                    // centre the top-left-anchored 16px GUI draw instead of
-                    // letting it float to the bottom-right of the target.
+            ensureModelCacheClearer();
+            ModelKey key = modelKey(itemStack);
+            CachedModel cached = MODEL_CACHE.get(key);
+            if (cached != null) {
+                offsetX = cached.offsetX();
+                offsetY = cached.offsetY();
+            } else {
+                try {
+                    TrackingItemStackRenderState tracked = new TrackingItemStackRenderState();
+                    mc.getItemModelResolver().updateForLiving(tracked, itemStack, ItemDisplayContext.GUI, entity);
+                    AABB bounds = tracked.getModelBoundingBox();
+                    float ox, oy;
+                    if (bounds != null) {
+                        // The 16x16 GUI icon pins the model origin at (8,8) with
+                        // 1 block unit = 16px, so the visual centre lands at
+                        // (8 + 16*centreX, 8 + 16*centreY); negate to pin (pX,pY).
+                        ox = -16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F;
+                        oy = -16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F;
+                    } else {
+                        // Some flat items (armour leggings etc.) report no bounds;
+                        // centre the top-left-anchored 16px GUI draw instead of
+                        // letting it float to the bottom-right of the target.
+                        ox = -8F;
+                        oy = -8F;
+                    }
+                    offsetX = ox;
+                    offsetY = oy;
+                    // The 2D draw resolves its own (glint-animated) state via
+                    // guiGraphics.item(); trackedState is used here only for
+                    // measurement, so caching it for the 3D path is harmless.
+                    MODEL_CACHE.put(key, new CachedModel(ox, oy, tracked, 1F, 0F, 0F, 0F));
+                } catch (Throwable ignored) {
+                    // Best-effort measurement; centre so icons never drift bottom-right.
                     offsetX = -8F;
                     offsetY = -8F;
                 }
-            } catch (Throwable ignored) {
-                // Best-effort measurement; centre so icons never drift bottom-right.
-                offsetX = -8F;
-                offsetY = -8F;
             }
         }
         // Anchor-relative scale: translate to the target pixel first, then
@@ -140,27 +211,47 @@ public final class AnimRenderOps {
 
         int textureSize = Math.max(1, Math.round(16.0F * scale));
 
-        // TrackingItemStackRenderState registers a model identity so the PIP
-        // renderer caches the texture across frames (matches OversizedItemRenderer).
-        TrackingItemStackRenderState trackedState = new TrackingItemStackRenderState();
-        ItemModelResolver resolver = mc.getItemModelResolver();
-        resolver.updateForLiving(trackedState, item, ItemDisplayContext.GUI, player);
-        AABB bounds = trackedState.getModelBoundingBox();
+        ensureModelCacheClearer();
+        ModelKey key = modelKey(item);
+        CachedModel cached = MODEL_CACHE.get(key);
+        TrackingItemStackRenderState trackedState;
         float modelSpan;
         float modelCenterX;
         float modelCenterY;
         float modelCenterZ;
-        if (bounds != null) {
-            modelSpan = (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()));
-            modelCenterX = (float) ((bounds.minX + bounds.maxX) * 0.5D);
-            modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
-            modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
+        if (cached != null && cached.trackedState() != null) {
+            // Reuse cached geometry + render state. The bounding box is static
+            // for a given item+components; reusing trackedState may freeze the
+            // glint phase on the dragged 3D preview (cosmetic trade-off).
+            trackedState = cached.trackedState();
+            modelSpan = cached.span();
+            modelCenterX = cached.cx();
+            modelCenterY = cached.cy();
+            modelCenterZ = cached.cz();
         } else {
-            // Flat items may report no bounds; a unit model keeps them centred.
-            modelSpan = 1.0F;
-            modelCenterX = 0.0F;
-            modelCenterY = 0.0F;
-            modelCenterZ = 0.0F;
+            // TrackingItemStackRenderState registers a model identity so the PIP
+            // renderer caches the texture across frames (matches OversizedItemRenderer).
+            trackedState = new TrackingItemStackRenderState();
+            ItemModelResolver resolver = mc.getItemModelResolver();
+            resolver.updateForLiving(trackedState, item, ItemDisplayContext.GUI, player);
+            AABB bounds = trackedState.getModelBoundingBox();
+            if (bounds != null) {
+                modelSpan = (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()));
+                modelCenterX = (float) ((bounds.minX + bounds.maxX) * 0.5D);
+                modelCenterY = (float) ((bounds.minY + bounds.maxY) * 0.5D);
+                modelCenterZ = (float) ((bounds.minZ + bounds.maxZ) * 0.5D);
+            } else {
+                // Flat items may report no bounds; a unit model keeps them centred.
+                modelSpan = 1.0F;
+                modelCenterX = 0.0F;
+                modelCenterY = 0.0F;
+                modelCenterZ = 0.0F;
+            }
+            if (cached == null) {
+                float ox = (bounds != null) ? (-16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F) : -8F;
+                float oy = (bounds != null) ? (-16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F) : -8F;
+                MODEL_CACHE.put(key, new CachedModel(ox, oy, trackedState, modelSpan, modelCenterX, modelCenterY, modelCenterZ));
+            }
         }
 
         // (cx, cy) is the TOP-LEFT of the preview square (all 26.x callers

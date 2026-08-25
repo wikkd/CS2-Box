@@ -35,6 +35,11 @@ public class CsboxProgressScreen extends Screen {
     private static final int MAX_WAIT_TICKS = 200;
     private static final int MAX_BULK_WAIT_TICKS = 100;
 
+    // Per-frame texture lookups resolved once (was Identifier.parse() every frame).
+    // Per-frame texture lookups resolved once (was Identifier.parse() every frame).
+    private static final Identifier SPOT_GLOW = Identifier.fromNamespaceAndPath("csgobox", "textures/screens/spot_glow.png");
+    private static final Identifier LENS_VIGNETTE = Identifier.fromNamespaceAndPath("csgobox", "textures/screens/lens_vignette.png");
+
     private final Player player;
     private final long expectedRequestId;
     private final float randomWidth;
@@ -218,7 +223,7 @@ public class CsboxProgressScreen extends Screen {
         int glowR = (int) (this.height * 45F / 100F);
         guiGraphics.blit(
                 RenderPipelines.GUI_TEXTURED,
-                Identifier.parse("csgobox:textures/screens/spot_glow.png"),
+                SPOT_GLOW,
                 (int) spotCX - glowR, (int) spotCY - glowR,
                 0F, 0F,
                 glowR * 2, glowR * 2,
@@ -357,7 +362,7 @@ public class CsboxProgressScreen extends Screen {
         // glass edge marks the lens silhouette.
         guiGraphics.blit(
                 RenderPipelines.GUI_TEXTURED,
-                Identifier.parse("csgobox:textures/screens/lens_vignette.png"),
+                LENS_VIGNETTE,
                 lensMinX, lensMinY,
                 0F, 0F,
                 lensW, lensW,

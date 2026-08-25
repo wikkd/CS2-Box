@@ -40,6 +40,11 @@ public class CsboxProgressScreen extends Screen {
      */
     private static final int MAX_BULK_WAIT_TICKS = 100;
 
+    // Per-frame texture lookups resolved once (was Identifier.parse() every frame).
+    // Per-frame texture lookups resolved once (was Identifier.parse() every frame).
+    private static final Identifier SPOT_GLOW = Identifier.fromNamespaceAndPath("csgobox", "textures/screens/spot_glow.png");
+    private static final Identifier LENS_VIGNETTE = Identifier.fromNamespaceAndPath("csgobox", "textures/screens/lens_vignette.png");
+
     private final Player player;
     private final long expectedRequestId;
     private final float randomWidth;
@@ -235,7 +240,7 @@ public class CsboxProgressScreen extends Screen {
         // transparent rim (the old lens_vignette.png baked in a black ring).
         int glowR = (int) (this.height * 45F / 100F);
         AnimRenderOps.blitTextured(guiGraphics,
-                Identifier.parse("csgobox:textures/screens/spot_glow.png"),
+                SPOT_GLOW,
                 (int) spotCX - glowR, (int) spotCY - glowR,
                 glowR * 2, glowR * 2);
 
@@ -370,7 +375,7 @@ public class CsboxProgressScreen extends Screen {
         // the blit square stay see-through), only a soft rim shade around the
         // glass edge marks the lens silhouette.
         AnimRenderOps.blitTextured(guiGraphics,
-                Identifier.parse("csgobox:textures/screens/lens_vignette.png"),
+                LENS_VIGNETTE,
                 lensMinX, lensMinY, lensW, lensW);
 
 
