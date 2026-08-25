@@ -143,10 +143,10 @@ public final class TerminalOfferRegion {
         RenderFontTool.drawSpacedText(gg, font, name, x0 + 7, y0 + 6,
                 1.25F, 0.59F, TerminalPalette.WHITE);
 
-        // ---- B: rarity block (below the name) ----
+        // ---- B: rarity block (below the name) — actual offered item's box tier ----
         int rarity = TerminalChatRegion.rarityColor(offer);
         String rarityName = Component.translatable(
-                "csgobox.terminal.rarity." + NegotiationModel.SKIN_RARITY[offer.skinIdx()]).getString();
+                "csgobox.terminal.rarity." + TerminalOfferItems.rarityKeyFor(offer)).getString();
         int rw = Math.round(font.width(rarityName) * 0.51F) + Math.round(0.9F * (rarityName.length() - 1)) + 6;
         AnimRenderOps.fill(gg, x0 + 4, y0 + 16, x0 + 4 + rw, y0 + 24, rarity);
         RenderFontTool.drawSpacedText(gg, font, rarityName, x0 + 7, y0 + 18,

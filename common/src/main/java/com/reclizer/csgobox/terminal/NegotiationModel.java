@@ -93,12 +93,16 @@ public final class NegotiationModel {
     public static final int[] GRADE_PRICE = {6, 10, 16, 22, 30};
     /** Dealer line when the player cancels a trade or lacks Armory Points. */
     public static final String LINE_RECONSIDER = "csgobox.terminal.line.reconsider";
-    /** Five rarity tier keys (grade 1..5, CS2-style): 军规级/受限级/保密级/隐秘级/违禁. */
+    /**
+     * Five rarity tier keys, indexed by the box grade (1..5) exactly as
+     * {@code BoxGrades.gradeLevel} defines them: 消费级/工业级/军规级/受限级/保密级.
+     * The terminal samples real box items, so the displayed tier must match
+     * the box's own tiering (not the CS2 5-tier ladder) to stay consistent
+     * with box opening, JEI and the grade advancements.
+     */
     public static final String[] RARITY_TIER_KEYS = {
-            "mil_spec", "restricted", "classified", "covert", "contraband"
+            "consumer", "industrial", "mil_spec", "restricted", "classified"
     };
-    /** Rarity tier key per script skin (skin0 -> grade4 covert, skin1/2 -> grade3 classified). */
-    public static final String[] SKIN_RARITY = {"covert", "classified", "classified"};
 
     /** Rarity tier key for a box grade (1..5, clamped). */
     public static String rarityKeyForGrade(int grade) {

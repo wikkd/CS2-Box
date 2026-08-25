@@ -93,7 +93,8 @@ public final class TerminalPalette {
     public static final int RARITY_COVERT = 0xFFEB4B4B;
     public static final int RARITY_GOLD = 0xFFE4AE39;
 
-    /** Tier colour for a box grade (1..5): 军规级 -> 违禁. */
+    /** Tier colour for a box grade (1..5), matching {@code ColorTools.colorItems}
+     *  used by the box-opening screens (blue/purple/magenta/red/gold). */
     public static int rarityColorForGrade(int grade) {
         int idx = Math.max(0, Math.min(grade - 1, 4));
         return switch (idx) {

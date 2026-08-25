@@ -370,6 +370,24 @@ final class NegotiationModelTest {
     }
 
     @Test
+    @DisplayName("rarity tier keys follow the box grade ladder (consumer..classified)")
+    void rarityTierKeysMatchBoxGrades() {
+        // The terminal samples real box items (BoxGrades.gradeLevel semantics),
+        // so the displayed tier must match the box's own 5-tier ladder.
+        assertEquals("consumer", NegotiationModel.rarityKeyForGrade(1));
+        assertEquals("industrial", NegotiationModel.rarityKeyForGrade(2));
+        assertEquals("mil_spec", NegotiationModel.rarityKeyForGrade(3));
+        assertEquals("restricted", NegotiationModel.rarityKeyForGrade(4));
+        assertEquals("classified", NegotiationModel.rarityKeyForGrade(5));
+        // Clamped bounds behave like every other grade helper.
+        assertEquals("consumer", NegotiationModel.rarityKeyForGrade(0));
+        assertEquals("classified", NegotiationModel.rarityKeyForGrade(99));
+        // Prices stay indexed by the same box grade (monotonic).
+        assertEquals(6, NegotiationModel.priceForGrade(1));
+        assertEquals(30, NegotiationModel.priceForGrade(5));
+    }
+
+    @Test
     @DisplayName("session line draw: 5 unique lines from the pool")
     void sessionLinesUnique() {
         NegotiationModel m = fresh();

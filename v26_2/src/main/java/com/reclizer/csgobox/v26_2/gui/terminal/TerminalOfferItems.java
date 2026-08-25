@@ -63,7 +63,7 @@ public final class TerminalOfferItems {
         return itemFor(offer).getHoverName().getString();
     }
 
-    /** Rarity tier key ("mil_spec".."contraband") of the offered item. */
+    /** Rarity tier key ("consumer".."classified") of the offered item (box grade 1..5). */
     public static String rarityKeyFor(NegotiationModel.Offer offer) {
         return NegotiationModel.rarityKeyForGrade(gradeFor(offer));
     }
