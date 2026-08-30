@@ -30,6 +30,10 @@ public class CsLookItemScreen extends Screen {
     private final Player player;
     private final ItemStack openItem;
     private final int grade;
+    /** Screen to return to on close; {@code null} in the unboxing flow (the
+     *  screen then closes to the world). Non-null when opened from the
+     *  right-click "检视" context menu to inspect an item from a preview page. */
+    private final Screen previousScreen;
     private final ItemDrag3D itemDrag = new ItemDrag3D(0, 0);
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
@@ -81,10 +85,20 @@ public class CsLookItemScreen extends Screen {
 
     /** Displays the server-authoritative reward after the progress animation completes. */
     public CsLookItemScreen(ItemStack item, int grade) {
+        this(item, grade, null);
+    }
+
+    /**
+     * Same screen but opened from the right-click "检视" context menu to inspect
+     * an item from a preview page: silent (no entry chime) and returns to
+     * {@code previousScreen} on close instead of closing to the world.
+     */
+    public CsLookItemScreen(ItemStack item, int grade, Screen previousScreen) {
         super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("look_item"));
         this.player = Minecraft.getInstance().player;
         this.openItem = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = grade;
+        this.previousScreen = previousScreen;
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         if (!this.openItem.isEmpty() && this.openItem.isDamageableItem() && this.openItem.getDamageValue() > 0) {
             int maxDamage = this.openItem.getMaxDamage();
@@ -95,7 +109,8 @@ public class CsLookItemScreen extends Screen {
         this.patternSeed = rnd.nextInt(1000);
         this.skinId = rnd.nextInt(100, 1301);
         this.skinStyleIndex = rnd.nextInt(SKIN_STYLES.length);
-        if (this.player != null && !this.openItem.isEmpty()) {
+        // Inspect entry is silent: the unboxing chime belongs to the reward flow.
+        if (previousScreen == null && this.player != null && !this.openItem.isEmpty()) {
             float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
@@ -495,7 +510,11 @@ public class CsLookItemScreen extends Screen {
         if (this.minecraft != null) {
             HudVisibility.show();
         }
-        super.onClose();
+        if (this.previousScreen != null && this.minecraft != null) {
+            this.minecraft.setScreenAndShow(this.previousScreen);
+        } else {
+            super.onClose();
+        }
     }
 
     @Override

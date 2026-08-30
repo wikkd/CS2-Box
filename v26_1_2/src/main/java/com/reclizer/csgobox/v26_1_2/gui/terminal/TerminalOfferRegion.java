@@ -271,6 +271,20 @@ public final class TerminalOfferRegion {
         return false;
     }
 
+    /**
+     * Right-click hit-test on the 3D offer item itself (same circular region
+     * as the drag detection, minus the capsule) — drives the "检视" context
+     * menu in {@code TerminalScreen}. False while no offer has landed.
+     */
+    public boolean hitItem(int mx, int my) {
+        if (currentOffer == null || itemCx == 0) {
+            return false;
+        }
+        int radius = Math.max(40, inspectW + 80);
+        return mx >= itemCx - radius && mx <= itemCx + radius
+                && my >= itemCy - radius && my <= itemCy + radius;
+    }
+
     /** Drag accumulates raw deltas into the shared drag-feel state. */
     public boolean mouseDragged(int mx, int my) {
         if (!dragging) {

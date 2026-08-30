@@ -42,6 +42,12 @@ public class CsboxScreen extends Screen {
     private float itemRotX;
     private float itemRotY;
 
+    /** Right-click "检视" context menu (single action) over a grid cell. */
+    private final InspectMenu inspectMenu = new InspectMenu();
+    /** Item + grade remembered when the menu opens (target of the inspect). */
+    private ItemStack rightClickedItem = ItemStack.EMPTY;
+    private int rightClickedGrade = 0;
+
     private Map<ItemStack, Integer> itemGroup;
 
     private List<ItemStack> itemsList;
@@ -207,6 +213,7 @@ public class CsboxScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderBg(guiGraphics, partialTicks, mouseX, mouseY);
         this.renderLabels(guiGraphics, mouseX, mouseY);
+        this.inspectMenu.render(guiGraphics, mouseX, mouseY);
     }
 
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int gx, int gy) {
@@ -284,6 +291,10 @@ public class CsboxScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
+            if (this.inspectMenu.isOpen()) {
+                this.inspectMenu.close();
+                return true;
+            }
             this.minecraft.player.closeContainer();
             this.minecraft.options.hideGui = false;
             return true;
@@ -467,8 +478,70 @@ public class CsboxScreen extends Screen {
         super.init();
     }
 
+    /**
+     * Returns the grid index under the given mouse position, or -1. Mirrors
+     * {@link #renderPageGrid} cell layout (2 rows × 10 cols; only grades
+     * ≤4 are right-clickable — the grade-5 "more" placeholder is skipped).
+     */
+    private int itemCellAt(int mx, int my) {
+        if (this.entity == null || itemsList.isEmpty()) {
+            return -1;
+        }
+        GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
+        int startIdx = this.page * ITEMS_PER_PAGE;
+        int frameW = this.width * 8 / 100;
+        int frameH = this.height * 11 / 100;
+        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
+            int px = i - startIdx;
+            int py = 55;
+            if (px > 9) {
+                py = 73;
+                px -= 10;
+            }
+            if (gradeList.get(i) > 4) {
+                break; // grade-5 "more" placeholder / unrenderable tail
+            }
+            int x = listArea.x() + px * GuiRegion.pctW(this.width, 9);
+            int y = GuiRegion.pctH(this.height, py);
+            if (mx >= x && mx <= x + frameW && my >= y && my <= y + frameH) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Opens the shared 3D item showcase (the unboxing reward screen) for the
+     *  right-clicked item, returning here on close. */
+    private void openInspect() {
+        if (rightClickedItem == null || rightClickedItem.isEmpty()) {
+            return;
+        }
+        Minecraft.getInstance().setScreen(
+                new CsLookItemScreen(rightClickedItem, rightClickedGrade, this));
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int mx = (int) mouseX;
+        int my = (int) mouseY;
+        // Right-click on a grid cell opens the "检视" context menu.
+        if (button == 1 && !this.inspectMenu.isOpen()) {
+            int idx = itemCellAt(mx, my);
+            if (idx >= 0) {
+                this.rightClickedItem = itemsList.get(idx);
+                this.rightClickedGrade = gradeList.get(idx);
+                this.inspectMenu.openAt(mx, my);
+                return true;
+            }
+        }
+        // While the menu is open every click is captured by it.
+        if (this.inspectMenu.isOpen()) {
+            int action = this.inspectMenu.mouseClicked(button, mx, my);
+            if (action == InspectMenu.INSPECT) {
+                this.openInspect();
+            }
+            return true;
+        }
         if (button == 0) {
             int openX = openButtonX();
             int openY = this.height * 94 / 100;

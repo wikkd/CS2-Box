@@ -67,6 +67,7 @@
   "gui.csgobox.csgo_box.toolbar.info": "Wear Rating",
   "gui.csgobox.csgo_box.toolbar.sticker": "Stickers",
   "gui.csgobox.csgo_box.toolbar.more": "Change Inspect Scenery",
+  "gui.csgobox.inspect.open": "Inspect",
   "commands.csgobox.prefix": "[CSBox] ",
   "commands.csgobox.help.title": "---- /csbox box management help ----",
   "commands.csgobox.help.line.info": "/csbox info [box] — list boxes and load errors; `info error` shows errors only, add <box> for details",
