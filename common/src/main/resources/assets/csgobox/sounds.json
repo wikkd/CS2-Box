@@ -28,6 +28,46 @@
         "stream": true
       }
     ]
+  },
+  "terminal_open_ui": {
+    "subtitle": "subtitle.csgobox.terminal_open_ui",
+    "replace": true,
+    "sounds": [
+      {
+        "name": "csgobox:terminal_open_ui",
+        "stream": true
+      }
+    ]
+  },
+  "terminal_button_open": {
+    "subtitle": "subtitle.csgobox.terminal_button_open",
+    "replace": true,
+    "sounds": [
+      {
+        "name": "csgobox:terminal_button_open",
+        "stream": true
+      }
+    ]
+  },
+  "terminal_item_pop": {
+    "subtitle": "subtitle.csgobox.terminal_item_pop",
+    "replace": true,
+    "sounds": [
+      {
+        "name": "csgobox:terminal_item_pop",
+        "stream": true
+      }
+    ]
+  },
+  "terminal_long_press": {
+    "subtitle": "subtitle.csgobox.terminal_long_press",
+    "replace": true,
+    "sounds": [
+      {
+        "name": "csgobox:terminal_long_press",
+        "stream": true
+      }
+    ]
   }
 
 }

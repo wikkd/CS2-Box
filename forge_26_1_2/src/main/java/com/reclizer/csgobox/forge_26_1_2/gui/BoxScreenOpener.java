@@ -39,6 +39,12 @@ public final class BoxScreenOpener {
     public static void openTerminal(ItemStack stack) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
+            if (mc.player != null) {
+                float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+                if (vol > 0) {
+                    mc.player.playSound(ModSounds.TERMINAL_OPEN_UI.get(), vol * 10F, 1F);
+                }
+            }
             mc.execute(() -> mc.setScreen(new TerminalBootScreen(stack.copy())));
         }
     }

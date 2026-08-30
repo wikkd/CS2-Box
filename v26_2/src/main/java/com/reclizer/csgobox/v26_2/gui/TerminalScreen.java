@@ -4,6 +4,7 @@ import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
+import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalActionBar;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalChatRegion;
@@ -17,6 +18,7 @@ import com.reclizer.csgobox.v26_2.packet.PacketTerminalClose;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalOpen;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalReject;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalState;
+import com.reclizer.csgobox.v26_2.sounds.ModSounds;
 import com.reclizer.csgobox.v26_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.v26_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -76,6 +78,9 @@ public class TerminalScreen extends Screen {
     /** True once the server's locked session state has been applied. */
     private boolean stateReceived;
     private boolean closeSynced;
+    /** Offer cards already present when the session was restored — a new card
+     *  (round becomes PENDING) bumps this and plays the item-pop sound. */
+    private int offerEntryCount;
     /** The server-side session uid — identifies THIS terminal on close. */
     private String terminalUid;
     /** Nonce echoed by the server so a stale reply for another terminal is dropped. */
@@ -140,6 +145,20 @@ public class TerminalScreen extends Screen {
                 state.round(), status, state.generation(), state.cap(),
                 state.countdownDeadlineMs(), state.pending(), state.history()),
                 worldNowMs());
+        // Baseline for the offer-pop sound: cards already in the restored
+        // history must not replay; only NEW cards (future rounds) pop.
+        this.offerEntryCount = countOfferEntries(model);
+    }
+
+    /** Number of offer cards currently in the chat history. */
+    private static int countOfferEntries(NegotiationModel model) {
+        int count = 0;
+        for (Object entry : model.history()) {
+            if (entry instanceof NegotiationModel.OfferEntry) {
+                count++;
+            }
+        }
+        return count;
     }
 
     // ---- layout fractions (HTML prototype) ----
@@ -193,6 +212,15 @@ public class TerminalScreen extends Screen {
         this.nowMs = worldNowMs();
         model.tick(nowMs);
         Player player = Minecraft.getInstance().player;
+        // A new offer card popped into the chat (round became PENDING) — play
+        // the item-pop feedback. Baseline set when the session was restored.
+        if (stateReceived && player != null) {
+            int cardCount = countOfferEntries(model);
+            if (cardCount > offerEntryCount) {
+                offerEntryCount = cardCount;
+                playItemPop(player);
+            }
+        }
 
         // ---- stage background ----
         AnimRenderOps.fill(gg, 0, 0, width, height, TerminalPalette.OUTSIDE);
@@ -350,6 +378,7 @@ public class TerminalScreen extends Screen {
         return super.mouseClicked(event, doubleClick);
     }
 
+    /** Opens the 3D inspect screen for the right-clicked offer item. */
     /** Opens the shared 3D item showcase (the unboxing reward screen) for the
      *  right-clicked offer item, returning here on close. */
     private void openInspect() {
@@ -371,6 +400,7 @@ public class TerminalScreen extends Screen {
         long now = worldNowMs();
         TerminalActionBar.Fired fired = actionBar.mouseUp(mouseX, mouseY, now);
         if (fired == TerminalActionBar.Fired.ACCEPT) {
+            playLongPressSound();
             NegotiationModel.Offer offer = model.pending();
             if (offer != null) {
                 confirmDialog.open(TerminalOfferItems.itemFor(offer),
@@ -378,6 +408,7 @@ public class TerminalScreen extends Screen {
                         TerminalOfferItems.basePriceFor(offer), offer.wearVal());
             }
         } else if (fired == TerminalActionBar.Fired.REJECT) {
+            playLongPressSound();
             model.rejectNow(now);
             sendRejectRequest(model.round());
         }
@@ -518,5 +549,25 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    // ---- terminal UI sound feedback ----
+
+    /** Item-pop when a new offer card is revealed — respects the open volume. */
+    private void playItemPop(Player player) {
+        float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+        if (vol > 0) {
+            player.playSound(ModSounds.TERMINAL_ITEM_POP.get(), vol * 10F, 1F);
+        }
+    }
+
+    /** Long-press capsule fired (accept / reject) — respects the open volume. */
+    private void playLongPressSound() {
+        if (this.minecraft != null && this.minecraft.player != null) {
+            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+            if (vol > 0) {
+                this.minecraft.player.playSound(ModSounds.TERMINAL_LONG_PRESS.get(), vol * 10F, 1F);
+            }
+        }
     }
 }

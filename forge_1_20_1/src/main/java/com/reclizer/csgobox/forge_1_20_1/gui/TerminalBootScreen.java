@@ -9,6 +9,7 @@ import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_20_1.box.GradeGroup;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_1_20_1.sounds.ModSounds;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.ButtonPalette;
 import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
@@ -394,6 +395,7 @@ public class TerminalBootScreen extends Screen {
         if (button == 0) {
             if (ButtonPalette.isInside(mouseX, mouseY, openButtonX(), buttonY(),
                     actionButtonWidth(), buttonHeight())) {
+                playOpenButtonSound();
                 Minecraft.getInstance().setScreen(new TerminalScreen(this.terminalStack));
                 return true;
             }
@@ -404,6 +406,16 @@ public class TerminalBootScreen extends Screen {
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** "开启" button feedback — respects the open sound volume knob. */
+    private void playOpenButtonSound() {
+        if (this.minecraft != null && this.minecraft.player != null) {
+            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+            if (vol > 0) {
+                this.minecraft.player.playSound(ModSounds.TERMINAL_BUTTON_OPEN.get(), vol * 10F, 1F);
+            }
+        }
     }
 
     @Override
