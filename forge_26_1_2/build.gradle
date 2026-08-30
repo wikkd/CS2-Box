@@ -200,3 +200,17 @@ tasks.register('minifyJar', JavaExec) {
         args '@' + config.absolutePath
     }
 }
+
+// WORKAROUND (ForgeGradle 7.0.35 + Gradle 9.5.1): ForgeGradle's
+// slimeLauncherMetadataForForge task declares runsJson (@OutputFile) derived
+// from the task's own outputDirectory (@OutputDirectory). Gradle 9.5.1 forbids
+// querying a task's own output during output resolution, so the task fails
+// validation before it ever runs. Point runsJson at a stable,
+// non-self-referential path to break the cycle. (forge_1_20_1 pins 7.0.31 and
+// is unaffected.)
+def slimeRunsJsonDir = layout.buildDirectory
+tasks.configureEach {
+    if (name == 'slimeLauncherMetadataForForge') {
+        runsJson.set(slimeRunsJsonDir.file("minecraftforge/forgegradle/${name}/runs.json"))
+    }
+}
