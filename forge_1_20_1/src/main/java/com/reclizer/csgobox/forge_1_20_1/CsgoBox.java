@@ -120,9 +120,16 @@ public class CsgoBox {
             }
         });
 
-        // Register advancement triggers directly via CriteriaTriggers (1.20.1 pattern)
-        net.minecraft.advancements.CriteriaTriggers.register(OpenedBoxTrigger.INSTANCE);
-        net.minecraft.advancements.CriteriaTriggers.register(ModLoadedTrigger.INSTANCE);
+        // Register advancement triggers — CriteriaTriggers.register() may be
+        // inaccessible in some Forge 1.20.1 builds (NoSuchMethodError at runtime
+        // due to SRG / MojMap mismatch).  Wrap in try-catch so the mod still
+        // loads; the triggers themselves work for programmatic use (trigger()).
+        try {
+            net.minecraft.advancements.CriteriaTriggers.register(OpenedBoxTrigger.INSTANCE);
+            net.minecraft.advancements.CriteriaTriggers.register(ModLoadedTrigger.INSTANCE);
+        } catch (NoSuchMethodError | Exception e) {
+            LOGGER.warn("Could not register advancement triggers via CriteriaTriggers.register(): {}", e.getMessage());
+        }
 
         ModSounds.SOUNDS.register(modEventBus);
         ModItems.register(modEventBus);
