@@ -185,7 +185,7 @@ GATE PASSED`。
 |---|---|---|
 | `box/NetworkLimits` | 全部 | 纯 `static final int` 常量，javac 已内联 |
 | `config/CsboxConfigDefaults` | 全部 | 纯常量类（默认值/取值范围），javac 已内联 |
-| `box/BoxOdds` | 仅 forge | 仅被 JEI 类别引用（显示概率用）；forge 无 JEI 集成 → 死代码 |
+| `box/BoxOdds` | 仅 forge_26_1_2 | 仅被 JEI 类别引用（显示概率用）；shrunk 的 forge 平台仅 forge_26_1_2 且无 JEI 集成 → 死代码（forge_1_20_1 已接入 JEI，但不参与 shrink，不受影响） |
 | `villager/ModVillagers` | 仅 forge | forge 模块零引用（见文末「发现」） |
 
 minified jar 资源完整性已抽查：`mods.toml`/`pack.mcmeta`/`assets/`/`data/` 全保留。

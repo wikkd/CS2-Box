@@ -18,7 +18,7 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 | DataComponent → NBT | 箱子/终端机数据存储回退为 ItemStack NBT（`getOrCreateTag()` / `setTag()`） |
 | Networking | `SimpleChannel` + 14 个 class 风格 packet（非 `CustomPacketPayload` record） |
 | Capability | `CapabilityManager.get(CapabilityToken)` + `LazyOptional` + `AttachCapabilitiesEvent` |
-| JEI | 未实现（`build.gradle` 已声明 compileOnly 依赖，与其他 forge 模块现状一致） |
+| JEI | 已实现（`cfd750f`，JEI 15.x 开箱概率查询；`compileOnly` + `-PwithJei` 可选 `runtimeOnly`；`mods.toml` 可选依赖 `[15.20,)`，side=CLIENT） |
 | 序列化 | `StreamCodec`/`RegistryFriendlyByteBuf` → `FriendlyByteBuf` 手动读写 + NBT |
 
 ## 2. 前置条件
@@ -61,7 +61,8 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 5. **武库拆解台**：方块放置、菜单、回收产出、`ArmoryRecycleEvent` 取消语义；
 6. **村民**：`arms_dealer` 职业与交易（结构生成数据在 common 资源内共享）；
 7. **命令**：`/csbox info` / `/csbox nbt hand` / `/csbox reload`；
-8. **配置**：`csbox-common.toml` 生成且默认值与 `CsboxConfigDefaults` 一致。
+8. **配置**：`csbox-common.toml` 生成且默认值与 `CsboxConfigDefaults` 一致；
+9. **JEI（可选，需先装 JEI 15.x 或用 `-PwithJei` 进 dev）**：「开箱概率」分类出现在 JEI 目录；每个箱子一条配方（钥匙输入槽 / 箱子输出槽 / 物品池 4×5 网格）；左侧概率文本（掉率、各稀有度权重百分比、实体掉率）与 `BoxOdds` 口径一致；物品 tooltip 含 `[等级] 权重 x/y · 单件 z%`；`/csbox reload` 后配方即时刷新。
 
 ### 4.1 TACZ 运行时（重要）
 
@@ -101,9 +102,9 @@ Critical injection failure ... could not find any targets matching
 
 ## 5. 已知待办
 
-- [ ] JEI 集成（JEI 15.x，`build.gradle` 依赖已声明）
+- [x] JEI 集成（`cfd750f`，JEI 15.x 开箱概率查询——`jei/` 4 文件 + `BoxJeiSync` 桥 + `mods.toml` 可选依赖）
 - [ ] `scripts/test-forge-1201.sh` 门禁脚本（L0-L3 自动化）
-- [ ] 运行时 L4 回归报告（`docs/TEST-REPORT-FORGE-1201-*.md`）
+- [ ] 运行时 L4 回归报告（`docs/TEST-REPORT-FORGE-1201-*.md`，含 JEI 分类 E2E 抽查，见第 4 节）
 
 ## 6. 迁移记录
 
