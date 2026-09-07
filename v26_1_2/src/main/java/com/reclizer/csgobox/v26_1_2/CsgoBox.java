@@ -236,7 +236,7 @@ public class CsgoBox {
     }
 
     public static boolean debug() {
-        return CONFIG.enableDebugLogging();
+        return false;
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.forge_26_1_2.gui;
 
-import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.sounds.ModSounds;
 import com.reclizer.csgobox.forge_26_1_2.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
@@ -110,7 +109,7 @@ public class CsLookItemScreen extends Screen {
         this.skinStyleIndex = rnd.nextInt(SKIN_STYLES.length);
         // Inspect entry is silent: the unboxing chime belongs to the reward flow.
         if (previousScreen == null && this.player != null && !this.openItem.isEmpty()) {
-            float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
+            float vol = 1.0F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }

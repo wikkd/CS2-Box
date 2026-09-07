@@ -4,6 +4,11 @@
 
 > 当前开发迭代：`2.0.0-beta` 之后的下一版本线（开发中），版本号已正式写入 `gradle.properties` 的 `mod_version`。功能条目随开发推进逐步补充。
 
+### 更改（配置收窄）
+- **移除全部玩家向 / 开发向配置项（不允许配置，行为硬编码为固定默认值）**：从 `csgobox.toml` 删除 `openSoundVolume` / `tickSoundVolume` / `finishSoundVolume`（音量固定 100/50/100）、`animationSpeed` / `animationSpeedMultiplier` / `totalAnimationTicks`（开箱动画固定 145 tick，顺带消解三旋钮重复配置）、`showItemNames`（预览固定显示物品名）、`backgroundStyle`（背景固定半透明主题灰）、`blurRadius`（开屏菜单模糊固定 8）、`enableDebugLogging`（调试日志固定关闭）。`CsboxConfig` 六平台由 17 字段收窄为 7 个服务端/服主向字段（`[general]` 的 `globalDropRatePercent` + `[advanced]` 的 `loadDefaultBoxes` / `enableAchievements` / `enableHotReload` / `bulkOpenCount` / `jsonErrorAudience` / `damageItemByWear`），`AnimationSpeed` / `BackgroundStyle` 枚举删除；`docs/CONFIGURATION.md` 同步更新（并修正 `jsonErrorAudience` 枚举文档 `ALL`→`EVERYONE`、`globalDropRatePercent` 范围「0-1000」→「0=关闭,无上限」、平台数四→六）。
+- 六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
+
+### 修复（终端机）
 ### 修复（终端机）
 - **「检视」子屏返回后终端机屏幕失联**：右键报价物品进 `CsLookItemScreen` 再返回时，`TerminalScreen` 是同一实例被 `setScreen(previousScreen)` 重新显示，构造函数不会重跑——此前 `OPEN_INSTANCE` 保持 null、服务端 `OPEN_UID` 绑定也被隐式 close 清掉且没有重发 `PacketTerminalOpen`，导致返回后购买被 INVALID 拒绝、拒绝被静默忽略（本地与服务器状态分叉）。现在 `TerminalScreen` 在 `init()`（re-show 每次都会调用）恢复单例、重置 `closeSynced`/`stateReceived`、刷新 requestId 并重发 Open 包重挂绑定；同时右键检视在确认对话框打开（含「交易中」等待态）时不再响应，避免购买飞行中被顶开。
 - **服务端 reject 后 typing 门限与客户端动画对齐**：`rejectForced` 推进下一轮时 `roundStartMs` 不再设为拒绝时刻，而是 `+ REJECT_BUSY_MS(450ms)`——服务端买/拒门限从「拒绝后 1100ms」延到与客户端「450ms busy + 1100ms typing」一致的 1550ms，堵住改包客户端提前 450ms 购买下一轮报价的口子。

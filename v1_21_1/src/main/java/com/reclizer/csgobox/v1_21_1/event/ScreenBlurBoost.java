@@ -19,7 +19,7 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
  * open: the GUI blur (1.21.1 {@code GameRenderer.processBlurEffect} and the
  * 26.x {@code MenuBlurRadius} global uniform) is driven by the vanilla
  * {@code menuBackgroundBlurriness} option and cannot be set directly, so the
- * option is temporarily raised to {@link CsgoBox#CONFIG} {@code blurRadius}
+ * option is temporarily raised to a fixed radius of 8
  * while our screens are shown and restored when the last one closes.
  *
  * <p>Soft-adaptation contract: when the Blur mod is installed it renders its
@@ -47,7 +47,7 @@ public final class ScreenBlurBoost {
     }
 
     private static void boost() {
-        int radius = CsgoBox.CONFIG.blurRadius();
+        int radius = 8;
         if (radius <= 0) {
             return;
         }

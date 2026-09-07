@@ -47,7 +47,7 @@ public final class ScreenBlurBoost {
     }
 
     private static void boost() {
-        int radius = CsgoBox.CONFIG.blurRadius();
+        int radius = 8;
         if (radius <= 0) {
             return;
         }

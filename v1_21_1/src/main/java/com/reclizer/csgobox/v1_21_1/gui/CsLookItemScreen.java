@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.v1_21_1.event.FirstPersonInspectHandler;
 import com.reclizer.csgobox.v1_21_1.sounds.ModSounds;
@@ -131,7 +130,7 @@ public class CsLookItemScreen extends Screen {
         boolean silent = quietReopen || previousScreen != null;
         quietReopen = false;
         if (this.player != null && !this.openItem.isEmpty() && !silent) {
-            float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
+            float vol = 1.0F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }

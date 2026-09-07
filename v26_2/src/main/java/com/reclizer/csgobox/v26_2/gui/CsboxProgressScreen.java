@@ -1,7 +1,6 @@
 package com.reclizer.csgobox.v26_2.gui;
 
 import com.reclizer.csgobox.v26_2.utils.HudVisibility;
-import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxBulkResult;
 import com.reclizer.csgobox.v26_2.packet.PacketBoxOpenResult;
 import com.reclizer.csgobox.v26_2.sounds.ModSounds;
@@ -481,7 +480,7 @@ public class CsboxProgressScreen extends Screen {
         soundWidthAdd += startWidth / 173F * velocity;
         if (soundWidthAdd > soundThreshold) {
             soundWidthAdd = 0;
-            float tickVol = CsgoBox.CONFIG.tickSoundVolume() / 100F;
+            float tickVol = 0.5F;
             if (tickVol > 0) {
                 long nowMs = System.currentTimeMillis();
                 if (nowMs - lastTickSoundMs >= MIN_TICK_SOUND_INTERVAL_MS) {
@@ -587,13 +586,6 @@ public class CsboxProgressScreen extends Screen {
     }
 
     private static int readAnimationTicks() {
-        int base = CsgoBox.CONFIG.totalAnimationTicks();
-        int multiplier = CsgoBox.CONFIG.animationSpeedMultiplier();
-        int ticks = switch (CsgoBox.CONFIG.animationSpeed()) {
-            case SLOW -> base * 2;
-            case FAST -> base / 2;
-            default -> base;
-        };
-        return ticks / Math.max(1, multiplier);
+        return 145;
     }
 }

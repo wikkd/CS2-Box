@@ -550,7 +550,7 @@ public class TerminalScreen extends Screen {
 
     /** Item-pop when a new offer card is revealed — respects the open volume. */
     private void playItemPop(Player player) {
-        float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+        float vol = 1.0F;
         if (vol > 0) {
             player.playSound(ModSounds.TERMINAL_ITEM_POP.get(), vol * 10F, 1F);
         }
@@ -559,7 +559,7 @@ public class TerminalScreen extends Screen {
     /** Long-press capsule fired (accept / reject) — respects the open volume. */
     private void playLongPressSound() {
         if (this.minecraft != null && this.minecraft.player != null) {
-            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+            float vol = 1.0F;
             if (vol > 0) {
                 this.minecraft.player.playSound(ModSounds.TERMINAL_LONG_PRESS.get(), vol * 10F, 1F);
             }

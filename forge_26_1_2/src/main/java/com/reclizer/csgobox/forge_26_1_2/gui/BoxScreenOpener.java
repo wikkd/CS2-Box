@@ -1,6 +1,5 @@
 package com.reclizer.csgobox.forge_26_1_2.gui;
 
-import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +20,7 @@ public final class BoxScreenOpener {
         if (mc == null || mc.player == null) {
             return;
         }
-        float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+        float vol = 1.0F;
         if (vol > 0) {
             mc.player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
         }
@@ -40,7 +39,7 @@ public final class BoxScreenOpener {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) {
             if (mc.player != null) {
-                float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+                float vol = 1.0F;
                 if (vol > 0) {
                     mc.player.playSound(ModSounds.TERMINAL_OPEN_UI.get(), vol * 10F, 1F);
                 }

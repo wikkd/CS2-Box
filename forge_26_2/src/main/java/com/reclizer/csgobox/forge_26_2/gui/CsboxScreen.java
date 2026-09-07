@@ -334,7 +334,7 @@ public class CsboxScreen extends Screen {
         Style style = Style.EMPTY.withBold(true);
         int x = 0;
         int y = 0;
-        boolean showNames = CsgoBox.CONFIG.showItemNames();
+        boolean showNames = true;
 
         int startIdx = this.page * ITEMS_PER_PAGE;
         for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {

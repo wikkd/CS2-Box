@@ -190,7 +190,7 @@ public class CsgoBox {
     }
 
     public static boolean debug() {
-        return CONFIG.enableDebugLogging();
+        return false;
     }
 
     private void registerDynamicBoxItems(final RegisterEvent event) {

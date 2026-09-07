@@ -2,7 +2,6 @@ package com.reclizer.csgobox.forge_1_20_1.gui;
 
 import com.reclizer.csgobox.forge_1_20_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.forge_1_20_1.event.FirstPersonInspectHandler;
-import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import net.minecraft.util.FormattedCharSequence;
 import com.reclizer.csgobox.forge_1_20_1.sounds.ModSounds;
 import com.reclizer.csgobox.forge_1_20_1.utils.ButtonPalette;
@@ -116,7 +115,7 @@ public class CsLookItemScreen extends Screen {
         boolean silent = quietReopen || previousScreen != null;
         quietReopen = false;
         if (this.player != null && !this.openItem.isEmpty() && !silent) {
-            float vol = CsgoBox.CONFIG.finishSoundVolume() / 100F;
+            float vol = 1.0F;
             if (vol > 0) {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }

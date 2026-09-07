@@ -14,51 +14,25 @@
 
 ## 2. 配置项总览
 
-`CsboxConfig.java` 在四个平台 loader 中定义一致(17 个字段,5 个 TOML 分组):
+`CsboxConfig.java` 在六个平台 loader 中定义一致(7 个字段,2 个 TOML 分组)。
+自 2.0.0beta-1 起仅保留服务端/服主向配置项——音效音量、动画时长/速度、物品名显示、背景样式与模糊半径、调试日志等玩家向/开发向选项已从配置中移除并硬编码为固定默认值(不允许配置)。
 
 ### 2.1 `[general]` 通用设置
 
 | 配置项 | 类型 | 默认值 | 范围 | 说明 |
 |---|---|---|---|---|
-| `animationSpeed` | 枚举 | `NORMAL` | `SLOW` / `NORMAL` / `FAST` | 动画播放速度:`SLOW` = 2× 基速,`NORMAL` = 1×,`FAST` = 0.5× |
-| `globalDropRatePercent` | 整数 | `100` | 0-1000 | 全局掉落概率百分比 |
+| `globalDropRatePercent` | 整数 | `100` | `0` = 关闭,无上限 | 全局掉落概率百分比 |
 
 ### 2.2 `[advanced]` 高级设置
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `loadDefaultBoxes` | 布尔 | `true` | 启动时自动从 `config/csbox/*.json` 加载默认宝箱 |
-| `enableDebugLogging` | 布尔 | `false` | 启用控制台详细调试日志 |
+| `loadDefaultBoxes` | 布尔 | `true` | 启动时自动从 `config/csbox/*.json` 加载箱子定义 |
 | `enableAchievements` | 布尔 | `true` | 启用成就系统;关闭时仍累积统计(保留进度) |
 | `enableHotReload` | 布尔 | `true` | 监听 `config/csbox/*.json` 文件变化并自动热重载(300ms 防抖) |
 | `bulkOpenCount` | 整数 | `0` | 单次批量开箱上限(0 = 无上限),服务端权威截断 |
-| `jsonErrorAudience` | 枚举 | `OP_ONLY` | JSON 加载错误提示受众:`OP_ONLY`(仅 OP)/ `ALL` |
+| `jsonErrorAudience` | 枚举 | `OP_ONLY` | JSON 加载错误提示受众:`OP_ONLY`(仅 OP)/ `EVERYONE`(所有玩家) |
 | `damageItemByWear` | 布尔 | `true` | 抽出的物品若有耐久,按磨损值百分比损耗耐久(不会碎裂) |
-
-### 2.3 `[sound]` 音效设置
-
-| 配置项 | 类型 | 默认值 | 范围 | 说明 |
-|---|---|---|---|---|
-| `openSoundVolume` | 整数 | `100` | 0-100 | 开箱音效音量百分比 |
-| `tickSoundVolume` | 整数 | `50` | 0-100 | 滴答音效音量百分比 |
-| `finishSoundVolume` | 整数 | `100` | 0-100 | 完成音效音量百分比 |
-
-### 2.4 `[animation]` 动画设置
-
-| 配置项 | 类型 | 默认值 | 范围 | 说明 |
-|---|---|---|---|---|
-| `totalAnimationTicks` | 整数 | `145` | 20-500 | 基础动画持续时间(tick) |
-| `animationSpeedMultiplier` | 整数 | `1` | 1-10 | 动画速度倍数(值越大越快) |
-| `showItemNames` | 布尔 | `true` | — | 在宝箱预览界面显示物品名称 |
-
-### 2.5 `[ui]` UI 设置
-
-| 配置项 | 类型 | 默认值 | 范围 | 说明 |
-|---|---|---|---|---|
-| `backgroundStyle` | 枚举 | `TRANSLUCENT` | `OPAQUE` / `TRANSLUCENT` | 屏幕背景样式：`TRANSLUCENT`（默认）= 半透明主题灰（alpha 140），模糊的世界透过背景显示（原生模糊或 Blur 模组的动画模糊）；`OPAQUE` = 实心深色面板（旧观感） |
-| `blurRadius` | 整数 | `8` | 0-10 | 模组半透明屏打开期间使用的菜单模糊半径（原版默认 5）：`0` = 跟随原版 `menuBackgroundBlurriness` 选项不干预；打开任一模组屏时临时提升该选项、关闭后恢复原值。安装 Blur 模组时由其自身半径接管，此值不生效 |
-
-> 说明：该选项为软适配——未安装 Blur 模组（`blur`）时半透明背景遵循原版 `menuBackgroundBlurriness` 模糊选项（设为 0 则无模糊；`blurRadius` 可在此基础上增强）；安装 Blur 后自动获得其淡入动画与可配置模糊半径/渐变。进度屏（开箱动画）始终为半透明背景，不受 `backgroundStyle` 开关影响。
 
 ## 3. 宝箱数据配置(JSON schema)
 
@@ -140,7 +114,6 @@
 
 ## 6. 配置开关与运行时一致性
 
-- `enableDebugLogging=false`(默认)避免控制台被调试日志刷屏
 - `enableAchievements=false` 关闭成就弹窗与 toast,但 `Stats.CUSTOM` 仍累积,重新开启后即恢复触发
 - `loadDefaultBoxes=false` 可阻止自动加载 `config/csbox/*.json`,适合纯数据包驱动的服务端
 

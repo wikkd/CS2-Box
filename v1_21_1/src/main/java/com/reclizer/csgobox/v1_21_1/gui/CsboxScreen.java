@@ -386,7 +386,7 @@ public class CsboxScreen extends Screen {
 
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         Style style = Style.EMPTY.withBold(true);
-        boolean showNames = CsgoBox.CONFIG.showItemNames();
+        boolean showNames = true;
 
         renderLabelsAnimated(guiGraphics, showNames, partialTicks);
 

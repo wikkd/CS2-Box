@@ -238,7 +238,7 @@ public class TerminalBootScreen extends Screen {
 
     protected void renderLabels(GuiGraphicsExtractor gg, int mouseX, int mouseY) {
         Style style = Style.EMPTY.withBold(true);
-        boolean showNames = CsgoBox.CONFIG.showItemNames();
+        boolean showNames = true;
 
         int x = 0;
         int y = 0;
@@ -413,7 +413,7 @@ public class TerminalBootScreen extends Screen {
     /** "开启" button feedback — respects the open sound volume knob. */
     private void playOpenButtonSound() {
         if (this.minecraft != null && this.minecraft.player != null) {
-            float vol = CsgoBox.CONFIG.openSoundVolume() / 100F;
+            float vol = 1.0F;
             if (vol > 0) {
                 this.minecraft.player.playSound(ModSounds.TERMINAL_BUTTON_OPEN.get(), vol * 10F, 1F);
             }
