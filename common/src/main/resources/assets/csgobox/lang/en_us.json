@@ -223,6 +223,12 @@
   "jei.csgobox.recipe.entity_rate": "%s drops %s%%",
   "jei.csgobox.tooltip.grade_weight": "[%s] weight %s/%s",
   "jei.csgobox.tooltip.item_chance": "Per-item chance %s%%",
+  "rei.csgobox.category.box_open": "Box Drop Chances",
+  "rei.csgobox.recipe.drop_rate": "Drop rate: %s%%",
+  "rei.csgobox.recipe.grade_line": "%s %s%%",
+  "rei.csgobox.recipe.more_grades": "…%s more tiers",
+  "rei.csgobox.recipe.more_items": "…%s more items",
+  "rei.csgobox.recipe.entity_rate": "%s drops %s%%",
   "stat.csgobox.opened_boxes": "CS Boxes Opened",
   "stat.csgobox.terminal_buys": "Terminal Purchases"
 }

@@ -30,3 +30,10 @@ mandatory=false
 versionRange="[19.44,)"
 ordering="NONE"
 side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="roughlyenoughitems"
+mandatory=false
+versionRange="[16.0,)"
+ordering="NONE"
+side="CLIENT"

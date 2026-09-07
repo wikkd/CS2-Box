@@ -223,6 +223,12 @@
   "jei.csgobox.recipe.entity_rate": "%s 掉落 %s%%",
   "jei.csgobox.tooltip.grade_weight": "[%s] 权重 %s/%s",
   "jei.csgobox.tooltip.item_chance": "单件概率 %s%%",
+  "rei.csgobox.category.box_open": "开箱概率",
+  "rei.csgobox.recipe.drop_rate": "掉落率: %s%%",
+  "rei.csgobox.recipe.grade_line": "%s %s%%",
+  "rei.csgobox.recipe.more_grades": "…共 %s 级",
+  "rei.csgobox.recipe.more_items": "…共 %s 件",
+  "rei.csgobox.recipe.entity_rate": "%s 掉落 %s%%",
   "stat.csgobox.opened_boxes": "开启的 CS 箱子数",
   "stat.csgobox.terminal_buys": "终端机购买次数"
 }

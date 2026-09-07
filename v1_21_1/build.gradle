@@ -93,6 +93,7 @@ repositories {
     mavenCentral()
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://modmaven.dev' }
+    maven { url = 'https://maven.shedaniel.me' }
     maven { url = 'https://www.cursemaven.com' }
     maven {
         url = 'https://maven.latvian.dev/releases'
@@ -120,6 +121,13 @@ dependencies {
     // FML annotation scanning (@JeiPlugin), no ServiceLoader entry needed.
     compileOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
     runtimeOnly "mezz.jei:jei-${mc_version_1_21_1}-neoforge:${jei_version_1_21_1}"
+
+    // REI (Roughly Enough Items) integration (optional client mod).
+    // compileOnly for the plugin API (pullsin cloth-config + architectury
+    // transitively), runtimeOnly so dev runs ship the REI jar. Discovery is
+    // @REIPluginClient annotation scanning (covers MEI, a REI fork, too).
+    compileOnly "me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version_1_21_1}"
+    runtimeOnly "me.shedaniel:RoughlyEnoughItems-neoforge:${rei_version_1_21_1}"
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

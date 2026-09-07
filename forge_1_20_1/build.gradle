@@ -80,6 +80,7 @@ repositories {
     mavenCentral()
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://modmaven.dev' }
+    maven { url = 'https://maven.shedaniel.me' }
 }
 
 dependencies {
@@ -111,6 +112,15 @@ dependencies {
     // runtimeOnly 需显式 -PwithJei：userdev 环境下 JEI 构造报 NoSuchMethodError（I18n SRG 名未重映射），E2E 测试不需要 JEI
     if (project.hasProperty('withJei')) {
         runtimeOnly "mezz.jei:jei-${mc_version_forge_1_20_1}-forge:${jei_version_forge_1_20_1}"
+    }
+
+    // REI (Roughly Enough Items) integration (optional client mod).
+    // compileOnly for the plugin API (pullsin cloth-config + architectury
+    // transitively), runtimeOnly so dev runs ship the REI jar. Discovery is
+    // @REIPluginClient annotation scanning (covers MEI, a REI fork, too).
+    compileOnly "me.shedaniel:RoughlyEnoughItems-api-forge:${rei_version_forge_1_20_1}"
+    if (project.hasProperty('withRei')) {
+        runtimeOnly "me.shedaniel:RoughlyEnoughItems-forge:${rei_version_forge_1_20_1}"
     }
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

@@ -95,10 +95,13 @@
 -keep class com.reclizer.csgobox.utils.ColorTools { *; }
 -keep class com.reclizer.csgobox.utils.OverlayColor { *; }
 
-# ---- 8. Runtime-discovered surfaces (JEI + GUI screens) ----
+# ---- 8. Runtime-discovered surfaces (JEI + REI + GUI screens) ----
 # JEI plugin/recipe classes are discovered reflectively by the JEI runtime;
 # EntityChineseMap feeds the JEI recipe category at runtime.
 -keep class com.reclizer.csgobox.**.jei.** { *; }
+# REI (Roughly Enough Items / MEI) plugin/display classes are discovered via
+# @REIPluginClient annotation scanning; shrink would strip them otherwise.
+-keep class com.reclizer.csgobox.**.rei.** { *; }
 -keep class com.reclizer.csgobox.utils.EntityChineseMap { *; }
 # ArmoryRecyclerScreen is opened from the event chain; kept explicitly so the
 # recycler GUI cannot be silently dropped by shrink.
