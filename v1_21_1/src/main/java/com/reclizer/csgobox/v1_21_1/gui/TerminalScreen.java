@@ -72,18 +72,21 @@ public class TerminalScreen extends Screen {
     /** True once the server's locked session state has been applied. */
     private boolean stateReceived;
     private boolean closeSynced;
+    /** Set when this screen is replaced by the "检视" sub-screen — re-show
+     *  ({@link #init()}) re-arms the server OPEN_UID binding and singleton. */
+    private boolean rearmOnShow;
     /** Offer cards already present when the session was restored — a new card
      *  (round becomes PENDING) bumps this and plays the item-pop sound. */
     private int offerEntryCount;
     /** The server-side session uid — identifies THIS terminal on close. */
     private String terminalUid;
     /** Nonce echoed by the server so a stale reply for another terminal is dropped. */
-    private final long requestId = System.nanoTime();
+    private long requestId = System.nanoTime();
     /** When this open was requested — the server must answer within 5s
      *  (world clock, so a server lag-spike that stalls the world never
      *  triggers a false "unreachable"; a genuinely lost packet surfaces as
      *  the world still ticking past the deadline). */
-    private final long openSentAtMs = worldNowMs();
+    private long openSentAtMs = worldNowMs();
     /** Terminal item stack (copy) — box_id travels with the buy request. */
     private final ItemStack terminalStack;
     /** Terminal item display name (config name or anvil rename). */
@@ -317,7 +320,7 @@ public class TerminalScreen extends Screen {
         this.mouseY = (int) mouseY;
         long now = worldNowMs();
         // Right-click on the 3D offer item opens the "检视" context menu.
-        if (button == 1 && !this.inspectMenu.isOpen()) {
+        if (button == 1 && !this.inspectMenu.isOpen() && !confirmDialog.isOpen()) {
             NegotiationModel.Offer offer = model.pending();
             if (offer != null && offerRegion.hitItem(this.mouseX, this.mouseY)) {
                 ItemStack item = TerminalOfferItems.itemFor(offer);
@@ -505,6 +508,29 @@ public class TerminalScreen extends Screen {
         }
     }
 
+    /**
+     * Re-shown after the "检视" sub-screen closes (setScreen(previousScreen)):
+     * the constructor does not run again, so restore the singleton and re-send
+     * the open packet to re-pin the server-side OPEN_UID binding (removed()
+     * already sent the implicit close). A plain first show / resize is a no-op.
+     */
+    @Override
+    public void init() {
+        super.init();
+        OPEN_INSTANCE = this;
+        if (rearmOnShow) {
+            rearmOnShow = false;
+            closeSynced = false;
+            stateReceived = false;
+            requestId = System.nanoTime();
+            openSentAtMs = worldNowMs();
+            ClientPacketListener conn = Minecraft.getInstance().getConnection();
+            if (conn != null) {
+                conn.send(new ServerboundCustomPayloadPacket(new PacketTerminalOpen(terminalStack, requestId)));
+            }
+        }
+    }
+
     @Override
     public void onClose() {
         syncCloseState();
@@ -524,6 +550,7 @@ public class TerminalScreen extends Screen {
         if (OPEN_INSTANCE == this) {
             OPEN_INSTANCE = null;
         }
+        rearmOnShow = stateReceived;
         super.removed();
     }
 

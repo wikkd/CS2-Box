@@ -235,7 +235,11 @@ public final class NegotiationModel {
         cap = snap.cap();
         countdownDeadlineMs = snap.countdownDeadlineMs();
         pending = snap.pending();
-        roundStartMs = nowMs;
+        // A PENDING restore proves the typing window already elapsed; keep the
+        // buy/reject gate passable immediately (matches the in-memory syncClose
+        // behaviour) instead of bouncing for another typing window after a
+        // server restart. TYPING restores replay the animation, so they reset.
+        roundStartMs = nowMs - (status == Status.PENDING ? TYPING_MS : 0L);
         statusSinceMs = nowMs;
         lastTickMs = nowMs;
     }
@@ -353,6 +357,11 @@ public final class NegotiationModel {
         appendHistory(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
         if (round < MAX_ROUNDS) {
             presentRound(nowMs);
+            // The legit client plays REJECT_BUSY (450ms) + TYPING (1100ms) before
+            // the next offer is revealed; shift the server's round start by the
+            // busy duration so the buy/reject gate only opens at the real reveal
+            // time, not 450ms early.
+            roundStartMs += REJECT_BUSY_MS;
         } else {
             status = Status.FAILED;
             statusSinceMs = nowMs;

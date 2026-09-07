@@ -4,6 +4,13 @@
 
 > 当前开发迭代：`2.0.0-beta` 之后的下一版本线（开发中），版本号已正式写入 `gradle.properties` 的 `mod_version`。功能条目随开发推进逐步补充。
 
+### 修复（终端机）
+- **「检视」子屏返回后终端机屏幕失联**：右键报价物品进 `CsLookItemScreen` 再返回时，`TerminalScreen` 是同一实例被 `setScreen(previousScreen)` 重新显示，构造函数不会重跑——此前 `OPEN_INSTANCE` 保持 null、服务端 `OPEN_UID` 绑定也被隐式 close 清掉且没有重发 `PacketTerminalOpen`，导致返回后购买被 INVALID 拒绝、拒绝被静默忽略（本地与服务器状态分叉）。现在 `TerminalScreen` 在 `init()`（re-show 每次都会调用）恢复单例、重置 `closeSynced`/`stateReceived`、刷新 requestId 并重发 Open 包重挂绑定；同时右键检视在确认对话框打开（含「交易中」等待态）时不再响应，避免购买飞行中被顶开。
+- **服务端 reject 后 typing 门限与客户端动画对齐**：`rejectForced` 推进下一轮时 `roundStartMs` 不再设为拒绝时刻，而是 `+ REJECT_BUSY_MS(450ms)`——服务端买/拒门限从「拒绝后 1100ms」延到与客户端「450ms busy + 1100ms typing」一致的 1550ms，堵住改包客户端提前 450ms 购买下一轮报价的口子。
+- **PENDING 会话服务端重启恢复不再白等 1.1s**：`NegotiationModel.restore` 对 PENDING 快照把 `roundStartMs` 回拨一个 typing 窗口（`nowMs - TYPING_MS`），重开即可立即买/拒，与内存态 `syncClose` 的「PENDING 保留原 roundStart」语义一致。
+- **禁用态胶囊不再触发按压**：`TerminalActionBar.mouseDown` 仅在 `status == PENDING` 时开始接受/拒绝蓄力，typing/busy/failed 的禁用胶囊按下去不再读条（此前只是视觉禁用、实际仍会触发按压，靠模型/服务端兜底）。
+- 六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1），`:common:test` 与六平台 `compileJava`、`PlatformSmokeTest`、`check-animops-drift.sh`、`check-version.sh` 全通过。
+
 ## [2.0.0-beta] - 2026-08-22
 
 > 版本说明：此前内部开发的 1.0.7 / 1.0.8 线不再单独发行，以下全部功能合并为 **2.0.0-beta** 一次性发布。

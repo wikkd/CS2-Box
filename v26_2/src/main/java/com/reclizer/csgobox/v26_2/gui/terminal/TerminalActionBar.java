@@ -254,15 +254,19 @@ public final class TerminalActionBar {
             capOpen = !capOpen;
             return true;
         }
-        if (absX >= acceptX && absX <= acceptX + acceptW && absY >= acceptY && absY <= acceptY + acceptH) {
-            pressPill = Pill.ACCEPT;
-            pressStartMs = nowMs;
-            return true;
-        }
-        if (absX >= rejectX && absX <= rejectX + rejectW && absY >= rejectY && absY <= rejectY + rejectH) {
-            pressPill = Pill.REJECT;
-            pressStartMs = nowMs;
-            return true;
+        // Pills are only live while an offer is pending — pressing a disabled
+        // (typing / busy / failed) capsule must not start the hold.
+        if (model.status() == NegotiationModel.Status.PENDING) {
+            if (absX >= acceptX && absX <= acceptX + acceptW && absY >= acceptY && absY <= acceptY + acceptH) {
+                pressPill = Pill.ACCEPT;
+                pressStartMs = nowMs;
+                return true;
+            }
+            if (absX >= rejectX && absX <= rejectX + rejectW && absY >= rejectY && absY <= rejectY + rejectH) {
+                pressPill = Pill.REJECT;
+                pressStartMs = nowMs;
+                return true;
+            }
         }
         return false;
     }
