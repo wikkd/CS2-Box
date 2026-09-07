@@ -155,9 +155,29 @@ public class CsgoBox {
         Path boxesDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
         boxWatcher = BoxFileWatcher.start(
                 boxesDir,
-                BoxJsonLoader::reloadPreserving,
+                () -> {
+                    BoxJsonLoader.reloadPreserving();
+                    net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+                    if (server != null) {
+                        server.execute(CsgoBox::broadcastBoxDefinitions);
+                    }
+                },
                 msg -> LOGGER.info("[BoxFileWatcher] {}", msg),
                 (msg, err) -> LOGGER.error("[BoxFileWatcher] {}", msg, err));
+    }
+
+    /** Broadcasts the box registry to all players so client registries follow
+     *  server state after reloads. No-op on the client or without a server. */
+    public static void broadcastBoxDefinitions() {
+        net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return;
+        }
+        com.reclizer.csgobox.forge_26_2.packet.PacketSyncBoxDefinitions packet =
+                com.reclizer.csgobox.forge_26_2.packet.PacketSyncBoxDefinitions.ofAll();
+        for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+            com.reclizer.csgobox.forge_26_2.packet.Networking.sendToPlayer(packet, player);
+        }
     }
 
     private void resolveOpenedBoxesStat(final FMLCommonSetupEvent event) {

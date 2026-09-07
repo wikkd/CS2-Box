@@ -98,14 +98,14 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | `HudVisibility` | — | — | ✅ | — | ✅ | — |
 | JEI (4 文件) | 4 文件 | ✅ | ✅ | ❌ | ❌ | ✅ |
 | REI (3 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ | 3 文件 |
-| `PacketSyncBoxDefinitions` | — | ✅ | ✅ | — | — | — |
+| `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
-| **文件数** | **86** | **85** | **86** | **78** | **79** | **87** |
+| **文件数** | **86** | **85** | **86** | **79** | **80** | **88** |
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）与 `forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）
 - JEI：NeoForge 3 平台已同步；`forge_1_20_1` 已接入（JEI 15.x，`mods.toml` 可选依赖 `[15.20,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
 - REI：`v1_21_1`（16.x）/`v26_1_2`（26.1.x）/`v26_2`（26.2.x）NeoForge 已同步——`@REIPluginClient` + 动态显示生成器（`/csbox reload` / 文件热重载后无需手动刷新），`forge_1_20_1` 已接入（REI 12.x，`mods.toml` 可选依赖 `[12.0,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（与 JEI 同策略，暂不接入）
-- Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）
+- Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）。**Forge 三平台已补齐全量定义同步**（`PacketSyncBoxDefinitions`，`sync_box_definitions`：玩家加入 / `/csbox reload` / 文件热重载时服务端广播整份 `BoxRegistry`，客户端 `clear + register` 覆盖，`forge_1_20_1` 同时刷新 JEI），与 NeoForge 三平台架构对齐——专用服务器下客户端定义内容（权重/价格/物品清单/JEI 概率）始终以服务端为准
 - Tutorial/Validator：`TutorialSources` / `TutorialFetcher` / `BoxJsonSchemaValidator` 全部走 `common/` 唯一实现（六平台共用，无平台本地副本）；教程下载六平台统一为后台线程异步执行
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`

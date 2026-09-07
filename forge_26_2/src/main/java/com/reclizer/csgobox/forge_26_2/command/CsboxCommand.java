@@ -201,6 +201,7 @@ public final class CsboxCommand {
     private static int reloadBoxes(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
         BoxJsonLoader.reloadPreserving();
+        CsgoBox.broadcastBoxDefinitions();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
     }

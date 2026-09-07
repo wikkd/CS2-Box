@@ -6,6 +6,8 @@ import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_2.item.ModItems;
+import com.reclizer.csgobox.forge_26_2.packet.Networking;
+import com.reclizer.csgobox.forge_26_2.packet.PacketSyncBoxDefinitions;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -76,9 +78,12 @@ public final class ModEvents {
     /** Fires ModLoadedTrigger so csgobox:root criteria is satisfied on world join. */
     @SubscribeEvent
     public static void playerLoggedIn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
-        if (CsgoBox.CONFIG.enableAchievements()
-                && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
-            com.reclizer.csgobox.forge_26_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // Bring the joining client's box registry in sync.
+            Networking.sendToPlayer(PacketSyncBoxDefinitions.ofAll(), sp);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                com.reclizer.csgobox.forge_26_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+            }
         }
     }
 

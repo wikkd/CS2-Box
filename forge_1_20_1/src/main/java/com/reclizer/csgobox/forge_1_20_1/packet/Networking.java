@@ -48,6 +48,8 @@ public final class Networking {
                 PacketBoxBulkResult::encode, PacketBoxBulkResult::new, PacketBoxBulkResult::handle);
         INSTANCE.registerMessage(id++, PacketSyncBoxItems.class,
                 PacketSyncBoxItems::encode, PacketSyncBoxItems::new, PacketSyncBoxItems::handle);
+        INSTANCE.registerMessage(id++, PacketSyncBoxDefinitions.class,
+                PacketSyncBoxDefinitions::encode, PacketSyncBoxDefinitions::new, PacketSyncBoxDefinitions::handle);
         INSTANCE.registerMessage(id++, PacketTerminalBuyResult.class,
                 PacketTerminalBuyResult::encode, PacketTerminalBuyResult::new, PacketTerminalBuyResult::handle);
         INSTANCE.registerMessage(id++, PacketTerminalState.class,

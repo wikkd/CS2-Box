@@ -6,6 +6,8 @@ import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ModItems;
+import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
+import com.reclizer.csgobox.forge_1_20_1.packet.PacketSyncBoxDefinitions;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -72,9 +74,12 @@ public final class ModEvents {
 
     @SubscribeEvent
     public static void playerLoggedIn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
-        if (CsgoBox.CONFIG.enableAchievements()
-                && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
-            com.reclizer.csgobox.forge_1_20_1.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // Bring the joining client's box registry (and JEI category) in sync.
+            Networking.sendToPlayer(PacketSyncBoxDefinitions.ofAll(), sp);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                com.reclizer.csgobox.forge_1_20_1.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+            }
         }
     }
 

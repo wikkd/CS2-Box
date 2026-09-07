@@ -88,6 +88,12 @@ public final class Networking {
                 .consumer(PacketTerminalState::handle)
                 .add();
 
+        INSTANCE.messageBuilder(PacketSyncBoxDefinitions.class, NetworkProtocol.PLAY)
+                .direction(PacketFlow.CLIENTBOUND)
+                .codec(PacketSyncBoxDefinitions.STREAM_CODEC)
+                .consumer(PacketSyncBoxDefinitions::handle)
+                .add();
+
         INSTANCE.build();
     }
 
