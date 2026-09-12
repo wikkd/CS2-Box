@@ -32,9 +32,10 @@ jobs:
           cache: npm
           cache-dependency-path: box-editor/package.json
 
-      - name: Regenerate embedded data from docs
+      - name: Regenerate embedded data from docs (optional)
         working-directory: box-editor
-        run: npm run sync
+        run: |
+          npm run sync || echo "::warning title=sync skipped::docs/box-schema or docs/examples not on this ref; using committed js/data.js"
 
       - name: Build static site
         working-directory: box-editor
