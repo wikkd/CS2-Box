@@ -189,3 +189,6 @@ run-data/
 
 # Runtime config backups
 *.bak
+
+# box-editor build output
+box-editor/dist/

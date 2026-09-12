@@ -1,0 +1,17 @@
+{
+  "name": "@reclizer/cs2-box-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CS2-Box visual box/price-table config editor — static, zero-dependency, deployable to GitHub Pages.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "build": "node build.mjs",
+    "sync": "python ../scripts/sync-box-editor-data.py || python3 ../scripts/sync-box-editor-data.py",
+    "deploy:gh-pages": "npm run build && npx --yes gh-pages -d dist -a -m \"chore(box-editor): deploy build\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

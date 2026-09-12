@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS2-Box Box Config Editor</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">▣</span>
+    <div class="brand-text">
+      <h1 id="app-title">CS2-Box Box Config Editor</h1>
+      <p id="app-subtitle"></p>
+    </div>
+  </div>
+  <div class="topbar-controls">
+    <label class="ctl"><span id="lang-label"></span>
+      <select id="lang-select">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+    <label class="ctl"><span id="version-label"></span>
+      <select id="version-select"></select>
+    </label>
+    <button id="btn-new" class="btn">New</button>
+    <button id="btn-import" class="btn">Import</button>
+    <button id="btn-example" class="btn accent">Examples</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="left column" id="form-root"></section>
+
+  <aside class="right column">
+    <div class="preview-toolbar">
+      <div class="tab-row">
+        <button id="tab-box" class="tab active" data-action="tab" data-tab="box">Box JSON</button>
+        <button id="tab-prices" class="tab" data-action="tab" data-tab="prices">_prices.json</button>
+      </div>
+      <div class="preview-actions">
+        <label class="chk" title=""><input type="checkbox" id="compact-toggle" checked><span id="compact-label"></span></label>
+        <button class="btn small" data-action="copy" id="btn-copy">Copy</button>
+        <button class="btn small" data-action="download" id="btn-download">Download</button>
+        <button class="btn small accent" data-action="download-all" id="btn-download-all">All</button>
+      </div>
+    </div>
+    <div class="path-hint" id="path-hint"></div>
+    <pre class="json-preview" id="json-preview"></pre>
+    <section class="issues" id="issues-root"></section>
+  </aside>
+</main>
+
+<footer class="foot" id="app-foot"></footer>
+
+<input type="file" id="file-input" accept=".json,application/json" hidden>
+
+<dialog id="import-dialog" class="dlg">
+  <h2 id="import-title">Paste JSON</h2>
+  <textarea id="import-textarea" rows="10" class="grow"></textarea>
+  <div class="dlg-actions">
+    <button class="btn" id="import-cancel">Cancel</button>
+    <button class="btn accent" id="import-do">Import</button>
+  </div>
+</dialog>
+
+<dialog id="example-dialog" class="dlg">
+  <h2 id="example-title">Examples</h2>
+  <ul class="example-list" id="example-list"></ul>
+  <div class="dlg-actions">
+    <button class="btn" id="example-close">Close</button>
+  </div>
+</dialog>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/validator.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

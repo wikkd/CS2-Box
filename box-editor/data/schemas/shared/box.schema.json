@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csgobox.reclizer.com/schemas/box.schema.json",
+  "title": "CS2-Box Box Definition",
+  "description": "Schema for a CS2-Box crate / terminal definition (config/csbox/<id>.json). The file name (minus .json) becomes the box id. Terminal prices are NOT part of box files anymore — they live in the central price table config/csbox/_prices.json (see prices.schema.json); a leftover 'price' field is rejected by the runtime validator. Runtime validation in-game is authoritative; this schema is an authoring aid for IDE autocomplete / offline checks.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name shown on the box item and GUI. May start with a '#RRGGBB ' color prefix (e.g. \"#FF5555 神化宝石箱\")."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "csbox",
+        "terminal"
+      ],
+      "description": "csbox = regular crate (default), terminal = terminal machine. Terminals must NOT declare a key field."
+    },
+    "key": {
+      "type": "string",
+      "description": "Key item id required to open. Use minecraft:air for a keyless box. Terminals forbid this field."
+    },
+    "drop": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Default entity drop chance (0.0-1.0)."
+    },
+    "random": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10000
+      },
+      "description": "Five grade weights ordered grade1(common)..grade5(rare). Non-positive uses defaults; >10000 clamps."
+    },
+    "entity": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        ]
+      },
+      "description": "Entity ids that drop this box, or alternating id/rate pairs."
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "v2.1.0: false skips this box entirely (no error)."
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "v2.1.0: list of mod ids that must be loaded; the box is skipped with an error when any is missing."
+    },
+    "icon": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Item-model id (26.x renders directly; other versions warn)"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "description": "CustomModelData value (pair with a resource pack)"
+        }
+      ],
+      "description": "v2.1.0: per-box icon override."
+    },
+    "discount": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.0,
+      "description": "v2.1.0: terminal price discount (0..1 off), e.g. 0.2 = 20% off."
+    },
+    "stock": {
+      "type": "integer",
+      "minimum": -1,
+      "default": -1,
+      "description": "v2.1.0: terminal stock limit; -1 = unlimited."
+    },
+    "restock_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "v2.1.0: minutes between stock refills; 0 = never auto-restock."
+    },
+    "max_per_player": {
+      "type": "integer",
+      "minimum": -1,
+      "default": -1,
+      "description": "v2.1.0: per-player open cap; -1 = unlimited (in-memory, resets on restart)."
+    },
+    "cooldown_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "v2.1.0: per-box open cooldown; 0 = none."
+    },
+    "permission": {
+      "type": "string",
+      "description": "v2.1.0: permission node checked against the PERMISSION_GATE hook (default allow-all)."
+    },
+    "grade1": {
+      "$ref": "#/$defs/grade"
+    },
+    "grade2": {
+      "$ref": "#/$defs/grade"
+    },
+    "grade3": {
+      "$ref": "#/$defs/grade"
+    },
+    "grade4": {
+      "$ref": "#/$defs/grade"
+    },
+    "grade5": {
+      "$ref": "#/$defs/grade"
+    }
+  },
+  "$defs": {
+    "grade": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      },
+      "description": "Items in this grade tier (grade1 lowest rarity .. grade5 highest)."
+    },
+    "item": {
+      "type": "object",
+      "description": "One item pool entry. Exactly one source: id, '#tag' or loot_table. Terminal prices come from the central _prices.json table, never from this object.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Item registry id, e.g. minecraft:diamond_sword."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Item tag reference starting with '#', e.g. #minecraft:swords. Expanded at load time."
+        },
+        "loot_table": {
+          "type": "string",
+          "description": "Loot table reference, e.g. minecraft:chests/simple_dungeon. Rolled at open time."
+        },
+        "count": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "description": "Item count, or [min,max] rolled at open time (v2.1.0)."
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1,
+          "description": "v2.1.0: intra-grade weight; 0 disables the entry."
+        },
+        "enchant": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Enchantment id, e.g. minecraft:sharpness"
+                },
+                "level": {
+                  "oneOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  ],
+                  "description": "Fixed level or [min,max] range."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "v2.1.0: random-enchant shortcut (true = any enchant, or {id, level})."
+        },
+        "price": {
+          "not": {},
+          "description": "REMOVED — do not use. Terminal prices are centrally managed in config/csbox/_prices.json (see prices.schema.json). A leftover price here is reported by the in-game validator; this item then falls back to the grade default price until migrated."
+        },
+        "components": {
+          "type": "object",
+          "description": "Data components (1.21+/26.x). Ignored on 1.20.1."
+        },
+        "tag_nbt": {
+          "type": "string",
+          "description": "Legacy NBT tag string (1.20.1 / old configs)."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "tag"
+          ]
+        },
+        {
+          "required": [
+            "loot_table"
+          ]
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

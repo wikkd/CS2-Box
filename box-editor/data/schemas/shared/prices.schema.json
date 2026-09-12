@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://csgobox.reclizer.com/schemas/prices.schema.json",
+  "title": "CS2-Box Price Table",
+  "description": "Central terminal price table (config/csbox/_prices.json). Keys are item registry ids ('minecraft:diamond_sword') or id#variant sub-keys for NBT-distinguished items ('tacz:modern_kinetic_gun#tacz:deagle_golden'); values are non-negative integers in Armory Points. Items without an entry use the grade default price (grade1..5 = 6/10/16/22/30). The underscore prefix keeps the file out of the box scan.",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$"
+  },
+  "additionalProperties": {
+    "type": "integer",
+    "minimum": 0,
+    "description": "Terminal purchase price in Armory Points for the item id (or id#variant)."
+  }
+}

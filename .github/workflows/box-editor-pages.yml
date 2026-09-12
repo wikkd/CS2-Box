@@ -1,0 +1,62 @@
+name: Deploy Box Editor to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'box-editor/**'
+      - 'scripts/sync-box-editor-data.py'
+      - 'docs/box-schema/**'
+      - 'docs/examples/**'
+      - '.github/workflows/box-editor-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-box-editor
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: box-editor/package.json
+
+      - name: Regenerate embedded data from docs
+        working-directory: box-editor
+        run: npm run sync
+
+      - name: Build static site
+        working-directory: box-editor
+        run: npm run build
+
+      - name: Sanity check output
+        working-directory: box-editor
+        run: |
+          test -f dist/index.html && test -f dist/js/data.js && test -f dist/js/app.js
+          echo "dist contents:" && ls -R dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: box-editor/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
