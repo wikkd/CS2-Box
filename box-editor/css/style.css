@@ -813,3 +813,10 @@ input[type="checkbox"]:indeterminate { accent-color: var(--warn); }
   cursor: pointer;
 }
 .name-color-row input[type="color"]:hover { border-color: var(--accent); }
+
+/* ---------- tutorial dialog ---------- */
+.tutorial-body { line-height: 1.75; font-size: 13px; margin-top: 8px; max-height: 55vh; overflow: auto; }
+.tutorial-body ol { margin: 0; padding-left: 20px; }
+.tutorial-body ol > li { margin: 8px 0; }
+.tutorial-body ul { margin: 4px 0 0; padding-left: 18px; }
+.tutorial-body code { white-space: nowrap; }

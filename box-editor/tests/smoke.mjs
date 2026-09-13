@@ -104,6 +104,15 @@ try {
   check('entity input offers vanilla mob dropdown',
     entityListAttr === 'csbox-entity-list' && entityOptionCount >= 70, 'options=' + entityOptionCount);
 
+  // TACZ import tutorial dialog
+  await page.click('[data-action="tacz-tutorial"]');
+  const tutorialOpen = await page.locator('#tutorial-dialog').evaluate((el) => el.open);
+  const tutorialLis = await page.locator('#tutorial-body li').count();
+  const tutorialHasReload = ((await page.locator('#tutorial-body').textContent()) || '').includes('/csbox reload');
+  check('TACZ tutorial dialog opens with import steps',
+    tutorialOpen && tutorialLis >= 8 && tutorialHasReload, 'li=' + tutorialLis);
+  await page.click('#tutorial-close');
+
   await page.locator('[data-f="meta.fileName"]').hover();
   await page.waitForTimeout(350);
   const tipVisible = await page.locator('.field-tooltip').evaluate((el) => el.classList.contains('show'));

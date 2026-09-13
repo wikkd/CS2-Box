@@ -110,6 +110,27 @@ window.CSBI18N = (function () {
       'item.componentsHelp': '如 {"minecraft:enchantments":{"minecraft:power":5}}',
 
       'tacz.title': 'TACZ 专属字段',
+      'tacz.tutorialBtn': '查看 TACZ 导入教程',
+      'tacz.tutorialTitle': 'TACZ 枪械/弹药导入教程',
+      'tacz.tutorial': '<ol>' +
+        '<li>打开「TACZ 专属字段」开关（自动模式下 1.21.1 / Forge 1.20.1 已开启）。</li>' +
+        '<li>在奖池点「＋ 添加物品」，来源选 <b>物品 ID</b>，物品框填入枪械或弹药 ID：' +
+        '<ul><li>枪械：<code>tacz:modern_kinetic_gun</code></li>' +
+        '<li>弹药：<code>tacz:ammo</code></li></ul></li>' +
+        '<li>填写「TACZ 变体」：' +
+        '<ul><li>枪械：变体字段保持 <code>GunId</code>，值填枪械名，如 <code>tacz:ak47</code></li>' +
+        '<li>弹药：变体字段改为 <code>AmmoId</code>，值填弹药名，如 <code>tacz:556x45</code></li></ul></li>' +
+        '<li>高级方式：不用变体输入，直接在「原始 NBT tag」粘贴 ' +
+        '<code>{GunId:"tacz:ak47"}</code>（或 <code>{AmmoId:"tacz:556x45"}</code>）。</li>' +
+        '<li>价格表会自动生成 <code>id#变体</code> 键（如 ' +
+        '<code>tacz:modern_kinetic_gun#tacz:ak47</code>），填上武库点数即可。</li>' +
+        '<li><b>26.x 默认不支持 #变体 键</b>：数据按纯 id 价回退并提示；如需在 26.x ' +
+        '使用可强制启用开关，但服务端是否接受取决于你的整合包。</li>' +
+        '<li>下载 <code>箱名.json</code> 与 <code>_prices.json</code> 放入 ' +
+        '<code>config/csbox/</code>（_prices.json 全局一份），游戏内执行 ' +
+        '<code>/csbox reload</code> 生效。</li>' +
+        '<li>参考联动包示例：仓库 <code>compat-packs/tacz-pack/</code>（枪械箱 + 价格表）。</li>' +
+        '</ol>',
       'tacz.help': '在物品上显示 TACZ 变体 / 原始 NBT 输入，并允许 id#变体 价格键。自动时跟随所选版本；点击开关可强制启用/禁用。',
       'tacz.state.auto': '自动',
       'tacz.state.yes': '当前版本支持变体键',
@@ -211,6 +232,7 @@ window.CSBI18N = (function () {
       'import.cancel': '取消',
       'paste.cancel': '取消',
       'paste.do': '确定',
+      'tutorial.close': '关闭',
 
       'example.title': '内置示例',
       'example.load': '载入',
@@ -324,6 +346,27 @@ window.CSBI18N = (function () {
       'item.componentsHelp': 'e.g. {"minecraft:enchantments":{"minecraft:power":5}}',
 
       'tacz.title': 'TACZ-specific fields',
+      'tacz.tutorialBtn': 'TACZ import tutorial',
+      'tacz.tutorialTitle': 'TACZ gun/ammo import tutorial',
+      'tacz.tutorial': '<ol>' +
+        '<li>Turn on the "TACZ-specific fields" switch (auto mode: 1.21.1 / Forge 1.20.1 are on).</li>' +
+        '<li>Click "+ Add item" in a pool, source = <b>Item ID</b>, and enter the gun/ammo id:' +
+        '<ul><li>gun: <code>tacz:modern_kinetic_gun</code></li>' +
+        '<li>ammo: <code>tacz:ammo</code></li></ul></li>' +
+        '<li>Fill in the "TACZ variant":' +
+        '<ul><li>gun: keep the variant field <code>GunId</code>, e.g. <code>tacz:ak47</code></li>' +
+        '<li>ammo: switch the variant field to <code>AmmoId</code>, e.g. <code>tacz:556x45</code></li></ul></li>' +
+        '<li>Advanced: paste the raw NBT instead — ' +
+        '<code>{GunId:"tacz:ak47"}</code> (or <code>{AmmoId:"tacz:556x45"}</code>).</li>' +
+        '<li>The price table auto-creates <code>id#variant</code> keys (e.g. ' +
+        '<code>tacz:modern_kinetic_gun#tacz:ak47</code>); fill in Armory Points.</li>' +
+        '<li><b>26.x defaults to no #variant keys</b>: data falls back to the plain id ' +
+        'with a hint; you may force the switch on, but server acceptance depends on your pack.</li>' +
+        '<li>Download <code>box-name.json</code> and <code>_prices.json</code> into ' +
+        '<code>config/csbox/</code> (one _prices.json for the server), then run ' +
+        '<code>/csbox reload</code> in-game.</li>' +
+        '<li>Reference pack: <code>compat-packs/tacz-pack/</code> in this repository.</li>' +
+        '</ol>',
       'tacz.help': 'Show TACZ variant / raw NBT inputs on items and allow id#variant price keys. Auto follows the selected version; the switch can force enable/disable.',
       'tacz.state.auto': 'Auto',
       'tacz.state.yes': 'version supports variant keys',
@@ -425,6 +468,7 @@ window.CSBI18N = (function () {
       'import.cancel': 'Cancel',
       'paste.cancel': 'Cancel',
       'paste.do': 'OK',
+      'tutorial.close': 'Close',
 
       'example.title': 'Built-in examples',
       'example.load': 'Load',

@@ -309,6 +309,7 @@
       'btn-undo': 'app.undo',
       'btn-redo': 'app.redo',
       'btn-share': 'app.share',
+      'tutorial-close': 'tutorial.close',
       'btn-copy': 'preview.copy',
       'btn-download': 'preview.download',
       'btn-download-all': 'preview.downloadAll',
@@ -384,6 +385,9 @@
 
     const exd = $('#example-dialog');
     $('#example-close').addEventListener('click', () => exd.close());
+
+    const td = $('#tutorial-dialog');
+    if (td) $('#tutorial-close').addEventListener('click', () => td.close());
 
     const pad = $('#paste-dialog');
     $('#paste-cancel').addEventListener('click', () => pad.close());
@@ -737,6 +741,14 @@
           shareLink();
           break;
         }
+        case 'tacz-tutorial': {
+          const td = $('#tutorial-dialog');
+          if (!td) break;
+          $('#tutorial-title').textContent = t('tacz.tutorialTitle');
+          $('#tutorial-body').innerHTML = t('tacz.tutorial');
+          td.showModal();
+          break;
+        }
         case 'tab': {
           currentTab = btn.dataset.tab;
           rebuildPreview();
@@ -900,6 +912,7 @@
       '<div>' +
       '<h2>' + esc(t('tacz.title')) + '</h2>' +
       '<p class="help">' + esc(t('tacz.help')) + '</p>' +
+      '<button class="btn small" data-action="tacz-tutorial">' + esc(t('tacz.tutorialBtn')) + '</button>' +
       '</div>' +
       '<label class="chk tacz-switch" data-help="tacz.tip">' +
       '<input type="checkbox" id="tacz-toggle"' + (on ? ' checked' : '') + '>' +
