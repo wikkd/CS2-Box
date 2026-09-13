@@ -1,24 +1,28 @@
 package com.reclizer.csgobox.v1_21_1.packet;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
-import com.reclizer.csgobox.v1_21_1.capability.CsboxPlayerData;
-import com.reclizer.csgobox.v1_21_1.capability.ModCapability;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.box.GradeGroup;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpeningEvent;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
-import com.reclizer.csgobox.logic.GradeMap;
+import com.reclizer.csgobox.v1_21_1.box.BoxItemResolver;
+import com.reclizer.csgobox.logic.BoxConstraintTracker;
 import com.reclizer.csgobox.logic.GradeMapCache;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
+import com.reclizer.csgobox.logic.PityPolicy;
+import com.reclizer.csgobox.logic.PityTracker;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -74,138 +78,31 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            if (OpenBlockGuard.isBlocked(player.getUUID(), player.level().getGameTime())) {
+            // v2.2.0: the whole headless pipeline (guards, BoxOpeningEvent,
+            // constraints, pity, roll, keys, grant, records) moved to
+            // BoxOpenExecutor, shared with the Create deployer compat so a
+            // mechanical deployer holding the key opens crates with identical
+            // rules. Note the prize is now granted slightly before the
+            // animation packet is sent (same tick, no visible change).
+            BoxOpenExecutor.Outcome outcome = BoxOpenExecutor.execute(player, box, true, true);
+            if (outcome == null) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(sp, message.requestId());
                 }
                 return;
             }
-
-var boxId = ItemCsgoBox.getBoxId(box);
-            if (boxId == null) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-            // Same guard for a box_id pointing at a terminal from a plain box stack.
-            if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            // Mods may veto the open before any roll or consumption.
-            BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
-            NeoForge.EVENT_BUS.post(opening);
-            if (opening.isCanceled()) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            int[] weights = ItemCsgoBox.getRandom(box);
-            if (weights.length == 0) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            long serverSeed = SECURE_RANDOM.nextLong();
-            var rng = new Random(serverSeed);
-
-            // Grade pool is immutable per box id (shared cache with the bulk
-            // path, invalidated on reload). pickRandom returns copies, so
-            // callers may mutate freely.
-            var gradeMap = GradeMapCache.get(boxId.toString(),
-                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
-            if (gradeMap.isEmpty()) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
-            int winningIndex = strip.winningIndex();
-            if (winningIndex < 0) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            ItemStack giveItem = strip.items().get(winningIndex);
-            int finalGrade = strip.grades().get(winningIndex);
-
-            if (giveItem.isEmpty()) {
-                giveItem = gradeMap.findFallback(1);
-                if (giveItem == null) giveItem = ItemStack.EMPTY;
-                if (giveItem.isEmpty()) {
-                    if (player instanceof ServerPlayer sp) {
-                        sendRejected(sp, message.requestId());
-                    }
-                    return;
-                }
-                finalGrade = resolveGrade(giveItem, boxId, 1);
-                strip.items().set(winningIndex, giveItem.copy());
-                strip.grades().set(winningIndex, finalGrade);
-            }
-
-            // Consume keys only after the whole roll is validated — a broken
-            // definition must never eat a key.
-            if (!tryConsumeKeys(player, box, 1)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(sp, message.requestId());
-                }
-                return;
-            }
-
-            float wear = 0F;
-            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
-                wear = rng.nextFloat();
-                applyWearDamage(giveItem, wear);
-            }
-
-            OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
-
-            player.setData(ModCapability.PLAYER_DATA,
-                    new CsboxPlayerData(serverSeed, 0, giveItem.copy(), finalGrade));
 
             if (player instanceof ServerPlayer sp) {
                 PacketDistributor.sendToPlayer(sp, new PacketBoxOpenResult(
-                        finalGrade,
-                        winningIndex,
+                        outcome.grade(),
+                        outcome.winningIndex(),
                         message.requestId(),
-                        strip.items(),
-                        strip.grades()
+                        outcome.animationItems(),
+                        outcome.animationGrades()
                 ));
             }
-
-            ItemStack toGive = giveItem.copy();
-            boolean added = player.getInventory().add(toGive);
-            if (!added && !toGive.isEmpty()) {
-                player.drop(toGive, false);
-            }
-            // Creative mode is fully free (parity with tryConsumeKeys).
-            if (!player.getAbilities().instabuild) {
-                box.shrink(1);
-            }
-
-            if (player instanceof ServerPlayer sp) {
-                sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
-                if (CsgoBox.CONFIG.enableAchievements()) {
-                    OpenedBoxTrigger.INSTANCE.trigger(sp, finalGrade);
-                }
-            }
-
-            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));        });
+        });
     }
-
-
 
     static void sendRejected(ServerPlayer player, long requestId) {
         PacketDistributor.sendToPlayer(player, new PacketBoxOpenResult(

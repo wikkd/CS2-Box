@@ -1,6 +1,7 @@
 # ProGuard / R8 minify rules for CS2-Box mod.
 # Applied via: ./gradlew :v1_21_1:minifyJar -Pactive_versions=1.21.1
-# (or :v26_1_2 / :v26_2). Output: build/libs/csgobox-<mc>-1.0.6-minified.jar.
+# (or :v26_1_2 / :v26_2 / :forge_26_1_2 / :forge_26_2 / :forge_1_20_1).
+# Output: build/libs/csgobox-<mc>-<mod_version>-minified.jar.
 
 # ---- 1. Mod entry point ----
 # The @Mod entry class is discovered by string-key lookup in mods.toml.
@@ -51,13 +52,6 @@
     public ** id();
     public ** streamCodec();
 }
-
-# ---- 4. Capability attachment data (NBT-serialised) ----
-# CsboxPlayerData read from NBT / Capability by Forge via reflection
-# on the no-arg constructor + Codec/StreamCodec fields.
--keep class com.reclizer.csgobox.**.capability.** { *; }
--keepclassmembers class * implements net.neoforged.neoforge.attachment.IAttachmentHolder { *; }
--keepclassmembers class com.reclizer.csgobox.**.capability.ModCapability$* { *; }
 
 # ---- 5. Static init / JSON load / item registration ----
 # ItemCsgoBox / BoxRegistry / BoxJsonLoader run side effects in <clinit>

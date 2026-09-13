@@ -1,22 +1,26 @@
 package com.reclizer.csgobox.forge_1_20_1.packet;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.advancement.OpenedBoxTrigger;
-import com.reclizer.csgobox.forge_1_20_1.capability.CsboxPlayerData;
-import com.reclizer.csgobox.forge_1_20_1.capability.ModCapability;
 import com.reclizer.csgobox.forge_1_20_1.event.BoxOpeningEvent;
 import com.reclizer.csgobox.forge_1_20_1.event.BoxOpenedEvent;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
+import com.reclizer.csgobox.forge_1_20_1.box.BoxItemResolver;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
 import com.reclizer.csgobox.forge_1_20_1.box.GradeGroup;
-import com.reclizer.csgobox.logic.GradeMap;
+import com.reclizer.csgobox.logic.BoxConstraintTracker;
 import com.reclizer.csgobox.logic.GradeMapCache;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
+import com.reclizer.csgobox.logic.PityPolicy;
+import com.reclizer.csgobox.logic.PityTracker;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemTerminal;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -76,109 +80,26 @@ public class PacketCsgoProgress {
             return;
         }
 
-        if (OpenBlockGuard.isBlocked(player.getUUID(), player.level().getGameTime())) {
+        // v2.2.0: the whole headless pipeline (guards, BoxOpeningEvent,
+        // constraints, pity, roll, keys, grant, records) moved to
+        // BoxOpenExecutor, shared with the Create deployer compat so a
+        // mechanical deployer holding the key opens crates with identical
+        // rules. Note the prize is now granted slightly before the
+        // animation packet is sent (same tick, no visible change).
+        BoxOpenExecutor.Outcome outcome = BoxOpenExecutor.execute(player, box, true, true);
+        if (outcome == null) {
             sendRejectedToPlayer(message.requestId, player);
             return;
         }
-
-        var boxId = ItemCsgoBox.getBoxId(box);
-        if (boxId == null) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-        if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        BoxOpeningEvent opening = new BoxOpeningEvent(player, boxId, false, 1);
-        BoxOpeningEvent.BUS.post(opening);
-        if (opening.isCanceled()) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        int[] weights = ItemCsgoBox.getRandom(box);
-        if (weights.length == 0) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        long serverSeed = SECURE_RANDOM.nextLong();
-        var rng = new Random(serverSeed);
-
-        var gradeMap = GradeMapCache.get(boxId.toString(),
-                () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
-        if (gradeMap.isEmpty()) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
-        int winningIndex = strip.winningIndex();
-        if (winningIndex < 0) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        ItemStack giveItem = strip.items().get(winningIndex);
-        int finalGrade = strip.grades().get(winningIndex);
-
-        if (giveItem.isEmpty()) {
-            giveItem = gradeMap.findFallback(1);
-            if (giveItem == null) giveItem = ItemStack.EMPTY;
-            if (giveItem.isEmpty()) {
-                sendRejectedToPlayer(message.requestId, player);
-                return;
-            }
-            finalGrade = resolveGrade(giveItem, boxId, 1);
-            strip.items().set(winningIndex, giveItem.copy());
-            strip.grades().set(winningIndex, finalGrade);
-        }
-
-        if (!tryConsumeKeys(player, box, 1)) {
-            sendRejectedToPlayer(message.requestId, player);
-            return;
-        }
-
-        float wear = 0F;
-        if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
-            wear = rng.nextFloat();
-            applyWearDamage(giveItem, wear);
-        }
-
-        OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
-
-        final ItemStack capturedGiveItem = giveItem.copy();
-        final int capturedGrade = finalGrade;
-        player.getCapability(ModCapability.PLAYER_DATA).ifPresent(holder -> holder.set(
-                new CsboxPlayerData(serverSeed, 0, capturedGiveItem, capturedGrade)));
 
         Networking.INSTANCE.reply(new PacketBoxOpenResult(
-                giveItem.copy(),
-                finalGrade,
-                winningIndex,
-                serverSeed,
+                outcome.animItem().copy(),
+                outcome.grade(),
+                outcome.winningIndex(),
                 message.requestId,
-                strip.items(),
-                strip.grades()
+                outcome.animationItems(),
+                outcome.animationGrades()
         ), context);
-
-        ItemStack toGive = giveItem.copy();
-        boolean added = player.getInventory().add(toGive);
-        if (!added && !toGive.isEmpty()) {
-            player.drop(toGive, false);
-        }
-        if (!player.getAbilities().instabuild) {
-            box.shrink(1);
-        }
-
-        player.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
-        if (CsgoBox.CONFIG.enableAchievements()) {
-            OpenedBoxTrigger.INSTANCE.trigger(player);
-        }
-
-        BoxOpenedEvent.BUS.post(new BoxOpenedEvent(player, boxId, giveItem.copy(), finalGrade, false));
     }
 
     static void sendRejected(long requestId) {
@@ -187,7 +108,7 @@ public class PacketCsgoProgress {
 
     static void sendRejectedToPlayer(long requestId, ServerPlayer player) {
         Networking.sendToPlayer(new PacketBoxOpenResult(
-                ItemStack.EMPTY, 1, 0, 0L, requestId, List.of(), List.of()), player);
+                ItemStack.EMPTY, 1, 0, requestId, List.of(), List.of()), player);
     }
 
     public static void applyWearDamage(ItemStack stack, float wear) {

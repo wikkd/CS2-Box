@@ -1,24 +1,28 @@
 package com.reclizer.csgobox.forge_26_1_2.packet;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.box.BoxStripGenerator;
+import com.reclizer.csgobox.logic.BoxConstraintTracker;
+import com.reclizer.csgobox.logic.GradeMapCache;
+import com.reclizer.csgobox.logic.OddsCalculator;
+import com.reclizer.csgobox.logic.OpenBlockGuard;
+import com.reclizer.csgobox.logic.PityPolicy;
+import com.reclizer.csgobox.logic.PityTracker;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.advancement.OpenedBoxTrigger;
-import com.reclizer.csgobox.forge_26_1_2.capability.CsboxPlayerData;
-import com.reclizer.csgobox.forge_26_1_2.capability.ModCapability;
 import com.reclizer.csgobox.forge_26_1_2.event.BoxOpeningEvent;
 import com.reclizer.csgobox.forge_26_1_2.event.BoxOpenedEvent;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxDefinition;
+import com.reclizer.csgobox.forge_26_1_2.box.BoxItemResolver;
 import com.reclizer.csgobox.forge_26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_26_1_2.box.GradeGroup;
-import com.reclizer.csgobox.logic.GradeMap;
-import com.reclizer.csgobox.logic.GradeMapCache;
-import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.item.ItemTerminal;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -89,7 +93,8 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
             // Same guard for a box_id pointing at a terminal from a plain box stack.
-            if (BoxRegistry.get(boxId) != null && BoxRegistry.get(boxId).isTerminal()) {
+            BoxDefinition def = BoxRegistry.get(boxId);
+            if (def != null && def.isTerminal()) {
                 sendRejected(context, message.requestId());
                 return;
             }
@@ -103,27 +108,61 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             }
 
             int[] weights = ItemCsgoBox.getRandom(box);
-            if (weights.length == 0) {
+            if (weights.length == 0 || !BoxOdds.hasOpenableWeights(weights)) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
                 return;
             }
 
+            // v2.1.1-hardening: serverSeed comes from a CSPRNG and must NEVER be
+            // logged, sent to clients or exposed through events — Random(seed)
+            // is a 48-bit LCG; anyone holding the seed can replay the roll.
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
 
             // Grade pool is immutable per box id (shared cache with the bulk
-            // path, invalidated on reload). pickRandom returns copies, so
-            // callers may mutate freely.
+            // path, invalidated on reload). v2.1.0 builds the pool with
+            // per-item weights. pickRandom returns copies, so callers may
+            // mutate freely.
             var gradeMap = GradeMapCache.get(boxId.toString(),
-                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(box), stack -> !stack.isEmpty(), ItemStack::copy));
+                    () -> ItemCsgoBox.buildGradeMap(box));
             if (gradeMap.isEmpty()) {
                 if (player instanceof ServerPlayer sp) {
                     sendRejected(context, message.requestId());
                 }
                 return;
             }
+
+            // v2.1.0 constraints (in-memory, server-authoritative): per-player
+            // open cap and per-box cooldown are checked before the roll so a
+            // capped player never wastes a key.
+            if (!BoxConstraintTracker.underPerPlayerCap(player.getStringUUID(), boxId.toString(), def.maxPerPlayer())) {
+                player.sendSystemMessage(Component.translatable(
+                        "commands.csgobox.constraint.capped", def.name(), def.maxPerPlayer()));
+                sendRejected(context, message.requestId());
+                return;
+            }
+            if (!BoxConstraintTracker.cooldownElapsed(
+                    player.getStringUUID(), boxId.toString(), def.cooldownSeconds(), player.level().getGameTime())) {
+                player.sendSystemMessage(Component.translatable(
+                        "commands.csgobox.constraint.cooldown", def.name()));
+                sendRejected(context, message.requestId());
+                return;
+            }
+            if (!def.permission().isBlank() && !CsgoBox.PERMISSION_GATE.test((ServerPlayer) player, def.permission())) {
+                player.sendSystemMessage(Component.translatable(
+                        "commands.csgobox.constraint.permission", def.name()));
+                sendRejected(context, message.requestId());
+                return;
+            }
+
+            // v2.1.1 pity (保底): snapshot the per-player miss streak before
+            // the roll; a forced roll replaces the winning slot below.
+            PityPolicy pity = def != null ? def.pity().orElse(null) : null;
+            int pityStreak = pity != null
+                    ? PityTracker.missStreak(player.getStringUUID(), boxId.toString())
+                    : 0;
 
             var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
             int winningIndex = strip.winningIndex();
@@ -136,6 +175,33 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             ItemStack giveItem = strip.items().get(winningIndex);
             int finalGrade = strip.grades().get(winningIndex);
+            // v2.1.1-fix(B): pity counts the ROLLED grade, never the resolved
+            // (post-fallback) one — a forced roll that lands on the target
+            // grade must reset the streak even when the item pool falls back
+            // to a lower-tier item.
+            int pityRollGrade = finalGrade;
+
+            // v2.1.1 pity: replace the winning slot with a forced roll from
+            // [targetLevel..5] when the miss streak reached the threshold.
+            // pickGradeWithPity returns forced=false when the pity slice has
+            // no positive weight (misconfigured) — the plain roll stands.
+            if (pity != null && pity.shouldForce(pityStreak)) {
+                OddsCalculator.PityResult pityRoll =
+                        OddsCalculator.pickGradeWithPity(rng, weights, pity, pityStreak);
+                if (pityRoll.forced()) {
+                    ItemStack pityItem = gradeMap.pickRandom(rng, pityRoll.grade());
+                    if (pityItem == null) {
+                        pityItem = gradeMap.findFallback(pityRoll.grade());
+                    }
+                    if (pityItem != null) {
+                        giveItem = pityItem;
+                        pityRollGrade = Math.min(Math.max(pityRoll.grade(), 1), 5);
+                        finalGrade = resolveGrade(giveItem, boxId, pityRoll.grade());
+                        strip.items().set(winningIndex, giveItem.copy());
+                        strip.grades().set(winningIndex, finalGrade);
+                    }
+                }
+            }
 
             if (giveItem.isEmpty()) {
                 giveItem = gradeMap.findFallback(1);
@@ -149,6 +215,16 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 finalGrade = resolveGrade(giveItem, boxId, 1);
                 strip.items().set(winningIndex, giveItem.copy());
                 strip.grades().set(winningIndex, finalGrade);
+            }
+
+            // v2.1.0: resolve count-range / random-enchant / loot-table specs
+            // on the winning item BEFORE keys are consumed (a broken loot
+            // table must never eat a key). player.level() returns ServerLevel
+            // on ServerPlayer (covariant override).
+            giveItem = BoxItemResolver.resolve(giveItem, (net.minecraft.server.level.ServerLevel) player.level(), rng);
+            if (giveItem.isEmpty()) {
+                sendRejected(context, message.requestId());
+                return;
             }
 
             // Consume keys only after the whole roll is validated — a broken
@@ -168,22 +244,30 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             OpenBlockGuard.block(player.getUUID(), player.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
 
-            final ItemStack capturedGiveItem = giveItem.copy();
-            final int capturedGrade = finalGrade;
-            player.getCapability(ModCapability.PLAYER_DATA).ifPresent(holder -> holder.set(
-                    new CsboxPlayerData(serverSeed, 0, capturedGiveItem, capturedGrade)));
+            // v2.2.0-fix: sync the resolved (and wear-damaged) winner back into
+            // the animation strip so the client reveal always matches the
+            // granted item (count-range / random-enchant / loot-table / wear).
+            // The plain roll shares the strip reference, but pity/fallback
+            // branches replace the winner with a fresh copy — mirror the bulk
+            // path (finalizeBulkOpen) and make it unconditional.
+            strip.items().set(winningIndex, giveItem.copy());
 
             Networking.INSTANCE.reply(new PacketBoxOpenResult(
                     giveItem.copy(),
                     finalGrade,
                     winningIndex,
-                    serverSeed,
                     message.requestId(),
                     strip.items(),
                     strip.grades()
             ), context);
 
             ItemStack toGive = giveItem.copy();
+            // v2.1.0: the rarity grade must ride on the granted stack — the
+            // armory recycler only accepts items carrying csgobox:grade. Bulk
+            // open (PacketCsgoBulkProgress) and terminal buys already stamp it;
+            // this single-open path was missing it, so normally-opened items
+            // could never be dismantled.
+            toGive.set(ItemCsgoBox.GRADE.get(), finalGrade);
             boolean added = player.getInventory().add(toGive);
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
@@ -191,6 +275,17 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             // Creative mode is fully free (parity with tryConsumeKeys).
             if (!player.getAbilities().instabuild) {
                 box.shrink(1);
+            }
+
+            // Record the successful open for max_per_player / cooldown.
+            BoxConstraintTracker.recordOpen(player.getStringUUID(), boxId.toString(), player.level().getGameTime());
+
+            // v2.1.1 pity: advance the miss streak only after the item was
+            // actually given (rejected/aborted opens never count). Uses the
+            // ROLLED grade (pityRollGrade), not the resolved/final one.
+            if (pity != null) {
+                PityTracker.recordOpen(player.getStringUUID(), boxId.toString(),
+                        pityRollGrade, pity.targetLevel());
             }
 
             if (player instanceof ServerPlayer sp) {
@@ -210,7 +305,6 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 ItemStack.EMPTY,
                 1,
                 0,
-                0L,
                 requestId,
                 List.of(),
                 List.of()

@@ -26,16 +26,14 @@ public class PacketBoxOpenResult {
     private final ItemStack item;
     private final int grade;
     private final int winningIndex;
-    private final long serverSeed;
     private final long requestId;
     private final List<ItemStack> animationItems;
     private final List<Integer> animationGrades;
 
-    public PacketBoxOpenResult(ItemStack item, int grade, int winningIndex, long serverSeed,
+    public PacketBoxOpenResult(ItemStack item, int grade, int winningIndex,
                                long requestId, List<ItemStack> animationItems, List<Integer> animationGrades) {
         this.item = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = Mth.clamp(grade, 1, 5);
-        this.serverSeed = serverSeed;
         this.requestId = requestId;
         this.animationItems = animationItems == null ? List.of() : List.copyOf(PacketValidation.copyStacks(animationItems));
         this.animationGrades = animationGrades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(animationGrades, 1, 5, 1));
@@ -49,7 +47,6 @@ public class PacketBoxOpenResult {
         this.item = tag == null ? ItemStack.EMPTY : ItemStack.of(tag);
         this.grade = Mth.clamp(buf.readVarInt(), 1, 5);
         this.winningIndex = Mth.clamp(buf.readVarInt(), 0, ANIMATION_ITEM_COUNT - 1);
-        this.serverSeed = buf.readLong();
         this.requestId = buf.readLong();
         int animationSize = buf.readVarInt();
         if (animationSize < 0 || animationSize > ANIMATION_ITEM_COUNT) {
@@ -70,7 +67,6 @@ public class PacketBoxOpenResult {
         buf.writeNbt(item.save(new CompoundTag()));
         buf.writeVarInt(grade);
         buf.writeVarInt(winningIndex);
-        buf.writeLong(serverSeed);
         buf.writeLong(requestId);
         buf.writeVarInt(animationItems.size());
         for (int i = 0; i < animationItems.size(); i++) {
@@ -82,7 +78,6 @@ public class PacketBoxOpenResult {
     public ItemStack getItem() { return item; }
     public int getGrade() { return grade; }
     public int getWinningIndex() { return winningIndex; }
-    public long getServerSeed() { return serverSeed; }
     public long getRequestId() { return requestId; }
     public List<ItemStack> getAnimationItems() { return animationItems; }
     public List<Integer> getAnimationGrades() { return animationGrades; }

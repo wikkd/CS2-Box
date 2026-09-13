@@ -28,7 +28,6 @@ public record PacketBoxOpenResult(
         ItemStack item,
         int grade,
         int winningIndex,
-        long serverSeed,
         long requestId,
         List<ItemStack> animationItems,
         List<Integer> animationGrades
@@ -68,7 +67,6 @@ public record PacketBoxOpenResult(
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, packet.item);
         buf.writeVarInt(packet.grade);
         buf.writeVarInt(packet.winningIndex);
-        buf.writeLong(packet.serverSeed);
         buf.writeLong(packet.requestId);
         buf.writeVarInt(packet.animationItems.size());
         for (int i = 0; i < packet.animationItems.size(); i++) {
@@ -81,7 +79,6 @@ public record PacketBoxOpenResult(
         ItemStack item = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         int grade = Mth.clamp(buf.readVarInt(), 1, 5);
         int winningIndex = Mth.clamp(buf.readVarInt(), 0, ANIMATION_ITEM_COUNT - 1);
-        long serverSeed = buf.readLong();
         long requestId = buf.readLong();
         int animationSize = buf.readVarInt();
         if (animationSize < 0 || animationSize > ANIMATION_ITEM_COUNT) {
@@ -94,7 +91,7 @@ public record PacketBoxOpenResult(
             animationItems.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
             animationGrades.add(Mth.clamp(buf.readVarInt(), 1, 5));
         }
-        return new PacketBoxOpenResult(item, grade, winningIndex, serverSeed, requestId, animationItems, animationGrades);
+        return new PacketBoxOpenResult(item, grade, winningIndex, requestId, animationItems, animationGrades);
     }
 
     @Override
