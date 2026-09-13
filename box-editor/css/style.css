@@ -28,7 +28,10 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(1200px 600px at 20% -10%, #16202e 0%, var(--bg) 55%);
+  /* The full background stack (cover image + dark scrim) lives in the
+     "page atmosphere" section below, which wins by source order. This
+     base color is the fallback while the stylesheet loads. */
+  background-color: var(--bg);
   color: var(--text);
   font: 14px/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
@@ -469,9 +472,12 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 /* ---------- page atmosphere ---------- */
 html, body {
   background:
+    linear-gradient(rgba(13, 17, 23, 0.82), rgba(13, 17, 23, 0.9)),
+    url('../img/bg.jpg') center / cover no-repeat fixed,
     radial-gradient(900px 420px at 12% -8%, rgba(61, 139, 255, .10) 0%, transparent 60%),
     radial-gradient(700px 380px at 88% -6%, rgba(106, 92, 255, .09) 0%, transparent 55%),
     radial-gradient(1200px 600px at 20% -10%, #16202e 0%, var(--bg) 55%);
+  background-color: var(--bg);
   background-attachment: fixed;
 }
 ::selection { background: rgba(61, 139, 255, .35); color: #fff; }

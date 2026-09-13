@@ -19,6 +19,7 @@ const FILES = [
   'js/model.js',
   'js/validator.js',
   'js/app.js',
+  'img/bg.jpg',
   'data/schemas/shared/box.schema.json',
   'data/schemas/shared/prices.schema.json',
   'README.md',
@@ -63,6 +64,14 @@ async function main() {
     }
   } catch (e) {
     console.error('[build] js/data.js missing — run `npm run sync` first.');
+    process.exitCode = 1;
+  }
+  // sanity: background image is actually shipped
+  try {
+    const bg = await fs.stat(join(OUT, 'img/bg.jpg'));
+    if (!bg.isFile() || bg.size < 100) throw new Error('unexpected size ' + bg.size);
+  } catch (e) {
+    console.error('[build] img/bg.jpg missing or invalid — ' + e.message);
     process.exitCode = 1;
   }
 

@@ -67,6 +67,11 @@ try {
   await page.goto(BASE, { waitUntil: 'load' });
   check('title contains CS2-Box', /CS2-Box/.test(await page.title()));
 
+  const bgImage = await page.evaluate(() => getComputedStyle(document.body).backgroundImage);
+  check('body background uses bundled cover image',
+    bgImage.includes('bg.jpg') && bgImage.split(',').length >= 2,
+    (bgImage || '').slice(0, 60));
+
   const metaInputs = await page.locator('#card-meta input, #card-meta select').count();
   check('meta card has real inputs', metaInputs >= 6, 'count=' + metaInputs);
   check('no escaped ghost inputs',
