@@ -93,6 +93,31 @@ repositories {
             includeGroup 'dev.latvian.apps'
         }
     }
+    // Jade / EMI / WTHIT / TOP — optional client mods. Jade, EMI and WTHIT
+    // resolve from the Modrinth Maven (group maven.modrinth), TOP from the
+    // k-4u Maven (group mcjty.theoneprobe). Groups are pinned so unrelated
+    // artifacts keep resolving from their original repositories.
+    maven {
+        name = 'ModrinthMaven'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    maven {
+        name = 'BaiMaven'
+        url = 'https://maven4.bai.lol'
+        content {
+            includeGroup 'mcp.mobius.waila'
+        }
+    }
+    maven {
+        name = 'McjtyMaven'
+        url = 'https://maven.k-4u.nl'
+        content {
+            includeGroup 'mcjty.theoneprobe'
+        }
+    }
 }
 
 dependencies {
@@ -112,6 +137,27 @@ dependencies {
     compileOnly "me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version_26_1_2}"
     runtimeOnly "me.shedaniel:RoughlyEnoughItems-neoforge:${rei_version_26_1_2}"
 
+    // Cloth Config (optional client config GUI). The screen is a thin
+    // wrapper over the existing ModConfigSpec bindings — no storage change.
+    // compileOnly for the API, runtimeOnly so dev runs ship the Cloth jar.
+    // Runtime guard: ModList.isLoaded("cloth_config"); without it the mod
+    // simply keeps the TOML-only workflow (no Configure button).
+    compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version_26_1_2}"
+    runtimeOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version_26_1_2}"
+
+    // Jade (hover information overlay) — optional client mod, Modrinth Maven.
+    // compileOnly for the plugin API; discovery is @WailaPlugin annotation
+    // scanning, performed only by Jade itself.
+    compileOnly "maven.modrinth:jade:${jade_version_26_1_2}"
+
+    // WTHIT (hover information overlay) — optional client mod; compileOnly
+    // against the published wthit-api artifact.
+    compileOnly "mcp.mobius.waila:wthit-api:${wthit_version_26_1_2}"
+
+    // The One Probe — optional client mod. The ":api" classifier ships the
+    // plugin API without the implementation.
+    compileOnly "mcjty.theoneprobe:theoneprobe:${top_version_26_1_2}:api"
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -129,13 +175,13 @@ tasks.withType(Test).configureEach {
 }
 
 def removeStaleBuildResources = { task ->
-    def buildRes = file("$buildDir/resources/main")
+    def buildRes = layout.buildDirectory.dir("resources/main").get().asFile
     if (!buildRes.exists()) {
         return
     }
     def staleArtifacts = []
     buildRes.eachFileRecurse(groovy.io.FileType.ANY) { f ->
-        if (f.name ==~ /.+ [0-9]+(\..+)?/) {
+        if (f.name ==~ /.+[ ][0-9]+(\..+)?/ || f.name ==~ /.+\+[0-9]+(\..+)?/) {
             staleArtifacts << f
         }
     }
@@ -161,6 +207,11 @@ def purgeStaleBuildResources = tasks.register('purgeStaleBuildResources') {
 tasks.named('processResources', ProcessResources).configure {
     dependsOn purgeStaleBuildResources
 
+    // gradle.properties 是 UTF-8；Java Properties 默认按 ISO-8859-1 解析，
+    // 会使 description 中的中文在 expand 后双重编码乱码。用 UTF-8 显式重读覆盖。
+    def utf8RootProps = new Properties()
+    rootProject.file('gradle.properties').withReader('UTF-8') { reader -> utf8RootProps.load(reader) }
+
     var replaceProperties = [
             minecraft_version: mc_version_26_1_2,
             minecraft_version_range: mc_version_range_26_1_2,
@@ -169,7 +220,7 @@ tasks.named('processResources', ProcessResources).configure {
             neo_version_range: neo_version_range_26_1_2,
             loader_version_range: loader_version_range_26_1_2,
             mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-            mod_authors: mod_authors, mod_description: mod_description,
+            mod_authors: mod_authors, mod_description: utf8RootProps.getProperty('mod_description'),
     ]
 
     inputs.properties replaceProperties
@@ -189,7 +240,6 @@ tasks.named('jar', Jar).configure {
                 "Implementation-Title": project.name,
                 "Implementation-Version": project.jar.archiveVersion,
                 "Implementation-Vendor": mod_authors,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
     // Exclude anonymous/inner-class stubs left over by incremental javac when
@@ -200,7 +250,11 @@ tasks.named('jar', Jar).configure {
     // regression pushed the v26_1.2 jar from 370 KB to 832 KB without any
     // feature change). The pattern matches "<path>/<ClassName> <N>.<ext>"
     // which is javac's anonymous-class naming convention.
-    exclude '**/*+[0-9]+*'
+    // Stale incremental-javac leftovers (anonymous-class revisions) appear as
+    // "Foo 2.class" (space form) or "Foo+2.class" (plus form). Both predicates
+    // mirror purgeStaleBuildResources so classes/ and resources/ are filtered
+    // consistently.
+    exclude { it.name ==~ /.+[ ][0-9]+(\..+)?/ || it.name ==~ /.+\+[0-9]+(\..+)?/ }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -234,14 +288,14 @@ tasks.register('minifyJar', JavaExec) {
 
     def rules = rootProject.file('proguard-rules.pro')
     def unminified = tasks.named('jar').get().outputs.files.singleFile
-    def minified = file("build/libs/${unminified.name.replace('.jar', '-minified.jar')}")
+    def minified = layout.buildDirectory.file("libs/${unminified.name.replace('.jar', '-minified.jar')}").get().asFile
 
     inputs.file unminified
     inputs.file rules
     outputs.file minified
 
     doFirst {
-        def config = file("build/proguard-config.pro")
+        def config = layout.buildDirectory.file("proguard-config.pro").get().asFile
         config.parentFile.mkdirs()
         def libs = configurations.runtimeClasspath.findAll { it.exists() }*.absolutePath
         StringBuilder sb = new StringBuilder()

@@ -43,9 +43,9 @@ tasks.withType(Jar).configureEach {
 
 dependencies {
     api 'com.google.code.gson:gson:2.10.1'
-    // BoxDefaults / TutorialFetcher / TutorialSources (migrated from per-platform
-    // copies in the v1.0.6 dedup pass) use SLF4J directly. SLF4J is provided
-    // transitively by neoforge at runtime, so we only need the API here.
+    // BoxDefaults (migrated from per-platform copies in the v1.0.6 dedup pass)
+    // uses SLF4J directly. SLF4J is provided transitively by neoforge at
+    // runtime, so we only need the API here.
     api 'org.slf4j:slf4j-api:2.0.13'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
@@ -71,7 +71,10 @@ def checkCommonArchitecture = tasks.register('checkCommonArchitecture') {
     description = 'CONSTRAINT-001: refuse net.minecraft.* / net.neoforged.* / net.minecraftforge.* imports in common/ sources.'
     def sourceDirs = ['src/main/java', 'src/test/java'].collect { file(it) }
     inputs.files sourceDirs
-    outputs.upToDateWhen { true }
+    // Declared output so the task re-runs when sources change (previously
+    // `outputs.upToDateWhen { true }` made it permanently up-to-date locally —
+    // only CI's clean checkout still ran it).
+    outputs.file(layout.buildDirectory.file('reports/checkCommonArchitecture.txt'))
     doLast {
         def violations = []
         sourceDirs.each { dir ->
@@ -96,6 +99,12 @@ def checkCommonArchitecture = tasks.register('checkCommonArchitecture') {
                 violations.join('\n'))
         }
         logger.lifecycle 'checkCommonArchitecture: no Minecraft/NeoForge/Forge imports in common/ sources'
+        // Materialize the declared output so the task is properly up-to-date on
+        // the next run (content is deterministic — no timestamps — so the build
+        // cache can also key on it).
+        layout.buildDirectory.file('reports/checkCommonArchitecture.txt').get().asFile.withWriter('UTF-8') { w ->
+            w.write('OK: no Minecraft/NeoForge/Forge imports in common/ sources\n')
+        }
     }
 }
 

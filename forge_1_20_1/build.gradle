@@ -5,9 +5,14 @@ plugins {
     // Pinned to a concrete version instead of the dynamic range [7.0.17,8):
     // in offline / maven.minecraftforge.net-blocked environments the range
     // resolves to the newest plugin marker (e.g. 7.0.35) whose implementation
-    // artifact may not be cached, breaking the build. 7.0.31 is the version
-    // declared in gradle.properties (forgegradle_version).
-    id 'net.minecraftforge.gradle' version '7.0.31'
+    // artifact may not be cached, breaking the build. Version lives in
+    // gradle.properties (forgegradle_version_forge_1_20_1).
+    id 'net.minecraftforge.gradle' version "${forgegradle_version_forge_1_20_1}"
+    // SRG reobfuscation for the 1.20.1 production jar (official → SRG).
+    // Forge 1.20.1 runs Minecraft with SRG names at runtime; without this,
+    // released jars crash with NoSuchMethodError/NoSuchFieldError. See the
+    // renamer.classes block below (MDKExamples obfuscation/fg7 pattern).
+    id 'net.minecraftforge.renamer' version '1.1.7'
 }
 
 group = mod_group_id
@@ -81,6 +86,28 @@ repositories {
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://modmaven.dev' }
     maven { url = 'https://maven.shedaniel.me' }
+    // EMI — published through the Modrinth Maven (group maven.modrinth).
+    maven {
+        name = 'ModrinthMaven'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    maven {
+        name = 'BaiMaven'
+        url = 'https://maven4.bai.lol'
+        content {
+            includeGroup 'mcp.mobius.waila'
+        }
+    }
+    maven {
+        name = 'McjtyMaven'
+        url = 'https://maven.k-4u.nl'
+        content {
+            includeGroup 'mcjty.theoneprobe'
+        }
+    }
 }
 
 dependencies {
@@ -123,8 +150,63 @@ dependencies {
         runtimeOnly "me.shedaniel:RoughlyEnoughItems-forge:${rei_version_forge_1_20_1}"
     }
 
+    // EMI integration (optional client mod; Modrinth Maven). compileOnly for
+    // the plugin API; discovery is @EmiEntrypoint annotation scanning. The
+    // Modrinth Forge build is SRG-mapped for MC overrides, but every EMI API
+    // method we call keeps its own name — like the JEI forge-api/common-api
+    // artifacts, it compiles directly without fg.deobf (FG7's deobf() does not
+    // accept a bare Maven notation). The runtime jar is only put on the dev
+    // classpath behind -PwithEmi.
+    compileOnly "maven.modrinth:emi:${emi_version_forge_1_20_1}"
+    if (project.hasProperty('withEmi')) {
+        runtimeOnly "maven.modrinth:emi:${emi_version_forge_1_20_1}"
+    }
+
+    // Jade — optional client mod, Modrinth Maven. compileOnly for the plugin
+    // API; discovery is @WailaPlugin annotation scanning by Jade itself.
+    compileOnly "maven.modrinth:jade:${jade_version_forge_1_20_1}"
+
+    // WTHIT — optional client mod; compileOnly against wthit-api.
+    compileOnly "mcp.mobius.waila:wthit-api:${wthit_version_forge_1_20_1}"
+
+    // The One Probe — optional client mod; ":api" classifier.
+    compileOnly "mcjty.theoneprobe:theoneprobe:${top_version_forge_1_20_1}:api"
+
+    // Cloth Config (optional client config GUI). The screen is a thin
+    // wrapper over the existing ForgeConfigSpec bindings — no storage change.
+    // compileOnly for the API, runtimeOnly so dev runs ship the Cloth jar.
+    // Runtime guard: ModList.isLoaded("cloth_config"); without it the mod
+    // simply keeps the TOML-only workflow (no Configure button).
+    compileOnly "me.shedaniel.cloth:cloth-config-forge:${cloth_config_version_forge_1_20_1}"
+    runtimeOnly "me.shedaniel.cloth:cloth-config-forge:${cloth_config_version_forge_1_20_1}"
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// ===== SRG reobfuscation for the production jar (official → SRG) =====
+// ForgeGradle 7's userdev client runs with official (Mojang/MCP) names, but a
+// real Forge 1.20.1 client loads Minecraft with SRG names at runtime.  Jars
+// built by plain `jar` keep official names, so the first call to a renamed
+// Minecraft member crashes the game (the 2.0.0-beta reports:
+// NoSuchMethodError CriteriaTriggers.register — SRG m_10595_).  This follows
+// MinecraftForge/MDKExamples obfuscation/fg7 and produces
+// build/libs/csgobox-forge-1.20.1-<version>-srg.jar, which is the artifact to
+// ship for Forge 1.20.1.
+renamer.mappings.from minecraft.dependency.toSrgFile
+
+renamer.classes(tasks.named('jar', Jar)) {
+    map.from minecraft.dependency.toSrgFile
+    archiveClassifier = 'srg'
+}
+
+// The renamer plugin defaults its tool launcher to Java 8; there is no JDK 8
+// in this project's toolchain set, so pin the reobf task to the module's own
+// Java 17 toolchain (the renamer CLI is a plain executable and runs fine).
+tasks.named('renameJar').configure {
+    javaLauncher.set(javaToolchains.launcherFor { spec ->
+        spec.languageVersion.set(JavaLanguageVersion.of(17))
+    })
 }
 
 tasks.withType(Test).configureEach {
@@ -137,6 +219,11 @@ tasks.withType(Test).configureEach {
 }
 
 tasks.named('processResources', ProcessResources).configure {
+    // gradle.properties 是 UTF-8；Java Properties 默认按 ISO-8859-1 解析，
+    // 会使 description 中的中文在 expand 后双重编码乱码。用 UTF-8 显式重读覆盖。
+    def utf8RootProps = new Properties()
+    rootProject.file('gradle.properties').withReader('UTF-8') { reader -> utf8RootProps.load(reader) }
+
     var replaceProperties = [
             minecraft_version: mc_version_forge_1_20_1,
             minecraft_version_range: minecraft_version_range_forge_1_20_1,
@@ -145,7 +232,7 @@ tasks.named('processResources', ProcessResources).configure {
             forge_version_range: forge_version_range_forge_1_20_1,
             loader_version_range: loader_version_range_forge_1_20_1,
             mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-            mod_authors: mod_authors, mod_description: mod_description,
+            mod_authors: mod_authors, mod_description: utf8RootProps.getProperty('mod_description'),
     ]
     inputs.properties replaceProperties
     filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
@@ -163,10 +250,13 @@ tasks.named('jar', Jar).configure {
                 "Implementation-Title": project.name,
                 "Implementation-Version": project.jar.archiveVersion,
                 "Implementation-Vendor": mod_authors,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
-    exclude '**/*+[0-9]+*'
+    // Stale incremental-javac leftovers (anonymous-class revisions) appear as
+    // "Foo 2.class" (space form) or "Foo+2.class" (plus form). Both predicates
+    // mirror purgeStaleBuildResources so classes/ and resources/ are filtered
+    // consistently.
+    exclude { it.name ==~ /.+[ ][0-9]+(\..+)?/ || it.name ==~ /.+\+[0-9]+(\..+)?/ }
 }
 
 tasks.withType(JavaCompile).configureEach {
