@@ -85,6 +85,15 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `box/PriceTable.java`（v2.1.0 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 非负整数；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中回退档位默认价 `NegotiationModel.GRADE_PRICE`）；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
 - `box/LegacyPriceMigration.java`
 - `box/PriceTableRegistry.java`（v2.1.0 新增）— 当前价格表的跨平台持有者：六平台 `BoxJsonLoader` 每次 load/reload 发布（/csbox validate 干跑不发布），武库拆解台只读消费，按 `PriceTable.recycleYield`(表价 × 90% 向上取整) 计价，表外回退等级价 3/5/7/8/8
+- **Create/自动化联动（v2.1.0）**：武库拆解台开放物品处理 capability——Forge 三平台
+  `ArmoryRecyclerBlockEntity` 覆盖 `getCapability`（`ForgeCapabilities.ITEM_HANDLER` +
+  内部 `RecyclerHandler`），NeoForge 1.21.1（v1_21_1）用 `RecyclerAutomation`
+  （`@EventBusSubscriber(Bus.MOD)` + `RegisterCapabilitiesEvent.registerBlockEntity`，
+  同包 `ArmoryRecyclerBlockEntity.RecyclerHandler` 为 public）。输入槽只收 grade 印记
+  物品、输出槽只可提取武库点数；Create（1.20.1/1.21.1）机械臂/传送带/管道可直接自动化。
+  `v26_1_2` / `v26_2`（NeoForge 26.x）刻意未做——该线 capability 已迁移 transfer API
+  （`Capabilities.Item.BLOCK` = `ResourceHandler<ItemResource>`）且 Create 无 26.x 构建，
+  待 Create 26.x 发布后按 transfer API 适配
 （v2.1.0 新增）— 旧版适配：每次 `loadAll`/`/csbox reload` 前把残留的旧 `price` 自动转移进 `_prices.json`（同物不同价按平均值四舍五入；表已有价优先；`#tag`/`loot_table`/非法价保留报错；表损坏则整体中止不写入），并幂等清除已迁移字段（六平台 `BoxJsonLoader` 各在 loadAll + reloadPreserving 调一次）
 - `common/logic/BoxConstraintTracker.java`（v2.1.0 新增）— 开箱约束（max_per_player / cooldown）内存追踪，六平台共用
 - `common/terminal/TerminalStockManager.java`（v2.1.0 新增）— 终端库存/补货内存态，六平台共用

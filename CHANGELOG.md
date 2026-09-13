@@ -51,6 +51,13 @@
   （`box-editor/tests/smoke.mjs`，CI 工作流 `box-editor-smoke.yml`）。六平台新增
   `EditorCommand` 注册 `/csbox editor` 子命令（**全员可用，无需 OP**，聊天栏输出可点击
   链接直达网页配置工具，悬浮显示用途提示）。
+- **Create 自动化兼容**：武库拆解台向自动化模组开放标准物品处理 capability
+  （Forge：`ForgeCapabilities.ITEM_HANDLER`；NeoForge 1.21.1：`Capabilities.ItemHandler.BLOCK`
+  注册式）——输入槽只收盖过 grade 印记的箱货、输出槽只放武库点数，与 `WorldlyContainer`
+  面规则一致；Create 机械臂/传送带/管道及任意按 item handler 工作的自动化可直接喂料取料。
+  平台范围：`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`（Forge 老 capability API）+
+  `v1_21_1`（NeoForge 注册式，新增 `RecyclerAutomation`）；NeoForge 26.x 的方块能力已迁移
+  到 transfer API 且 Create 尚无 26.x 构建，留待后续适配（`v26_1_2` / `v26_2` 未改动）。
 - 新 schema：`docs/box-schema/prices.schema.json`（IDE 补全用）。
 - `common/box/PriceTable.java`（纯函数解析/查价/变体键/hash/`recycleYield`）+ 单测；六平台
   `BoxJsonLoader` 统一接入。
