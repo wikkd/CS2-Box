@@ -28,11 +28,17 @@ async function ensureDir(p) {
   await fs.mkdir(p, { recursive: true });
 }
 
+const VERSION = (process.env.GITHUB_SHA || '').slice(0, 8) || Date.now().toString(36);
+
 async function copy(rel) {
   const src = join(SRC, rel);
   const dst = join(OUT, rel);
   await ensureDir(join(dst, '..'));
-  const buf = await fs.readFile(src);
+  let buf = await fs.readFile(src);
+  if (rel.endsWith('.html')) {
+    // cache-bust static refs so CDN/browsers pick up new assets immediately
+    buf = Buffer.from(buf.toString('utf8').replace(/__VER__/g, VERSION), 'utf8');
+  }
   await fs.writeFile(dst, buf);
   return buf.length;
 }
