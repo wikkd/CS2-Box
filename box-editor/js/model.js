@@ -67,6 +67,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       meta: emptyMeta(),
       grades: [[], [], [], [], []],
       priceRows: {}, // key -> { price: number|'' , pinned: bool }
+      // TACZ field visibility: null = follow selected version metadata,
+      // true = force enable, false = force disable (editor preference only).
+      taczEnabled: null,
     };
   }
 

@@ -192,3 +192,5 @@ run-data/
 
 # box-editor build output
 box-editor/dist/
+node_modules/
+box-editor/node_modules/

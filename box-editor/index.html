@@ -26,9 +26,12 @@
     <label class="ctl"><span id="version-label"></span>
       <select id="version-select"></select>
     </label>
+    <button id="btn-undo" class="btn small" data-action="undo">Undo</button>
+    <button id="btn-redo" class="btn small" data-action="redo">Redo</button>
     <button id="btn-new" class="btn">New</button>
     <button id="btn-import" class="btn">Import</button>
     <button id="btn-example" class="btn accent">Examples</button>
+    <button id="btn-share" class="btn small" data-action="share">Share</button>
   </div>
 </header>
 
@@ -72,6 +75,16 @@
   <ul class="example-list" id="example-list"></ul>
   <div class="dlg-actions">
     <button class="btn" id="example-close">Close</button>
+  </div>
+</dialog>
+
+<dialog id="paste-dialog" class="dlg">
+  <h2 id="paste-title">Paste</h2>
+  <textarea id="paste-textarea" rows="8" class="grow"></textarea>
+  <p class="help" id="paste-hint"></p>
+  <div class="dlg-actions">
+    <button class="btn" id="paste-cancel">Cancel</button>
+    <button class="btn accent" id="paste-do">OK</button>
   </div>
 </dialog>
 

@@ -1,0 +1,51 @@
+name: box-editor smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'box-editor/**'
+      - 'scripts/sync-box-editor-data.py'
+      - 'docs/box-schema/**'
+      - 'docs/examples/**'
+      - '.github/workflows/box-editor-smoke.yml'
+  pull_request:
+    paths:
+      - 'box-editor/**'
+      - 'scripts/sync-box-editor-data.py'
+      - 'docs/box-schema/**'
+      - 'docs/examples/**'
+      - '.github/workflows/box-editor-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: box-editor/package-lock.json
+
+      - name: Install dependencies
+        working-directory: box-editor
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        working-directory: box-editor
+        run: npx playwright install --with-deps chromium
+
+      - name: Build (sanity check the generator output is usable)
+        working-directory: box-editor
+        run: npm run build
+
+      - name: Run UI smoke tests
+        working-directory: box-editor
+        run: node tests/smoke.mjs

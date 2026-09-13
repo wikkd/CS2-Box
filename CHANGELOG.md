@@ -1,8 +1,309 @@
 # 更新日志
 
-## [2.0.0beta-1] - Unreleased
+## [2.1.0] - Unreleased
 
-> 当前开发迭代：`2.0.0-beta` 之后的下一版本线（开发中），版本号已正式写入 `gradle.properties` 的 `mod_version`。功能条目随开发推进逐步补充。
+> 箱子配置优化批次：档内物品权重、count 区间、物品标签 / 战利品表引用、随机附魔、
+> 缺模组 id 区分、空档位告警、文件名校验、enabled/requires 门控、每箱 icon、终端
+> 库存/补货/折扣、开箱约束（每人上限/冷却/权限）、/csbox validate 干跑、$schema
+> 校验文件、boxgen/check-ids 工具脚本。六平台同步（v1_21_1 / v26_1_2 / v26_2 /
+> forge_26_1_2 / forge_26_2 / forge_1_20_1）。
+
+### 变更（终端价格统一管理）
+
+- **全局价格表 `config/csbox/_prices.json`**：终端物品成交价（武库点数）不再写在
+  箱子 JSON 的物品条目里，统一由一份全局价格表管理（物品 id → 非负整数；
+  `id#变体` 子键支持 NBT 变体定价，如 TACZ 枪/弹：`"tacz:modern_kinetic_gun#tacz:ak47"`）。
+  查价顺序：表内 id（或变体）→ 档位默认价（grade1..5 = 6/10/16/22/30）；表缺失 =
+  全部档位默认价，与原「没写 price 用默认价」行为一致。
+- **破坏性变更**：`price` 字段从箱子 JSON 移除（`box.schema.json` 同步移除）；残留
+  `price` 会被运行时校验器与 `/csbox validate` 报错（该物品回退档位默认价直到迁移）。
+  旧配置请把价格迁移进 `_prices.json`（迁移示例见 `docs/examples/_prices.json`、
+  `compat-packs/tacz-pack/_prices.json`）。
+- **旧版自动迁移**：`common/box/LegacyPriceMigration.java` 在每次 `loadAll` /
+  `/csbox reload`（含热重载）前自动把残留的旧 `price` 转移进 `_prices.json`——同物
+  不同价按**平均值（四舍五入）**迁移，表里已有价格优先，并把已迁移字段从箱子 JSON
+  中移除（幂等）。`#tag` / `loot_table` / 非法价（负数/小数/非数字）保留原位报错；
+  `_prices.json` 损坏时整体中止不写入（防丢价）。+ 8 个单测（含平均、已有价优先、
+  损坏表中止、变体键、tag/loot 保留、幂等）。
+- **缓存联立失效**：加载缓存按「箱子文件内容 + 价格表内容」双重 hash，
+  `/csbox reload` 与热重载重读价格表，改价即时生效（箱子文件未改也会按新价重算）。
+- `/csbox validate` 新增 `_prices.json` 校验（非法键/负值/小数/非数字报错、其余条目
+  照常生效）；`scripts/check-ids.py` 同步支持价格表核查并拒绝残留 `price`；
+  `scripts/boxgen.py` 新增 `--price` / `--price-key` / `--prices`（合并写入
+  `_prices.json`，箱子 JSON 不再产出 price）。
+- **新增 `box-editor/` 可视化网页配置工具**（初始版）：纯前端零依赖、`file://`
+  离线可用、中英双语、跟随六平台版本（控制 TACZ 变体键 / Data Components 可见性）、
+  向导式建箱 + 实时 JSON 预览 + 轻量校验 + 内置示例 + 旧版内联 `price` 自动迁移
+  （同物多价取平均、已有价优先，与 `LegacyPriceMigration` 规则一致）+
+  一键下载 `箱名.json` / `_prices.json`，可整目录发布 GitHub Pages。
+  `scripts/sync-box-editor-data.py` 从 `docs/box-schema` 与 `docs/examples` 生成
+  内嵌数据（schema/示例/版本元数据），保证工具与实际文档不漂移。TACZ 变体 / 原始
+  NBT 字段另设「TACZ 专属字段」开关（自动跟随版本，也可强制启用 / 禁用，本地保存）。
+  所有输入框 / 下拉框支持悬浮教程（中英双语，鼠标悬停或键盘聚焦即显示）。
+  编辑器体验批次：撤销/重做（按钮 + Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y）、校验项点击
+  定位高亮、物品复制/批量粘贴、价格批量导入、分享链接（`#state=...`）、奖池
+  折叠状态记忆、功能区卡片折叠（标题点击，掉落实体/终端机参数默认收起，状态
+  本地保存）；修复 `field()` 渲染参数错位（基本信息/终端机卡片此前未渲染出
+  控件）与文件名输入无效两个既有 bug；新增 Playwright 冒烟测试
+  （`box-editor/tests/smoke.mjs`，CI 工作流 `box-editor-smoke.yml`）。
+- 新 schema：`docs/box-schema/prices.schema.json`（IDE 补全用）。
+- `common/box/PriceTable.java`（纯函数解析/查价/变体键/hash/`recycleYield`）+ 单测；六平台
+  `BoxJsonLoader` 统一接入。
+- **拆解台对齐价格表（折价 90%）**：武库拆解台对盖章物品先按价格表计价——该物品 id
+  （或 `id#变体`，TACZ 枪/弹）在 `_prices.json` 有价时，拆解回收 = 表价 × **90%**
+  （向上取整，`PriceTable.recycleYield`，如表价 4500 → 4050、10 → 9）；表外回退原等级价
+  3/5/7/8/8。拆解资格不变（只收开箱盖章带 `csgobox:grade` 的物品）；`ArmoryRecycleEvent`
+  仍可否决/改价；新增 `common/box/PriceTableRegistry.java`（装载器每次 load/reload
+  发布当前表，拆解台只读消费），六平台 `ArmoryRecyclerBlockEntity` 统一接入．
+
+### 新增（配置表达力）
+- **档内物品权重 `weight`**：`GradeGroup` 新增平行 `itemWeights` 列表（默认全 1 =
+  原均匀行为），`GradeMap` 加权选取，tooltip / `/csbox info` / 终端采样全部按权重；
+  权重 0 可临时禁用单个条目（不用删配置）。
+- **`count` 支持 `[min,max]` 区间**：开箱/购买时在区间内随机，预览与 tooltip 显示下限。
+- **物品标签引用 `"tag": "#minecraft:swords"`**：加载时展开为当前成员物品，自动跟随
+  整合包增删；与旧 NBT `tag` 字符串（不带 `#`）向后兼容。
+- **战利品表引用 `"loot_table": "minecraft:chests/..."`**：开箱时服务端掷指定表
+  （预览显示桶占位 + `item_spec` 标记），支持任意模组战利品表联动。
+- **随机附魔 `"enchant": true` / `{"id": "...", "level": [3,5]}`**：开箱时按物品可附魔
+  性随机附魔。
+- 新 lang 键 `tooltips.csgobox.item.item_chance`（加权概率行）。
+
+### 新增（校验与排错）
+- **缺模组 id 区分**：未知物品 id 现在提示「模组未装，请安装或移除」vs「模组已装，
+  请检查拼写」（`CsgoBox.isModLoaded`）。
+- **空档位告警**：某档 0 个有效物品时 `/csbox info error` 显示 warning（防静默降档）。
+- **文件名校验**：`config/csbox/*.json` 文件名只允许 `[a-z0-9_./-]+`，非法名直接报错
+  并说明合法示例。
+- **`/csbox validate [box]`**：干跑校验（不注册、不进缓存），作者可循环「改→验→改」。
+- **`docs/box-schema/box.schema.json`**：完整 JSON Schema（含全部新字段），IDE 补全用。
+
+### 新增（箱子身份与门控）
+- **`enabled` / `requires`**：`"enabled": false` 整箱跳过；`"requires": ["modid"]`
+  依赖缺失时整箱跳过并报错（联动包不再出现半残箱子/紫黑块物品）。
+- **每箱 `icon`**：整数 = CustomModelData（配资源包）；字符串 = item-model id
+  （26.x 直接渲染，1.21.1/1.20.1 记警告跳过）。
+- **损坏文件保留原位**：corrupt `terminal.json` 不再被移走——保留原文件让
+  `/csbox info error` 持续报告，另存 `.corrupt-<时间戳>` 备份副本（行为变更 + 测试更新）。
+
+### 新增（终端经济）
+- **`discount`**：终端售价按 0..1 折扣（`def.discountedPrice`）。
+- **`stock` / `restock_minutes`**：终端全局库存（-1 无限），购买扣减，`restock_minutes`
+  分钟补货（内存态，重启恢复满库存，文档注明）；售罄时终端显示空态并拒绝购买。
+- 新 lang 键 `csgobox.terminal.sys.soldout`。
+
+### 调整（终端磨损惩罚改为百分比加价）
+- **无耐久条物品的磨损惩罚从「每 5% 磨损 +1 点」改为按基础价百分比加价**：
+  `WearPenalty.surcharge(basePrice, wearVal)` = `ceil(基础价 × 20% × 磨损值)`，即每 1%
+  磨损 +基础价的 0.2%，满磨损（战痕累累）最多 +20%（grade1=6 → +2、grade5=30 → +6）——
+  惩罚随物品价格放大，贵物品同样磨损要付更多点数；签名由 `surcharge(wearVal)` 变为
+  `surcharge(basePrice, wearVal)`（6 平台 12 处调用点同步：`PacketTerminalBuy` 服务端权威 +
+  `TerminalOfferItems` 客户端显示同公式）。磨损按整百分比四舍五入后走整数运算，避免
+  `10 点 × 50% 磨损` 这类边界被浮点 ulp 顶成 2 点；磨损 < 0.5% 不收费，>100% 钳到 20% 上限。
+  有耐久条物品不受影响（仍走 `damageItemByWear` 扣耐久、不加价）。确认对话框「含磨损惩罚 +X」
+  与实际差额一致（`price - basePrice`）。教程（内置 + `docs/tutorials/` 在线副本，中英）与
+  `docs/ARCHITECTURE.md` / `docs/CONFIGURATION.md` 公式同步更新；`WearPenaltyTest` 重写为
+  8 个用例（比例 / 满磨损 20% / 边界不漂移 / 量化下限 / 双参数单调性）。
+
+### 新增（开箱约束）
+- **`max_per_player` / `cooldown_seconds` / `permission`**：每人开箱上限、每箱冷却、
+  权限节点（`CsgoBox.PERMISSION_GATE` 钩子，默认放行，整合包可接入 LuckPerms 等）。
+  内存态追踪（`BoxConstraintTracker`），单次与批量开箱均生效，键在验证后才消耗。
+
+### 调整（开箱概率 tooltip 门控）
+- **箱子物品 tooltip 的概率行改为 F3+H 高级提示框激活后显示**：默认 tooltip 只列出各档
+  物品名；按 **F3+H** 开启原版高级提示框后（`tooltipFlag.isAdvanced()`）才显示「第 N 档：
+  XX.X%」与档内逐物品概率。六平台同步实现（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 /
+  forge_26_2 / forge_1_20_1）；JEI / REI / `/csbox info` 概率入口不受影响。
+
+### 调整（TACZ 箱子配置容错，v1_21_1 / forge_1_20_1）
+- **TACZ 校验降级为「告警保留」**：不再因缺 `GunId` 整条拒绝——条目保留为裸枪并在
+  `/csbox info error` 告警（枪无法开火）；`GunFireMode` 大小写、`GunId` 两侧空白自动纠正。
+- **小差异自动修复**：`GunCurrentAmmoCount` 等弹量/数字字段写成字符串自动转 int；
+  `HasBulletInBarrel` / `OverHeated` 写成 `true`/`false` 或整数自动转 byte（TACZ 按
+  Byte 读）；配件槽（`Attachment*`）结构有误只告警不杀枪，非对象配件槽自动丢弃。
+- **1.20.1 `tag` 双格式**：兼容 SNBT 字符串与 JSON 对象两种写法（布尔/数字自动强转，
+  附件内层 `tag` 接受 SNBT 字符串）；SNBT 字符串解析失败会自动按 JSON 再解释一次。
+
+### 新增（终端机 TACZ 检视联动）
+- **报价面板「检视」胶囊与 TACZ 检视对齐**（v1_21_1 / forge_1_20_1）：报价物品是 TACZ
+  枪械时，点击右上「检视」胶囊直接进入 TACZ 原生第一人称检视动画——与开箱检视屏手套
+  按钮同一调用链（`FirstPersonInspectHandler.start`），动画结束后回到终端机继续谈判。
+  `FirstPersonInspectHandler` 新增 `start(player, item, grade, returnScreen)` 重载
+  （结束时恢复指定屏；箱子流程不传，行为不变）。非 TACZ 物品/无 TACZ 环境保持原「切换
+  3D 自动旋转」，其余四平台无 TACZ 不受影响。
+
+### 修复（TACZ 枪索引告警误报）
+- **纯客户端加载箱子配置时不再误报「TACZ gun ... is not loaded (missing gun pack?)」**：
+  `validateTacz` 之前无条件用服务端索引 `TimelessAPI.getCommonGunIndex` 检查——客户端
+  （创造栏构建/预览/客户端 reload）没有服务端索引数据，导致 1.20.1 上全部 54 把枪
+  逐条误报（`uzi` 只是其中一条，枪 id 与枪包本身均正常）。现在仅在确有服务端
+  （`ServerLifecycleHooks.getCurrentServer() != null`，集成本地/专用服务器）时做权威
+  检查；纯客户端跳过，交给 TACZ 客户端渲染自行兜底。修复平台：forge_1_20_1 /
+  v1_21_1（TACZ 双平台同构）。
+
+### 工具脚本
+- **`scripts/boxgen.py`**：CLI/交互式箱子配置生成器（权重/区间/标签/战利品表/附魔/
+  门控/库存，输出前打印各档概率估算，`--dry-run`）。
+- **`scripts/check-ids.py`**：扫描箱子配置的 id/tag/loot_table（语法 + 可选注册表
+  比对 + 结构粗查），`--json` 机器输出，坏配置退出码 1；非 `#` 前缀的 `tag` 按
+  legacy NBT（SNBT）做括号/引号配对校验，不再误报 1.20.1 TACZ `GunId` 写法。
+
+### 工程
+- `GradeMap` 支持加权池（`fromWeighted` / `Weighted<T>` / `empty()`），旧 `build`
+  均匀语义不变；`BoxOdds` 新增 `weightedItemChance` / `positiveItemWeightSum`。
+- 单测：GradeMap 加权、BoxOdds 加权、Schema 新字段、BoxDefaults 损坏保留。
+- 网络同步：`item_spec` 标记只在非常规条目上存在（默认条目零开销）；GradeGroup
+  平行 `item_weights` 走紧凑 int 列表。
+- `/csbox reload tutorial` 文案去「下载」化：该命令实际是**从包内刷新**内置教程（离线，
+  `BoxDefaults.refreshTutorials`），成功提示 / 英文帮助行 / Java 注释不再写「重新下载」，
+  命令保留作离线恢复手段。
+- `/csbox nbt hand` 新增独立可点击按钮行「[ 点击复制完整 JSON ]」（六平台）：一键复制
+  完整序列化结果，不再依赖点击正文长文本；正文行保留原点击复制行为。
+- `/csbox tacz list` 新增 TACZ 注册表浏览器（v1_21_1 / forge_1_20_1，仅装 TACZ 时注册）：
+  枚举已加载枪械/弹药/附件（含类别、用弹、弹匣、槽位、反查用枪等元信息），支持命名空间
+  前缀过滤、`--ammo/--gun/--slot` 过滤、`page n` 分页与 `json` 可复制输出（20000 字符截断 +
+  完整复制按钮），为枪包作者查真实 ID 服务；`TaczList` 纯函数（排序/过滤/分页/JSON）带单测。
+- **EMI 配方查看器接入（v1_21_1 / forge_1_20_1，可选）**：`emi/` 包补齐 JEI/REI/EMI 三件套
+  最后一块——类别「开箱概率」、输出槽携带单件概率（`EmiStack.setChance`）、反查由 EMI 按
+  outputs 自动完成；盒定义同步后装 EMI 才触发一次 `reloadResourcePacks()` 重跑插件（EMI
+  无 JEI 式运行时配方接口，带重入守卫）；**与 JEI 并存时不注册原生 EMI 分类**，由 EMI 内置
+  JemiPlugin 桥接既有 JEI 分类以防重复。26.x 无 EMI 构建，不接线。
+- **Jade / WTHIT / The One Probe 准星信息（可选，纯客户端）**：掉落在地上的箱子物品被
+  准星指向时直接显示掉落率 + 5 档概率（按 `grade.color()` 上色），`ArmoryRecyclerBlock`
+  显示一行使用提示；三家各写薄适配器（`jade/`、`wthit/`、`top/` 包），不依赖服务端数据
+  往返（复用已同步的客户端 `BoxRegistry` + `BoxOdds`）。平台覆盖：Jade/TOP 为 NeoForge
+  三平台 + forge_1_20_1（26.x Forge 无构建），**WTHIT 六平台全接入**（是 26.x Forge 双平台
+  唯一的信息显示集成，衔接 JEI/REI/EMI 在这些平台上无构建的缺口）。
+
+## [2.0.1] - Unreleased
+
+> 联动批次 A：开箱信息可查性 + 世界生成/数据包生态接入。六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
+
+### 新增（开箱概率进物品 tooltip）
+- **箱子物品 tooltip 显示 5 档稀有度概率**：`ItemCsgoBox.appendHoverText` 在每档物品列表前
+  追加「第 N 档：XX.X%」行（与服务端 `/csbox info`、JEI 同口径，数据源 `BoxOdds`）。
+- `common` 新增 `BoxOdds.percent(double)` 纯函数（Locale.ROOT，六平台显示一致）+ 单测
+  （`BoxOddsTest.percentFormats`）。
+- 新 lang 键 `tooltips.csgobox.item.grade_chance`（en_us / zh_cn）。
+
+### 新增（武库商小屋进模组群系）
+- **`scripts/add-biome.py`**：向 `has_structure/*` 群系标签追加 biome id / 嵌套 tag
+  （去重、幂等、`--dry-run`、`--replace` 慎用、`--tag` 可指向原版 village tag）。
+- **`docs/BIOME-INTEGRATION.md`**：三种接法教程（野外据点 tag 追加 / 村庄 village tag /
+  自建村庄类型）+ TerraBlender 说明 + 间距与群系气质风险。
+- **`docs/examples/biome-datapack/`**：可用示例 datapack（虚构 `mythicmod` 演示两条通道）。
+- README 文档导航新增 BIOME-INTEGRATION 条目。
+
+### 新增（/csbox info 来源模组统计）
+- `/csbox info` 概览末尾输出「物品来源模组」：把所有箱子的全部档位物品按注册表命名空间
+  分组计数（v26 系用 `BuiltInRegistries`，forge_1_20_1 用 `ForgeRegistries`），联动数据包
+  作者可一眼核对「开得出哪些模组的货」。
+- 新 lang 键 `commands.csgobox.list.mod_summary_header` / `mod_summary_entry`。
+
+### 新增（官方联动数据包示例）
+- **`compat-packs/`**：`apotheosis-pack` / `irons-spells-pack` / `tacz-pack` 三个示例包
+  （箱子 JSON + README，含平台限制与「物品 id 需核实」声明），演示跨模组内容联动。
+  `tacz-pack/gun_crate.json` 升级为**真枪型**（`tacz:modern_kinetic_gun` + 顶层
+  `tag` NBT `GunId`，弹药 `tacz:ammo` + `AmmoId`，并加 `requires: ["tacz"]` 门控：
+  未装 TACZ 整箱跳过，不再出现紫黑块/裸枪）；新增 `tacz_terminal.json` 终端机示例
+  （5 档 TACZ 枪械报价 + 弹药，每项 `price`）。
+
+### 变更（设计决策固化）
+- `docs/ARCHITECTURE.md` §3.4：明确「钥匙/箱子扣减范围为整个原版 `PlayerInventory`
+  （主背包+护甲+副手），不支持 Curios / Trinkets 等模组扩展槽位」。
+
+### 变更（箱子物品注册表与配置解耦 —— 联机修复，破坏性变更）
+- **物品注册不再读取 `config/csbox/`**：2.1.0 及以前每个 `<名字>.json` 都会在注册阶段
+  生成独立物品 `csgobox:<名字>`。物品注册表是**同步且启动期冻结**的，客户端与服务端
+  配置一有差异（或 `requires` 门控的可选模组只装在一侧）两侧注册表就分叉，联机被
+  拒绝并显示「Failed to synchronize registry data from server / 模组版本不匹配」——
+  而两侧版本号显示完全相同，极易误判为版本问题。现在注册集合是**编译期常量**：
+  随模组发布的 5 个默认箱子 id（`ammo_crate` / `attachment_crate` / `gun_crate` /
+  `normal_crate` / `tacz_terminal`）固定注册，其余箱子一律使用通用物品 `csgo_box`
+  （终端机类型用 `terminal`），身份走 NBT / 数据组件 `csgobox:box_id` + 服务端同步的
+  `BoxRegistry`。
+- **影响**：① 联机不再要求两侧 `config/csbox/` 一致，配置可自由增删并热重载；
+  ② 自定义箱子不再有 `/give csgobox:<名字>`，改用新增的
+  **`/csbox give <玩家> <箱子> [数量]`**；③ 旧存档中的默认箱子物品继续可用
+  （无 `box_id` 时以物品注册 id 兜底为 boxId）；④ 用户自建箱子的旧物品 id 会失效
+  （用 `/csbox give` 重新发放）。
+- `ItemCsgoBox.openScreen` 改为**按箱子定义**分派 UI（终端机类型 → 终端界面），
+  不再依赖物品类，使通用物品可以承载任意箱子类型。
+
+### 工程
+- **注册表解耦落地（六平台）**：删除 `CsgoBox#registerDynamicBoxItems` 及其监听注册，
+  各平台 `ModItems` 新增 5 个固定箱子物品 + `itemForBox(...)`（创意标签页改用），
+  新增 `/csbox give` 子命令与帮助行（lang 键 `commands.csgobox.help.line.give` /
+  `commands.csgobox.give.success`，落在 `common`）。
+- **26.x 物品模型定义补齐（4 个模块）**：`assets/csgobox/items/` 新增 5 个固定箱子 id 的
+  模型定义（`ammo_crate` / `attachment_crate` / `gun_crate` / `normal_crate` →
+  `csgobox:item/csgo_box`，`tacz_terminal` → `csgobox:item/terminal`）。26.x 的
+  `ITEM_MODEL` 默认取物品自身 id，且 `/give`、创造栏、掉落都走注册原型而**不经过**
+  `getDefaultInstance()`，所以只有随包提供该文件才会正确渲染（1.20.1 / 1.21.1 分别由
+  模型重映射钩子覆盖，无需该文件；四个 26.x 模块统一采用"每 id 一个模型文件"的做法，
+  不再使用 `DATA_COMPONENT_INITIALIZERS` 注册原型钩子）。
+- **连带回归修复：按箱子 id 取物品的 13 处调用点改用 `itemForBox`**。删除动态物品后，
+  `event/ModEvents`（实体掉落箱子路径）与 JEI / REI / EMI 配方仍按箱子 id 查注册表，
+  自建箱子会拿到 AIR（掉落变空、配方图标消失）。现已改为
+  `ModItems.itemForBox(def.id(), def.isTerminal())`（`ModEvents` 6 处 + JEI/REI/EMI 7 处，
+  含各自的 `ModItems` 导入）；`keyItem` 查询不受影响（钥匙仍是静态物品）。
+- **武库拆解台修复（六平台）**：①`ArmoryRecyclerBlockEntity` 补上缺失的持久化
+  （`v1_21_1` / `v26_1_2` / `v26_2` / `forge_26_2` 原本没有
+  `saveAdditional/loadAdditional`，区块重载后输入/输出槽物品直接消失；1.20.1 已有一并
+  对齐），并新增 `refusedInput` 去重（被脚本否决的同一堆叠不再每 40 tick 重复触发事件，
+  离开输入槽后重新询问）；②`ArmoryRecycleEvent` 新增 `setYield(int)`（0/负 = 不消耗，
+  产量可在事件中重定价），BE 改用 `recycle.getYield()`，输出放不下时不消耗输入并钳制到
+  物品最大堆叠；③单开箱路径补盖 `csgobox:grade`（`forge_1_20_1` / `forge_26_2` 原本缺失，
+  NeoForge 三平台已有），普通右键开箱产物终于可以进拆解台。API 适配：1.20.1 用
+  `CompoundTag` + `ItemStack.setGrade` / `isSameItemSameTags`；1.21.1 用
+  `CompoundTag + HolderLookup.Provider`；26.x 用 `ValueOutput/ValueInput`；NeoForge 用
+  `ICancellableEvent` + `NeoForge.EVENT_BUS`，Forge 用 `Event`/`MutableEvent` + `BUS.post`。
+- **六平台编译验证**：`forge_1_20_1`（含 `renameJar` 产物与 `PlatformSmokeTest`）/
+  `v1_21_1` / `v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 的 `compileJava` 全部通过。
+- `:common:test` 通过（含新增用例）；lang JSON 校验通过；六平台 `ItemCsgoBox` /
+  `CsboxCommand` 定点合入完成（`scripts/mirror.sh` 不适用于有适配差异的文件）。
+- **forge_1_20_1 接入 `net.minecraftforge.renamer`（SRG reobf）**：新增 `renameJar`
+  任务，发布产物改为 `csgobox-forge-1.20.1-<mod_version>-srg.jar`，修复生产 jar 在
+  1.20.1 SRG 运行时 `NoSuchMethodError`（`CriteriaTriggers.register` → `m_10595_`）
+  崩溃（2.0.0-beta 已受影响）；`docs/RELEASE.md` / `docs/TESTING-FORGE-1201.md` /
+  `docs/DEVELOPMENT.md` / `README.md` / `AGENTS.md` 同步更新。
+- **六平台 mods.toml 可选依赖版本区间语法修复**：jade / wthit / theoneprobe（及
+  forge_26_x 的 wthit）的 `versionRange` 由非法写法 `[x.y,?)` 修正为合法 `[x.y,)`
+  （Maven 版本区间不接受 `?` 结尾，Forge 1.20.1 在模组扫描阶段直接
+  `InvalidVersionSpecificationException: Range defies version ordering` FATAL——
+  v1_21_1 jade 区间笔误 `[1.15,?)` 一并改为实际版本线 `[15,)`）；forge_1_20_1
+  `-srg.jar` 已重新构建验证。
+- **The One Probe 软依赖修复（四平台）**：`commonSetup` 调用
+  `CsgoBoxTopPlugin.registerIfLoaded()` 处补 `isModLoaded("theoneprobe")` 门卫——
+  原实现仅插件类内部判断，但 JVM 加载/校验 `CsgoBoxTopPlugin` 时就会解析
+  `BoxItemEntityProvider`（implements TOP API）导致未装 TOP 直接
+  `NoClassDefFoundError: mcjty.theoneprobe.api.IProbeInfoEntityProvider`；
+  Jade/WTHIT 走 `@WailaPlugin` 注解扫描不受影响。修复平台：forge_1_20_1 /
+  v1_21_1 / v26_1_2 / v26_2。
+
+### 新增（Shader 兼容：Iris / Oculus 降级，P6）
+- 每平台 `AnimRenderOps` 新增私有 `isShaderModActive()`（检测 `iris`/`oculus`，
+  NeoForge 用 `ModList.get().isLoaded`，Forge 26.x 用静态 `ModList.isLoaded`）。
+- `supports3D()` 改为 `!isShaderModActive()`；`renderItem3D` 在 shader 激活时
+  内部回退 `renderItem2D`（含 TACZ 枪械分支）——**公开 op 表面不变，drift 门禁通过**。
+- `docs/SHADER-COMPAT.md`：行为矩阵 + 回归测试清单；并记录
+  `fade_in_blur` 后处理资源当前**无 Java 引用**（未接线，留待审计）。
+
+### 设计文档（P5 + 立项待办）
+- **`docs/DESIGN-jade-wthit-integration.md`**（P5）：Jade/WTHIT 集成设计定稿——
+  范围修正为方块/掉落物实体（手持物品已由 P1 tooltip 覆盖）；API 已从克隆源码核实
+  （Jade `@WailaPlugin`+`registerClient`+`registerBlockComponent`；WTHIT
+  `IWailaPlugin.register(IRegistrar)`）；给出可粘贴 provider 代码 + gradle/mods.toml
+  接线模板。**因离线无 API jar 缓存，接线排到联网后**（`build.gradle` 未动，不破坏构建）。
+- **`docs/DESIGN-rarity-mapping.md`**（RFC 草案）：`csgobox:rarity` 语义组件 +
+  `rarity_map.json` 映射表 + Apotheosis 弱依赖，待评审。
+- **`docs/DESIGN-terminal-protocol.md`**（设计草案）：终端机谈判泛化为通用 NPC
+  交互协议的三阶段渐进路线 + 边界，未排期。
+
+## [2.0.0] - 2026-09-09
+
+> 基于 `2.0.0-beta` 的正式发布版本，6 平台同步发行（NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1）。
 
 ### 更改（配置收窄）
 - **移除全部玩家向 / 开发向配置项（不允许配置，行为硬编码为固定默认值）**：从 `csgobox.toml` 删除 `openSoundVolume` / `tickSoundVolume` / `finishSoundVolume`（音量固定 100/50/100）、`animationSpeed` / `animationSpeedMultiplier` / `totalAnimationTicks`（开箱动画固定 145 tick，顺带消解三旋钮重复配置）、`showItemNames`（预览固定显示物品名）、`backgroundStyle`（背景固定半透明主题灰）、`blurRadius`（开屏菜单模糊固定 8）、`enableDebugLogging`（调试日志固定关闭）。`CsboxConfig` 六平台由 17 字段收窄为 7 个服务端/服主向字段（`[general]` 的 `globalDropRatePercent` + `[advanced]` 的 `loadDefaultBoxes` / `enableAchievements` / `enableHotReload` / `bulkOpenCount` / `jsonErrorAudience` / `damageItemByWear`），`AnimationSpeed` / `BackgroundStyle` 枚举删除；`docs/CONFIGURATION.md` 同步更新（并修正 `jsonErrorAudience` 枚举文档 `ALL`→`EVERYONE`、`globalDropRatePercent` 范围「0-1000」→「0=关闭,无上限」、平台数四→六）。

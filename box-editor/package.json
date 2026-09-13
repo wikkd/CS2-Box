@@ -9,9 +9,13 @@
     "dev": "node server.mjs",
     "build": "node build.mjs",
     "sync": "python ../scripts/sync-box-editor-data.py || python3 ../scripts/sync-box-editor-data.py",
-    "deploy:gh-pages": "npm run build && npx --yes gh-pages -d dist -a -m \"chore(box-editor): deploy build\""
+    "deploy:gh-pages": "npm run build && npx --yes gh-pages -d dist -a -m \"chore(box-editor): deploy build\"",
+    "test:smoke": "node tests/smoke.mjs"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

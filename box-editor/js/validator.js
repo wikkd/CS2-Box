@@ -31,6 +31,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   function validate(state, versionKey) {
     const issues = [];
     const version = DATA.versions.find((v) => v.key === versionKey) || DATA.versions[0];
+    const taczOn = state.taczEnabled == null ? version.taczVariants : !!state.taczEnabled;
     const meta = state.meta;
 
     /* ------- top-level ------- */
@@ -157,7 +158,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
           }
         }
 
-        if (!version.taczVariants && variant) {
+        if (!taczOn && variant) {
           add(issues, 'warn', path + '.variant', 'v.variantUnsupported');
         }
       });
@@ -180,7 +181,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
           if (!Number.isInteger(n) || n < 0) add(issues, 'error', path, 'v.badPriceValue');
         }
       }
-      if (r.key.includes('#') && !version.taczVariants) {
+      if (r.key.includes('#') && !taczOn) {
         add(issues, 'warn', path, 'v.variantUnsupported');
       }
     }

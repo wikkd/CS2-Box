@@ -10,12 +10,17 @@
   const LS_STATE = 'cs2box-editor-state-v1';
   const LS_LANG = 'cs2box-editor-lang';
   const LS_VER = 'cs2box-editor-version';
+  const LS_GRADE_OPEN = 'cs2box-editor-grade-open-v1';
+  const LS_COLS = 'cs2box-editor-cols-v1';
 
   let state = NS.emptyState();
   let currentTab = 'box'; // 'box' | 'prices'
   let compact = true;
   let previewTimer = null;
   let saveTimer = null;
+  let gradeOpen = [true, true, true, true, true];
+  const history = { undo: [], redo: [] };
+  let pasteContext = null; // { mode: 'items'|'prices', grade?: number }
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -26,7 +31,12 @@
     setupDialogs();
     setupDelegation();
     setupFileInput();
-    if (!loadState()) loadExample(0, false);
+    setupShortcuts();
+    initTooltip();
+    if (!loadHashState() && !loadState()) loadExample(0, false);
+    window.addEventListener('hashchange', () => {
+      if (/[#&]state=/.test(location.hash)) location.reload();
+    });
     schedulePreview(0);
   });
 
@@ -40,6 +50,129 @@
 
   function version() {
     return DATA.versions.find((v) => v.key === state.versionKey) || DATA.versions[0];
+  }
+
+  /** Effective TACZ field visibility: manual switch wins, else follows version. */
+  function taczVisible() {
+    return state.taczEnabled == null ? version().taczVariants : !!state.taczEnabled;
+  }
+
+  /* ------------------------------ undo / redo ------------------------------ */
+
+  function snapshotState() {
+    return JSON.parse(JSON.stringify({
+      fileName: state.fileName,
+      meta: state.meta,
+      grades: state.grades,
+      priceRows: state.priceRows,
+      versionKey: state.versionKey,
+      taczEnabled: state.taczEnabled,
+    }));
+  }
+
+  function pushHistory() {
+    const snap = snapshotState();
+    const last = history.undo[history.undo.length - 1];
+    if (last && JSON.stringify(last) === JSON.stringify(snap)) return;
+    history.undo.push(snap);
+    if (history.undo.length > 60) history.undo.shift();
+    history.redo = [];
+    const undoBtn = $('#btn-undo');
+    const redoBtn = $('#btn-redo');
+    if (undoBtn) undoBtn.disabled = false;
+    if (redoBtn) redoBtn.disabled = true;
+  }
+
+  function applySnapshot(snap) {
+    state = Object.assign(NS.emptyState(), snap);
+    renderAll();
+  }
+
+  function undo() {
+    if (!history.undo.length) return;
+    history.redo.push(snapshotState());
+    applySnapshot(history.undo.pop());
+    schedulePreview(0);
+  }
+
+  function redo() {
+    if (!history.redo.length) return;
+    history.undo.push(snapshotState());
+    applySnapshot(history.redo.pop());
+    schedulePreview(0);
+  }
+
+  /* ------------------------------ hover tooltip ------------------------------ */
+
+  let tooltipEl = null;
+  let tooltipTimer = null;
+
+  function initTooltip() {
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'field-tooltip';
+    tooltipEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(tooltipEl);
+
+    document.addEventListener('mouseover', (e) => {
+      const host = e.target.closest('[data-help]');
+      if (host) tooltipSchedule(host);
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (tooltipEl.classList.contains('show')) tooltipMove(e.clientX, e.clientY);
+    });
+    document.addEventListener('mouseout', (e) => {
+      const host = e.target.closest('[data-help]');
+      if (!host) return;
+      const to = e.relatedTarget;
+      if (to && to instanceof Node && host.contains(to)) return; // still inside host
+      tooltipHide();
+    });
+    document.addEventListener('focusin', (e) => {
+      const host = e.target.closest('[data-help]');
+      if (host) tooltipShowNow(host);
+    });
+    document.addEventListener('focusout', (e) => {
+      const host = e.target.closest('[data-help]');
+      if (host) tooltipHide();
+    });
+  }
+
+  function tooltipSchedule(host) {
+    clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => tooltipShow(host), 180);
+  }
+
+  function tooltipShowNow(host) {
+    clearTimeout(tooltipTimer);
+    tooltipShow(host);
+  }
+
+  function tooltipShow(host) {
+    if (!tooltipEl) return;
+    const key = host.dataset.help;
+    const text = key ? t(key) : '';
+    if (!text || text === key) { tooltipHide(); return; }
+    tooltipEl.textContent = text;
+    tooltipEl.classList.add('show');
+    const r = host.getBoundingClientRect();
+    let left = r.left + r.width / 2 - tooltipEl.offsetWidth / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipEl.offsetWidth - 8));
+    let top = r.top - tooltipEl.offsetHeight - 8;
+    if (top < 4) top = r.bottom + 8; // flip below when no room above
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+  }
+
+  function tooltipMove(x, y) {
+    if (!tooltipEl) return;
+    const left = Math.max(8, Math.min(x + 16, window.innerWidth - tooltipEl.offsetWidth - 8));
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = (y + 18) + 'px';
+  }
+
+  function tooltipHide() {
+    clearTimeout(tooltipTimer);
+    if (tooltipEl) tooltipEl.classList.remove('show');
   }
 
   function toast(msg, isError) {
@@ -56,6 +189,7 @@
         versionKey: state.versionKey,
         compact,
         currentTab,
+        taczEnabled: state.taczEnabled,
         state: JSON.parse(JSON.stringify({
           fileName: state.fileName,
           meta: state.meta,
@@ -80,6 +214,7 @@
         priceRows: payload.state.priceRows || {},
       });
       state.versionKey = payload.versionKey || state.versionKey || '1.21.1';
+      state.taczEnabled = payload.taczEnabled == null ? null : !!payload.taczEnabled;
       compact = payload.compact !== false;
       currentTab = payload.currentTab === 'prices' ? 'prices' : 'box';
       renderAll();
@@ -101,6 +236,13 @@
   }
 
   function loadPrefs() {
+    try {
+      const rawOpen = localStorage.getItem(LS_GRADE_OPEN);
+      if (rawOpen) {
+        const arr = JSON.parse(rawOpen);
+        if (Array.isArray(arr)) gradeOpen = [0, 1, 2, 3, 4].map((i) => arr[i] !== false);
+      }
+    } catch (e) { /* keep defaults */ }
     const lang = localStorage.getItem(LS_LANG);
     if (lang === 'en' || lang === 'zh') {
       I18N.setLang(lang);
@@ -130,6 +272,9 @@
       'lang-label': 'app.lang',
       'version-label': 'app.version',
       'compact-label': 'preview.compact',
+      'btn-undo': 'app.undo',
+      'btn-redo': 'app.redo',
+      'btn-share': 'app.share',
       'btn-copy': 'preview.copy',
       'btn-download': 'preview.download',
       'btn-download-all': 'preview.downloadAll',
@@ -163,6 +308,7 @@
       '<option value="' + esc(v.key) + '">' + esc(v.label[I18N.lang]) + '</option>').join('');
     verSel.value = state.versionKey;
     verSel.addEventListener('change', () => {
+      pushHistory();
       state.versionKey = verSel.value;
       localStorage.setItem(LS_VER, state.versionKey);
       renderAll();
@@ -171,8 +317,11 @@
     });
 
     $('#btn-new').addEventListener('click', () => {
+      pushHistory();
+      const prevTacz = state.taczEnabled;
       state = NS.emptyState();
       state.versionKey = state.versionKey || '1.21.1';
+      state.taczEnabled = prevTacz;
       renderAll();
       toast(t('toast.newDone'));
     });
@@ -201,6 +350,15 @@
 
     const exd = $('#example-dialog');
     $('#example-close').addEventListener('click', () => exd.close());
+
+    const pad = $('#paste-dialog');
+    $('#paste-cancel').addEventListener('click', () => pad.close());
+    $('#paste-do').addEventListener('click', () => {
+      const text = document.getElementById('paste-textarea').value;
+      applyPasteText(text);
+      document.getElementById('paste-textarea').value = '';
+      pad.close();
+    });
   }
 
   function renderExampleDialog() {
@@ -217,10 +375,155 @@
     }).join('');
   }
 
+  /* ------------------------------ paste / share ------------------------------ */
+
+  function openPasteDialog(ctx) {
+    const pd = $('#paste-dialog');
+    if (!pd) return;
+    $('#paste-title').textContent = ctx.mode === 'prices' ? t('prices.pasteTitle') : t('item.pasteTitle');
+    $('#paste-hint').textContent = ctx.mode === 'prices' ? t('prices.pastePh') : t('item.pastePh');
+    document.getElementById('paste-textarea').value = '';
+    pasteContext = ctx;
+    pd.showModal();
+  }
+
+  function parsePasteItems(text) {
+    const out = [];
+    const trimmed = text.trim();
+    if (!trimmed) return out;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        for (const o of parsed) {
+          out.push(o && typeof o === 'object' ? NS.parseItem(o, []) : null);
+        }
+      } else if (parsed && typeof parsed === 'object') {
+        out.push(NS.parseItem(parsed, []));
+      } else {
+        out.push(null);
+      }
+      return out;
+    } catch (e) { /* not JSON -> line mode */ }
+    for (const line of trimmed.split(/\r?\n/)) {
+      const s = line.trim();
+      if (!s) continue;
+      out.push(/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(s) ? NS.parseItem({ id: s }, []) : null);
+    }
+    return out;
+  }
+
+  function parsePastePrices(text) {
+    const ok = [];
+    let bad = 0;
+    const trimmed = text.trim();
+    if (!trimmed) return { ok, bad };
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        for (const k of Object.keys(parsed)) {
+          const v = parsed[k];
+          if (/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(k) && Number.isInteger(v) && v >= 0) ok.push({ key: k, price: v });
+          else bad++;
+        }
+        return { ok, bad };
+      }
+    } catch (e) { /* line mode */ }
+    for (const line of trimmed.split(/\r?\n/)) {
+      const s = line.trim();
+      if (!s) continue;
+      const m = /^([a-z0-9_.-]+:[a-z0-9_./-]+(?:#[^ ]+)?)[\t ,:]+(\d+)$/.exec(s);
+      if (m) {
+        const price = Number(m[2]);
+        if (Number.isInteger(price) && price >= 0) ok.push({ key: m[1], price });
+        else bad++;
+      } else bad++;
+    }
+    return { ok, bad };
+  }
+
+  function applyPasteText(text) {
+    if (!pasteContext || !text.trim()) { pasteContext = null; return; }
+    if (pasteContext.mode === 'items') {
+      const parsed = parsePasteItems(text);
+      const bad = parsed.filter((x) => x === null).length;
+      const items = parsed.filter((x) => x !== null);
+      if (items.length) {
+        pushHistory();
+        for (const it of items) state.grades[pasteContext.grade].push(it);
+        rebuildGrade(pasteContext.grade);
+        schedulePreview();
+        toast(t('toast.pastedItems', { n: items.length }));
+      }
+      if (bad) toast(t('toast.pasteBad', { n: bad }), true);
+    } else if (pasteContext.mode === 'prices') {
+      const res = parsePastePrices(text);
+      if (res.ok.length) {
+        pushHistory();
+        for (const r of res.ok) state.priceRows[r.key] = { price: String(r.price), pinned: true };
+        rebuildPrices();
+        schedulePreview();
+        toast(t('toast.pastedPrices', { n: res.ok.length }));
+      }
+      if (res.bad) toast(t('toast.pasteBad', { n: res.bad }), true);
+    }
+    pasteContext = null;
+  }
+
+  function copyText(text, okMsg) {
+    const done = () => toast(okMsg);
+    const fail = () => toast(t('preview.copyFailed'), true);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fail);
+    } else {
+      fail();
+    }
+  }
+
+  function shareLink() {
+    try {
+      const json = JSON.stringify(snapshotState());
+      const enc = btoa(unescape(encodeURIComponent(json)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = location.href.split('#')[0] + '#state=' + enc;
+      copyText(url, t('toast.linkCopied'));
+      if (enc.length > 8000) toast(t('toast.linkTooLong', { n: enc.length }), true);
+    } catch (e) {
+      toast(t('preview.copyFailed'), true);
+    }
+  }
+
+  function loadHashState() {
+    const m = /[#&]state=([A-Za-z0-9_-]+)/.exec(location.hash);
+    if (!m) return false;
+    try {
+      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(escape(atob(b64)));
+      const snap = JSON.parse(json);
+      if (!snap || typeof snap !== 'object') return false;
+      state = Object.assign(NS.emptyState(), snap);
+      state.versionKey = state.versionKey || '1.21.1';
+      renderAll();
+      toast(t('toast.linkLoaded'));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /* ------------------------------ event delegation ------------------------------ */
 
   function setupDelegation() {
     const root = document;
+
+    document.addEventListener('toggle', (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains('grade-card')) {
+        const gi = Number(e.target.dataset.grade);
+        if (gi >= 0 && gi < 5) {
+          gradeOpen[gi] = e.target.open;
+          try { localStorage.setItem(LS_GRADE_OPEN, JSON.stringify(gradeOpen)); } catch (err) { /* file:// */ }
+        }
+      }
+    }, true);
 
     root.addEventListener('input', (e) => {
       const el = e.target;
@@ -236,6 +539,18 @@
 
     root.addEventListener('change', (e) => {
       const el = e.target;
+      if (el.id === 'tacz-toggle') {
+        pushHistory();
+        const cur = state.taczEnabled;
+        if (cur === null) state.taczEnabled = true;
+        else if (cur === true) state.taczEnabled = false;
+        else state.taczEnabled = null;
+        rebuildTaczCard();
+        rebuildGrades();
+        rebuildPrices();
+        schedulePreview();
+        return;
+      }
       const f = el.dataset.f;
       if (!f) return;
       if (el.dataset.kind === 'checkbox') {
@@ -256,11 +571,21 @@
     });
 
     root.addEventListener('click', (e) => {
+      const issue = e.target.closest('.issue[data-issue-path]');
+      if (issue) {
+        locateIssue(issue.dataset.issuePath);
+        return;
+      }
       const btn = e.target.closest('[data-action]');
-      if (!btn) return;
+      if (!btn) {
+        const colHead = e.target.closest('.col-head[data-col]');
+        if (colHead) toggleCol(colHead.dataset.col);
+        return;
+      }
       const action = btn.dataset.action;
       switch (action) {
         case 'add-item': {
+          pushHistory();
           const gi = Number(btn.dataset.grade);
           state.grades[gi].push(NS.emptyItem());
           rebuildGrade(gi);
@@ -268,6 +593,7 @@
           break;
         }
         case 'del-item': {
+          pushHistory();
           const gi = Number(btn.dataset.grade);
           const ii = Number(btn.dataset.index);
           state.grades[gi].splice(ii, 1);
@@ -276,6 +602,7 @@
           break;
         }
         case 'move-item': {
+          pushHistory();
           const gi = Number(btn.dataset.grade);
           const ii = Number(btn.dataset.index);
           const dir = Number(btn.dataset.dir);
@@ -290,11 +617,13 @@
           break;
         }
         case 'add-entity': {
+          pushHistory();
           state.meta.entity.push({ id: '', rate: '' });
           rebuildMeta();
           break;
         }
         case 'del-entity': {
+          pushHistory();
           const idx = Number(btn.dataset.index);
           state.meta.entity.splice(idx, 1);
           if (!state.meta.entity.length) state.meta.entity.push({ id: '', rate: '' });
@@ -302,6 +631,7 @@
           break;
         }
         case 'add-price-key': {
+          pushHistory();
           const input = $('#extra-key-input');
           const key = input.value.trim();
           if (key) {
@@ -315,6 +645,7 @@
           break;
         }
         case 'del-price-key': {
+          pushHistory();
           const key = btn.dataset.key;
           delete state.priceRows[key];
           rebuildPrices();
@@ -322,6 +653,7 @@
           break;
         }
         case 'load-example': {
+          pushHistory();
           loadExample(Number(btn.dataset.index), true);
           document.getElementById('example-dialog').close();
           break;
@@ -332,6 +664,35 @@
         }
         case 'expand-all': {
           document.querySelectorAll('.grade-card').forEach((d) => { d.open = true; });
+          break;
+        }
+        case 'undo': {
+          undo();
+          break;
+        }
+        case 'redo': {
+          redo();
+          break;
+        }
+        case 'copy-item': {
+          const gi = Number(btn.dataset.grade);
+          const ii = Number(btn.dataset.index);
+          const it = state.grades[gi] && state.grades[gi][ii];
+          if (!it) break;
+          const obj = NS.buildItem(it) || { id: it.value || '' };
+          copyText(JSON.stringify(obj, null, 2), t('item.copied'));
+          break;
+        }
+        case 'paste-items': {
+          openPasteDialog({ mode: 'items', grade: Number(btn.dataset.grade) });
+          break;
+        }
+        case 'paste-prices': {
+          openPasteDialog({ mode: 'prices' });
+          break;
+        }
+        case 'share': {
+          shareLink();
           break;
         }
         case 'tab': {
@@ -361,6 +722,21 @@
     });
   }
 
+  function setupShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      const tag = e.target && e.target.tagName;
+      const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z')) {
+        if (!inField) { e.preventDefault(); undo(); } // allow native undo inside text fields
+      } else if (mod && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault(); redo();
+      } else if (mod && !e.altKey && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault(); redo();
+      }
+    });
+  }
+
   function setupFileInput() {
     const fi = $('#file-input');
     fi.addEventListener('change', () => {
@@ -376,8 +752,13 @@
   /* ------------------------------ field updates ------------------------------ */
 
   function applyField(path, value) {
+    pushHistory();
     const parts = path.split('.');
     if (parts[0] === 'meta') {
+      if (parts[1] === 'fileName') {
+        state.fileName = value;
+        return;
+      }
       if (parts[1] === 'entity') {
         const i = Number(parts[2]);
         const k = parts[3];
@@ -405,6 +786,7 @@
   }
 
   function onPriceInput(el) {
+    pushHistory();
     const key = el.dataset.key;
     if (!state.priceRows[key]) state.priceRows[key] = { price: '', pinned: true };
     state.priceRows[key].price = el.value;
@@ -431,12 +813,14 @@
     const v = version();
     root.innerHTML =
       '<section class="card" id="card-meta"></section>' +
+      '<section class="card" id="card-tacz"></section>' +
       '<section class="card" id="card-drop"></section>' +
       (state.meta.type === 'terminal' ? '<section class="card" id="card-term"></section>' : '') +
       '<section class="card" id="card-grades"></section>' +
       '<section class="card" id="card-prices"></section>' +
       '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>';
     rebuildMeta();
+    rebuildTaczCard();
     rebuildDrop();
     if (state.meta.type === 'terminal') rebuildTerm();
     rebuildGrades();
@@ -447,6 +831,30 @@
 
   function card(id) { return document.getElementById(id); }
 
+  function rebuildTaczCard() {
+    const el = card('card-tacz');
+    if (!el) return;
+    const v = version();
+    const auto = state.taczEnabled == null;
+    const on = auto ? v.taczVariants : !!state.taczEnabled;
+    const stateLabel = auto
+      ? t('tacz.state.auto') + ' · ' + (on ? t('tacz.state.yes') : t('tacz.state.no'))
+      : (on ? t('tacz.state.on') : t('tacz.state.off'));
+    el.innerHTML =
+      '<div class="split-row tacz-row">' +
+      '<div>' +
+      '<h2>' + esc(t('tacz.title')) + '</h2>' +
+      '<p class="help">' + esc(t('tacz.help')) + '</p>' +
+      '</div>' +
+      '<label class="chk tacz-switch" data-help="tacz.tip">' +
+      '<input type="checkbox" id="tacz-toggle"' + (on ? ' checked' : '') + '>' +
+      '<span id="tacz-state">' + esc(stateLabel) + '</span>' +
+      '</label>' +
+      '</div>';
+    const cb = $('#tacz-toggle');
+    if (cb && auto) cb.indeterminate = true;
+  }
+
   function rebuildMeta() {
     const el = card('card-meta');
     if (!el) return;
@@ -454,22 +862,22 @@
     el.innerHTML =
       '<h2>' + esc(t('meta.title')) + '</h2>' +
       '<div class="grid2">' +
-      field('meta.fileName', 'meta.fileName', 'meta.fileNameHelp', input('meta.fileName', m.fileName, 'my_box', false)) +
-      field('meta.name', 'meta.name', 'meta.nameHelp', input('meta.name', m.name, '#FF5555 ' + (I18N.lang === 'zh' ? '名字' : 'Name'), false)) +
-      field('meta.type', 'meta.type', '', select('meta.type', [
+      field('meta.fileName', 'meta.fileNameHelp', input('meta.fileName', state.fileName, 'my_box', false)) +
+      field('meta.name', 'meta.nameHelp', input('meta.name', m.name, '#FF5555 ' + (I18N.lang === 'zh' ? '名字' : 'Name'), false)) +
+      field('meta.type', '', select('meta.type', [
         ['csbox', t('meta.type.csbox')],
         ['terminal', t('meta.type.terminal')],
       ], m.type)) +
-      field('meta.key', 'meta.key', 'meta.keyHelp', input('meta.key', m.key, 'minecraft:iron_ingot', m.type === 'terminal', m.type === 'terminal')) +
-      field('meta.drop', 'meta.drop', 'meta.dropHelp', input('meta.drop', m.drop, '0.05', false)) +
-      field('meta.icon', 'meta.icon', 'meta.iconHelp', input('meta.icon', m.icon, 'minecraft:ender_chest', false)) +
+      field('meta.key', 'meta.keyHelp', input('meta.key', m.key, 'minecraft:iron_ingot', m.type === 'terminal', m.type === 'terminal')) +
+      field('meta.drop', 'meta.dropHelp', input('meta.drop', m.drop, '0.05', false)) +
+      field('meta.icon', 'meta.iconHelp', input('meta.icon', m.icon, 'minecraft:ender_chest', false)) +
       '</div>' +
       '<div class="split-row">' +
       '<label class="chk"><input type="checkbox" data-f="meta.enabled" data-kind="checkbox"' + (m.enabled ? ' checked' : '') + '> ' + esc(t('meta.enabled')) + '</label>' +
       '<div class="grow"></div>' +
       '</div>' +
       '<div class="row">' +
-      '<label>' + esc(t('meta.requires')) + '<input data-f="meta.requiresText" value="' + esc(m.requiresText) + '" placeholder="tacz" class="grow"></label>' +
+      '<label data-help="meta.requiresHelp">' + esc(t('meta.requires')) + '<input data-f="meta.requiresText" value="' + esc(m.requiresText) + '" placeholder="tacz" class="grow"></label>' +
       '</div>';
   }
 
@@ -483,7 +891,7 @@
       '<label>' + esc(t('drop.random')) +
       '<div class="random-row">' +
       m.random.map((v, i) =>
-        '<span class="random-slot"><b>' + esc((DATA.gradeNames[i] || {}).zh) + '</b>' +
+        '<span class="random-slot" data-help="drop.randomHelp"><b>' + esc((DATA.gradeNames[i] || {}).zh) + '</b>' +
         '<input data-f="meta.random.' + i + '" value="' + esc(v) + '" type="number" min="0" max="10000"></span>').join('') +
       '</div>' +
       '<span class="help">' + esc(t('drop.randomHelp')) + '</span>' +
@@ -500,8 +908,8 @@
     if (!host) return;
     host.innerHTML = state.meta.entity.map((row, i) =>
       '<div class="entity-row">' +
-      '<input data-f="meta.entity.' + i + '.id" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +
-      '<input data-f="meta.entity.' + i + '.rate" value="' + esc(row.rate) + '" placeholder="0.1" type="number" min="0" max="1" step="0.01" class="rate">' +
+      '<input data-help="drop.entityIdHelp" data-f="meta.entity.' + i + '.id" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +
+      '<input data-help="drop.entityRateHelp" data-f="meta.entity.' + i + '.rate" value="' + esc(row.rate) + '" placeholder="0.1" type="number" min="0" max="1" step="0.01" class="rate">' +
       '<button class="btn small danger" data-action="del-entity" data-index="' + i + '">✕</button>' +
       '</div>').join('');
   }
@@ -513,32 +921,35 @@
     el.innerHTML =
       '<h2>' + esc(t('term.title')) + '</h2>' +
       '<div class="grid2">' +
-      field('term.discount', 'term.discount', '', input('meta.discount', m.discount, '0.2', false)) +
-      field('term.stock', 'term.stock', '', input('meta.stock', m.stock, '-1', false)) +
-      field('term.restock', 'term.restock', '', input('meta.restockMinutes', m.restockMinutes, '30', false)) +
-      field('term.maxPer', 'term.maxPer', '', input('meta.maxPerPlayer', m.maxPerPlayer, '-1', false)) +
-      field('term.cooldown', 'term.cooldown', '', input('meta.cooldownSeconds', m.cooldownSeconds, '0', false)) +
-      field('term.permission', 'term.permission', '', input('meta.permission', m.permission, 'csgobox.open', false)) +
+      field('term.discount', 'term.discountHelp', input('meta.discount', m.discount, '0.2', false)) +
+      field('term.stock', 'term.stockHelp', input('meta.stock', m.stock, '-1', false)) +
+      field('term.restock', 'term.restockHelp', input('meta.restockMinutes', m.restockMinutes, '30', false)) +
+      field('term.maxPer', 'term.maxPerHelp', input('meta.maxPerPlayer', m.maxPerPlayer, '-1', false)) +
+      field('term.cooldown', 'term.cooldownHelp', input('meta.cooldownSeconds', m.cooldownSeconds, '0', false)) +
+      field('term.permission', 'term.permissionHelp', input('meta.permission', m.permission, 'csgobox.open', false)) +
       '</div>';
   }
 
-  function field(labelKey, helpKey, inputHtml, helpText) {
-    return '<label class="field">' +
+  /* Args: (labelKey, helpKey, inputHtml). helpKey is an i18n key (may be '');
+   * the widget HTML follows. data-help on the label drives the hover tooltip. */
+  function field(labelKey, helpKey, inputHtml) {
+    const help = helpKey ? t(helpKey) : '';
+    return '<label class="field"' + (helpKey ? ' data-help="' + esc(helpKey) + '"' : '') + '>' +
       '<span class="f-label">' + esc(t(labelKey)) + '</span>' +
       inputHtml +
-      (helpText ? '<span class="help">' + esc(helpText) + '</span>' : '') +
+      (help ? '<span class="help">' + esc(help) + '</span>' : '') +
       '</label>';
   }
 
   function input(f, value, ph, disabled, redFlag) {
     return '<input data-f="' + esc(f) + '" value="' + esc(value) + '" placeholder="' + esc(ph) + '"' +
-      (disabled ? ' disabled title="' + esc(I18N.t('meta.keyHelp')) + '"' : '') +
+      (disabled ? ' disabled' : '') +
       (redFlag ? ' class="danger-input"' : '') +
       '>';
   }
 
-  function select(f, options, value) {
-    return '<select data-f="' + esc(f) + '">' +
+  function select(f, options, value, helpKey) {
+    return '<select data-f="' + esc(f) + '"' + (helpKey ? ' data-help="' + esc(helpKey) + '"' : '') + '>' +
       options.map((o) => '<option value="' + esc(o[0]) + '"' + (String(value) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
       '</select>';
   }
@@ -557,7 +968,7 @@
       '<div class="grade-list">' +
       DATA.gradeNames.map((g, gi) => {
         const count = state.grades[gi].length;
-        return '<details class="grade-card" data-grade="' + gi + '" open>' +
+        return '<details class="grade-card" data-grade="' + gi + '"' + (gradeOpen[gi] ? ' open' : '') + '>' +
           '<summary>' +
           '<span class="grade-badge g' + (gi + 1) + '">' + esc(g[I18N.lang]) + '</span>' +
           '<code>grade' + (gi + 1) + '</code>' +
@@ -567,6 +978,7 @@
           '</summary>' +
           '<div class="grade-items" id="grade-items-' + gi + '"></div>' +
           '<button class="btn small accent" data-action="add-item" data-grade="' + gi + '">' + esc(t('grade.add')) + '</button>' +
+          '<button class="btn small" data-action="paste-items" data-grade="' + gi + '">' + esc(t('item.pasteItems')) + '</button>' +
           '</details>';
       }).join('') +
       '</div>';
@@ -611,48 +1023,49 @@
     ];
     const header = '<div class="item-head">' +
       '<span class="item-no">#' + (ii + 1) + '</span>' +
-      select(p + 'source', srcOptions, it.source) +
-      '<input data-f="' + esc(p + 'value') + '" value="' + esc(it.value) +
+      select(p + 'source', srcOptions, it.source, 'item.sourceHelp') +
+      '<input data-help="item.sourceHelp" data-f="' + esc(p + 'value') + '" value="' + esc(it.value) +
       '" placeholder="' + (it.source === 'tag' ? '#minecraft:swords' : it.source === 'loot_table' ? 'minecraft:chests/simple_dungeon' : 'minecraft:diamond_sword') + '" class="grow">' +
-      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="-1" title="' + esc(t('item.up')) + '">↑</button>' +
-      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="1" title="' + esc(t('item.down')) + '">↓</button>' +
-      '<button class="btn small danger" data-action="del-item" data-grade="' + gi + '" data-index="' + ii + '" title="' + esc(t('item.remove')) + '">✕</button>' +
+      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="-1" data-help="item.up">↑</button>' +
+      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="1" data-help="item.down">↓</button>' +
+      '<button class="btn small" data-action="copy-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.copy">⧉</button>' +
+      '<button class="btn small danger" data-action="del-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.remove">✕</button>' +
       '</div>';
 
     const body = '<div class="item-body">' +
 
       '<div class="row inline">' +
-      '<label class="mini">' + esc(t('item.count')) + ' ' +
+      '<label class="mini" data-help="item.countHelp">' + esc(t('item.count')) + ' ' +
       select(p + 'countMode', countOptions, it.countMode) + '</label>' +
       (it.countMode === 'fixed'
-        ? '<label class="mini">' + esc(t('item.count')) + '<input data-f="' + esc(p + 'count') + '" value="' + esc(it.count) + '" type="number" min="1" class="w7"></label>'
+        ? '<label class="mini" data-help="item.countHelp">' + esc(t('item.count')) + '<input data-f="' + esc(p + 'count') + '" value="' + esc(it.count) + '" type="number" min="1" class="w7"></label>'
         : it.countMode === 'range'
-          ? '<label class="mini">' + esc(t('item.count')) + ' <input data-f="' + esc(p + 'countMin') + '" value="' + esc(it.countMin) + '" type="number" min="1" class="w7"> … <input data-f="' + esc(p + 'countMax') + '" value="' + esc(it.countMax) + '" type="number" min="1" class="w7"></label>'
+          ? '<label class="mini" data-help="item.countHelp">' + esc(t('item.count')) + ' <input data-f="' + esc(p + 'countMin') + '" value="' + esc(it.countMin) + '" type="number" min="1" class="w7"> … <input data-f="' + esc(p + 'countMax') + '" value="' + esc(it.countMax) + '" type="number" min="1" class="w7"></label>'
           : '') +
-      '<label class="mini">' + esc(t('item.weight')) + '<input data-f="' + esc(p + 'weight') + '" value="' + esc(it.weight) + '" type="number" min="0" class="w7" title="' + esc(t('item.weightHelp')) + '"></label>' +
-      '<label class="mini">' + esc(t('item.enchant')) + ' ' + select(p + 'enchantMode', enchantOptions, it.enchantMode) + '</label>' +
+      '<label class="mini" data-help="item.weightHelp">' + esc(t('item.weight')) + '<input data-f="' + esc(p + 'weight') + '" value="' + esc(it.weight) + '" type="number" min="0" class="w7"></label>' +
+      '<label class="mini" data-help="item.enchantHelp">' + esc(t('item.enchant')) + ' ' + select(p + 'enchantMode', enchantOptions, it.enchantMode) + '</label>' +
       (it.enchantMode === 'custom'
-        ? '<label class="mini">' + esc(t('item.enchantId')) + '<input data-f="' + esc(p + 'enchantId') + '" value="' + esc(it.enchantId) + '" placeholder="minecraft:sharpness" class="w14"></label>' +
-          '<label class="mini">' + esc(t('item.enchantLevel')) + ' ' + select(p + 'enchantLevelMode', levelOptions, it.enchantLevelMode) + '</label>' +
+        ? '<label class="mini" data-help="item.enchantIdHelp">' + esc(t('item.enchantId')) + '<input data-f="' + esc(p + 'enchantId') + '" value="' + esc(it.enchantId) + '" placeholder="minecraft:sharpness" class="w14"></label>' +
+          '<label class="mini" data-help="item.enchantLevelHelp">' + esc(t('item.enchantLevel')) + ' ' + select(p + 'enchantLevelMode', levelOptions, it.enchantLevelMode) + '</label>' +
           (it.enchantLevelMode === 'range'
-            ? '<label class="mini"><input data-f="' + esc(p + 'enchantLevelMin') + '" value="' + esc(it.enchantLevelMin) + '" type="number" min="1" class="w7"></label>' +
+            ? '<label class="mini" data-help="item.enchantLevelHelp"><input data-f="' + esc(p + 'enchantLevelMin') + '" value="' + esc(it.enchantLevelMin) + '" type="number" min="1" class="w7"></label>' +
               '<span class="mini sep">' + esc(t('item.to')) + '</span>' +
-              '<label class="mini"><input data-f="' + esc(p + 'enchantLevelMax') + '" value="' + esc(it.enchantLevelMax) + '" type="number" min="1" class="w7"></label>'
-            : '<label class="mini"><input data-f="' + esc(p + 'enchantLevel') + '" value="' + esc(it.enchantLevel) + '" type="number" min="1" class="w7"></label>')
+              '<label class="mini" data-help="item.enchantLevelHelp"><input data-f="' + esc(p + 'enchantLevelMax') + '" value="' + esc(it.enchantLevelMax) + '" type="number" min="1" class="w7"></label>'
+            : '<label class="mini" data-help="item.enchantLevelHelp"><input data-f="' + esc(p + 'enchantLevel') + '" value="' + esc(it.enchantLevel) + '" type="number" min="1" class="w7"></label>')
         : '') +
       '</div>' +
 
-      (v.taczVariants
+      (taczVisible()
         ? '<div class="row inline">' +
-          '<label class="mini">' + esc(t('item.variant')) + '<input data-f="' + esc(p + 'variant') + '" value="' + esc(it.variant) + '" placeholder="tacz:ak47" title="' + esc(t('item.variantHelp')) + '" class="w14"></label>' +
-          '<label class="mini">' + esc(t('item.variantField')) + ' ' +
+          '<label class="mini" data-help="item.variantHelp">' + esc(t('item.variant')) + '<input data-f="' + esc(p + 'variant') + '" value="' + esc(it.variant) + '" placeholder="tacz:ak47" class="w14"></label>' +
+          '<label class="mini" data-help="item.variantFieldHelp">' + esc(t('item.variantField')) + ' ' +
           select(p + 'variantField', [['GunId', 'GunId'], ['AmmoId', 'AmmoId']], it.variantField) + '</label>' +
-          '<label class="mini">' + esc(t('item.nbt')) + '<input data-f="' + esc(p + 'tagRaw') + '" value="' + esc(it.tagRaw) + '" placeholder=\'{GunId:"tacz:ak47"}\' title="' + esc(t('item.nbtHelp')) + '" class="w24"></label>' +
+          '<label class="mini" data-help="item.nbtHelp">' + esc(t('item.nbt')) + '<input data-f="' + esc(p + 'tagRaw') + '" value="' + esc(it.tagRaw) + '" placeholder=\'{GunId:"tacz:ak47"}\' class="w24"></label>' +
           '</div>'
         : '') +
 
       (v.components
-        ? '<div class="row"><label class="mini grow">' + esc(t('item.components')) +
+        ? '<div class="row"><label class="mini grow" data-help="item.componentsHelp">' + esc(t('item.components')) +
           '<textarea data-f="' + esc(p + 'components') + '" placeholder="' + esc(t('item.componentsHelp')) + '" rows="2" class="grow">' + esc(it.components) + '</textarea></label></div>'
         : (it.components ? '<div class="row"><span class="help">' + esc(t('v.componentsIgnored')) + '</span></div>' : '')) +
       '</div>';
@@ -663,7 +1076,7 @@
   function rebuildPrices() {
     const el = card('card-prices');
     if (!el) return;
-    const { rows, version: v } = NS.collectPriceRows(state, state.versionKey);
+    const { rows } = NS.collectPriceRows(state, state.versionKey);
     const bodyRows = rows.map((r) => {
       const price = r.row.price;
       const priced = price !== '' && price !== null && price !== undefined && Number.isInteger(Number(price)) && Number(price) >= 0;
@@ -671,21 +1084,22 @@
       if (priced) recycle = String(Math.ceil(Number(price) * 0.9));
       else if (r.grades.size === 1) recycle = String(DATA.gradeRecycleYields[[...r.grades][0] - 1]);
       else if (r.grades.size > 1) recycle = '-';
-      let status = priced ? t('prices.state.priced') : (r.key.includes('#') && !v.taczVariants ? t('prices.variantUnsupported') : t('prices.state.default'));
+      let status = priced ? t('prices.state.priced') : (r.key.includes('#') && !taczVisible() ? t('prices.variantUnsupported') : t('prices.state.default'));
       const gradeTag = r.grades.size
         ? [...r.grades].sort((a, b) => a - b).map((g) => 'g' + g).join(',')
         : '<span class="extra-tag">' + esc(t('prices.state.extra')) + '</span>';
       const removable = r.row.pinned && !r.grades.size;
       return '<tr data-price-key="' + esc(r.key) + '">' +
         '<td class="key-cell"><code>' + esc(r.key) + '</code><span class="tiny muted">' + gradeTag + '</span></td>' +
-        '<td><input data-role="price-input" data-key="' + esc(r.key) + '" value="' + esc(price === '' ? '' : price) + '" type="number" min="0" step="1" class="price-input" placeholder="—"></td>' +
+        '<td><input data-help="prices.priceHelp" data-role="price-input" data-key="' + esc(r.key) + '" value="' + esc(price === '' ? '' : price) + '" type="number" min="0" step="1" class="price-input" placeholder="—"></td>' +
         '<td class="recycle-cell">' + esc(recycle) + '</td>' +
-        '<td class="status-cell status-' + (priced ? 'ok' : (r.key.includes('#') && !v.taczVariants ? 'warn' : 'muted')) + '">' + esc(status) + '</td>' +
+        '<td class="status-cell status-' + (priced ? 'ok' : (r.key.includes('#') && !taczVisible() ? 'warn' : 'muted')) + '">' + esc(status) + '</td>' +
         '<td>' + (removable ? '<button class="btn small danger" data-action="del-price-key" data-key="' + esc(r.key) + '">' + esc(t('prices.remove')) + '</button>' : '') + '</td>' +
         '</tr>';
     }).join('');
     el.innerHTML =
-      '<h2>' + esc(t('prices.title')) + '</h2>' +
+      '<div class="card-head"><h2>' + esc(t('prices.title')) + '</h2>' +
+      '<button class="btn small" data-action="paste-prices">' + esc(t('prices.paste')) + '</button></div>' +
       '<p class="help">' + esc(t('prices.help')) + '</p>' +
       '<table class="price-table"><thead><tr>' +
       '<th>' + esc(t('prices.key')) + '</th>' +
@@ -694,7 +1108,7 @@
       '<th>' + esc(t('prices.state')) + '</th><th></th>' +
       '</tr></thead><tbody>' + bodyRows + '</tbody></table>' +
       '<div class="add-key-row">' +
-      '<input id="extra-key-input" placeholder="' + esc(t('prices.addKeyPh')) + '" class="grow">' +
+      '<input id="extra-key-input" data-help="prices.addKeyHelp" placeholder="' + esc(t('prices.addKeyPh')) + '" class="grow">' +
       '<button class="btn small accent" data-action="add-price-key">' + esc(t('prices.addKey')) + '</button>' +
       '</div>';
   }
@@ -711,11 +1125,121 @@
       let status;
       let cls;
       if (priced) { status = t('prices.state.priced'); cls = 'ok'; }
-      else if (key.includes('#') && !version().taczVariants) { status = t('prices.variantUnsupported'); cls = 'warn'; }
+      else if (key.includes('#') && !taczVisible()) { status = t('prices.variantUnsupported'); cls = 'warn'; }
       else { status = t('prices.state.default'); cls = 'muted'; }
       sc.textContent = status;
       sc.className = 'status-cell status-' + cls;
     }
+  }
+
+  /* ------------------------------ collapsible sections ------------------------------ */
+
+  let colState = null;
+
+  function colCollapsed(id) {
+    if (colState === null) {
+      colState = {};
+      try {
+        const raw = localStorage.getItem(LS_COLS);
+        if (raw) colState = JSON.parse(raw) || {};
+      } catch (e) { /* defaults */ }
+      // first-run defaults: advanced / conditional sections start collapsed
+      const defaults = { drop: true, term: true, meta: false, tacz: false, grades: false, prices: false };
+      for (const k of Object.keys(defaults)) {
+        if (colState[k] === undefined) colState[k] = defaults[k];
+      }
+    }
+    return !!colState[id];
+  }
+
+  function toggleCol(id) {
+    colCollapsed(); // initialize + defaults
+    colState[id] = !colState[id];
+    try { localStorage.setItem(LS_COLS, JSON.stringify(colState)); } catch (e) { /* file:// */ }
+    const sec = document.getElementById('card-' + id);
+    if (sec) sec.classList.toggle('collapsed', colState[id]);
+  }
+
+  /** Wraps each section card into a clickable header + collapsible body at
+   * runtime. Idempotent: re-wraps when a rebuild replaces the card HTML. */
+  function decorateCollapsibleCards() {
+    const ids = ['meta', 'tacz', 'drop', 'term', 'grades', 'prices'];
+    for (const id of ids) {
+      const sec = document.getElementById('card-' + id);
+      if (!sec) continue;
+      const existing = sec.firstElementChild;
+      if (existing && existing.classList && existing.classList.contains('col-head')) {
+        const head = existing.querySelector('.col-head-h2, h2');
+        sec.classList.toggle('collapsed', colCollapsed(id));
+        continue;
+      }
+      // find the native heading block: <h2> or the .card-head wrapper
+      const head = sec.querySelector(':scope > h2') || sec.querySelector(':scope > .card-head');
+      if (!head) continue; // e.g. TACZ card keeps its inline layout
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'col-head';
+      wrapper.dataset.col = id;
+      if (!head.classList.contains('card-head')) {
+        head.classList.add('col-head-h2'); // keep original h2 styling hooks
+      }
+      sec.insertBefore(wrapper, head);
+      wrapper.appendChild(head);
+
+      const caret = document.createElement('span');
+      caret.className = 'col-caret';
+      caret.setAttribute('aria-hidden', 'true');
+      wrapper.appendChild(caret);
+
+      const body = document.createElement('div');
+      body.className = 'col-body';
+      while (sec.firstChild && sec.firstChild !== wrapper) body.appendChild(sec.firstChild);
+      sec.appendChild(body);
+
+      sec.classList.toggle('collapsed', colCollapsed(id));
+    }
+  }
+
+  /* ------------------------------ issue navigation ------------------------------ */
+
+  function locateIssue(path) {
+    let el = null;
+    const gradeMatch = /^grade([1-5])\[(\d+)\](?:\.([\w-]+))?$/.exec(path);
+    if (gradeMatch) {
+      const gi = Number(gradeMatch[1]) - 1;
+      const ii = Number(gradeMatch[2]) - 1;
+      const field = gradeMatch[3];
+      const card = document.getElementById('grade-items-' + gi);
+      if (card) {
+        el = field ? card.querySelector('[data-f="grades.' + gi + '.' + ii + '.' + field + '"]')
+                   : (card.children[ii] || null);
+      }
+    } else if (path === 'grades') {
+      const first = document.querySelector('.grade-card');
+      el = first || null;
+    } else if (path.indexOf('prices.') === 0) {
+      const key = path.slice('prices.'.length);
+      el = document.querySelector('#card-prices tr[data-price-key="' + CSS.escape(key) + '"]');
+      if (!el) el = document.getElementById('card-prices');
+    } else if (path === 'meta.requires') {
+      el = document.querySelector('[data-f="meta.requiresText"]');
+    } else if (path === 'meta.random') {
+      el = document.querySelector('[data-f="meta.random.0"]');
+    } else if (path === 'meta.entity') {
+      el = document.querySelector('[data-f="meta.entity.0.id"]');
+    } else {
+      el = document.querySelector('[data-f="' + CSS.escape(path) + '"]');
+    }
+    if (!el) el = document.getElementById('card-meta');
+    flashElement(el);
+  }
+
+  function flashElement(el) {
+    if (!el) return;
+    if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('flash-highlight');
+    clearTimeout(el._flashT);
+    el._flashT = setTimeout(() => el.classList.remove('flash-highlight'), 2000);
   }
 
   /* ------------------------------ preview & validation ------------------------------ */
@@ -734,6 +1258,7 @@
   }
 
   function rebuildPreview() {
+    decorateCollapsibleCards();
     const pre = $('#json-preview');
     const boxObj = NS.buildBox(state);
     const pricesObj = NS.buildPrices(state);
@@ -755,6 +1280,11 @@
     const issues = NS.validate(state, state.versionKey);
     renderIssues(issues);
     saveStateDebounced();
+
+    const undoBtn = $('#btn-undo');
+    const redoBtn = $('#btn-redo');
+    if (undoBtn) undoBtn.disabled = !history.undo.length;
+    if (redoBtn) redoBtn.disabled = !history.redo.length;
   }
 
   function renderIssues(issues) {
@@ -773,7 +1303,7 @@
         '</div>' +
         '<ul class="issue-list">' +
         issues.map((i) =>
-          '<li class="issue ' + i.level + '"><span class="issue-path">' + esc(i.path) + '</span> ' +
+          '<li class="issue ' + i.level + '" data-issue-path="' + esc(i.path) + '" title="' + esc(t('validate.jump')) + '"><span class="issue-path">' + esc(i.path) + '</span> ' +
           esc(t(i.key, i.vars)) + '</li>').join('') +
         '</ul>';
     }
@@ -792,9 +1322,12 @@
     }
     const type = detectType(obj);
     if (type === 'box') {
+      pushHistory();
       const base = fileName ? fileName.replace(/\.json$/i, '') : (obj.name && String(obj.name).replace(/[^a-z0-9_.\/-]/gi, '_').toLowerCase()) || 'imported';
+      const prevTacz = state.taczEnabled;
       const res = NS.boxToState(obj, base);
       state = res.state;
+      state.taczEnabled = prevTacz;
       state.versionKey = state.versionKey || '1.21.1';
       const mig = NS.mergeMigrations(state, res.migrations);
       renderAll();
@@ -802,6 +1335,7 @@
       else if (mig.bad) toast(t('toast.ignoredBadPrice', { n: mig.bad }), true);
       else toast(t('toast.importBox', { file: fileName || base }));
     } else if (type === 'prices') {
+      pushHistory();
       const n = NS.mergePrices(state, obj);
       rebuildPrices();
       schedulePreview();
@@ -828,8 +1362,10 @@
   function loadExample(index, announce) {
     const ex = DATA.examples[index];
     if (!ex) return;
+    const prevTacz = state.taczEnabled;
     const res = NS.boxToState(ex.box, ex.file.replace(/\.json$/i, ''));
     state = res.state;
+    state.taczEnabled = prevTacz;
     state.versionKey = state.versionKey || '1.21.1';
     NS.mergeMigrations(state, res.migrations);
     NS.mergePrices(state, ex.prices || {});
