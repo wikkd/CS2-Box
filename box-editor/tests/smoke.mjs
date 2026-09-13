@@ -266,6 +266,17 @@ try {
   check('prices preview includes imported key',
     ((await page.locator('#json-preview').textContent()) || '').includes('test_shard'));
 
+  await page.click('[data-action="paste-prices"]');
+  await page.fill('#paste-textarea', 'minecraft:test_range\t1500-3000');
+  await page.click('#paste-do');
+  await page.waitForTimeout(350);
+  const rangePreview = (await page.locator('#json-preview').textContent()) || '';
+  const rangeObj = JSON.parse(rangePreview);
+  check('price range imports and serializes as [min, max]',
+    JSON.stringify(rangeObj['minecraft:test_range']) === '[1500,3000]' &&
+    (await page.locator('tr[data-price-key="minecraft:test_range"] input.price-input').inputValue()) === '1500-3000',
+    'serialized=' + JSON.stringify(rangeObj['minecraft:test_range']));
+
   // imported rows survive a round-trip to the box page
   await page.goto(BASE, { waitUntil: 'load' });
   const storedState = await page.evaluate(() => localStorage.getItem('cs2box-editor-state-v1') || '');

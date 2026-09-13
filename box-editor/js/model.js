@@ -19,6 +19,39 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return /^-?\d+$/.test(s) ? parseInt(s, 10) : '';
   }
 
+  /** Java int upper bound: the in-game loader casts prices with `(int) v`
+   *  (PriceTable), so anything above 2147483647 overflows negative and breaks
+   *  parsing — the editor must refuse it before it reaches the game. */
+  const MAX_INT = 2147483647;
+
+  /** Parse a price-cell value: a fixed non-negative integer, a "min-max"
+   *  string, or a [min, max] array. Returns {min, max} or null. */
+  function parsePriceInput(v) {
+    if (v === '' || v === null || v === undefined) return null;
+    if (Array.isArray(v)) {
+      if (v.length !== 2) return null;
+      const a = Number(v[0]);
+      const b = Number(v[1]);
+      if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a > b) return null;
+      if (a > MAX_INT || b > MAX_INT) return null;
+      return { min: a, max: b };
+    }
+    const s = String(v).trim();
+    const m = /^(\d+)\s*[-~]\s*(\d+)$/.exec(s);
+    if (m) {
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (a < 0 || b < 0 || a > b) return null;
+      if (a > MAX_INT || b > MAX_INT) return null;
+      return { min: a, max: b };
+    }
+    if (!/^\d+$/.test(s)) return null;
+    const n = Number(s);
+    if (!Number.isInteger(n) || n < 0) return null;
+    if (n > MAX_INT) return null;
+    return { min: n, max: n };
+  }
+
   function emptyMeta() {
     return {
       name: '',
@@ -36,6 +69,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       maxPerPlayer: '',
       cooldownSeconds: '',
       permission: '',
+      pityGrade: '', // v2.1.1 pity (保底) target grade id
+      pityEvery: '', // v2.1.1 pity (保底) force threshold
     };
   }
 
@@ -220,12 +255,14 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       obj.random = rn.map((v) => (v === '' ? 0 : Math.max(0, Math.min(10000, Math.round(v)))));
     }
 
-    // entity rows → flat alternating [id, rate?] list
+    // entity rows → flat alternating [id, rate?] list. Rows WITHOUT an id but
+    // WITH a rate are emitted as bare numbers so a round-trip never drops the
+    // value (misplaced / dangling numbers stay visible in the editor for the
+    // user to fix; validator.js flags them).
     const entity = [];
     for (const row of meta.entity) {
       const id = (row.id || '').trim();
-      if (!id) continue;
-      entity.push(id);
+      if (id) entity.push(id);
       const r = numOrEmpty(row.rate);
       if (r !== '') entity.push(r);
     }
@@ -253,6 +290,15 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const perm = (meta.permission || '').trim();
     if (perm) obj.permission = perm;
 
+    // v2.1.1 pity: only emitted when BOTH fields are valid (grade in the
+    // five-tier ids, every >= 2); a half-filled pity config is dropped.
+    const pityGrade = (meta.pityGrade || '').trim();
+    const pityEveryStr = String(meta.pityEvery ?? '').trim();
+    const pityEvery = Number(pityEveryStr);
+    if (pityGrade && pityEveryStr !== '' && Number.isInteger(pityEvery) && pityEvery >= 2) {
+      obj.pity = { grade: pityGrade, every: pityEvery };
+    }
+
     for (let gi = 1; gi <= 5; gi++) {
       const items = [];
       for (const it of state.grades[gi - 1]) {
@@ -264,17 +310,17 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return obj;
   }
 
-  /** Serializes the price table. Only priced, valid integer entries. */
+  /** Serializes the price table. Only priced, valid entries: fixed integers
+   *  stay integers, ranges are written as [min, max] arrays. */
   function buildPrices(state) {
     const out = {};
     const keys = Object.keys(state.priceRows).sort();
     for (const key of keys) {
       const row = state.priceRows[key];
-      if (row.price === '' || row.price === null || row.price === undefined) continue;
-      const n = Number(row.price);
-      if (!Number.isInteger(n) || n < 0) continue;
+      const parsed = parsePriceInput(row.price);
+      if (!parsed) continue;
       if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(key)) continue;
-      out[key] = n;
+      out[key] = parsed.min === parsed.max ? parsed.min : [parsed.min, parsed.max];
     }
     return out;
   }
@@ -387,6 +433,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     m.maxPerPlayer = intOrEmpty(obj.max_per_player);
     m.cooldownSeconds = intOrEmpty(obj.cooldown_seconds);
     m.permission = typeof obj.permission === 'string' ? obj.permission : '';
+    const pityObj = obj.pity;
+    m.pityGrade = pityObj && typeof pityObj.grade === 'string' ? pityObj.grade : '';
+    m.pityEvery = pityObj ? intOrEmpty(pityObj.every) : '';
 
     const migrations = [];
     for (let gi = 1; gi <= 5; gi++) {
@@ -441,18 +490,20 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return { migrated: okCount, bad: badCount };
   }
 
-  /** Merge an imported _prices.json into priceRows (existing prices win). */
+  /** Merge an imported _prices.json into priceRows (existing prices win).
+   *  Fixed entries land as ints, ranges as "min-max" strings. */
   function mergePrices(state, pricesObj) {
     let n = 0;
     for (const key of Object.keys(pricesObj)) {
-      const v = pricesObj[key];
-      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) continue;
+      const parsed = parsePriceInput(pricesObj[key]);
+      if (!parsed) continue;
       if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(key)) continue;
+      const display = parsed.min === parsed.max ? String(parsed.min) : parsed.min + '-' + parsed.max;
       if (!state.priceRows[key]) {
-        state.priceRows[key] = { price: v, pinned: true };
+        state.priceRows[key] = { price: display, pinned: true };
         n++;
       } else if (state.priceRows[key].price === '' || state.priceRows[key].price === null || state.priceRows[key].price === undefined) {
-        state.priceRows[key].price = v;
+        state.priceRows[key].price = display;
         n++;
       }
     }
@@ -463,6 +514,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.emptyItem = emptyItem;
   NS.emptyState = emptyState;
   NS.priceKeyOf = priceKeyOf;
+  NS.parsePriceInput = parsePriceInput;
   NS.extractVariant = extractVariant;
   NS.collectPriceRows = collectPriceRows;
   NS.looksLikeId = looksLikeId;

@@ -120,6 +120,33 @@ window.CSBDATA = {
           "type": "string",
           "description": "v2.1.0: permission node checked against the PERMISSION_GATE hook (default allow-all)."
         },
+        "pity": {
+          "type": "object",
+          "properties": {
+            "grade": {
+              "type": "string",
+              "enum": [
+                "consumer",
+                "industrial",
+                "mil_spec",
+                "restricted",
+                "classified"
+              ],
+              "description": "v2.1.1: the grade that must eventually drop; forces a roll at/above it."
+            },
+            "every": {
+              "type": "integer",
+              "minimum": 2,
+              "description": "v2.1.1: after every-1 consecutive opens below the target grade, the next open is forced to roll the target grade or higher. In-memory per player+box, resets on restart."
+            }
+          },
+          "required": [
+            "grade",
+            "every"
+          ],
+          "additionalProperties": false,
+          "description": "v2.1.1: pity (保底) policy. Invalid grade ids or every < 2 degrade to no pity (schema validator reports the mistake)."
+        },
         "grade1": {
           "$ref": "#/$defs/grade"
         },
@@ -222,7 +249,7 @@ window.CSBDATA = {
             },
             "price": {
               "not": {},
-              "description": "REMOVED — do not use. Terminal prices are centrally managed in config/csbox/_prices.json (see prices.schema.json). A leftover price here is reported by the in-game validator; this item then falls back to the grade default price until migrated."
+              "description": "REMOVED — do not use. Terminal prices are centrally managed in config/csbox/_prices.json (see prices.schema.json). A leftover price here is reported by the in-game validator; the item is treated as unpriced (terminal never sells it, recycler pays 0) until migrated."
             },
             "components": {
               "type": "object",
@@ -258,15 +285,29 @@ window.CSBDATA = {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://csgobox.reclizer.com/schemas/prices.schema.json",
       "title": "CS2-Box Price Table",
-      "description": "Central terminal price table (config/csbox/_prices.json). Keys are item registry ids ('minecraft:diamond_sword') or id#variant sub-keys for NBT-distinguished items ('tacz:modern_kinetic_gun#tacz:deagle_golden'); values are non-negative integers in Armory Points. Items without an entry use the grade default price (grade1..5 = 6/10/16/22/30). The underscore prefix keeps the file out of the box scan.",
+      "description": "Central terminal price table (config/csbox/_prices.json). Keys are item registry ids ('minecraft:diamond_sword') or id#variant sub-keys for NBT-distinguished items ('tacz:modern_kinetic_gun#tacz:deagle_golden'); values are a fixed non-negative integer ('200') or an inclusive random range '[min, max]' ('[1500, 3000]', same style as the count interval) in Armory Points — ranges are sampled once per terminal offer / recycle. Items without an entry have NO price: terminals never offer them, the recycler pays 0, and boxes containing unpriced id entries refuse to load (loot_table entries are the only exception and are never offered). The underscore prefix keeps the file out of the box scan.",
       "type": "object",
       "propertyNames": {
         "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$"
       },
       "additionalProperties": {
-        "type": "integer",
-        "minimum": 0,
-        "description": "Terminal purchase price in Armory Points for the item id (or id#variant)."
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Fixed terminal purchase price in Armory Points for the item id (or id#variant)."
+          },
+          {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Random price range [min, max] (inclusive) in Armory Points; sampled once per terminal offer (and per recycle). min must not exceed max (reported at runtime)."
+          }
+        ]
       }
     }
   },
@@ -951,7 +992,11 @@ window.CSBDATA = {
         "minecraft:stone_axe": 50,
         "minecraft:totem_of_undying": 1500,
         "minecraft:trident": 4000,
-        "minecraft:wooden_sword": 50
+        "minecraft:wooden_sword": 50,
+        "minecraft:nautilus_shell": [
+          200,
+          400
+        ]
       }
     },
     {
@@ -1093,7 +1138,11 @@ window.CSBDATA = {
         "minecraft:stone_axe": 50,
         "minecraft:totem_of_undying": 1500,
         "minecraft:trident": 4000,
-        "minecraft:wooden_sword": 50
+        "minecraft:wooden_sword": 50,
+        "minecraft:nautilus_shell": [
+          200,
+          400
+        ]
       }
     },
     {
@@ -1209,7 +1258,11 @@ window.CSBDATA = {
         "minecraft:stone_axe": 50,
         "minecraft:totem_of_undying": 1500,
         "minecraft:trident": 4000,
-        "minecraft:wooden_sword": 50
+        "minecraft:wooden_sword": 50,
+        "minecraft:nautilus_shell": [
+          200,
+          400
+        ]
       }
     },
     {

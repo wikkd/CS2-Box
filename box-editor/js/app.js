@@ -104,7 +104,25 @@
     }));
   }
 
+  let historyTimer = null;
+
+  /** Debounced history snapshot: text inputs fire per keystroke, so record a
+   *  snapshot only after 600 ms of quiet typing (undo granularity = one editing
+   *  burst). Button-level operations call pushHistory() directly, which cancels
+   *  any pending debounce. */
+  function scheduleHistory() {
+    if (historyTimer !== null) return;
+    historyTimer = setTimeout(() => {
+      historyTimer = null;
+      pushHistory();
+    }, 600);
+  }
+
   function pushHistory() {
+    if (historyTimer !== null) {
+      clearTimeout(historyTimer);
+      historyTimer = null;
+    }
     const snap = snapshotState();
     const last = history.undo[history.undo.length - 1];
     if (last && JSON.stringify(last) === JSON.stringify(snap)) return;
@@ -513,7 +531,8 @@
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         for (const k of Object.keys(parsed)) {
           const v = parsed[k];
-          if (/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(k) && Number.isInteger(v) && v >= 0) ok.push({ key: k, price: v });
+          const p = NS.parsePriceInput(v);
+          if (/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(k) && p) ok.push({ key: k, price: p.min === p.max ? String(p.min) : p.min + '-' + p.max });
           else bad++;
         }
         return { ok, bad };
@@ -522,10 +541,10 @@
     for (const line of trimmed.split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
-      const m = /^([a-z0-9_.-]+:[a-z0-9_./-]+(?:#[^ ]+)?)[\t ,:]+(\d+)$/.exec(s);
+      const m = /^([a-z0-9_.-]+:[a-z0-9_./-]+(?:#[^ ]+)?)[\t ,:]+(\S+)$/.exec(s);
       if (m) {
-        const price = Number(m[2]);
-        if (Number.isInteger(price) && price >= 0) ok.push({ key: m[1], price });
+        const p = NS.parsePriceInput(m[2]);
+        if (p) ok.push({ key: m[1], price: p.min === p.max ? String(p.min) : p.min + '-' + p.max });
         else bad++;
       } else bad++;
     }
@@ -862,7 +881,7 @@
   /* ------------------------------ field updates ------------------------------ */
 
   function applyField(path, value) {
-    pushHistory();
+    scheduleHistory();
     const parts = path.split('.');
     if (parts[0] === 'meta') {
       if (parts[1] === 'fileName') {
@@ -1061,6 +1080,8 @@
       field('term.maxPer', 'term.maxPerHelp', input('meta.maxPerPlayer', m.maxPerPlayer, '-1', false)) +
       field('term.cooldown', 'term.cooldownHelp', input('meta.cooldownSeconds', m.cooldownSeconds, '0', false)) +
       field('term.permission', 'term.permissionHelp', input('meta.permission', m.permission, 'csgobox.open', false)) +
+      field('term.pityGrade', 'term.pityGradeHelp', input('meta.pityGrade', m.pityGrade, '', false)) +
+      field('term.pityEvery', 'term.pityEveryHelp', input('meta.pityEvery', m.pityEvery, '20', false)) +
       '</div>';
   }
 
@@ -1106,8 +1127,7 @@
           '<summary>' +
           '<span class="grade-badge g' + (gi + 1) + '">' + esc(g[I18N.lang]) + '</span>' +
           '<code>grade' + (gi + 1) + '</code>' +
-          '<span class="muted">' + esc(t('grade.defaultPrice')) + ' ' + DATA.gradeDefaultPrices[gi] +
-          ' · ' + esc(t('grade.recycle')) + ' ' + DATA.gradeRecycleYields[gi] + '</span>' +
+          '<span class="muted">' + esc(t('grade.priceHint')) + '</span>' +
           '<span class="count-badge">' + count + '</span>' +
           '</summary>' +
           '<div class="grade-items" id="grade-items-' + gi + '"></div>' +
@@ -1119,6 +1139,31 @@
     for (let gi = 0; gi < 5; gi++) rebuildGrade(gi);
   }
 
+  /** Rebuild the DOM, then restore focus/caret to the element the user was
+   *  editing (identified by data-f or id). Rebuilds destroy the focused
+   *  select/input, which drops keyboard users back to <body>. */
+  function withFocusRestore(fn, preferField) {
+    const active = document.activeElement;
+    let mark = null;
+    if (preferField) {
+      mark = preferField;
+    } else if (active && active instanceof HTMLElement) {
+      mark = active.getAttribute('data-f') || (active.id ? '#' + active.id : null);
+    }
+    fn();
+    if (!mark) return;
+    const el = mark.startsWith('#')
+      ? document.getElementById(mark.slice(1))
+      : document.querySelector('[data-f="' + CSS.escape(mark) + '"]');
+    if (el) {
+      el.focus();
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      }
+    }
+  }
+
   function rebuildGrade(gi) {
     const host = $('#grade-items-' + gi);
     if (!host) return;
@@ -1128,9 +1173,11 @@
       host.innerHTML = '<div class="muted">' + esc(t('grade.empty')) + '</div>';
       return;
     }
-    host.innerHTML = items.map((it, ii) => renderItem(gi, ii, it, v)).join('');
-    const badge = document.querySelector('.grade-card[data-grade="' + gi + '"] .count-badge');
-    if (badge) badge.textContent = items.length;
+    withFocusRestore(() => {
+      host.innerHTML = items.map((it, ii) => renderItem(gi, ii, it, v)).join('');
+      const badge = document.querySelector('.grade-card[data-grade="' + gi + '"] .count-badge');
+      if (badge) badge.textContent = items.length;
+    });
   }
 
   function renderItem(gi, ii, it, v) {
@@ -1233,11 +1280,15 @@
     const { rows } = NS.collectPriceRows(state, state.versionKey);
     const bodyRows = rows.map((r) => {
       const price = r.row.price;
-      const priced = price !== '' && price !== null && price !== undefined && Number.isInteger(Number(price)) && Number(price) >= 0;
-      let recycle = '';
-      if (priced) recycle = String(Math.ceil(Number(price) * 0.9));
-      else if (r.grades.size === 1) recycle = String(DATA.gradeRecycleYields[[...r.grades][0] - 1]);
-      else if (r.grades.size > 1) recycle = '-';
+      const parsed = NS.parsePriceInput(price);
+      const priced = !!parsed;
+      // Unpriced items are not recyclable at all (no grade-ladder fallback).
+      let recycle = '0';
+      if (priced) {
+        recycle = parsed.min === parsed.max
+          ? String(Math.ceil(parsed.min * 0.9))
+          : String(Math.ceil(parsed.min * 0.9)) + '–' + String(Math.ceil(parsed.max * 0.9));
+      }
       let status = priced ? t('prices.state.priced') : (r.key.includes('#') && !taczVisible() ? t('prices.variantUnsupported') : t('prices.state.default'));
       const gradeTag = r.grades.size
         ? [...r.grades].sort((a, b) => a - b).map((g) => 'g' + g).join(',')
@@ -1245,7 +1296,7 @@
       const removable = r.row.pinned && !r.grades.size;
       return '<tr data-price-key="' + esc(r.key) + '">' +
         '<td class="key-cell"><code>' + esc(r.key) + '</code><span class="tiny muted">' + gradeTag + '</span></td>' +
-        '<td><input data-help="prices.priceHelp" data-role="price-input" data-key="' + esc(r.key) + '" value="' + esc(price === '' ? '' : price) + '" type="number" min="0" step="1" class="price-input" placeholder="—"></td>' +
+        '<td><input data-help="prices.priceHelp" data-role="price-input" data-key="' + esc(r.key) + '" value="' + esc(price === '' ? '' : price) + '" type="text" inputmode="numeric" class="price-input" placeholder="—"></td>' +
         '<td class="recycle-cell">' + esc(recycle) + '</td>' +
         '<td class="status-cell status-' + (priced ? 'ok' : (r.key.includes('#') && !taczVisible() ? 'warn' : 'muted')) + '">' + esc(status) + '</td>' +
         '<td>' + (removable ? '<button class="btn small danger" data-action="del-price-key" data-key="' + esc(r.key) + '">' + esc(t('prices.remove')) + '</button>' : '') + '</td>' +
@@ -1271,10 +1322,15 @@
     const row = document.querySelector('#card-prices tr[data-price-key="' + CSS.escape(key) + '"]');
     if (!row) return;
     const price = state.priceRows[key] && state.priceRows[key].price;
-    const priced = price !== '' && price !== null && price !== undefined && Number.isInteger(Number(price)) && Number(price) >= 0;
+    const parsed = NS.parsePriceInput(price);
+    const priced = !!parsed;
     const rc = row.querySelector('.recycle-cell');
     const sc = row.querySelector('.status-cell');
-    if (rc) rc.textContent = priced ? String(Math.ceil(Number(price) * 0.9)) : '';
+    if (rc) rc.textContent = priced
+      ? (parsed.min === parsed.max
+          ? String(Math.ceil(parsed.min * 0.9))
+          : String(Math.ceil(parsed.min * 0.9)) + '–' + String(Math.ceil(parsed.max * 0.9)))
+      : '0';
     if (sc) {
       let status;
       let cls;
@@ -1431,14 +1487,32 @@
         : 'config/csbox/' + fname + '.json';
     }
 
-    const issues = NS.validate(state, state.versionKey);
-    renderIssues(issues);
+    scheduleValidation();
     saveStateDebounced();
 
     const undoBtn = $('#btn-undo');
     const redoBtn = $('#btn-redo');
     if (undoBtn) undoBtn.disabled = !history.undo.length;
     if (redoBtn) redoBtn.disabled = !history.redo.length;
+  }
+
+  let validateTimer = null;
+  let lastIssuesKey = '';
+
+  /** Idle validation: rebuildPreview reruns on every keystroke; validating
+   *  and re-rendering the issues list is O(total items), so defer it 300 ms
+   *  and skip the re-render when nothing changed. */
+  function scheduleValidation() {
+    clearTimeout(validateTimer);
+    validateTimer = setTimeout(() => {
+      validateTimer = null;
+      const issues = NS.validate(state, state.versionKey);
+      const key = JSON.stringify(issues);
+      if (key !== lastIssuesKey) {
+        lastIssuesKey = key;
+        renderIssues(issues);
+      }
+    }, 300);
   }
 
   function renderIssues(issues) {
@@ -1500,14 +1574,23 @@
   }
 
   function detectType(obj) {
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj) || !Object.keys(obj).length) return null;
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    if (!Object.keys(obj).length) {
+      // An empty object is a legal empty price table (PriceTable.parse accepts
+      // it); a box config can never legitimately be empty, so treat it as prices
+      // rather than refusing the import.
+      return 'prices';
+    }
     for (let i = 1; i <= 5; i++) {
       if (obj['grade' + i] !== undefined) return 'box';
     }
     if (obj.name !== undefined || obj.type !== undefined) return 'box';
     const keys = Object.keys(obj);
+    const priceValueOk = (v) =>
+        typeof v === 'number' ||
+        (Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number'));
     if (keys.every((k) => /^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(k)) &&
-        keys.every((k) => typeof obj[k] === 'number')) {
+        keys.every((k) => priceValueOk(obj[k]))) {
       return 'prices';
     }
     return null;

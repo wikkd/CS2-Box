@@ -22,10 +22,15 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return true;
   }
 
-  function intOk(v, min) {
+  /** Java int upper bound — mirrors model.js MAX_INT; the in-game loader
+   *  casts prices/ints with `(int)`, larger values overflow negative. */
+  const MAX_INT = 2147483647;
+
+  function intOk(v, min, max) {
+    const hi = max === undefined ? MAX_INT : max;
     if (v === '' || v === null || v === undefined) return true;
-    if (typeof v === 'number') return Number.isInteger(v) && (min === undefined || v >= min);
-    return /^-?\d+$/.test(String(v)) && (min === undefined || Number(v) >= min);
+    if (typeof v === 'number') return Number.isInteger(v) && (min === undefined || v >= min) && v <= hi;
+    return /^-?\d+$/.test(String(v)) && (min === undefined || Number(v) >= min) && Number(v) <= hi;
   }
 
   function validate(state, versionKey) {
@@ -60,6 +65,15 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (!intOk(meta.maxPerPlayer, -1)) add(issues, 'error', 'meta.maxPerPlayer', 'v.badMaxPer');
     if (!intOk(meta.cooldownSeconds, 0)) add(issues, 'error', 'meta.cooldownSeconds', 'v.badCooldown');
 
+    /* ------- pity (v2.1.1) ------- */
+    const pityGrade = (meta.pityGrade || '').trim();
+    const pityEveryStr = String(meta.pityEvery ?? '').trim();
+    if (pityGrade || pityEveryStr !== '') {
+      const PITY_GRADES = ['consumer', 'industrial', 'mil_spec', 'restricted', 'classified'];
+      if (!PITY_GRADES.includes(pityGrade)) add(issues, 'error', 'meta.pityGrade', 'v.badPityGrade');
+      if (!intOk(meta.pityEvery, 2)) add(issues, 'error', 'meta.pityEvery', 'v.badPityEvery');
+    }
+
     /* ------- random ------- */
     const rn = meta.random.map((v) => (v === '' || v === null ? null : Number(v)));
     const anyFilled = rn.some((v) => v !== null);
@@ -86,6 +100,14 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       const ra = (r.rate || '').trim();
       if (ra !== '' && !numOk(ra, 0, 1)) {
         add(issues, 'error', 'meta.entity', 'v.badEntity');
+        break;
+      }
+      // A row with a rate but no id exports as a bare number — either a
+      // misplaced rate (number before its id) or a dangling one, both of
+      // which the in-game loader rejects or ignores (load error). Keep the
+      // data visible but flag it so the round-trip is not silently wrong.
+      if (ra !== '' && !(r.id || '').trim()) {
+        add(issues, 'error', 'meta.entity', 'v.entityDanglingRate');
         break;
       }
     }
@@ -173,13 +195,13 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       const path = 'prices.' + r.key;
       if (!KEY_RE.test(r.key)) add(issues, 'error', path, 'v.badPriceKey');
       const price = r.row.price;
-      if (price !== '' && price !== null && price !== undefined) {
-        if (typeof price !== 'number' && !/^\d+$/.test(String(price))) {
-          add(issues, 'error', path, 'v.badPriceValue');
-        } else {
-          const n = Number(price);
-          if (!Number.isInteger(n) || n < 0) add(issues, 'error', path, 'v.badPriceValue');
-        }
+      // Pool auto-keys (id entries) MUST be priced: the game refuses to load
+      // a box containing an unpriced id item (no grade-default fallback).
+      if (r.grades.size > 0 && !NS.parsePriceInput(price)) {
+        add(issues, 'error', path, 'v.unpricedItem');
+      } else if (price !== '' && price !== null && price !== undefined) {
+        // Fixed non-negative int or a "min-max" range (parsed by model).
+        if (!NS.parsePriceInput(price)) add(issues, 'error', path, 'v.badPriceValue');
       }
       if (r.key.includes('#') && !taczOn) {
         add(issues, 'warn', path, 'v.variantUnsupported');

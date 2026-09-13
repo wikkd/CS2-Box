@@ -11,10 +11,7 @@
     },
     "type": {
       "type": "string",
-      "enum": [
-        "csbox",
-        "terminal"
-      ],
+      "enum": ["csbox", "terminal"],
       "description": "csbox = regular crate (default), terminal = terminal machine. Terminals must NOT declare a key field."
     },
     "key": {
@@ -31,25 +28,15 @@
       "type": "array",
       "minItems": 5,
       "maxItems": 5,
-      "items": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 10000
-      },
+      "items": { "type": "integer", "minimum": 0, "maximum": 10000 },
       "description": "Five grade weights ordered grade1(common)..grade5(rare). Non-positive uses defaults; >10000 clamps."
     },
     "entity": {
       "type": "array",
       "items": {
         "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number",
-            "minimum": 0.0,
-            "maximum": 1.0
-          }
+          { "type": "string" },
+          { "type": "number", "minimum": 0.0, "maximum": 1.0 }
         ]
       },
       "description": "Entity ids that drop this box, or alternating id/rate pairs."
@@ -61,22 +48,13 @@
     },
     "requires": {
       "type": "array",
-      "items": {
-        "type": "string"
-      },
+      "items": { "type": "string" },
       "description": "v2.1.0: list of mod ids that must be loaded; the box is skipped with an error when any is missing."
     },
     "icon": {
       "oneOf": [
-        {
-          "type": "string",
-          "description": "Item-model id (26.x renders directly; other versions warn)"
-        },
-        {
-          "type": "integer",
-          "minimum": 0,
-          "description": "CustomModelData value (pair with a resource pack)"
-        }
+        { "type": "string", "description": "Item-model id (26.x renders directly; other versions warn)" },
+        { "type": "integer", "minimum": 0, "description": "CustomModelData value (pair with a resource pack)" }
       ],
       "description": "v2.1.0: per-box icon override."
     },
@@ -120,13 +98,7 @@
       "properties": {
         "grade": {
           "type": "string",
-          "enum": [
-            "consumer",
-            "industrial",
-            "mil_spec",
-            "restricted",
-            "classified"
-          ],
+          "enum": ["consumer", "industrial", "mil_spec", "restricted", "classified"],
           "description": "v2.1.1: the grade that must eventually drop; forces a roll at/above it."
         },
         "every": {
@@ -135,35 +107,20 @@
           "description": "v2.1.1: after every-1 consecutive opens below the target grade, the next open is forced to roll the target grade or higher. In-memory per player+box, resets on restart."
         }
       },
-      "required": [
-        "grade",
-        "every"
-      ],
+      "required": ["grade", "every"],
       "additionalProperties": false,
       "description": "v2.1.1: pity (保底) policy. Invalid grade ids or every < 2 degrade to no pity (schema validator reports the mistake)."
     },
-    "grade1": {
-      "$ref": "#/$defs/grade"
-    },
-    "grade2": {
-      "$ref": "#/$defs/grade"
-    },
-    "grade3": {
-      "$ref": "#/$defs/grade"
-    },
-    "grade4": {
-      "$ref": "#/$defs/grade"
-    },
-    "grade5": {
-      "$ref": "#/$defs/grade"
-    }
+    "grade1": { "$ref": "#/$defs/grade" },
+    "grade2": { "$ref": "#/$defs/grade" },
+    "grade3": { "$ref": "#/$defs/grade" },
+    "grade4": { "$ref": "#/$defs/grade" },
+    "grade5": { "$ref": "#/$defs/grade" }
   },
   "$defs": {
     "grade": {
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/item"
-      },
+      "items": { "$ref": "#/$defs/item" },
       "description": "Items in this grade tier (grade1 lowest rarity .. grade5 highest)."
     },
     "item": {
@@ -184,19 +141,8 @@
         },
         "count": {
           "oneOf": [
-            {
-              "type": "integer",
-              "minimum": 1
-            },
-            {
-              "type": "array",
-              "minItems": 2,
-              "maxItems": 2,
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
+            { "type": "integer", "minimum": 1 },
+            { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer", "minimum": 1 } }
           ],
           "description": "Item count, or [min,max] rolled at open time (v2.1.0)."
         },
@@ -208,31 +154,15 @@
         },
         "enchant": {
           "oneOf": [
-            {
-              "type": "boolean"
-            },
+            { "type": "boolean" },
             {
               "type": "object",
               "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "Enchantment id, e.g. minecraft:sharpness"
-                },
+                "id": { "type": "string", "description": "Enchantment id, e.g. minecraft:sharpness" },
                 "level": {
                   "oneOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    {
-                      "type": "array",
-                      "minItems": 2,
-                      "maxItems": 2,
-                      "items": {
-                        "type": "integer",
-                        "minimum": 1
-                      }
-                    }
+                    { "type": "integer", "minimum": 1 },
+                    { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer", "minimum": 1 } }
                   ],
                   "description": "Fixed level or [min,max] range."
                 }
@@ -256,21 +186,9 @@
         }
       },
       "oneOf": [
-        {
-          "required": [
-            "id"
-          ]
-        },
-        {
-          "required": [
-            "tag"
-          ]
-        },
-        {
-          "required": [
-            "loot_table"
-          ]
-        }
+        { "required": ["id"] },
+        { "required": ["tag"] },
+        { "required": ["loot_table"] }
       ]
     }
   },
