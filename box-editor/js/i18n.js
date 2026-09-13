@@ -6,6 +6,7 @@ window.CSBI18N = (function () {
   const dicts = {
     zh: {
       'app.title': 'CS2-Box 宝箱配置编辑器',
+      'app.titlePrices': 'CS2-Box 宝箱价格表配置',
       'app.subtitle': '可视化创建 config/csbox 下的宝箱 / 终端机与统一价格表',
       'app.lang': '语言',
       'app.version': '游戏版本',
@@ -15,6 +16,8 @@ window.CSBI18N = (function () {
       'app.undo': '↶ 撤销',
       'app.redo': '↷ 重做',
       'app.share': '分享链接',
+      'app.navBox': '箱子配置',
+      'app.navPrices': '价格表',
       'app.foot': '拆解台：表价 ×90%（向上取整）回收；未定价盖章物品按 3/5/7/8/8。生成的文件放入 config/csbox/ 后 /csbox reload 生效。',
 
       'meta.title': '基本信息',
@@ -216,6 +219,7 @@ window.CSBI18N = (function () {
 
     en: {
       'app.title': 'CS2-Box Box Config Editor',
+      'app.titlePrices': 'CS2-Box Price Table Editor',
       'app.subtitle': 'Visual editor for config/csbox crates / terminals and the unified price table',
       'app.lang': 'Language',
       'app.version': 'Game version',
@@ -225,6 +229,8 @@ window.CSBI18N = (function () {
       'app.undo': '↶ Undo',
       'app.redo': '↷ Redo',
       'app.share': 'Share link',
+      'app.navBox': 'Box Config',
+      'app.navPrices': 'Prices',
       'app.foot': 'Recycler: table price ×90% (ceil) back; unpriced graded items use 3/5/7/8/8. Put generated files into config/csbox/ and run /csbox reload.',
 
       'meta.title': 'Basic info',

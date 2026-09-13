@@ -12,6 +12,7 @@ const OUT = join(here, 'dist');
 
 const FILES = [
   'index.html',
+  'prices.html',
   'css/style.css',
   'js/i18n.js',
   'js/data.js',

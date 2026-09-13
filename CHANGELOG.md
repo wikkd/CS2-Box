@@ -43,7 +43,8 @@
   编辑器体验批次：撤销/重做（按钮 + Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y）、校验项点击
   定位高亮、物品复制/批量粘贴、价格批量导入、分享链接（`#state=...`）、奖池
   折叠状态记忆、功能区卡片折叠（标题点击，掉落实体/终端机参数默认收起，状态
-  本地保存）；修复 `field()` 渲染参数错位（基本信息/终端机卡片此前未渲染出
+  本地保存）；编辑器拆分为「箱子配置」与「价格表」两个独立页面（顶部导航切换，
+  状态共享 + 跨标签同步）；修复 `field()` 渲染参数错位（基本信息/终端机卡片此前未渲染出
   控件）与文件名输入无效两个既有 bug；新增 Playwright 冒烟测试
   （`box-editor/tests/smoke.mjs`，CI 工作流 `box-editor-smoke.yml`）。
 - 新 schema：`docs/box-schema/prices.schema.json`（IDE 补全用）。

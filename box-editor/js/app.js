@@ -37,6 +37,11 @@
     window.addEventListener('hashchange', () => {
       if (/[#&]state=/.test(location.hash)) location.reload();
     });
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG) return;
+      loadPrefs();
+      if (!loadState()) renderAll();
+    });
     schedulePreview(0);
   });
 
@@ -50,6 +55,11 @@
 
   function version() {
     return DATA.versions.find((v) => v.key === state.versionKey) || DATA.versions[0];
+  }
+
+  /** True on the dedicated price-table page (prices.html). */
+  function isPricesPage() {
+    return /prices\.html([?#]|$)/i.test(location.pathname);
   }
 
   /** Effective TACZ field visibility: manual switch wins, else follows version. */
@@ -216,7 +226,7 @@
       state.versionKey = payload.versionKey || state.versionKey || '1.21.1';
       state.taczEnabled = payload.taczEnabled == null ? null : !!payload.taczEnabled;
       compact = payload.compact !== false;
-      currentTab = payload.currentTab === 'prices' ? 'prices' : 'box';
+      currentTab = isPricesPage() ? 'prices' : 'box';
       renderAll();
       return true;
     } catch (e) {
@@ -278,14 +288,14 @@
       'btn-copy': 'preview.copy',
       'btn-download': 'preview.download',
       'btn-download-all': 'preview.downloadAll',
-      'tab-box': 'preview.boxTab',
-      'tab-prices': 'preview.pricesTab',
+      'nav-box': 'app.navBox',
+      'nav-prices': 'app.navPrices',
     };
     for (const id of Object.keys(map)) {
       const el = document.getElementById(id);
       if (el) el.textContent = t(map[id]);
     }
-    document.title = t('app.title');
+    document.title = isPricesPage() ? t('app.titlePrices') : t('app.title');
     const importPh = document.getElementById('import-textarea');
     if (importPh) importPh.placeholder = t('import.placeholder');
     const extraKeyInput = document.getElementById('extra-key-input');
@@ -811,20 +821,25 @@
   function renderForm() {
     const root = $('#form-root');
     const v = version();
-    root.innerHTML =
-      '<section class="card" id="card-meta"></section>' +
-      '<section class="card" id="card-tacz"></section>' +
-      '<section class="card" id="card-drop"></section>' +
-      (state.meta.type === 'terminal' ? '<section class="card" id="card-term"></section>' : '') +
-      '<section class="card" id="card-grades"></section>' +
-      '<section class="card" id="card-prices"></section>' +
-      '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>';
-    rebuildMeta();
-    rebuildTaczCard();
-    rebuildDrop();
-    if (state.meta.type === 'terminal') rebuildTerm();
-    rebuildGrades();
-    rebuildPrices();
+    const pricesPage = isPricesPage();
+    root.innerHTML = pricesPage
+      ? '<section class="card" id="card-prices"></section>' +
+        '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>'
+      : '<section class="card" id="card-meta"></section>' +
+        '<section class="card" id="card-tacz"></section>' +
+        '<section class="card" id="card-drop"></section>' +
+        (state.meta.type === 'terminal' ? '<section class="card" id="card-term"></section>' : '') +
+        '<section class="card" id="card-grades"></section>' +
+        '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>';
+    if (pricesPage) {
+      rebuildPrices();
+    } else {
+      rebuildMeta();
+      rebuildTaczCard();
+      rebuildDrop();
+      if (state.meta.type === 'terminal') rebuildTerm();
+      rebuildGrades();
+    }
     const compactToggle = $('#compact-toggle');
     if (compactToggle) compactToggle.checked = compact;
   }
@@ -1254,7 +1269,7 @@
   }
 
   function currentJson() {
-    return currentTab === 'prices' ? NS.buildPrices(state) : NS.buildBox(state);
+    return isPricesPage() ? NS.buildPrices(state) : NS.buildBox(state);
   }
 
   function rebuildPreview() {
@@ -1262,17 +1277,17 @@
     const pre = $('#json-preview');
     const boxObj = NS.buildBox(state);
     const pricesObj = NS.buildPrices(state);
-    const out = currentTab === 'prices' ? pricesObj : boxObj;
+    const out = isPricesPage() ? pricesObj : boxObj;
     pre.textContent = JSON.stringify(out, null, 2);
 
-    const tabBox = $('#tab-box');
-    const tabPrices = $('#tab-prices');
-    if (tabBox) tabBox.className = 'tab' + (currentTab === 'box' ? ' active' : '');
-    if (tabPrices) tabPrices.className = 'tab' + (currentTab === 'prices' ? ' active' : '');
+    const navBox = $('#nav-box');
+    const navPrices = $('#nav-prices');
+    if (navBox) navBox.className = 'tab' + (isPricesPage() ? '' : ' active');
+    if (navPrices) navPrices.className = 'tab' + (isPricesPage() ? ' active' : '');
     const pathHint = $('#path-hint');
     if (pathHint) {
       const fname = (state.fileName || '').trim() || 'box';
-      pathHint.textContent = currentTab === 'prices'
+      pathHint.textContent = isPricesPage()
         ? 'config/csbox/_prices.json'
         : 'config/csbox/' + fname + '.json';
     }
@@ -1406,7 +1421,7 @@
   }
 
   function downloadCurrent() {
-    if (currentTab === 'prices') downloadPrices();
+    if (isPricesPage()) downloadPrices();
     else downloadBox();
   }
 

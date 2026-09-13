@@ -1,6 +1,7 @@
 /* CS2-Box box-editor smoke test (Playwright).
- * Starts the zero-dependency static server, drives a headless Chromium through
- * the critical UI paths, and fails the process with exit 1 on any failure.
+ * Two pages: index.html (box config) and prices.html (price table), sharing
+ * one localStorage state. Starts the static server, drives headless Chromium
+ * through the critical UI paths, exits 1 on any failure.
  *
  * Run locally:  cd box-editor && npx playwright install chromium && node tests/smoke.mjs
  * CI:          .github/workflows/box-editor-smoke.yml
@@ -58,49 +59,49 @@ try {
   try {
     browser = await chromium.launch();
   } catch (e) {
-    // Fall back to a system Chrome when the Playwright bundle is not installed.
     browser = await chromium.launch({ channel: 'chrome' });
   }
   const page = await browser.newPage();
 
-  // ---- load ----
+  /* ================= box config page (index.html) ================= */
   await page.goto(BASE, { waitUntil: 'load' });
   check('title contains CS2-Box', /CS2-Box/.test(await page.title()));
 
-  // field() regression: meta card must render real widgets (was escaped text)
   const metaInputs = await page.locator('#card-meta input, #card-meta select').count();
   check('meta card has real inputs', metaInputs >= 6, 'count=' + metaInputs);
-  const noGhost = !(await page.locator('#card-meta').innerHTML()).includes('&lt;input');
-  check('no escaped ghost inputs', noGhost);
+  check('no escaped ghost inputs',
+    !(await page.locator('#card-meta').innerHTML()).includes('&lt;input'));
 
   const helpCount = await page.locator('[data-help]').count();
   check('data-help covers >= 100 widgets', helpCount >= 100, 'count=' + helpCount);
 
-  // ---- hover tooltip ----
+  // box page: no price card
+  check('box page hides price card', (await page.locator('#card-prices').count()) === 0);
+  check('nav highlights Box Config',
+    await page.locator('#nav-box').evaluate((el) => el.classList.contains('active')));
+
   await page.locator('[data-f="meta.fileName"]').hover();
   await page.waitForTimeout(350);
   const tipVisible = await page.locator('.field-tooltip').evaluate((el) => el.classList.contains('show'));
   const tipText = (await page.locator('.field-tooltip').textContent()).trim();
   check('hover tooltip shows', tipVisible && tipText.length > 0, tipText.slice(0, 40));
 
-  // ---- TACZ switch + version gating ----
   await page.selectOption('#version-select', '26.2');
   await page.waitForTimeout(250);
   const variant0 = await page.locator('[data-f$=".variant"]').count();
   check('26.2 auto hides TACZ fields', variant0 === 0, 'count=' + variant0);
-  await page.locator('#tacz-toggle').click(); // auto -> enabled
+  await page.locator('#tacz-toggle').click();
   await page.waitForTimeout(250);
   const variantOn = await page.locator('[data-f$=".variant"]').count();
   check('switch forces TACZ fields on for 26.2', variantOn > 0, 'count=' + variantOn);
-  await page.locator('#tacz-toggle').click(); // enabled -> disabled
+  await page.locator('#tacz-toggle').click();
   await page.waitForTimeout(200);
   const variantOff = await page.locator('[data-f$=".variant"]').count();
   check('switch forces TACZ fields off', variantOff === 0, 'count=' + variantOff);
-  await page.locator('#tacz-toggle').click(); // disabled -> auto
+  await page.locator('#tacz-toggle').click();
   await page.waitForTimeout(150);
   await page.selectOption('#version-select', '1.21.1');
 
-  // ---- undo / redo ----
   const before = await page.locator('[data-f$=".weight"]').count();
   await page.click('[data-action="add-item"][data-grade="0"]');
   await page.waitForTimeout(250);
@@ -114,46 +115,29 @@ try {
   check('undo/redo roundtrip', before === afterUndo && afterAdd === afterRedo && afterAdd === before + 1,
     before + '->' + afterAdd + '->' + afterUndo + '->' + afterRedo);
 
-  // ---- item paste ----
   await page.click('[data-action="paste-items"][data-grade="1"]');
   await page.fill('#paste-textarea', 'minecraft:stone\nminecraft:andesite');
   await page.click('#paste-do');
   await page.waitForTimeout(350);
   const grade1 = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
   check('item paste adds entries', grade1 >= 2, 'grade1 count=' + grade1);
-  await page.click('[data-action="undo"]'); // revert paste to keep later counts predictable
+  await page.click('[data-action="undo"]');
   await page.waitForTimeout(250);
 
-  // ---- price batch import ----
-  await page.click('[data-action="paste-prices"]');
-  await page.fill('#paste-textarea', 'minecraft:test_shard\t42\ntacz:mgun#tacz:x 7');
-  await page.click('#paste-do');
-  await page.waitForTimeout(350);
-  const hasShard = await page.locator('tr[data-price-key="minecraft:test_shard"]').count();
-  const hasVariantPrice = await page.locator('tr[data-price-key="tacz:mgun#tacz:x"]').count();
-  check('price batch import', hasShard === 1 && hasVariantPrice === 1);
-
-  // ---- prices tab preview ----
-  await page.click('#tab-prices');
-  await page.waitForTimeout(150);
-  const pricesText = (await page.locator('#json-preview').textContent()) || '';
-  check('prices tab shows JSON', pricesText.trim().startsWith('{') && pricesText.includes('test_shard'));
-  await page.click('#tab-box');
-  await page.waitForTimeout(150);
-
-  // ---- collapsible sections ----
   const dropSec = page.locator('#card-drop');
   check('drop section starts collapsed', await dropSec.evaluate((el) => el.classList.contains('collapsed')));
   await dropSec.locator('.col-head').click();
   await page.waitForTimeout(150);
-  check('drop header click expands section', !(await dropSec.evaluate((el) => el.classList.contains('collapsed'))));
+  check('drop header click expands section',
+    !(await dropSec.evaluate((el) => el.classList.contains('collapsed'))));
   await dropSec.locator('.col-head').click();
   await page.waitForTimeout(150);
-  check('drop header click collapses again', await dropSec.evaluate((el) => el.classList.contains('collapsed')));
+  check('drop header click collapses again',
+    await dropSec.evaluate((el) => el.classList.contains('collapsed')));
   const gradesSec = page.locator('#card-grades');
-  check('grade action button does not collapse card', !(await gradesSec.evaluate((el) => el.classList.contains('collapsed'))));
+  check('grade action button does not collapse card',
+    !(await gradesSec.evaluate((el) => el.classList.contains('collapsed'))));
 
-  // ---- issue click jump ----
   const fn = page.locator('[data-f="meta.fileName"]');
   await fn.fill('');
   await page.waitForTimeout(550);
@@ -161,25 +145,52 @@ try {
   if ((await issue.count()) > 0) {
     await issue.click();
     await page.waitForTimeout(400);
-    const flashed = await fn.evaluate((el) => el.classList.contains('flash-highlight'));
-    check('issue click highlights field', flashed);
+    check('issue click highlights field',
+      await fn.evaluate((el) => el.classList.contains('flash-highlight')));
   } else {
     check('issue click highlights field', false, 'no issue row found');
   }
 
-  // ---- share link restore ----
+  /* ================= price table page (prices.html) ================= */
+  await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+  check('prices page title set', /CS2-Box/.test(await page.title()) && (await page.title()).length > 10);
+  check('prices page shows only the price card',
+    (await page.locator('#card-prices').count()) === 1 && (await page.locator('#card-meta').count()) === 0);
+  check('nav highlights Prices',
+    await page.locator('#nav-prices').evaluate((el) => el.classList.contains('active')));
+  const autoRows = await page.locator('#card-prices tr[data-price-key]').count();
+  check('prices page lists auto keys from box state', autoRows >= 1, 'rows=' + autoRows);
+  check('prices preview shows JSON',
+    ((await page.locator('#json-preview').textContent()) || '').trim().startsWith('{'));
+
+  await page.click('[data-action="paste-prices"]');
+  await page.fill('#paste-textarea', 'minecraft:test_shard\t42\ntacz:mgun#tacz:x 7');
+  await page.click('#paste-do');
+  await page.waitForTimeout(350);
+  check('price batch import',
+    (await page.locator('tr[data-price-key="minecraft:test_shard"]').count()) === 1 &&
+    (await page.locator('tr[data-price-key="tacz:mgun#tacz:x"]').count()) === 1);
+  check('prices preview includes imported key',
+    ((await page.locator('#json-preview').textContent()) || '').includes('test_shard'));
+
+  // imported rows survive a round-trip to the box page
+  await page.goto(BASE, { waitUntil: 'load' });
+  const storedState = await page.evaluate(() => localStorage.getItem('cs2box-editor-state-v1') || '');
+  check('imported prices persist across pages', storedState.includes('minecraft:test_shard'));
+
+  /* ================= share link restore ================= */
   const shareUrl = BASE + '#state=' + makeShareState('shared_box_test');
   await page.goto(shareUrl, { waitUntil: 'load' });
-  // goto to the same document with a different hash only fires hashchange;
-  // reload simulates opening the shared link in a fresh tab.
   await page.waitForTimeout(200);
   await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(300);
   const sharedFn = await page.locator('[data-f="meta.fileName"]').inputValue();
   const sharedVer = await page.locator('#version-select').inputValue();
-  const emeraldRow = await page.locator('tr[data-price-key="minecraft:emerald"]').count();
-  check('share link restores state', sharedFn === 'shared_box_test' && sharedVer === '26.2' && emeraldRow === 1,
-    sharedFn + '/' + sharedVer + '/rows=' + emeraldRow);
+  check('share link restores box state', sharedFn === 'shared_box_test' && sharedVer === '26.2',
+    sharedFn + '/' + sharedVer);
+  await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+  check('share link restores prices',
+    (await page.locator('tr[data-price-key="minecraft:emerald"]').count()) === 1);
 
   const failed = results.filter((r) => !r.ok);
   console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed');

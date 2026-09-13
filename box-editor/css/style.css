@@ -787,3 +787,15 @@ input[type="checkbox"]:indeterminate { accent-color: var(--warn); }
 .card.collapsed .col-caret::before { content: "▸"; }
 .card.collapsed .col-body { display: none; }
 .card.collapsed { box-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
+
+/* ---------- page navigation links ---------- */
+.page-nav .tab {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--muted);
+  border-radius: 8px 8px 0 0;
+  padding: 7px 14px;
+}
+.page-nav .tab:hover { color: var(--text); text-decoration: none; }
+.page-nav .tab.active { color: #fff; }
