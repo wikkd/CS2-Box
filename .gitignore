@@ -158,6 +158,9 @@ __pycache__/
 # TACZ compileOnly jar (~57MB), downloaded on demand by scripts/download-tacz.sh
 /local-repo/com/tacz/
 
+# Local dependency probe artifacts (Modrinth API responses / downloaded jars)
+/local-repo/_probe/
+
 # Local tool state (never commit)
 .reasonix/
 .scratch/
@@ -185,6 +188,8 @@ run-data/
 .hvigor/
 .superpowers/
 .cw_skill/
+.opencode/
+.planning/
 .planning/*.tmp
 
 # Runtime config backups

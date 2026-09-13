@@ -7,13 +7,13 @@ import com.reclizer.csgobox.forge_1_20_1.advancement.ModLoadedTrigger;
 import com.reclizer.csgobox.forge_1_20_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxJsonLoader;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
+import com.reclizer.csgobox.forge_1_20_1.config.CsboxClothConfigScreen;
 import com.reclizer.csgobox.forge_1_20_1.config.CsboxConfig;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemTerminal;
 import com.reclizer.csgobox.forge_1_20_1.item.ModItems;
 import com.reclizer.csgobox.forge_1_20_1.menu.ModMenus;
 import com.reclizer.csgobox.forge_1_20_1.sounds.ModSounds;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelBakery;
@@ -43,6 +43,7 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
@@ -54,7 +55,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -64,6 +67,26 @@ public class CsgoBox {
     public static final String MODID = "csgobox";
     public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    /** Whether a mod with the given id is loaded. Used by the box JSON loader
+     *  to tell "item id typo" from "target mod not installed" (v2.1.0). */
+    public static boolean isModLoaded(String modId) {
+        if (modId == null || modId.isBlank()) {
+            return false;
+        }
+        return net.minecraftforge.fml.ModList.get().isLoaded(modId);
+    }
+
+    /**
+     * v2.1.0 permission gate for the {@code permission} box config field.
+     * Defaults to allow-all; a modpack wires this to its permission backend
+     * (e.g. {@code (player) -> LuckPerms.api().getUserManager().getUser(...)})
+     * once at startup. The gate receives the player and the permission node
+     * from the box JSON.
+     */
+    public static java.util.function.BiPredicate<net.minecraft.server.level.ServerPlayer, String> PERMISSION_GATE =
+            (player, node) -> true;
+
     public static final CsboxConfig CONFIG;
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static Stat<ResourceLocation> OPENED_BOXES_STAT;
@@ -71,16 +94,24 @@ public class CsgoBox {
             new ResourceLocation(CsgoBox.MODID, "terminal_buys");
     public static Stat<ResourceLocation> TERMINAL_BUYS_STAT;
 
-    public static final ExecutorService BULK_COMPUTE_POOL = Executors.newFixedThreadPool(2, new ThreadFactory() {
-        private final AtomicInteger counter = new AtomicInteger();
+    public static final ExecutorService BULK_COMPUTE_POOL = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS,
+            // Bounded work queue (v2.2.0-fix): an unbounded LinkedBlockingQueue
+            // let flood requests pile up without limit. Dropping with a log is
+            // safe — the per-player 10-tick open guard already rate-limits,
+            // and a dropped batch simply stays unopened.
+            new ArrayBlockingQueue<>(64),
+            new ThreadFactory() {
+                private final AtomicInteger counter = new AtomicInteger();
 
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, "csgobox-bulk-compute-" + counter.incrementAndGet());
-            t.setDaemon(true);
-            return t;
-        }
-    });
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "csgobox-bulk-compute-" + counter.incrementAndGet());
+                    t.setDaemon(true);
+                    return t;
+                }
+            },
+            (r, e) -> LOGGER.warn("[csgo-bulk] bulk compute queue full (64); batch request dropped"));
 
     private static BoxFileWatcher boxWatcher;
 
@@ -101,10 +132,21 @@ public class CsgoBox {
         }
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
+        // Cloth Config GUI (optional client mod). Registered only on the client
+        // with Cloth present; the reference is intentionally inside the
+        // Dist.CLIENT branch so dedicated servers never resolve the
+        // client-only screen classes.
+        if (FMLEnvironment.dist == Dist.CLIENT
+                && net.minecraftforge.fml.ModList.get().isLoaded("cloth_config")) {
+            ModLoadingContext.get().registerExtensionPoint(
+                    net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
+                    () -> new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory(
+                            (minecraft, screen) -> CsboxClothConfigScreen.create(screen)));
+        }
+
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::resolveOpenedBoxesStat);
         modEventBus.addListener(this::resolveTerminalBuysStat);
-        modEventBus.addListener(this::registerDynamicBoxItems);
         modEventBus.addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == CONFIG_SPEC) {
                 LOGGER.info("CS2 Box config reloaded");
@@ -153,6 +195,14 @@ public class CsgoBox {
             Networking.registerMessages();
             if (CONFIG.enableHotReload()) {
                 startBoxWatcher();
+            }
+            // Optional: register the The One Probe providers through TOP's IMC
+            // entry point. The call itself must be guarded: merely loading
+            // CsgoBoxTopPlugin for the call pulls in the TOP provider classes
+            // during class verification, so without this guard an uninstalled
+            // TOP throws NoClassDefFoundError (see 2.1.0 crash reports).
+            if (isModLoaded("theoneprobe")) {
+                com.reclizer.csgobox.forge_1_20_1.top.CsgoBoxTopPlugin.registerIfLoaded();
             }
         });
         com.reclizer.csgobox.forge_1_20_1.villager.ModVillagers.registerTrades();
@@ -209,91 +259,28 @@ public class CsgoBox {
         LOGGER.info("Resolved custom stat {} -> {}", TERMINAL_BUYS_STAT_ID, TERMINAL_BUYS_STAT);
     }
 
+    // ===== Box items are a compile-time constant (v2.1.0 registry hotfix) =====
+    // Up to 2.1.0 every config/csbox/<name>.json was turned into its own item
+    // (csgobox:<name>) during RegisterEvent. The item registry is synced over
+    // the network and frozen before login, so as soon as the client and server
+    // config folders differed (or a `requires` mod was installed on one side
+    // only) the registries diverged and joins died with Forge's misleading
+    // "Failed to synchronize registry data from server / mod versions do not
+    // match" screen.
+    //
+    // Item registration therefore no longer reads the config folder: the mod
+    // ships a fixed item set (see ModItems#fixedBoxItem) and a box's identity
+    // lives in the csgobox:box_id NBT tag plus the server-synced BoxRegistry.
+    // Consequences (all intended):
+    //   * client and server registries are identical whenever the mod version
+    //     matches — this failure class cannot come back;
+    //   * config/csbox/ may be edited, added to or hot-reloaded freely without
+    //     restarting and without syncing folders between players;
+    //   * custom boxes are handed out with /csbox give (generic csgo_box /
+    //     terminal item + NBT) instead of a dedicated registry id.
+
     public static boolean debug() {
         return false;
-    }
-
-    private void registerDynamicBoxItems(final RegisterEvent event) {
-        // 注意：必须用 Registries.ITEM（ResourceKey）；ForgeRegistries.ITEMS 是 registry 对象，equals 永假
-        if (!event.getRegistryKey().equals(Registries.ITEM)) {
-            return;
-        }
-        Path configDir = FMLPaths.CONFIGDIR.get().resolve("csbox");
-        if (!Files.isDirectory(configDir)) {
-            try {
-                Files.createDirectories(configDir);
-            } catch (IOException e) {
-                LOGGER.warn("[csgo-dynamic-items] cannot create {}: {}", configDir, e.getMessage());
-                return;
-            }
-        }
-        // Pre-v2.0.0 files (no "type") are upgraded here first. Since 2.0.0
-        // the terminal ships unconfigured — no default terminal.json is
-        // generated (empty crate, same as the default box).
-        BoxDefaults.upgradeLegacyTerminalConfig(configDir);
-        int registered = 0;
-        int skipped = 0;
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDir, "*.json")) {
-            for (Path file : stream) {
-                String filename = file.getFileName().toString();
-                if (filename.startsWith("_") || !filename.endsWith(".json")) {
-                    continue;
-                }
-                String idStr = filename.substring(0, filename.length() - 5);
-                if (idStr.isEmpty()) {
-                    continue;
-                }
-                ResourceLocation itemId;
-                try {
-                    itemId = new ResourceLocation(MODID, idStr);
-                } catch (Exception e) {
-                    LOGGER.warn("[csgo-dynamic-items] skip invalid filename '{}': {}", filename, e.getMessage());
-                    continue;
-                }
-                if (ForgeRegistries.ITEMS.containsKey(itemId)) {
-                    skipped++;
-                    continue;
-                }
-                if (ModItems.ITEMS.getEntries().stream()
-                        .anyMatch(entry -> entry.getId().equals(itemId))) {
-                    skipped++;
-                    continue;
-                }
-                final ResourceLocation boxId = itemId;
-                final boolean isTerminal = "terminal".equals(BoxJsonLoader.readType(file));
-                event.register(Registries.ITEM, helper -> {
-                    ItemCsgoBox item;
-                    if (isTerminal) {
-                        item = new ItemTerminal(new Item.Properties()) {
-                            @Override
-                            public ItemStack getDefaultInstance() {
-                                ItemStack stack = super.getDefaultInstance();
-                                ItemCsgoBox.setBoxId(boxId, stack);
-                                return stack;
-                            }
-                        };
-                    } else {
-                        item = new ItemCsgoBox(new Item.Properties().stacksTo(16)) {
-                            @Override
-                            public ItemStack getDefaultInstance() {
-                                ItemStack stack = super.getDefaultInstance();
-                                ItemCsgoBox.setBoxId(boxId, stack);
-                                return stack;
-                            }
-                        };
-                    }
-                    helper.register(itemId, item);
-                });
-                registered++;
-            }
-        } catch (IOException e) {
-            LOGGER.warn("[csgo-dynamic-items] scan of {} failed: {}", configDir, e.getMessage());
-            return;
-        }
-        if (registered > 0 || skipped > 0) {
-            LOGGER.info("[csgo-dynamic-items] registered {} dynamic box item(s) from config/csbox/ ({} skipped as already registered)",
-                    registered, skipped);
-        }
     }
 
     public void onServerStarting(ServerStartingEvent event) {
@@ -319,8 +306,12 @@ public class CsgoBox {
         @net.minecraftforge.eventbus.api.SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
-            LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-            event.enqueueWork(() -> {
+            // Client-side tutorial download: a dedicated-server player's client
+            // never fires ServerStartingEvent, so without this they get no local
+            // copy. Same-JVM duplicates (integrated server) are safe — the
+            // single-threaded executor + synchronized idempotent download.
+            BoxJsonLoader.downloadTutorialsAsync();
+                        event.enqueueWork(() -> {
                 // 1.20.1 屏幕注册：MenuScreens.register 必须在主线程执行（FMLClientSetupEvent.enqueueWork）
                 net.minecraft.client.gui.screens.MenuScreens.register(
                         ModMenus.ARMORY_RECYCLER.get(),

@@ -122,7 +122,7 @@ GUI 渲染、动画、音效、CS:GO 风格的滚动体验等无法用 GameTest 
 
 ### v1.0.5 功能验收清单
 
-来自 `docs/MANUAL-TESTING-v1.0.5.md`:
+来自 `docs/archive/MANUAL-TESTING-v1.0.5.md`:
 
 - [ ] TC-1:右键 csgo_box 打开预览界面,显示 2×10 物品网格
 - [ ] TC-2:放入对应钥匙,点开启按钮触发滚动动画

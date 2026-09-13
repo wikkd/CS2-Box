@@ -90,7 +90,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 
 首次启动会生成 `forge_26_1_2/run/`（含 `config/`、`mods/`、`saves/`）。
 如需把产物当正式环境验证，可另建 Forge 26.1.2 实例并把
-`forge_26_1_2/build/libs/csgobox-forge-26.1.2-1.0.6.jar` 放入 `mods/`。
+`forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.0.jar` 放入 `mods/`。
 建议删掉旧的 `config/csgobox.toml` 与 `config/csbox/` 后再测，避免脏数据。
 
 > **同步开发状态**：forge 模块自 2.0.0 线起与 `v26_1_2` 保持特性同步（同一
@@ -123,7 +123,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 | F6 | 配置热重载 | 修改 `config/csbox/*.json`（权重/分级）→ `/csbox reload` → `mc_status` 等价的开箱结果变化；`enableHotReload=true` 时文件改动自动生效 |
 | F7 | 磨损耐久 | 开出有耐久物品 → 查看界面 `wear` 显示与实际扣损一致；`damageItemByWear=false` 时不扣 |
 | F8 | 成就/统计 | 开箱后 `csgobox:opened_box` 自定义统计累计；成就页 CS2 Box 标签出现 |
-| F9 | 教程下载 | 首次启动 `config/csbox/` 生成教程 md；`/csbox reload tutorial` 可重下 |
+| F9 | 教程刷新 | 首次启动 `config/csbox/` 生成教程 md；`/csbox reload tutorial` 可从包内刷新 |
 | F10 | 语言 | 中/英 locale 下 GUI、提示、物品名无乱码/无 key 原文 |
 | F11 | 服务端权威 | 单机/联机下开箱结果由服务端 RNG 决定（日志 `[CS2 Box]` 输出结果与客户端一致） |
 | F12 | 持久化 | 开箱所得物品重进世界仍在；`csgobox.toml` 配置项读回一致 |
@@ -158,7 +158,7 @@ MCP_PORT=41502 python3 scripts/test_csbox_ext.py --skip-enter --port 41502
   - E2/E3/E4/E5/E6/E7/E9 全过。
 
 详细甄别、截图存证与运行记录见
-`docs/TEST-REPORT-FORGE-2612-2026-08-11.md`。
+`docs/archive/TEST-REPORT-FORGE-2612-2026-08-11.md`。
 
 ## 6. 发布门禁
 
@@ -171,7 +171,7 @@ MCP_PORT=41502 python3 scripts/test_csbox_ext.py --skip-enter --port 41502
 
 > **发布记录（2026-08-12）**：L0-L3 7/7 PASS（clean 编译 / jar 校验 / 版本四同步 /
 > 渲染门面漂移 / PlatformSmokeTest），L4 关键路径 11P/0F/0W（详见
-> `docs/TEST-REPORT-FORGE-2612-2026-08-11.md`）；产物
+> `docs/archive/TEST-REPORT-FORGE-2612-2026-08-11.md`）；产物
 > `csgobox-forge-26.1.2-1.0.6.jar` 校验通过（`assets/csgobox/items/` 5 个 1.0.6
 > 基线物品定义、无 2.0.0 线资产泄漏）。模块随 **1.0.6** 纳入 git 管理并发行。
 
