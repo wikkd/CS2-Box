@@ -46,6 +46,10 @@ jobs:
         working-directory: box-editor
         run: npm run build
 
+      - name: Run pure model/validator unit tests (no browser)
+        working-directory: box-editor
+        run: node --test tests/model.test.mjs
+
       - name: Run UI smoke tests
         working-directory: box-editor
         run: node tests/smoke.mjs

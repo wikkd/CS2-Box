@@ -18,14 +18,32 @@ jobs:
             version_key: 1.21.1
             module: v1_21_1
             java: 21
+            run_tests: true
           - mc: 26.1.2
             version_key: 26.1.2
             module: v26_1_2
             java: 25
+            run_tests: true
           - mc: 26.2
             version_key: 26.2
             module: v26_2
             java: 25
+            run_tests: false
+          - mc: forge-1.20.1
+            version_key: forge-1.20.1
+            module: forge_1_20_1
+            java: 17
+            run_tests: true
+          - mc: forge-26.1.2
+            version_key: forge-26.1.2
+            module: forge_26_1_2
+            java: 25
+            run_tests: true
+          - mc: forge-26.2
+            version_key: forge-26.2
+            module: forge_26_2
+            java: 25
+            run_tests: true
 
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +60,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ matrix.mc }}-${{ hashFiles('**/*.gradle', 'gradle.properties') }}
+          key: gradle-${{ runner.os }}-${{ matrix.mc }}-${{ hashFiles('**/*.gradle', 'gradle.properties', 'settings.gradle') }}
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Make gradlew executable
@@ -52,11 +70,15 @@ jobs:
         if: matrix.module == 'v1_21_1'
         run: scripts/download-tacz.sh
 
+      - name: Download TACZ compileOnly jar (forge_1_20_1 inspect viewport)
+        if: matrix.module == 'forge_1_20_1'
+        run: scripts/download-tacz-1201.sh
+
       - name: Compile ${{ matrix.module }}
         run: ./gradlew :${{ matrix.module }}:compileJava -Pactive_versions=${{ matrix.version_key }} --console=plain
 
       - name: Run platform smoke tests (${{ matrix.module }})
-        if: matrix.module == 'v26_1_2'
+        if: matrix.run_tests == 'true'
         run: ./gradlew :${{ matrix.module }}:test -Pactive_versions=${{ matrix.version_key }} --console=plain
 
       - name: Assemble jar
@@ -98,6 +120,12 @@ jobs:
 
       - name: Check AnimRenderOps drift (3 platforms)
         run: scripts/check-animops-drift.sh
+
+      - name: Check platform mirror drift (v26_1_2↔v26_2, forge_26_1_2↔forge_26_2)
+        # Baseline-gated: fails when a mirrored file drifted beyond its recorded
+        # diff (deliberate API-adapted files keep their baseline). Update the
+        # baseline with `scripts/check-platform-drift.py --save-baseline scripts/drift-baseline.json`.
+        run: python3 scripts/check-platform-drift.py --baseline scripts/drift-baseline.json
 
       - name: Architecture constraint check (CONSTRAINT-001)
         run: ./gradlew :common:checkCommonArchitecture --console=plain
