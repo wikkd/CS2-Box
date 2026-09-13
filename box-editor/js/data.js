@@ -447,6 +447,403 @@ window.CSBDATA = {
       "zh": "下界合金钥匙"
     }
   ],
+  "entitySuggestions": [
+    {
+      "id": "allay",
+      "en": "Allay",
+      "zh": "悦灵"
+    },
+    {
+      "id": "armadillo",
+      "en": "Armadillo",
+      "zh": "犰狳"
+    },
+    {
+      "id": "axolotl",
+      "en": "Axolotl",
+      "zh": "美西螈"
+    },
+    {
+      "id": "bat",
+      "en": "Bat",
+      "zh": "蝙蝠"
+    },
+    {
+      "id": "bee",
+      "en": "Bee",
+      "zh": "蜜蜂"
+    },
+    {
+      "id": "blaze",
+      "en": "Blaze",
+      "zh": "烈焰人"
+    },
+    {
+      "id": "bogged",
+      "en": "Bogged",
+      "zh": "沼泽骷髅"
+    },
+    {
+      "id": "breeze",
+      "en": "Breeze",
+      "zh": "旋风人"
+    },
+    {
+      "id": "camel",
+      "en": "Camel",
+      "zh": "骆驼"
+    },
+    {
+      "id": "cat",
+      "en": "Cat",
+      "zh": "猫"
+    },
+    {
+      "id": "cave_spider",
+      "en": "Cave Spider",
+      "zh": "洞穴蜘蛛"
+    },
+    {
+      "id": "chicken",
+      "en": "Chicken",
+      "zh": "鸡"
+    },
+    {
+      "id": "cod",
+      "en": "Cod",
+      "zh": "鳕鱼"
+    },
+    {
+      "id": "cow",
+      "en": "Cow",
+      "zh": "牛"
+    },
+    {
+      "id": "creeper",
+      "en": "Creeper",
+      "zh": "苦力怕"
+    },
+    {
+      "id": "dolphin",
+      "en": "Dolphin",
+      "zh": "海豚"
+    },
+    {
+      "id": "donkey",
+      "en": "Donkey",
+      "zh": "驴"
+    },
+    {
+      "id": "drowned",
+      "en": "Drowned",
+      "zh": "溺尸"
+    },
+    {
+      "id": "elder_guardian",
+      "en": "Elder Guardian",
+      "zh": "远古守卫者"
+    },
+    {
+      "id": "ender_dragon",
+      "en": "Ender Dragon",
+      "zh": "末影龙"
+    },
+    {
+      "id": "enderman",
+      "en": "Enderman",
+      "zh": "末影人"
+    },
+    {
+      "id": "endermite",
+      "en": "Endermite",
+      "zh": "末影螨"
+    },
+    {
+      "id": "evoker",
+      "en": "Evoker",
+      "zh": "唤魔者"
+    },
+    {
+      "id": "fox",
+      "en": "Fox",
+      "zh": "狐狸"
+    },
+    {
+      "id": "frog",
+      "en": "Frog",
+      "zh": "青蛙"
+    },
+    {
+      "id": "ghast",
+      "en": "Ghast",
+      "zh": "恶魂"
+    },
+    {
+      "id": "glow_squid",
+      "en": "Glow Squid",
+      "zh": "发光鱿鱼"
+    },
+    {
+      "id": "goat",
+      "en": "Goat",
+      "zh": "山羊"
+    },
+    {
+      "id": "guardian",
+      "en": "Guardian",
+      "zh": "守卫者"
+    },
+    {
+      "id": "hoglin",
+      "en": "Hoglin",
+      "zh": "疣猪兽"
+    },
+    {
+      "id": "horse",
+      "en": "Horse",
+      "zh": "马"
+    },
+    {
+      "id": "husk",
+      "en": "Husk",
+      "zh": "尸壳"
+    },
+    {
+      "id": "iron_golem",
+      "en": "Iron Golem",
+      "zh": "铁傀儡"
+    },
+    {
+      "id": "llama",
+      "en": "Llama",
+      "zh": "羊驼"
+    },
+    {
+      "id": "magma_cube",
+      "en": "Magma Cube",
+      "zh": "岩浆怪"
+    },
+    {
+      "id": "mooshroom",
+      "en": "Mooshroom",
+      "zh": "哞菇"
+    },
+    {
+      "id": "mule",
+      "en": "Mule",
+      "zh": "骡"
+    },
+    {
+      "id": "ocelot",
+      "en": "Ocelot",
+      "zh": "豹猫"
+    },
+    {
+      "id": "panda",
+      "en": "Panda",
+      "zh": "熊猫"
+    },
+    {
+      "id": "parrot",
+      "en": "Parrot",
+      "zh": "鹦鹉"
+    },
+    {
+      "id": "phantom",
+      "en": "Phantom",
+      "zh": "幻翼"
+    },
+    {
+      "id": "pig",
+      "en": "Pig",
+      "zh": "猪"
+    },
+    {
+      "id": "piglin",
+      "en": "Piglin",
+      "zh": "猪灵"
+    },
+    {
+      "id": "piglin_brute",
+      "en": "Piglin Brute",
+      "zh": "猪灵蛮兵"
+    },
+    {
+      "id": "pillager",
+      "en": "Pillager",
+      "zh": "掠夺者"
+    },
+    {
+      "id": "polar_bear",
+      "en": "Polar Bear",
+      "zh": "北极熊"
+    },
+    {
+      "id": "pufferfish",
+      "en": "Pufferfish",
+      "zh": "河豚"
+    },
+    {
+      "id": "rabbit",
+      "en": "Rabbit",
+      "zh": "兔子"
+    },
+    {
+      "id": "ravager",
+      "en": "Ravager",
+      "zh": "劫掠兽"
+    },
+    {
+      "id": "salmon",
+      "en": "Salmon",
+      "zh": "鲑鱼"
+    },
+    {
+      "id": "sheep",
+      "en": "Sheep",
+      "zh": "绵羊"
+    },
+    {
+      "id": "shulker",
+      "en": "Shulker",
+      "zh": "潜影贝"
+    },
+    {
+      "id": "silverfish",
+      "en": "Silverfish",
+      "zh": "蠹虫"
+    },
+    {
+      "id": "skeleton",
+      "en": "Skeleton",
+      "zh": "骷髅"
+    },
+    {
+      "id": "skeleton_horse",
+      "en": "Skeleton Horse",
+      "zh": "骷髅马"
+    },
+    {
+      "id": "slime",
+      "en": "Slime",
+      "zh": "史莱姆"
+    },
+    {
+      "id": "sniffer",
+      "en": "Sniffer",
+      "zh": "嗅探兽"
+    },
+    {
+      "id": "snow_golem",
+      "en": "Snow Golem",
+      "zh": "雪傀儡"
+    },
+    {
+      "id": "spider",
+      "en": "Spider",
+      "zh": "蜘蛛"
+    },
+    {
+      "id": "squid",
+      "en": "Squid",
+      "zh": "鱿鱼"
+    },
+    {
+      "id": "stray",
+      "en": "Stray",
+      "zh": "流浪者"
+    },
+    {
+      "id": "strider",
+      "en": "Strider",
+      "zh": "炽足兽"
+    },
+    {
+      "id": "tadpole",
+      "en": "Tadpole",
+      "zh": "蝌蚪"
+    },
+    {
+      "id": "trader_llama",
+      "en": "Trader Llama",
+      "zh": "行商羊驼"
+    },
+    {
+      "id": "tropical_fish",
+      "en": "Tropical Fish",
+      "zh": "热带鱼"
+    },
+    {
+      "id": "turtle",
+      "en": "Turtle",
+      "zh": "海龟"
+    },
+    {
+      "id": "vex",
+      "en": "Vex",
+      "zh": "恼鬼"
+    },
+    {
+      "id": "villager",
+      "en": "Villager",
+      "zh": "村民"
+    },
+    {
+      "id": "vindicator",
+      "en": "Vindicator",
+      "zh": "卫道士"
+    },
+    {
+      "id": "wandering_trader",
+      "en": "Wandering Trader",
+      "zh": "流浪商人"
+    },
+    {
+      "id": "warden",
+      "en": "Warden",
+      "zh": "循声守卫"
+    },
+    {
+      "id": "witch",
+      "en": "Witch",
+      "zh": "女巫"
+    },
+    {
+      "id": "wither",
+      "en": "Wither",
+      "zh": "凋灵"
+    },
+    {
+      "id": "wither_skeleton",
+      "en": "Wither Skeleton",
+      "zh": "凋灵骷髅"
+    },
+    {
+      "id": "wolf",
+      "en": "Wolf",
+      "zh": "狼"
+    },
+    {
+      "id": "zoglin",
+      "en": "Zoglin",
+      "zh": "僵尸疣猪兽"
+    },
+    {
+      "id": "zombie",
+      "en": "Zombie",
+      "zh": "僵尸"
+    },
+    {
+      "id": "zombie_horse",
+      "en": "Zombie Horse",
+      "zh": "僵尸马"
+    },
+    {
+      "id": "zombie_villager",
+      "en": "Zombie Villager",
+      "zh": "僵尸村民"
+    }
+  ],
   "examples": [
     {
       "key": "weapon_dealer",

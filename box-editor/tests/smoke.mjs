@@ -98,6 +98,12 @@ try {
   check('color picker writes #RRGGBB prefix',
     /^#00aa66\s/.test(nameAfterPick), nameAfterPick.slice(0, 24));
 
+  // entity id dropdown with every vanilla mob
+  const entityListAttr = await page.locator('[data-f="meta.entity.0.id"]').getAttribute('list');
+  const entityOptionCount = await page.locator('#csbox-entity-list option').count();
+  check('entity input offers vanilla mob dropdown',
+    entityListAttr === 'csbox-entity-list' && entityOptionCount >= 70, 'options=' + entityOptionCount);
+
   await page.locator('[data-f="meta.fileName"]').hover();
   await page.waitForTimeout(350);
   const tipVisible = await page.locator('.field-tooltip').evaluate((el) => el.classList.contains('show'));

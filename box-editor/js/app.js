@@ -838,8 +838,16 @@
 
   /* ------------------------------ rendering ------------------------------ */
 
+  function buildEntityDatalist() {
+    const list = document.getElementById('csbox-entity-list');
+    if (!list) return;
+    list.innerHTML = (DATA.entitySuggestions || []).map((e) =>
+      '<option value="minecraft:' + esc(e.id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">').join('');
+  }
+
   function renderAll() {
     bindStatics();
+    buildEntityDatalist();
     const verSel = $('#version-select');
     verSel.innerHTML = DATA.versions.map((v) =>
       '<option value="' + esc(v.key) + '">' + esc(v.label[I18N.lang]) + '</option>').join('');
@@ -965,7 +973,7 @@
     if (!host) return;
     host.innerHTML = state.meta.entity.map((row, i) =>
       '<div class="entity-row">' +
-      '<input data-help="drop.entityIdHelp" data-f="meta.entity.' + i + '.id" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +
+      '<input data-help="drop.entityIdHelp" data-f="meta.entity.' + i + '.id" list="csbox-entity-list" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +
       '<input data-help="drop.entityRateHelp" data-f="meta.entity.' + i + '.rate" value="' + esc(row.rate) + '" placeholder="0.1" type="number" min="0" max="1" step="0.01" class="rate">' +
       '<button class="btn small danger" data-action="del-entity" data-index="' + i + '">✕</button>' +
       '</div>').join('');
