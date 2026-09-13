@@ -72,6 +72,12 @@ try {
     bgImage.includes('bg.jpg') && bgImage.split(',').length >= 2,
     (bgImage || '').slice(0, 60));
 
+  const glass = await page.locator('.card').first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return (s.backdropFilter || s.webkitBackdropFilter || '');
+  });
+  check('cards use glass backdrop blur', /blur\(/.test(glass), (glass || '').slice(0, 40));
+
   const metaInputs = await page.locator('#card-meta input, #card-meta select').count();
   check('meta card has real inputs', metaInputs >= 6, 'count=' + metaInputs);
   check('no escaped ghost inputs',
