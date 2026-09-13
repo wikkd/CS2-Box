@@ -1085,3 +1085,116 @@ select {
 .col-caret { background: rgba(255, 253, 248, .58); border-color: var(--border); color: var(--muted); }
 .col-head:hover h2 { color: var(--text); }
 code { background: rgba(255, 253, 248, .7); border-color: var(--border-soft); color: var(--text); }
+
+
+/* =====================================================================
+ * Liquid glass fine-tune — extra transparency, stronger blur/saturation,
+ * frosted highlights and inner rims so the cover art reads through.
+ * ===================================================================== */
+html, body {
+  background:
+    linear-gradient(rgba(250, 246, 236, .16), rgba(250, 246, 236, .26)),
+    url('../img/bg.jpg') center / cover no-repeat fixed,
+    radial-gradient(900px 420px at 12% -8%, rgba(120, 170, 255, .16) 0%, transparent 60%),
+    radial-gradient(700px 380px at 88% -6%, rgba(200, 170, 255, .12) 0%, transparent 55%),
+    radial-gradient(1200px 600px at 20% -10%, #f8f4ea 0%, var(--bg) 55%);
+  background-color: var(--bg);
+  background-attachment: fixed;
+}
+
+.topbar {
+  background: linear-gradient(180deg, rgba(255, 252, 244, .42) 0%, rgba(248, 243, 232, .34) 100%);
+  backdrop-filter: blur(18px) saturate(1.8);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8);
+  border-bottom-color: rgba(255, 255, 255, .35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 10px 30px rgba(90, 80, 60, .12);
+}
+
+.btn {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .62) 0%, rgba(242, 237, 224, .52) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 2px 6px rgba(90, 80, 60, .10);
+}
+
+input[type="text"], input[type="number"], input:not([type]), select, textarea {
+  background: rgba(255, 253, 248, .46);
+}
+input:focus, select:focus, textarea:focus {
+  background: rgba(255, 255, 255, .80);
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255, 252, 244, .42) 0%, rgba(250, 245, 234, .30) 100%), var(--panel);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-color: rgba(255, 255, 255, .42);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 0 0 1px rgba(255, 255, 255, .14) inset, 0 12px 32px rgba(90, 80, 60, .16);
+}
+.card::before {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9), transparent);
+}
+
+.grade-card {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .36) 0%, rgba(248, 242, 230, .26) 100%);
+  backdrop-filter: blur(14px) saturate(1.7);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  border-color: rgba(255, 255, 255, .38);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 8px 22px rgba(90, 80, 60, .12);
+}
+.grade-card summary::before { background: rgba(255, 253, 248, .6); }
+
+.item-card {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .30) 0%, rgba(248, 243, 232, .22) 100%);
+  backdrop-filter: blur(10px) saturate(1.6);
+  -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  border-color: rgba(255, 255, 255, .36);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 4px 14px rgba(90, 80, 60, .10);
+}
+.item-no { background: rgba(255, 253, 248, .55); }
+.count-badge { background: rgba(255, 253, 248, .48); }
+.item-adv { background: rgba(255, 253, 248, .2); }
+
+.price-table th {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0));
+}
+.price-table tbody tr:nth-child(even) td { background: rgba(255, 253, 248, .22); }
+
+.tab { background: rgba(255, 253, 248, .24); }
+.tab:hover { background: rgba(255, 253, 248, .40); }
+.tab.active {
+  background: linear-gradient(180deg, rgba(255, 252, 244, .68), rgba(250, 246, 236, .56));
+}
+
+.json-preview {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .55) 0%, rgba(250, 246, 236, .42) 100%);
+  backdrop-filter: blur(14px) saturate(1.7);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 8px 20px rgba(90, 80, 60, .12);
+}
+
+.dlg {
+  background: linear-gradient(180deg, rgba(255, 252, 244, .58) 0%, rgba(250, 246, 236, .46) 100%);
+  backdrop-filter: blur(26px) saturate(1.9);
+  -webkit-backdrop-filter: blur(26px) saturate(1.9);
+  border-color: rgba(255, 255, 255, .5);
+  box-shadow: 0 24px 60px rgba(70, 62, 45, .25), 0 0 0 1px rgba(255, 255, 255, .5) inset;
+}
+.example-item {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .5), rgba(248, 243, 232, .36));
+}
+
+.toast {
+  background: linear-gradient(180deg, rgba(255, 253, 248, .68), rgba(248, 243, 232, .58));
+  backdrop-filter: blur(18px) saturate(1.7);
+  -webkit-backdrop-filter: blur(18px) saturate(1.7);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .5) inset, 0 12px 34px rgba(70, 62, 45, .22);
+}
+
+.field-tooltip {
+  background: rgba(255, 253, 248, .88);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+}
+
+.badge { background: rgba(255, 255, 255, .3); }
+.col-caret { background: rgba(255, 253, 248, .48); }
