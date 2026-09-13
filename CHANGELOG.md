@@ -48,7 +48,9 @@
   枪械/弹药变体、原始 NBT、id#变体 价格、26.x 回退、reload 说明）；修复
   `field()` 渲染参数错位（基本信息/终端机卡片此前未渲染出
   控件）与文件名输入无效两个既有 bug；新增 Playwright 冒烟测试
-  （`box-editor/tests/smoke.mjs`，CI 工作流 `box-editor-smoke.yml`）。
+  （`box-editor/tests/smoke.mjs`，CI 工作流 `box-editor-smoke.yml`）。六平台新增
+  `EditorCommand` 注册 `/csbox editor` 子命令（**全员可用，无需 OP**，聊天栏输出可点击
+  链接直达网页配置工具，悬浮显示用途提示）。
 - 新 schema：`docs/box-schema/prices.schema.json`（IDE 补全用）。
 - `common/box/PriceTable.java`（纯函数解析/查价/变体键/hash/`recycleYield`）+ 单测；六平台
   `BoxJsonLoader` 统一接入。

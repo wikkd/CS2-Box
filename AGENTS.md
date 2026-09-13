@@ -89,6 +89,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `common/logic/BoxConstraintTracker.java`（v2.1.0 新增）— 开箱约束（max_per_player / cooldown）内存追踪，六平台共用
 - `common/terminal/TerminalStockManager.java`（v2.1.0 新增）— 终端库存/补货内存态，六平台共用
 - `command/CsboxCommand.java` — `/csbox` 命令树；`showInfoOverview` 末尾输出「物品来源模组」命名空间统计（v26 系 `BuiltInRegistries` / forge_1_20_1 `ForgeRegistries`）；v2.1.0 起 `/csbox validate [box]` 干跑 + info 展示新字段
+- `command/EditorCommand.java`（六平台各一份，v2.1.0 新增）— 独立类注册 `/csbox editor` 子命令（**全员可用，无需 OP**），聊天栏输出可点击的网页配置工具链接（https://wikkd.github.io/CS2-Box/）；刻意不修改 `CsboxCommand.java` 以便与既有工作树解耦；新增/调整需六平台同步并逐平台编译验证
 - `scripts/add-biome.py` — 向 `has_structure/*` 群系标签追加 biome（去重/幂等/`--dry-run`/`--replace`），让武库商小屋在模组群系生成（机制见 `docs/BIOME-INTEGRATION.md`）
 - `scripts/boxgen.py` / `scripts/check-ids.py`（v2.1.0 新增）— 箱子配置生成器 / compat-packs id 核查工具
 - `scripts/sync-box-editor-data.py`（v2.1.0 新增）+ `box-editor/` — 可视化网页配置工具（纯前端零构建，`file://` 可离线打开，可整目录发布 GitHub Pages；中英双语、跟随六平台版本控制 TACZ 变体/Data Components 可见性（TACZ 专属字段另有手动开关可强制启用/禁用；撤销/重做、校验项点击定位、物品
