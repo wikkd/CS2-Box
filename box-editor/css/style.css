@@ -257,6 +257,37 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 .item-no { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .item-body { margin-top: 8px; }
 
+/* Advanced per-item data: collapsible, hidden by default until filled */
+.item-adv {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-top: 8px;
+}
+.item-adv summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  user-select: none;
+}
+.item-adv summary::-webkit-details-marker { display: none; }
+.item-adv summary::before { content: "▸"; transition: transform .15s; }
+.item-adv[open] summary::before { transform: rotate(90deg); }
+.item-adv .adv-badge {
+  margin-left: auto;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 0 7px;
+  font-size: 11px;
+  line-height: 16px;
+}
+.item-adv .row { margin-top: 6px; }
+
 /* ---------- price table ---------- */
 .price-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
 .price-table th {

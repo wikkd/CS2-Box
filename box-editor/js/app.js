@@ -1194,17 +1194,37 @@
           '<label class="mini" data-help="item.variantHelp">' + esc(t('item.variant')) + '<input data-f="' + esc(p + 'variant') + '" value="' + esc(it.variant) + '" placeholder="tacz:ak47" class="w14"></label>' +
           '<label class="mini" data-help="item.variantFieldHelp">' + esc(t('item.variantField')) + ' ' +
           select(p + 'variantField', [['GunId', 'GunId'], ['AmmoId', 'AmmoId']], it.variantField) + '</label>' +
-          '<label class="mini" data-help="item.nbtHelp">' + esc(t('item.nbt')) + '<input data-f="' + esc(p + 'tagRaw') + '" value="' + esc(it.tagRaw) + '" placeholder=\'{GunId:"tacz:ak47"}\' class="w24"></label>' +
           '</div>'
         : '') +
 
-      (v.components
-        ? '<div class="row"><label class="mini grow" data-help="item.componentsHelp">' + esc(t('item.components')) +
-          '<textarea data-f="' + esc(p + 'components') + '" placeholder="' + esc(t('item.componentsHelp')) + '" rows="2" class="grow">' + esc(it.components) + '</textarea></label></div>'
-        : (it.components ? '<div class="row"><span class="help">' + esc(t('v.componentsIgnored')) + '</span></div>' : '')) +
+      (taczVisible() || v.components || !!(it.components || '').trim() ? advancedBlock(it, p, v) : '') +
       '</div>';
 
     return '<div class="item-card">' + header + body + '</div>';
+  }
+
+  /** Advanced per-item data (raw NBT tag / data components) is tucked into a
+   *  collapsible block so casual builders are not confronted with it. It stays
+   *  expanded and labelled once a value is present (e.g. pasted from
+   *  /csbox nbt hand), so nothing silently disappears. */
+  function advancedBlock(it, p, v) {
+    const has = !!((it.tagRaw || '').trim() || (it.components || '').trim());
+    let inner = '';
+    if (taczVisible()) {
+      inner += '<div class="row inline">' +
+        '<label class="mini" data-help="item.nbtHelp">' + esc(t('item.nbt')) + '<input data-f="' + esc(p + 'tagRaw') + '" value="' + esc(it.tagRaw) + '" placeholder=\'{GunId:"tacz:ak47"}\' class="w24"></label>' +
+        '</div>';
+    }
+    if (v.components) {
+      inner += '<div class="row"><label class="mini grow" data-help="item.componentsHelp">' + esc(t('item.components')) +
+        '<textarea data-f="' + esc(p + 'components') + '" placeholder="' + esc(t('item.componentsHelp')) + '" rows="2" class="grow">' + esc(it.components) + '</textarea></label></div>';
+    } else if (it.components) {
+      inner += '<div class="row"><span class="help">' + esc(t('v.componentsIgnored')) + '</span></div>';
+    }
+    return '<details class="item-adv"' + (has ? ' open' : '') + '>' +
+      '<summary>' + esc(t('item.adv')) +
+      (has ? '<span class="adv-badge">' + esc(t('item.advFilled')) + '</span>' : '') +
+      '</summary>' + inner + '</details>';
   }
 
   function rebuildPrices() {

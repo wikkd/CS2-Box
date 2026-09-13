@@ -170,6 +170,13 @@ try {
   check('paste recognizes /csbox nbt hand chat output', afterHandPaste === baseG1 + 1,
     'count=' + afterHandPaste);
 
+  // advanced data collapsible: filled items expand, empty items stay closed
+  const advTotal = await page.locator('#grade-items-1 .item-adv').count();
+  const advOpen = await page.locator('#grade-items-1 .item-adv[open]').count();
+  check('advanced data block: filled expands, empty stays closed',
+    advTotal >= 2 && advOpen >= 1 && advOpen < advTotal,
+    'total=' + advTotal + ' open=' + advOpen);
+
   // multiple JSON blocks pasted at once
   await page.click('[data-action="paste-items"][data-grade="1"]');
   await page.fill('#paste-textarea',
