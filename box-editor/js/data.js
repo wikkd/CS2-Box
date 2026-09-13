@@ -415,6 +415,38 @@ window.CSBDATA = {
     8,
     8
   ],
+  "keySuggestions": [
+    {
+      "id": "minecraft:air",
+      "en": "Keyless (minecraft:air)",
+      "zh": "免钥匙 (minecraft:air)"
+    },
+    {
+      "id": "csgobox:csgo_key_copper",
+      "en": "Copper Key",
+      "zh": "铜钥匙"
+    },
+    {
+      "id": "csgobox:csgo_key0",
+      "en": "Iron Key",
+      "zh": "铁钥匙"
+    },
+    {
+      "id": "csgobox:csgo_key1",
+      "en": "Gold Key",
+      "zh": "金钥匙"
+    },
+    {
+      "id": "csgobox:csgo_key2",
+      "en": "Diamond Key",
+      "zh": "钻石钥匙"
+    },
+    {
+      "id": "csgobox:csgo_key3",
+      "en": "Netherite Key",
+      "zh": "下界合金钥匙"
+    }
+  ],
   "examples": [
     {
       "key": "weapon_dealer",

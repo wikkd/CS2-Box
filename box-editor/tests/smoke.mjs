@@ -80,6 +80,16 @@ try {
   check('nav highlights Box Config',
     await page.locator('#nav-box').evaluate((el) => el.classList.contains('active')));
 
+  // built-in key suggestions
+  await page.evaluate(() => {
+    const sel = document.querySelector('select[data-f="meta.type"]');
+    if (sel && sel.value === 'terminal') { sel.value = 'csbox'; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+  const keyListAttr = await page.locator('[data-f="meta.key"]').getAttribute('list');
+  const keyOptionCount = await page.locator('#csbox-key-list option').count();
+  check('key input offers built-in key dropdown',
+    keyListAttr === 'csbox-key-list' && keyOptionCount >= 5, 'options=' + keyOptionCount);
+
   await page.locator('[data-f="meta.fileName"]').hover();
   await page.waitForTimeout(350);
   const tipVisible = await page.locator('.field-tooltip').evaluate((el) => el.classList.contains('show'));

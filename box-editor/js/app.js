@@ -883,7 +883,9 @@
         ['csbox', t('meta.type.csbox')],
         ['terminal', t('meta.type.terminal')],
       ], m.type)) +
-      field('meta.key', 'meta.keyHelp', input('meta.key', m.key, 'minecraft:iron_ingot', m.type === 'terminal', m.type === 'terminal')) +
+      field('meta.key', 'meta.keyHelp',
+        '<input data-f="meta.key" list="csbox-key-list" value="' + esc(m.key) + '" placeholder="minecraft:iron_ingot"' +
+        (m.type === 'terminal' ? ' disabled class="danger-input"' : '') + '>') +
       field('meta.drop', 'meta.dropHelp', input('meta.drop', m.drop, '0.05', false)) +
       field('meta.icon', 'meta.iconHelp', input('meta.icon', m.icon, 'minecraft:ender_chest', false)) +
       '</div>' +
@@ -893,7 +895,11 @@
       '</div>' +
       '<div class="row">' +
       '<label data-help="meta.requiresHelp">' + esc(t('meta.requires')) + '<input data-f="meta.requiresText" value="' + esc(m.requiresText) + '" placeholder="tacz" class="grow"></label>' +
-      '</div>';
+      '</div>' +
+      '<datalist id="csbox-key-list">' +
+      (DATA.keySuggestions || []).map((k) =>
+        '<option value="' + esc(k.id) + '" label="' + esc(k[I18N.lang] || k.id) + '">').join('') +
+      '</datalist>';
   }
 
   function rebuildDrop() {

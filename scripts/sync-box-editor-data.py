@@ -101,6 +101,16 @@ GRADE_NAMES = [
 GRADE_DEFAULT_PRICES = [6, 10, 16, 22, 30]
 GRADE_RECYCLE_YIELDS = [3, 5, 7, 8, 8]
 
+# Built-in key items registered by CS2-Box (lang keys: item.csgobox.csgo_key*).
+KEY_SUGGESTIONS = [
+    {"id": "minecraft:air", "en": "Keyless (minecraft:air)", "zh": "免钥匙 (minecraft:air)"},
+    {"id": "csgobox:csgo_key_copper", "en": "Copper Key", "zh": "铜钥匙"},
+    {"id": "csgobox:csgo_key0", "en": "Iron Key", "zh": "铁钥匙"},
+    {"id": "csgobox:csgo_key1", "en": "Gold Key", "zh": "金钥匙"},
+    {"id": "csgobox:csgo_key2", "en": "Diamond Key", "zh": "钻石钥匙"},
+    {"id": "csgobox:csgo_key3", "en": "Netherite Key", "zh": "下界合金钥匙"},
+]
+
 
 def load_json(path: pathlib.Path):
     with path.open("r", encoding="utf-8") as fh:
@@ -150,6 +160,7 @@ def main():
         "gradeNames": GRADE_NAMES,
         "gradeDefaultPrices": GRADE_DEFAULT_PRICES,
         "gradeRecycleYields": GRADE_RECYCLE_YIELDS,
+        "keySuggestions": KEY_SUGGESTIONS,
         "examples": examples,
     }
     js = (
