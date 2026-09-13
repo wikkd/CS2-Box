@@ -157,6 +157,48 @@ try {
   await page.click('[data-action="undo"]');
   await page.waitForTimeout(250);
 
+  // /csbox nbt hand chat output: whole chat block (header + JSON + copy button)
+  const baseG1 = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
+  await page.click('[data-action="paste-items"][data-grade="1"]');
+  await page.fill('#paste-textarea',
+    '手中物品 石头 的 JSON（可直接粘贴到箱子 items 条目）:\n' +
+    '{"id":"minecraft:stone","count":1,"components":{}}\n' +
+    '[ 点击复制完整 JSON ]');
+  await page.click('#paste-do');
+  await page.waitForTimeout(350);
+  const afterHandPaste = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
+  check('paste recognizes /csbox nbt hand chat output', afterHandPaste === baseG1 + 1,
+    'count=' + afterHandPaste);
+
+  // multiple JSON blocks pasted at once
+  await page.click('[data-action="paste-items"][data-grade="1"]');
+  await page.fill('#paste-textarea',
+    '{"id":"minecraft:andesite","count":2,"components":{}}\n' +
+    '{"id":"minecraft:diorite","count":1}');
+  await page.click('#paste-do');
+  await page.waitForTimeout(350);
+  const afterMulti = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
+  check('paste extracts multiple /csbox nbt hand lines', afterMulti === afterHandPaste + 2,
+    'count=' + afterMulti);
+
+  // truncated chat output: adds nothing and shows the copy-button hint
+  const beforeTrunc = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
+  await page.click('[data-action="paste-items"][data-grade="1"]');
+  await page.fill('#paste-textarea',
+    '手中物品 深板岩 的 JSON（可直接粘贴到箱子 items 条目）:\n' +
+    '{"id":"minecraft:deepslate","count":1,"components":{"mine\n' +
+    '（输出过长已截断，完整 12345 字符）\n' +
+    '[ 点击复制完整 JSON ]');
+  await page.click('#paste-do');
+  await page.waitForTimeout(180);
+  const truncToast = await page.locator('#toast').textContent();
+  const afterTrunc = await page.locator('#grade-items-1 [data-f$=".weight"]').count();
+  check('truncated /csbox nbt hand output hints copy button and adds nothing',
+    afterTrunc === beforeTrunc && /截断|truncated/i.test(truncToast || ''),
+    'toast=' + (truncToast || '').slice(0, 40));
+  await page.click('[data-action="undo"]');
+  await page.waitForTimeout(250);
+
   const dropSec = page.locator('#card-drop');
   check('drop section starts collapsed', await dropSec.evaluate((el) => el.classList.contains('collapsed')));
   await dropSec.locator('.col-head').click();

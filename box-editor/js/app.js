@@ -425,6 +425,52 @@
     pd.showModal();
   }
 
+  /** Finds complete JSON objects inside a text blob (e.g. a full chat block
+   *  copied from /csbox nbt hand, with its header/button decoration lines).
+   *  Braces are matched across lines while ignoring braces inside quoted
+   *  strings (so SNBT inside a "tag" value does not confuse the scanner);
+   *  only fragments that actually parse as plain objects are returned. */
+  function extractHandJsonObjects(text) {
+    const out = [];
+    let i = 0;
+    const n = text.length;
+    while (i < n) {
+      const start = text.indexOf('{', i);
+      if (start < 0) break;
+      let depth = 0, inStr = false, esc = false, end = -1;
+      for (let j = start; j < n; j++) {
+        const ch = text[j];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (ch === '\\') esc = true;
+          else if (ch === '"') inStr = false;
+          continue;
+        }
+        if (ch === '"') inStr = true;
+        else if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) { end = j; break; }
+        }
+      }
+      if (end < 0) break; // unclosed braces -> truncated output, stop
+      const frag = text.slice(start, end + 1);
+      try {
+        const v = JSON.parse(frag);
+        if (v && typeof v === 'object' && !Array.isArray(v)) out.push(v);
+      } catch (e) { /* non-JSON braces (e.g. an SNBT fragment) — skip */ }
+      i = end + 1;
+    }
+    return out;
+  }
+
+  /** True when the pasted text looks like a truncated /csbox nbt hand chat
+   *  output (the chat prints a preview cut at MAX_NBT_CHARS; only the chat
+   *  copy button holds the full JSON). */
+  function looksTruncatedHandJson(text) {
+    return /(truncated|截断|过长)/i.test(text);
+  }
+
   function parsePasteItems(text) {
     const out = [];
     const trimmed = text.trim();
@@ -441,7 +487,14 @@
         out.push(null);
       }
       return out;
-    } catch (e) { /* not JSON -> line mode */ }
+    } catch (e) { /* not whole-JSON -> try chat output, then line mode */ }
+    // /csbox nbt hand chat output: header / copy-button decoration lines
+    // around one or more JSON objects — ignore decoration, parse every object.
+    const objects = extractHandJsonObjects(trimmed);
+    if (objects.length) {
+      for (const o of objects) out.push(NS.parseItem(o, []));
+      return out;
+    }
     for (const line of trimmed.split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
@@ -492,7 +545,10 @@
         schedulePreview();
         toast(t('toast.pastedItems', { n: items.length }));
       }
-      if (bad) toast(t('toast.pasteBad', { n: bad }), true);
+      if (bad) {
+        if (looksTruncatedHandJson(text)) toast(t('toast.handTruncated'), true);
+        else toast(t('toast.pasteBad', { n: bad }), true);
+      }
     } else if (pasteContext.mode === 'prices') {
       const res = parsePastePrices(text);
       if (res.ok.length) {
