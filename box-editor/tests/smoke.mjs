@@ -90,6 +90,14 @@ try {
   check('key input offers built-in key dropdown',
     keyListAttr === 'csbox-key-list' && keyOptionCount >= 5, 'options=' + keyOptionCount);
 
+  // name color picker: picking a color inserts the #RRGGBB prefix
+  const colorInput = page.locator('#name-color');
+  check('name color picker present', (await colorInput.count()) === 1);
+  await colorInput.fill('#00aa66');
+  const nameAfterPick = await page.locator('[data-f="meta.name"]').inputValue();
+  check('color picker writes #RRGGBB prefix',
+    /^#00aa66\s/.test(nameAfterPick), nameAfterPick.slice(0, 24));
+
   await page.locator('[data-f="meta.fileName"]').hover();
   await page.waitForTimeout(350);
   const tipVisible = await page.locator('.field-tooltip').evaluate((el) => el.classList.contains('show'));

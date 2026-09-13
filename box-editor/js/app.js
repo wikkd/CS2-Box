@@ -62,6 +62,30 @@
     return /prices\.html([?#]|$)/i.test(location.pathname);
   }
 
+  function nameColorValue(name) {
+    const m = /^#([0-9a-fA-F]{6})(\s|$)/.exec(String(name || '').trim());
+    return m ? '#' + m[1].toLowerCase() : '#ff5555';
+  }
+
+  function onNameColor(color) {
+    pushHistory();
+    color = String(color || '').toLowerCase();
+    const cur = String(state.meta.name || '');
+    const hasPrefix = /^#[0-9a-fA-F]{6}(\s|$)/.test(cur.trim());
+    let next;
+    if (hasPrefix) {
+      next = cur.replace(/^#[0-9a-fA-F]{6}(\s|$)/, color + ' ');
+    } else if (cur.trim()) {
+      next = color + ' ' + cur.trim();
+    } else {
+      next = color + ' ';
+    }
+    state.meta.name = next;
+    const nameInput = document.querySelector('[data-f="meta.name"]');
+    if (nameInput) nameInput.value = next;
+    schedulePreview();
+  }
+
   /** Effective TACZ field visibility: manual switch wins, else follows version. */
   function taczVisible() {
     return state.taczEnabled == null ? version().taczVariants : !!state.taczEnabled;
@@ -541,9 +565,17 @@
         onPriceInput(el);
         return;
       }
+      if (el.dataset.role === 'name-color') {
+        onNameColor(el.value);
+        return;
+      }
       const f = el.dataset.f;
       if (!f) return;
       applyField(f, el.value);
+      if (f === 'meta.name') {
+        const colorInput = $('#name-color');
+        if (colorInput) colorInput.value = nameColorValue(el.value);
+      }
       schedulePreview();
     });
 
@@ -878,7 +910,11 @@
       '<h2>' + esc(t('meta.title')) + '</h2>' +
       '<div class="grid2">' +
       field('meta.fileName', 'meta.fileNameHelp', input('meta.fileName', state.fileName, 'my_box', false)) +
-      field('meta.name', 'meta.nameHelp', input('meta.name', m.name, '#FF5555 ' + (I18N.lang === 'zh' ? '名字' : 'Name'), false)) +
+      field('meta.name', 'meta.nameHelp',
+        '<span class="name-color-row">' +
+        '<input data-f="meta.name" value="' + esc(m.name) + '" placeholder="' + esc('#FF5555 ' + (I18N.lang === 'zh' ? '名字' : 'Name')) + '" class="grow">' +
+        '<input type="color" id="name-color" data-role="name-color" value="' + nameColorValue(m.name) + '" title="' + esc(t('meta.nameColor')) + '">' +
+        '</span>') +
       field('meta.type', '', select('meta.type', [
         ['csbox', t('meta.type.csbox')],
         ['terminal', t('meta.type.terminal')],

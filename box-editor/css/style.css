@@ -799,3 +799,17 @@ input[type="checkbox"]:indeterminate { accent-color: var(--warn); }
 }
 .page-nav .tab:hover { color: var(--text); text-decoration: none; }
 .page-nav .tab.active { color: #fff; }
+
+/* ---------- name color picker ---------- */
+.name-color-row { display: flex; align-items: center; gap: 6px; }
+.name-color-row input[type="color"] {
+  width: 40px;
+  height: 30px;
+  padding: 2px;
+  flex: none;
+  background: #0b0f15;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.name-color-row input[type="color"]:hover { border-color: var(--accent); }
