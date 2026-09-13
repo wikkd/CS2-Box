@@ -894,7 +894,7 @@ input[type="checkbox"]:indeterminate { accent-color: var(--warn); }
 /* ---------- page atmosphere ---------- */
 html, body {
   background:
-    linear-gradient(rgba(250, 246, 236, .42), rgba(250, 246, 236, .55)),
+    linear-gradient(rgba(250, 246, 236, .30), rgba(250, 246, 236, .44)),
     url('../img/bg.jpg') center / cover no-repeat fixed,
     radial-gradient(900px 420px at 12% -8%, rgba(120, 170, 255, .16) 0%, transparent 60%),
     radial-gradient(700px 380px at 88% -6%, rgba(200, 170, 255, .12) 0%, transparent 55%),
@@ -914,7 +914,7 @@ h2 { color: #2b2620; }
 
 /* ---------- top bar ---------- */
 .topbar {
-  background: linear-gradient(180deg, rgba(255, 252, 244, .78) 0%, rgba(248, 243, 232, .72) 100%);
+  background: linear-gradient(180deg, rgba(255, 252, 244, .62) 0%, rgba(248, 243, 232, .56) 100%);
   backdrop-filter: blur(14px) saturate(1.5);
   -webkit-backdrop-filter: blur(14px) saturate(1.5);
   border-bottom-color: rgba(200, 190, 168, .55);
@@ -930,7 +930,7 @@ h2 { color: #2b2620; }
 
 /* ---------- buttons ---------- */
 .btn {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .92) 0%, rgba(242, 237, 224, .88) 100%);
+  background: linear-gradient(180deg, rgba(255, 253, 248, .80) 0%, rgba(242, 237, 224, .72) 100%);
   border-color: #d9d1bf;
   color: var(--text);
   box-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 2px 6px rgba(90, 80, 60, .12);
@@ -953,7 +953,7 @@ h2 { color: #2b2620; }
 
 /* ---------- inputs ---------- */
 input[type="text"], input[type="number"], input:not([type]), select, textarea {
-  background: rgba(255, 253, 248, .72);
+  background: rgba(255, 253, 248, .60);
   border-color: #d9d1bf;
   color: var(--text);
   box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
@@ -961,7 +961,7 @@ input[type="text"], input[type="number"], input:not([type]), select, textarea {
 input:not(:disabled):hover, select:hover, textarea:hover { border-color: #b9ad94; }
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
-  background: rgba(255, 255, 255, .92);
+  background: rgba(255, 255, 255, .88);
   box-shadow: 0 0 0 3px rgba(47, 111, 219, .14), 0 0 10px rgba(47, 111, 219, .12);
 }
 select {
@@ -971,7 +971,7 @@ select {
 
 /* ---------- cards ---------- */
 .card {
-  background: linear-gradient(180deg, rgba(255, 252, 244, .82) 0%, rgba(250, 245, 234, .70) 100%), var(--panel);
+  background: linear-gradient(180deg, rgba(255, 252, 244, .62) 0%, rgba(250, 245, 234, .50) 100%), var(--panel);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-color: rgba(214, 204, 180, .7);
@@ -981,51 +981,51 @@ select {
 .card h2::before { background: var(--accent-grad); }
 
 .grade-card {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .66) 0%, rgba(248, 242, 230, .55) 100%);
+  background: linear-gradient(180deg, rgba(255, 253, 248, .52) 0%, rgba(248, 242, 230, .42) 100%);
   backdrop-filter: blur(12px) saturate(1.35);
   -webkit-backdrop-filter: blur(12px) saturate(1.35);
   border-color: rgba(215, 205, 183, .65);
   box-shadow: 0 4px 14px rgba(90, 80, 60, .12);
 }
 .grade-card:hover { box-shadow: 0 6px 20px rgba(90, 80, 60, .18); }
-.grade-card summary::before { background: rgba(255, 253, 248, .85); border-color: var(--border); color: var(--muted); }
+.grade-card summary::before { background: rgba(255, 253, 248, .72); border-color: var(--border); color: var(--muted); }
 .grade-card[open] summary::before { color: var(--accent); border-color: var(--accent); }
 .grade-badge { background: rgba(255, 255, 255, .5); text-shadow: none; box-shadow: 0 0 0 1px rgba(255,255,255,.5) inset; }
 
 .item-card {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .6) 0%, rgba(248, 243, 232, .5) 100%);
+  background: linear-gradient(180deg, rgba(255, 253, 248, .45) 0%, rgba(248, 243, 232, .38) 100%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-color: rgba(210, 200, 178, .6);
   box-shadow: 0 2px 8px rgba(90, 80, 60, .1);
 }
 .item-card:hover { border-color: #c9bc9d; box-shadow: 0 6px 18px rgba(90, 80, 60, .16); }
-.item-no { background: rgba(255, 253, 248, .8); border-color: var(--border-soft); color: var(--muted); }
-.count-badge { background: rgba(255, 253, 248, .7); border-color: var(--border); color: var(--muted); box-shadow: none; }
-.item-adv { border-color: rgba(200, 190, 168, .65); background: rgba(255, 253, 248, .35); }
+.item-no { background: rgba(255, 253, 248, .66); border-color: var(--border-soft); color: var(--muted); }
+.count-badge { background: rgba(255, 253, 248, .58); border-color: var(--border); color: var(--muted); box-shadow: none; }
+.item-adv { border-color: rgba(200, 190, 168, .65); background: rgba(255, 253, 248, .28); }
 
 /* ---------- price table ---------- */
 .price-table th {
   color: var(--muted);
   border-bottom-color: #cfc6b2;
-  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+  background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0));
 }
 .price-table td { border-bottom-color: var(--border-soft); }
-.price-table tbody tr:nth-child(even) td { background: rgba(255, 253, 248, .35); }
+.price-table tbody tr:nth-child(even) td { background: rgba(255, 253, 248, .30); }
 .price-table tr:hover td { background: rgba(47, 111, 219, .08); }
 
 /* ---------- preview ---------- */
-.tab { color: var(--muted); border-color: var(--border); background: rgba(255, 253, 248, .35); }
-.tab:hover { color: var(--text); background: rgba(255, 253, 248, .6); }
+.tab { color: var(--muted); border-color: var(--border); background: rgba(255, 253, 248, .30); }
+.tab:hover { color: var(--text); background: rgba(255, 253, 248, .48); }
 .tab.active {
   color: var(--text);
-  background: linear-gradient(180deg, rgba(255, 252, 244, .9), rgba(250, 246, 236, .8));
+  background: linear-gradient(180deg, rgba(255, 252, 244, .76), rgba(250, 246, 236, .66));
   border-color: var(--accent);
 }
 .page-nav .tab.active { color: var(--text); }
 .path-hint { color: var(--accent-2); background: rgba(36, 143, 142, .08); border-color: rgba(36, 143, 142, .3); }
 .json-preview {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .82) 0%, rgba(250, 246, 236, .68) 100%);
+  background: linear-gradient(180deg, rgba(255, 253, 248, .66) 0%, rgba(250, 246, 236, .54) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-color: #d9d1bf;
@@ -1034,7 +1034,7 @@ select {
 }
 
 /* ---------- issues / badges ---------- */
-.badge { background: rgba(255, 255, 255, .5); box-shadow: none; }
+.badge { background: rgba(255, 255, 255, .4); box-shadow: none; }
 .issue.error { background: rgba(217, 69, 85, .07); border-color: rgba(217, 69, 85, .3); }
 .issue.warn { background: rgba(184, 134, 11, .08); border-color: rgba(184, 134, 11, .32); }
 .issue.info { background: rgba(14, 159, 216, .07); border-color: rgba(14, 159, 216, .3); }
@@ -1044,7 +1044,7 @@ select {
 
 /* ---------- dialogs ---------- */
 .dlg {
-  background: linear-gradient(180deg, rgba(255, 252, 244, .92) 0%, rgba(250, 246, 236, .86) 100%);
+  background: linear-gradient(180deg, rgba(255, 252, 244, .80) 0%, rgba(250, 246, 236, .70) 100%);
   backdrop-filter: blur(18px) saturate(1.35);
   -webkit-backdrop-filter: blur(18px) saturate(1.35);
   border-color: rgba(210, 200, 178, .8);
@@ -1052,7 +1052,7 @@ select {
 }
 .dlg::backdrop { background: rgba(92, 84, 66, .4); backdrop-filter: blur(3px); }
 .example-item {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .78), rgba(248, 243, 232, .6));
+  background: linear-gradient(180deg, rgba(255, 253, 248, .64), rgba(248, 243, 232, .48));
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-color: var(--border-soft);
@@ -1061,7 +1061,7 @@ select {
 
 /* ---------- toasts ---------- */
 .toast {
-  background: linear-gradient(180deg, rgba(255, 253, 248, .94), rgba(248, 243, 232, .88));
+  background: linear-gradient(180deg, rgba(255, 253, 248, .84), rgba(248, 243, 232, .76));
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   color: var(--text);
@@ -1072,7 +1072,7 @@ select {
 
 /* ---------- tooltip ---------- */
 .field-tooltip {
-  background: rgba(255, 253, 248, .95);
+  background: rgba(255, 253, 248, .90);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-color: var(--accent);
@@ -1082,6 +1082,6 @@ select {
 
 /* ---------- misc ---------- */
 .tacz-row { background: linear-gradient(135deg, rgba(47,111,219,.07), rgba(122,85,232,.05)); border-color: rgba(47,111,219,.24); box-shadow: 0 2px 8px rgba(90, 80, 60, .08); }
-.col-caret { background: rgba(255, 253, 248, .7); border-color: var(--border); color: var(--muted); }
+.col-caret { background: rgba(255, 253, 248, .58); border-color: var(--border); color: var(--muted); }
 .col-head:hover h2 { color: var(--text); }
 code { background: rgba(255, 253, 248, .7); border-color: var(--border-soft); color: var(--text); }
