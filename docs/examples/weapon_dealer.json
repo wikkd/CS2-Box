@@ -11,12 +11,10 @@
   ],
   "grade5": [
     {
-      "id": "minecraft:netherite_sword",
-      "price": 4000
+      "id": "minecraft:netherite_sword"
     },
     {
-      "id": "minecraft:trident",
-      "price": 4000
+      "id": "minecraft:trident"
     },
     {
       "id": "minecraft:bow",
@@ -24,14 +22,12 @@
         "minecraft:enchantments": {
           "minecraft:power": 5
         }
-      },
-      "price": 3500
+      }
     }
   ],
   "grade4": [
     {
-      "id": "minecraft:diamond_sword",
-      "price": 1500
+      "id": "minecraft:diamond_sword"
     },
     {
       "id": "minecraft:crossbow",
@@ -39,47 +35,38 @@
         "minecraft:enchantments": {
           "minecraft:multishot": 1
         }
-      },
-      "price": 1500
+      }
     }
   ],
   "grade3": [
     {
-      "id": "minecraft:golden_sword",
-      "price": 500
+      "id": "minecraft:golden_sword"
     },
     {
-      "id": "minecraft:shield",
-      "price": 500
+      "id": "minecraft:shield"
     }
   ],
   "grade2": [
     {
-      "id": "minecraft:iron_sword",
-      "price": 200
+      "id": "minecraft:iron_sword"
     },
     {
-      "id": "minecraft:bow",
-      "price": 200
+      "id": "minecraft:bow"
     },
     {
       "id": "minecraft:arrow",
-      "count": 64,
-      "price": 200
+      "count": 64
     }
   ],
   "grade1": [
     {
-      "id": "minecraft:wooden_sword",
-      "price": 50
+      "id": "minecraft:wooden_sword"
     },
     {
-      "id": "minecraft:stone_axe",
-      "price": 50
+      "id": "minecraft:stone_axe"
     },
     {
-      "id": "minecraft:leather_helmet",
-      "price": 50
+      "id": "minecraft:leather_helmet"
     }
   ]
 }

@@ -12,74 +12,60 @@
   "grade5": [
     {
       "id": "minecraft:shulker_box",
-      "count": 1,
-      "price": 4000
+      "count": 1
     },
     {
-      "id": "minecraft:elytra",
-      "price": 4000
+      "id": "minecraft:elytra"
     }
   ],
   "grade4": [
     {
-      "id": "minecraft:nether_star",
-      "price": 1500
+      "id": "minecraft:nether_star"
     },
     {
-      "id": "minecraft:diamond_block",
-      "price": 1500
+      "id": "minecraft:diamond_block"
     },
     {
-      "id": "minecraft:totem_of_undying",
-      "price": 1500
+      "id": "minecraft:totem_of_undying"
     }
   ],
   "grade3": [
     {
-      "id": "minecraft:golden_apple",
-      "price": 500
+      "id": "minecraft:golden_apple"
     },
     {
       "id": "minecraft:ender_pearl",
-      "count": 16,
-      "price": 500
+      "count": 16
     },
     {
-      "id": "minecraft:emerald_block",
-      "price": 500
+      "id": "minecraft:emerald_block"
     }
   ],
   "grade2": [
     {
       "id": "minecraft:diamond",
-      "count": 16,
-      "price": 200
+      "count": 16
     },
     {
-      "id": "minecraft:ender_chest",
-      "price": 200
+      "id": "minecraft:ender_chest"
     },
     {
       "id": "minecraft:experience_bottle",
-      "count": 32,
-      "price": 200
+      "count": 32
     }
   ],
   "grade1": [
     {
       "id": "minecraft:iron_ingot",
-      "count": 32,
-      "price": 50
+      "count": 32
     },
     {
       "id": "minecraft:cooked_beef",
-      "count": 64,
-      "price": 50
+      "count": 64
     },
     {
       "id": "minecraft:gold_ingot",
-      "count": 16,
-      "price": 50
+      "count": 16
     }
   ],
   "entity": [

@@ -1,0 +1,36 @@
+{
+  "name": "#AA3333 军火枪械箱",
+  "key": "csgobox:csgo_key3",
+  "drop": 0.02,
+  "random": [625, 125, 25, 6, 4],
+  "requires": ["tacz"],
+  "grade5": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:ak47\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m4a1\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:ai_awp\"}" },
+    { "id": "minecraft:netherite_ingot", "count": 2 }
+  ],
+  "grade4": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:kar98\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:rpk\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:sks_tactical\"}" },
+    { "id": "tacz:ammo", "count": 64, "tag": "{AmmoId:\"tacz:762x39\"}" }
+  ],
+  "grade3": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m1911\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:glock_17\"}" },
+    { "id": "tacz:ammo", "count": 32, "tag": "{AmmoId:\"tacz:9mm\"}" },
+    { "id": "tacz:ammo", "count": 32, "tag": "{AmmoId:\"tacz:45acp\"}" }
+  ],
+  "grade2": [
+    { "id": "tacz:ammo", "count": 16, "tag": "{AmmoId:\"tacz:9mm\"}" },
+    { "id": "tacz:ammo", "count": 16, "tag": "{AmmoId:\"tacz:45acp\"}" },
+    { "id": "tacz:ammo", "count": 16, "tag": "{AmmoId:\"tacz:762x39\"}" },
+    { "id": "minecraft:gunpowder", "count": 8 }
+  ],
+  "grade1": [
+    { "id": "minecraft:gunpowder", "count": 4 },
+    { "id": "minecraft:iron_nugget", "count": 16 },
+    { "id": "minecraft:iron_ingot", "count": 6 }
+  ]
+}
