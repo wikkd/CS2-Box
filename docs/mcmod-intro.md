@@ -20,9 +20,9 @@ Reclizer（Original）、ChloePrime（This version）
 
 ## 简介
 
-CS2 Box 是 CsgoBox 在 NeoForge 平台的移植增强版。
+CS2 Box 是 CsgoBox 在 NeoForge / Forge 平台的移植增强版。
 
-原版作者 Reclizer 将 CS2 风格的开箱机制带入 Minecraft。模组支持 MC 1.21.1 / 26.1.2 / 26.2 三平台（另有 MinecraftForge 26.1.2 实验版本），通过 config/csbox/*.json 文件自由配置箱子内容，无需重新编译。
+原版作者 Reclizer 将 CS2 风格的开箱机制带入 Minecraft。模组支持 **6 个平台**——NeoForge MC 1.21.1 / 26.1.2 / 26.2 与 MinecraftForge 1.20.1 / 26.1.2 / 26.2，通过 config/csbox/*.json 文件自由配置箱子内容，无需重新编译。
 
 功能：
 

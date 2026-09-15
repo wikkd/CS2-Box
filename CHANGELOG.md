@@ -11,12 +11,18 @@
 ### 变更（终端价格统一管理）
 
 - **全局价格表 `config/csbox/_prices.json`**：终端物品成交价（武库点数）不再写在
-  箱子 JSON 的物品条目里，统一由一份全局价格表管理（物品 id → 非负整数；
-  `id#变体` 子键支持 NBT 变体定价，如 TACZ 枪/弹：`"tacz:modern_kinetic_gun#tacz:ak47"`）。
-  查价顺序：表内 id（或变体）→ 档位默认价（grade1..5 = 6/10/16/22/30）；表缺失 =
-  全部档位默认价，与原「没写 price 用默认价」行为一致。
+  箱子 JSON 的物品条目里，统一由一份全局价格表管理（物品 id → 固定非负整数或
+  `[min, max]` 随机范围；`id#变体` 子键支持 NBT 变体定价，如 TACZ 枪/弹：
+  `"tacz:modern_kinetic_gun#tacz:ak47"`）。
+  查价顺序：表内 id（或变体）→ 未命中 = 没有价格——终端机不报价、拆解 0，且装载器
+  对未定价的 id 物品**加载报错**（无任何默认价回退）；`loot_table` 条目是唯一例外
+  （不参与终端机报价）。
+- **范围价随机**：价格表值可写 `[min, max]`（闭区间、min≤max、与 `count` 区间同风格），
+  每次终端机报价由服务端在区间内均匀随机取整（客户端显示与扣账用同一采样价），范围价
+  同样参与箱子 `discount`；武库拆解台对范围价每次拆解独立采样一次再 ×90%。固定价
+  仍是单个整数，`legacy` 迁移只产出固定价，零迁移成本。
 - **破坏性变更**：`price` 字段从箱子 JSON 移除（`box.schema.json` 同步移除）；残留
-  `price` 会被运行时校验器与 `/csbox validate` 报错（该物品回退档位默认价直到迁移）。
+  `price` 会被运行时校验器与 `/csbox validate` 报错（该物品视为未定价——终端机不售、拆解 0，直到迁移补价）。
   旧配置请把价格迁移进 `_prices.json`（迁移示例见 `docs/examples/_prices.json`、
   `compat-packs/tacz-pack/_prices.json`）。
 - **旧版自动迁移**：`common/box/LegacyPriceMigration.java` 在每次 `loadAll` /
@@ -27,15 +33,18 @@
   损坏表中止、变体键、tag/loot 保留、幂等）。
 - **缓存联立失效**：加载缓存按「箱子文件内容 + 价格表内容」双重 hash，
   `/csbox reload` 与热重载重读价格表，改价即时生效（箱子文件未改也会按新价重算）。
-- `/csbox validate` 新增 `_prices.json` 校验（非法键/负值/小数/非数字报错、其余条目
-  照常生效）；`scripts/check-ids.py` 同步支持价格表核查并拒绝残留 `price`；
+- `/csbox validate` 新增 `_prices.json` 校验（非法键/负值/小数/非数字/非法范围报错、
+  其余条目照常生效）；`scripts/check-ids.py` 同步支持价格表核查（含 `[min, max]`
+  范围值）并拒绝残留 `price`；
   `scripts/boxgen.py` 新增 `--price` / `--price-key` / `--prices`（合并写入
   `_prices.json`，箱子 JSON 不再产出 price）。
 - **新增 `box-editor/` 可视化网页配置工具**（初始版）：纯前端零依赖、`file://`
   离线可用、中英双语、跟随六平台版本（控制 TACZ 变体键 / Data Components 可见性）、
   向导式建箱 + 实时 JSON 预览 + 轻量校验 + 内置示例 + 旧版内联 `price` 自动迁移
   （同物多价取平均、已有价优先，与 `LegacyPriceMigration` 规则一致）+
-  一键下载 `箱名.json` / `_prices.json`，可整目录发布 GitHub Pages。
+  一键下载 `箱名.json` / `_prices.json`，可整目录发布 GitHub Pages。价格表页支持
+  **固定价或 `min-max` 范围价**（输入 `1500` 或 `1500-3000`，导出为 `[1500, 3000]`，
+  拆解回收列显示范围折算）。
   `scripts/sync-box-editor-data.py` 从 `docs/box-schema` 与 `docs/examples` 生成
   内嵌数据（schema/示例/版本元数据），保证工具与实际文档不漂移。TACZ 变体 / 原始
   NBT 字段另设「TACZ 专属字段」开关（自动跟随版本，也可强制启用 / 禁用，本地保存）。
@@ -70,7 +79,7 @@
 - **拆解台对齐价格表（折价 90%）**：武库拆解台对盖章物品先按价格表计价——该物品 id
   （或 `id#变体`，TACZ 枪/弹）在 `_prices.json` 有价时，拆解回收 = 表价 × **90%**
   （向上取整，`PriceTable.recycleYield`，如表价 4500 → 4050、10 → 9）；表外回退原等级价
-  3/5/7/8/8。拆解资格不变（只收开箱盖章带 `csgobox:grade` 的物品）；`ArmoryRecycleEvent`
+  表外未定价物品不可拆解（产出 0，无等级价回退）。拆解资格不变（只收开箱盖章带 `csgobox:grade` 的物品）；`ArmoryRecycleEvent`
   仍可否决/改价；新增 `common/box/PriceTableRegistry.java`（装载器每次 load/reload
   发布当前表，拆解台只读消费），六平台 `ArmoryRecyclerBlockEntity` 统一接入．
 

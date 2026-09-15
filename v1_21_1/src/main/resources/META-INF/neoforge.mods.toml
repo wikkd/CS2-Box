@@ -8,32 +8,68 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
+displayURL="https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/tutorials"
 description='''${mod_description}'''
 
 [[dependencies.${mod_id}]]
 modId="neoforge"
-mandatory=true
+type="required"
 versionRange="${neo_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="minecraft"
-mandatory=true
+type="required"
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="jei"
-mandatory=false
+type="optional"
 versionRange="[19.44,)"
 ordering="NONE"
 side="CLIENT"
 
 [[dependencies.${mod_id}]]
 modId="roughlyenoughitems"
-mandatory=false
+type="optional"
 versionRange="[16.0,)"
 ordering="NONE"
 side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="cloth_config"
+type="optional"
+versionRange="[15.0,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="emi"
+type="optional"
+versionRange="[1.1.24,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+  modId="jade"
+  type="optional"
+  versionRange="[15,)"
+  ordering="NONE"
+  side="CLIENT"
+
+[[dependencies.${mod_id}]]
+  modId="wthit"
+  type="optional"
+  versionRange="[12.10,)"
+  ordering="NONE"
+  side="CLIENT"
+
+[[dependencies.${mod_id}]]
+  modId="theoneprobe"
+  type="optional"
+  versionRange="[12.0,)"
+  ordering="NONE"
+  side="CLIENT"

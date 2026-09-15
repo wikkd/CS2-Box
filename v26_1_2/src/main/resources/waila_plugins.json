@@ -1,0 +1,6 @@
+{
+  "csgobox:main": {
+    "initializer": "com.reclizer.csgobox.v26_1_2.wthit.CsgoBoxWthitPlugin",
+    "side": "client"
+  }
+}

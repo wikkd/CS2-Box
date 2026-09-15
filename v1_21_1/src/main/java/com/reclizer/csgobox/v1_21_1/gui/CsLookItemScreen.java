@@ -102,7 +102,7 @@ public class CsLookItemScreen extends Screen {
 
     /** Displays the server-authoritative reward after the progress animation completes. */
     public CsLookItemScreen(ItemStack item, int grade) {
-        this(item, grade, null);
+        this(item, grade, null, -1F);
     }
 
     /**
@@ -111,13 +111,26 @@ public class CsLookItemScreen extends Screen {
      * {@code previousScreen} on close instead of closing to the world.
      */
     public CsLookItemScreen(ItemStack item, int grade, Screen previousScreen) {
+        this(item, grade, previousScreen, -1F);
+    }
+
+    /** Post-buy showcase: shows the bought item with the terminal offer's exact
+     *  wear value (works for items without a durability bar too) and closes to
+     *  the world on Esc / the close button. */
+    public CsLookItemScreen(ItemStack item, int grade, float wearValue) {
+        this(item, grade, null, wearValue);
+    }
+
+    private CsLookItemScreen(ItemStack item, int grade, Screen previousScreen, float forcedWear) {
         super(Component.literal("look_item"));
         this.player = Minecraft.getInstance().player;
         this.openItem = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = grade;
         this.previousScreen = previousScreen;
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        if (!this.openItem.isEmpty() && this.openItem.isDamageableItem() && this.openItem.getDamageValue() > 0) {
+        if (forcedWear >= 0F) {
+            this.wearValue = Math.max(0F, Math.min(1F, forcedWear));
+        } else if (!this.openItem.isEmpty() && this.openItem.isDamageableItem() && this.openItem.getDamageValue() > 0) {
             int maxDamage = this.openItem.getMaxDamage();
             this.wearValue = maxDamage > 0 ? (float) this.openItem.getDamageValue() / maxDamage : rnd.nextFloat();
         } else {

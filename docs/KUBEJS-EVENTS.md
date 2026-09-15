@@ -27,6 +27,12 @@ CS2-Box 通过 **NeoForge 原生事件总线**（forge 实验模块为 Forge 事
 | `getEntity()` | `Player` | 开箱的玩家（继承自 `PlayerEvent`） |
 | `getBoxId()` | `ResourceLocation` / `Identifier` | 箱子定义 ID，如 `csgobox:weapon_case` |
 | `isBulk()` | `boolean` | 是否为批量开箱请求 |
+
+> **v2.1.0 配置约束在事件之前**：`max_per_player` / `cooldown_seconds` / `permission`
+> 由 `BoxConstraintTracker` 与 `CsgoBox.PERMISSION_GATE` 在 `BoxOpeningEvent` 之前检查——
+> 被约束拒绝的开箱**不会**触发本事件（也不会消耗钥匙）。KubeJS 脚本仍可用本事件实现
+> 更灵活的门槛（任务、活动、VIP 等）；`permission` 字段默认放行，可在 `CsgoBox.PERMISSION_GATE`
+> 中接入权限后端。
 | `getCount()` | `int` | 本次开箱数量：单开 = 1；批量 = 服务端授权的批次大小 |
 | `isCanceled()` / `setCanceled(boolean)` | — | 取消则拒绝本次开箱（KubeJS 脚本用 `event.cancel()`） |
 
@@ -180,7 +186,7 @@ NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.TerminalBuyEvent', e
 | `getBlockEntity()` | `ArmoryRecyclerBlockEntity` | 拆解台机器 |
 | `getInputItem()` | `ItemStack` | 即将被消耗的物品（**副本**，修改无效） |
 | `getGrade()` | `int` | 输入物品等级 1–5 |
-| `getYield()` | `int` | 本将产出的武库点数数 |
+| `getYield()` | `int` | 本将产出的武库点数数（v2.1.0 起 = 价格表价 × 90% 向上取整；未定价物品不可拆解，产出 0） |
 | `isCanceled()` / `setCanceled(boolean)` | — | 取消则跳过本次回收（KubeJS 脚本用 `event.cancel()`） |
 
 ```js
@@ -273,7 +279,7 @@ public class CsboxEventHandler {
 
 ```groovy
 dependencies {
-    compileOnly files('libs/csgobox-1.21.1-1.0.6.jar') // 对应版本
+    compileOnly files('libs/csgobox-1.21.1-2.0.0.jar') // 对应版本
 }
 ```
 

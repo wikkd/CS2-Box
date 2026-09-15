@@ -100,15 +100,17 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
 
         int slotIndex = 0;
         for (GradeGroup grade : recipe.definition().grades()) {
-            for (ItemStack item : grade.items()) {
+            java.util.List<ItemStack> items = grade.items();
+            for (int i = 0; i < items.size(); i++) {
                 if (slotIndex >= MAX_ITEM_SLOTS) {
                     break;
                 }
                 int col = slotIndex % GRID_COLS;
                 int row = slotIndex / GRID_COLS;
+                final int itemIndex = i;
                 builder.addSlot(RecipeIngredientRole.OUTPUT, GRID_X + col * SLOT_PITCH, GRID_Y + row * SLOT_PITCH)
-                        .addItemStack(item)
-                        .addRichTooltipCallback((view, tooltip) -> addItemTooltip(tooltip, recipe.definition(), grade, item));
+                        .addItemStack(items.get(i))
+                        .addRichTooltipCallback((view, tooltip) -> addItemTooltip(tooltip, recipe.definition(), grade, itemIndex));
                 slotIndex++;
             }
             if (slotIndex >= MAX_ITEM_SLOTS) {
@@ -179,7 +181,7 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
         }
     }
 
-    private void addItemTooltip(ITooltipBuilder tooltip, BoxDefinition definition, GradeGroup grade, ItemStack item) {
+    private void addItemTooltip(ITooltipBuilder tooltip, BoxDefinition definition, GradeGroup grade, int itemIndex) {
         int[] weights = definition.getWeightArray();
         long totalWeight = BoxOdds.totalWeight(weights);
         double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
@@ -187,7 +189,8 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
         tooltip.add(Component.translatable("jei.csgobox.tooltip.grade_weight",
                 grade.displayName(), grade.weight(), totalWeight));
         tooltip.add(Component.translatable("jei.csgobox.tooltip.item_chance",
-                formatPercent(BoxOdds.itemChance(gradeChance, itemCount))));
+                formatPercent(BoxOdds.itemChance(gradeChance,
+                        grade.itemWeightAt(itemIndex), itemCount, grade.positiveItemWeightSum()))));
     }
 
     private static void drawText(GuiGraphics guiGraphics, Font font, int x, int y, int color, Component text) {

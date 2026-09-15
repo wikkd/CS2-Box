@@ -432,6 +432,10 @@ try {
 
   /* ================= share link restore ================= */
   const shareUrl = BASE + '#state=' + makeShareState('shared_box_test');
+  // Navigate via a different document first so the fragment-only URL is a full
+  // cross-document load; a same-document goto followed by reload is flaky
+  // (page detaches) in headless Chromium.
+  await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
   await page.goto(shareUrl, { waitUntil: 'load' });
   await page.waitForTimeout(200);
   await page.reload({ waitUntil: 'load' });

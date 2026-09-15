@@ -1,6 +1,6 @@
 # Release Process
 
-> 适用于 1.0.6+ 的多平台发布流程。版本矩阵见 `gradle.properties` 的 `active_versions`。
+> 适用于 2.0.0+ 的六平台发布流程（NeoForge 3 + Forge 3，共享同一 `mod_version`）。版本矩阵见 `gradle.properties` 的 `active_versions`。
 
 ## 1. 版本号同步（四处在升级时必须一致）
 
@@ -26,20 +26,20 @@ for v in 1.21.1 26.1.2 26.2 forge-26.1.2 forge-26.2 forge-1.20.1; do
     26.2)           ./gradlew :v26_2:jar -Pactive_versions=$v ;;
     forge-26.1.2)   ./gradlew :forge_26_1_2:jar -Pactive_versions=$v ;;
     forge-26.2)     ./gradlew :forge_26_2:jar -Pactive_versions=$v ;;
-    forge-1.20.1)   ./gradlew :forge_1_20_1:jar -Pactive_versions=$v ;;
+    forge-1.20.1)   ./gradlew :forge_1_20_1:renameJar -Pactive_versions=$v ;;  # renameJar 依赖 jar；产物为 -srg.jar（SRG 重映射，1.20.1 生产必需）
   esac
 done
 ```
 
 > 已归档（EOL）平台 v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 自 2026-08-09 起不再构建发布，最后状态见 tag `eol-legacy-21x-1.0.6`。
 
-> Forge 三模块（`forge_26_1_2` / `forge_26_2` / `forge_1_20_1`）自 2.0.0-beta 起纳入
+> Forge 三模块（`forge_26_1_2` / `forge_26_2` / `forge_1_20_1`）自 2.0.0 起纳入
 > **正式发布**（与对应 NeoForge 平台保持特性同步，同步纪律见 AGENTS.md「forge_26_1_2 同步」）；
 > 不在 CI 构建矩阵，发布门禁独立运行 `scripts/test-forge-2612.sh` /
 > `scripts/test-forge-262.sh` / `docs/TESTING-FORGE-1201.md` 对应的门禁脚本（L0-L3）
 > + L4 运行时 E2E。
 
-产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.0-beta.jar` / `csgobox-forge-26.1.2-2.0.0-beta.jar`）。
+产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.0.jar` / `csgobox-forge-26.1.2-2.0.0.jar`）。**例外：`forge_1_20_1` 的发布产物是 `forge_1_20_1/build/libs/csgobox-forge-1.20.1-<mod_version>-srg.jar`**（SRG 重映射版，`renameJar` 任务产出）；`jar` 直出产物只用于 dev/内部，进生产会因 SRG 命名域不匹配而崩溃（如 2.0.0-beta 的 `NoSuchMethodError: CriteriaTriggers.register`）。
 
 ## 3. 质量门（发布前必须全绿）
 
@@ -53,7 +53,7 @@ done
    - `/csbox reload`、`/csbox reload tutorial`、`/csbox info error`（加载错误）
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）
    - GUI 渲染验证走自动化工作流：`docs/RUNTIME-UI-TESTING.md`（CGEvent 驱动 + 帧缓冲像素断言）
-   - 终端机屏幕（`terminal` 物品右键打开，三平台）：
+   - 终端机屏幕（`terminal` 物品右键打开，六平台）：
      - 四区静态布局对齐原型（左聊天气泡 / 右下报价卡 / 左下操作条 / 底行三格）；点阵为 512px tile 平铺，无白色块状失真
      - 时间轴：倒计时 DD:HH:MM:SS 每秒递减（初始 2天23:57:45）、打字点循环、武器 2.5s 轮换、8-F 磨损条箭头 0.95s 滑入 + 扫描带
      - 交互：长按「接受」胶囊（700ms）成交 → 第 2 轮报价；长按「拒绝」→ 第 3 轮；第 5 轮拒绝出红色失败横幅；批量上限下拉（30/64/200/400/800/无上限）；「检视」胶囊切换 3D 自转拖拽预览；ESC / ✕ 关闭恢复 HUD
@@ -68,7 +68,8 @@ done
 
 ## 5. 发布后收尾
 
+- **版本号提升（`gradle.properties` 的 `mod_version`）是发布动作，仅由维护者在发布时明确执行**；未明确给出新版本号时严禁修改（教程落盘文件名与它强耦合，见 AGENTS.md「版本号变更铁律」）
 - 更新 `docs/` 下相关文档（`ARCHITECTURE.md` / `CONFIGURATION.md` 若涉及变更）
-- 按新版本号准备教程文档：复制/更新 `docs/tutorials/_tutorial_v<mod_version>.md` 与 `_zh_cn.md`（模组按 jar 清单版本号下载对应文件，缺文件会导致新版本玩家教程下载落空）
-- 教程文档源推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要，运行时下载走 HTTPS 公开访问
+- 按新版本号准备教程内容：更新内嵌源 `common/src/main/resources/assets/csgobox/tutorials/tutorial.md` 与 `tutorial_zh_cn.md`（固定文件名；首次启动随包复制到 `config/csbox/_tutorial_v<mod_version>.md` / `_zh_cn.md`，离线可用，**不再联网下载**，无缺文件落空问题）
+- 同步在线版（Mod 列表地球按钮指向）：把上述内嵌内容复制为 `docs/tutorials/_tutorial_v<mod_version>.md` / `_zh_cn.md` 并推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要
 - 打 tag：`git tag v<mod_version> && git push origin v<mod_version>`

@@ -8,6 +8,7 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
+displayURL="https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/tutorials"
 description='''${mod_description}'''
 
 [[dependencies.${mod_id}]]
@@ -35,5 +36,40 @@ description='''${mod_description}'''
     modId="roughlyenoughitems"
     mandatory=false
     versionRange="[12.0,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="emi"
+    mandatory=false
+    versionRange="[1.1.24,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="jade"
+    mandatory=false
+    versionRange="[11.13,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="wthit"
+    mandatory=false
+    versionRange="[8.21,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="cloth_config"
+    mandatory=false
+    versionRange="[11.0,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="theoneprobe"
+    mandatory=false
+    versionRange="[10.0,)"
     ordering="NONE"
     side="CLIENT"

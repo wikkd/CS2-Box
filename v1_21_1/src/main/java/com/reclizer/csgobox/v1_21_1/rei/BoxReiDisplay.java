@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v1_21_1.rei;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
@@ -33,10 +34,8 @@ public record BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemSt
     public static List<BoxReiDisplay> fromRegistry() {
         List<BoxReiDisplay> displays = new ArrayList<>();
         for (BoxDefinition definition : BoxRegistry.getAll()) {
-            Item boxItem = BuiltInRegistries.ITEM.get(definition.id());
-            if (boxItem == null || boxItem == net.minecraft.world.item.Items.AIR) {
-                continue;
-            }
+            // Box items are a fixed set (a box is data, not an item id).
+            Item boxItem = ModItems.itemForBox(definition.id(), definition.isTerminal());
             ItemStack boxStack = ItemCsgoBox.setBoxId(definition.id(), new ItemStack(boxItem));
             ItemStack keyStack = keyStack(definition);
             displays.add(new BoxReiDisplay(definition, boxStack, keyStack));

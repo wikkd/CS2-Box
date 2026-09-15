@@ -166,4 +166,58 @@ final class GradeMapTest {
         }
         assertTrue(sawA && sawB && sawC, "All items should be reachable");
     }
+
+// ---- v2.1.0 weighted-pool tests ----
+
+    @Test
+    @DisplayName("build with weightOf skips zero-weight entries")
+    void weightedBuildSkipsZero() {
+        Map<String, Integer> items = new LinkedHashMap<>();
+        items.put("common1", 1);
+        items.put("disabled", 1); // weight 0 → dropped
+        GradeMap<String> gm = GradeMap.build(items, s -> s.equals("disabled") ? 0 : 1, NOT_EMPTY, IDENTITY);
+        assertNotNull(gm.pickRandom(new Random(42), 1));
+        assertTrue(gm.pickRandom(new Random(42), 1).equals("common1"),
+                "zero-weight entries must be excluded from the pool");
+    }
+
+    @Test
+    @DisplayName("fromWeighted preserves per-item weights for selection")
+    void fromWeightedSelectsHeavierItemsMoreOften() {
+        Map<Integer, java.util.List<GradeMap.Weighted<String>>> raw = new LinkedHashMap<>();
+        raw.put(1, java.util.List.of(
+                new GradeMap.Weighted<>("heavy", 9),
+                new GradeMap.Weighted<>("light", 1)));
+        GradeMap<String> gm = GradeMap.fromWeighted(raw, NOT_EMPTY, IDENTITY);
+        Random rng = new Random(7);
+        int heavy = 0;
+        int total = 0;
+        for (int i = 0; i < 1000; i++) {
+            if ("heavy".equals(gm.pickRandom(rng, 1))) heavy++;
+            total++;
+        }
+        assertTrue(heavy > total / 2, "heavy (weight 9 vs 1) should win most rolls, got " + heavy + "/" + total);
+    }
+
+    @Test
+    @DisplayName("fromWeighted drops null and zero-weight entries")
+    void fromWeightedFilters() {
+        Map<Integer, java.util.List<GradeMap.Weighted<String>>> raw = new LinkedHashMap<>();
+        raw.put(1, java.util.List.of(
+                new GradeMap.Weighted<>("ok", 1),
+                new GradeMap.Weighted<>(null, 1),
+                new GradeMap.Weighted<>("", 1),
+                new GradeMap.Weighted<>("zero", 0)));
+        GradeMap<String> gm = GradeMap.fromWeighted(raw, NOT_EMPTY, IDENTITY);
+        assertEquals("ok", gm.pickRandom(new Random(1), 1));
+        assertNull(gm.pickRandom(new Random(1), 2));
+    }
+
+    @Test
+    @DisplayName("empty() produces an empty GradeMap placeholder")
+    void emptyFactory() {
+        GradeMap<String> gm = GradeMap.empty(NOT_EMPTY, IDENTITY);
+        assertTrue(gm.isEmpty());
+        assertNull(gm.pickRandom(new Random(1), 1));
+    }
 }

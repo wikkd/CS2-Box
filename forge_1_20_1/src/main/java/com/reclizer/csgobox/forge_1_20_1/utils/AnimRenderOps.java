@@ -53,6 +53,8 @@ public final class AnimRenderOps {
     private static final String TACZ_MOD_ID = "tacz";
 
     private static final Logger LOGGER = LogUtils.getLogger();
+    /** Set once the first supports3D() call has logged the render environment. */
+    private static boolean logged3DEnvironment;
     /** Identity render stack for model rendering: bone transforms accumulate
      *  here while the outer placement lives in RenderSystem's model-view
      *  matrix. Safe to reuse on the render thread. */
@@ -188,6 +190,13 @@ public final class AnimRenderOps {
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
+        // Shader-mod fallback (Iris/Oculus): degrade 3D previews (incl. TACZ
+        // guns) to the 2D icon so nothing renders blank under shader packs
+        // (see docs/SHADER-COMPAT.md).
+        if (!supports3D()) {
+            renderItem2D(player, gg, item, cx, cy, scale);
+            return;
+        }
         // Optional-dependency gate: without it the instanceof below would
         // class-load TACZ and crash clients that don't have it installed.
         if (ModList.get().isLoaded(TACZ_MOD_ID) && item.getItem() instanceof IGun) {
@@ -466,7 +475,27 @@ public final class AnimRenderOps {
         if (v.z > max[2]) max[2] = v.z;
     }
 
+    /** Whether 3D item previews (PIP / drag-to-rotate / TACZ guns) can render
+     *  in this client. Only shader-pack mods (Iris/Oculus) force the 2D
+     *  fallback; Modern UI (modernui) deliberately does NOT: it officially
+     *  renders vanilla-GUI-system mods unchanged, so 3D previews stay 3D
+     *  under it. If a future Modern UI release is proven to break the 3D
+     *  path, add it to isShaderModActive() (docs/MODERN-UI-COMPAT.md). */
     public static boolean supports3D() {
-        return true;
+        if (!logged3DEnvironment) {
+            logged3DEnvironment = true;
+            LOGGER.info("[csgobox] 3D preview env: supports3D={} iris={} oculus={} modernui={}",
+                    !isShaderModActive(), ModList.get().isLoaded("iris"),
+                    ModList.get().isLoaded("oculus"), ModList.get().isLoaded("modernui"));
+        }
+        return !isShaderModActive();
+    }
+
+    /** True when Iris (NeoForge/Fabric) or Oculus (Forge) is installed: their
+     *  shader packs intercept/ignore custom GUI 3D paths, so 3D previews
+     *  degrade to 2D for correctness (probabilities/gameplay unaffected).
+     *  Modern UI is intentionally excluded — see supports3D(). */
+    private static boolean isShaderModActive() {
+        return ModList.get().isLoaded("iris") || ModList.get().isLoaded("oculus");
     }
 }

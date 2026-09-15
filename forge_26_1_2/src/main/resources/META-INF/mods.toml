@@ -8,6 +8,7 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
+displayURL="https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/tutorials"
 description='''${mod_description}'''
 
 [[dependencies.${mod_id}]]
@@ -23,3 +24,17 @@ description='''${mod_description}'''
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="cloth_config"
+    mandatory=false
+    versionRange="[26.1,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="wthit"
+    mandatory=false
+    versionRange="[19.0,)"
+    ordering="NONE"
+    side="CLIENT"

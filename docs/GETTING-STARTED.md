@@ -50,7 +50,7 @@ active_versions=26.1.2  # 或 1.21.1
 ./gradlew build
 ```
 
-成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-1.0.6.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-1.0.6.jar`。
+成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-2.0.0.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-2.0.0.jar`（Forge 平台为 `csgobox-forge-<mc>-2.0.0.jar`，见 [DEVELOPMENT.md](./DEVELOPMENT.md)）。
 
 ## 首次运行
 

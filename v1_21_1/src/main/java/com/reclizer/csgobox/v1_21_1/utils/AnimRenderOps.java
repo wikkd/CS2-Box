@@ -28,6 +28,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.fml.ModList;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -49,6 +50,8 @@ import java.util.WeakHashMap;
  */
 public final class AnimRenderOps {
     private static final Logger LOGGER = LogUtils.getLogger();
+    /** Set once the first supports3D() call has logged the render environment. */
+    private static boolean logged3DEnvironment;
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
     /** Scratch quaternion for the drag rotation: {@code mulPose} copies the
      *  value immediately, so a single static instance is safe on the render
@@ -200,6 +203,13 @@ public final class AnimRenderOps {
     public static void renderItem3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                     int cx, int cy, Quat rotation, float scale) {
         if (item == null || item.isEmpty() || player == null) return;
+        // Shader-mod fallback (Iris/Oculus): degrade 3D previews (incl. TACZ
+        // guns) to the 2D icon so nothing renders blank under shader packs
+        // (see docs/SHADER-COMPAT.md).
+        if (!supports3D()) {
+            renderItem2D(player, gg, item, cx, cy, scale);
+            return;
+        }
         if (item.getItem() instanceof IGun) {
             Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(item);
             // No loaded display -> nothing to draw (TACZ would fall back to the
@@ -474,7 +484,27 @@ public final class AnimRenderOps {
         if (v.z > max[2]) max[2] = v.z;
     }
 
+    /** Whether 3D item previews (PIP / drag-to-rotate / TACZ guns) can render
+     *  in this client. Only shader-pack mods (Iris/Oculus) force the 2D
+     *  fallback; Modern UI (modernui) deliberately does NOT: it officially
+     *  renders vanilla-GUI-system mods unchanged, so 3D previews stay 3D
+     *  under it. If a future Modern UI release is proven to break the 3D
+     *  path, add it to isShaderModActive() (docs/MODERN-UI-COMPAT.md). */
     public static boolean supports3D() {
-        return true;
+        if (!logged3DEnvironment) {
+            logged3DEnvironment = true;
+            LOGGER.info("[csgobox] 3D preview env: supports3D={} iris={} oculus={} modernui={}",
+                    !isShaderModActive(), ModList.get().isLoaded("iris"),
+                    ModList.get().isLoaded("oculus"), ModList.get().isLoaded("modernui"));
+        }
+        return !isShaderModActive();
+    }
+
+    /** True when Iris (NeoForge/Fabric) or Oculus (Forge) is installed: their
+     *  shader packs intercept/ignore custom GUI 3D paths, so 3D previews
+     *  degrade to 2D for correctness (probabilities/gameplay unaffected).
+     *  Modern UI is intentionally excluded — see supports3D(). */
+    private static boolean isShaderModActive() {
+        return ModList.get().isLoaded("iris") || ModList.get().isLoaded("oculus");
     }
 }

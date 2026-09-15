@@ -315,10 +315,10 @@ class BoxItemCodecTest {
     }
 
     @Test
-    void parseItem_missingGunId_bareGunRejectedNotSilentlyKept() {
-        // A gun whose custom_data is present but carries no usable GunId must
-        // NOT be silently delivered as a bare gun: the validator rejects the
-        // entry, mirroring the production TACZ validator's checkTaczNbt gate.
+    void parseItem_missingGunId_warnKeptNotRejected() {
+        // Lenient policy: a gun whose custom_data carries no usable GunId is
+        // kept with a warning (it opens as a bare gun) instead of rejecting
+        // the whole entry over a partial config.
         JsonObject customData = new JsonObject();
         customData.addProperty("GunDisplayId", "tacz:ak47");
         JsonObject components = new JsonObject();
@@ -327,18 +327,120 @@ class BoxItemCodecTest {
         json.addProperty("id", "minecraft:stone");
         json.add("components", components);
 
-        TaczValidator identityValidator = stack -> {
-            CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
-            return cd != null && cd.copyTag().contains("GunId")
-                    ? Optional.of(GunCheckResult.warn(List.of()))
-                    : Optional.of(GunCheckResult.reject("TACZ gun missing GunId in custom_data"));
-        };
+        TaczValidator lenientValidator = stack -> Optional.of(
+                GunCheckResult.warn(List.of("TACZ gun missing GunId in custom_data; kept as bare gun")));
 
-        ParseOutcome out = BoxItemCodec.parseItem(json, identityValidator);
+        ParseOutcome out = BoxItemCodec.parseItem(json, lenientValidator);
 
-        assertFalse(out.isSuccess());
-        assertTrue(out.error().contains("GunId"));
-        assertTrue(out.stack().isEmpty());
+        assertTrue(out.isSuccess());
+        assertFalse(out.stack().isEmpty());
+        assertTrue(out.warnings().stream().anyMatch(w -> w.contains("GunId")),
+                () -> "expected missing-GunId warning, got: " + out.warnings());
+    }
+
+    // ------------------------------------------------------------------
+    // normalizeTaczNbt: lenient TACZ field repair
+    // ------------------------------------------------------------------
+
+    @Test
+    void normalizeTaczNbt_coercesStringNumbersAndBooleans() {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("GunId", "tacz:ak47");
+        tag.putString("GunCurrentAmmoCount", "30");
+        tag.putString("HasBulletInBarrel", "true");
+        tag.putInt("OverHeated", 1);
+
+        List<String> warnings = BoxItemCodec.normalizeTaczNbt(tag);
+
+        assertTrue(warnings.isEmpty(), () -> "expected no warnings, got: " + warnings);
+        assertEquals(30, tag.getInt("GunCurrentAmmoCount"));
+        assertEquals((byte) 1, tag.getByte("HasBulletInBarrel"),
+                "boolean string must become a byte so TACZ's contains(key,BYTE) works");
+        assertEquals((byte) 1, tag.getByte("OverHeated"),
+                "int must be coerced to byte for BYTE-checked fields");
+    }
+
+    @Test
+    void normalizeTaczNbt_badNumericField_warnsAndRemoves() {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("GunCurrentAmmoCount", "many");
+
+        List<String> warnings = BoxItemCodec.normalizeTaczNbt(tag);
+
+        assertFalse(tag.contains("GunCurrentAmmoCount"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("GunCurrentAmmoCount")),
+                () -> "expected field warning, got: " + warnings);
+    }
+
+    @Test
+    void normalizeTaczNbt_malformedAttachment_warnsAndKeepsGun() {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("GunId", "tacz:ak47");
+        tag.putString("AttachmentSCOPE", "tacz:scope_8x"); // wrong shape: string not object
+
+        List<String> warnings = BoxItemCodec.normalizeTaczNbt(tag);
+
+        assertFalse(tag.contains("AttachmentSCOPE"), "non-compound attachment should be dropped");
+        assertTrue(tag.contains("GunId"), "gun must be kept");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("AttachmentSCOPE")),
+                () -> "expected attachment warning, got: " + warnings);
+    }
+
+    @Test
+    void normalizeTaczNbt_attachmentWithoutId_warnsButKeepsAttachment() {
+        CompoundTag attachment = new CompoundTag();
+        attachment.putString("AttachmentId", "tacz:sro_dot");
+        CompoundTag tag = new CompoundTag();
+        tag.putString("GunId", "tacz:ak47");
+        tag.put("AttachmentSCOPE", attachment);
+
+        List<String> warnings = BoxItemCodec.normalizeTaczNbt(tag);
+
+        assertTrue(tag.contains("AttachmentSCOPE"), "compound attachment with data must be kept");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("AttachmentSCOPE")),
+                () -> "expected attachment warning, got: " + warnings);
+    }
+
+    // ------------------------------------------------------------------
+    // tag as JSON object (dual-format legacy tag)
+    // ------------------------------------------------------------------
+
+    @Test
+    void parseItem_tagJsonObject_migratesIntoCustomData() {
+        JsonObject tag = new JsonObject();
+        tag.addProperty("GunId", "tacz:ak47");
+        tag.addProperty("GunFireMode", "auto");
+        tag.addProperty("HasBulletInBarrel", false);
+        JsonObject json = new JsonObject();
+        json.addProperty("id", "minecraft:stone");
+        json.add("tag", tag);
+
+        ParseOutcome out = BoxItemCodec.parseItem(json, NO_TACZ);
+
+        assertTrue(out.isSuccess(), () -> "expected success, got error: " + out.error());
+        CustomData cd = out.stack().get(DataComponents.CUSTOM_DATA);
+        assertNotNull(cd, "JSON-object tag with GunId must be wrapped into minecraft:custom_data");
+        assertEquals("tacz:ak47", cd.copyTag().getString("GunId"));
+        assertEquals("auto", cd.copyTag().getString("GunFireMode"));
+        // Booleans become bytes (TACZ reads HasBulletInBarrel as a byte).
+        assertEquals((byte) 0, cd.copyTag().getByte("HasBulletInBarrel"));
+    }
+
+    @Test
+    void parseItem_tagSneakJsonString_withBooleans_parsesTolerantly() {
+        // A string that is JSON (quoted keys, boolean literal) but not valid
+        // SNBT must fall back to the JSON interpretation instead of failing.
+        JsonObject json = new JsonObject();
+        json.addProperty("id", "minecraft:stone");
+        json.addProperty("tag", "{\"GunId\":\"tacz:ak47\",\"HasBulletInBarrel\":false}");
+
+        ParseOutcome out = BoxItemCodec.parseItem(json, NO_TACZ);
+
+        assertTrue(out.isSuccess(), () -> "expected success, got error: " + out.error());
+        CustomData cd = out.stack().get(DataComponents.CUSTOM_DATA);
+        assertNotNull(cd);
+        assertEquals("tacz:ak47", cd.copyTag().getString("GunId"));
+        assertEquals((byte) 0, cd.copyTag().getByte("HasBulletInBarrel"));
     }
 
     private static JsonObject gunCustomData(String gunId) {

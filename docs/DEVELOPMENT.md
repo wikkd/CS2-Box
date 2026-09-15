@@ -41,9 +41,17 @@ active_versions=26.1.2  # 可选：1.21.1 / 26.2 / forge-26.1.2
 
 构建产物:
 
-- `v1_21_1/build/libs/csgobox-1.21.1-1.0.6.jar`
-- `v26_1_2/build/libs/csgobox-26.1.2-1.0.6.jar`
-- `v26_2/build/libs/csgobox-26.2-1.0.6.jar`
+NeoForge 平台（jar 名 `csgobox-<mc>-<mod_version>.jar`）：
+
+- `v1_21_1/build/libs/csgobox-1.21.1-2.0.0.jar`
+- `v26_1_2/build/libs/csgobox-26.1.2-2.0.0.jar`
+- `v26_2/build/libs/csgobox-26.2-2.0.0.jar`
+
+Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
+
+- `forge_1_20_1/build/libs/csgobox-forge-1.20.1-2.0.0-srg.jar`（**发布产物**；`renameJar` 的 SRG 重映射版，1.20.1 生产必需）
+- `forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.0.jar`
+- `forge_26_2/build/libs/csgobox-forge-26.2-2.0.0.jar`
 
 ### 4. 运行开发客户端
 
@@ -67,6 +75,7 @@ active_versions=26.1.2  # 可选：1.21.1 / 26.2 / forge-26.1.2
 | `./gradlew :v26_1_2:runClient` | 启动 v26_1_2 客户端 |
 | `./gradlew :v26_1_2:runServer` | 启动 v26_1_2 专用服务端 |
 | `./gradlew :v1_21_1:runClient` | 启动 v1_21_1 客户端 |
+| `./gradlew :forge_1_20_1:renameJar -Pactive_versions=forge-1.20.1` | Forge 1.20.1 生产 jar（SRG 重映射，产出 `-srg.jar`；直接 `jar` 产物只供 dev） |
 | `./gradlew gameTestServer` | 在测试服务器中运行集成测试 |
 | `./gradlew clean` | 删除所有 build/ 目录 |
 | `./gradlew tasks --all` | 列出所有可用 Gradle 任务 |
@@ -134,7 +143,7 @@ CS2-Box/
 │   ├── src/main/java/com/reclizer/csgobox/
 │   │   ├── box/                         # BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验 / 教程下载
 │   │   ├── logic/                       # GradeMap / OddsCalculator / OpenBlockGuard / 终端谈判模型
-│   │   ├── config/                      # CsboxConfigDefaults（四平台配置默认值唯一来源）
+│   │   ├── config/                      # CsboxConfigDefaults（六平台配置默认值唯一来源）
 │   │   ├── terminal/                    # 谈判算法（平台无关）
 │   │   └── utils/                       # ColorTools / OverlayColor / GuiRegion 等
 │   ├── src/test/java/                   # JUnit 5 单测
@@ -211,7 +220,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 ### 资源缺失
 
-`common/src/main/resources/` 由四个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
+`common/src/main/resources/` 由六个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
 
 ## 相关文档
 

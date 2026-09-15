@@ -34,7 +34,7 @@ final class BoxJsonSchemaValidatorTest {
     }
 
     private static List<BoxJsonSchemaValidator.SchemaIssue> validate(String json) {
-        return BoxJsonSchemaValidator.validate(parse(json));
+        return BoxJsonSchemaValidator.validate(parseObj(json));
     }
 
     private static void assertSingleIssue(List<BoxJsonSchemaValidator.SchemaIssue> issues,
@@ -142,6 +142,41 @@ final class BoxJsonSchemaValidatorTest {
                     { "random": "not-an-array" }
                     """;
             assertSingleIssue(validate(json), "random");
+        }
+
+        @Test
+        @DisplayName("all-zero grade weights report the un-openable box issue")
+        void allZeroWeights() {
+            String json = """
+                    { "random": [0, 0, 0, 0, 0] }
+                    """;
+            List<BoxJsonSchemaValidator.SchemaIssue> issues = validate(json);
+            assertEquals(1, issues.size(),
+                    "Expected exactly 1 issue (all-zero random), got: " + issues);
+            assertEquals("random", issues.get(0).field());
+        }
+
+        @Test
+        @DisplayName("negative grade weights also report the un-openable box issue")
+        void allNegativeWeights() {
+            String json = """
+                    { "random": [-1, -2, 0, -3, -4] }
+                    """;
+            List<BoxJsonSchemaValidator.SchemaIssue> issues = validate(json);
+            assertEquals(1, issues.size(),
+                    "Expected exactly 1 issue (all non-positive random), got: " + issues);
+            assertEquals("random", issues.get(0).field());
+        }
+
+        @Test
+        @DisplayName("a single positive weight keeps the box openable")
+        void singlePositiveWeightDoesNotReport() {
+            String json = """
+                    { "random": [0, 0, 25, 0, 0] }
+                    """;
+            List<BoxJsonSchemaValidator.SchemaIssue> issues = validate(json);
+            assertEquals(0, issues.size(),
+                    "Expected no issues for an openable box, got: " + issues);
         }
     }
 
@@ -381,32 +416,32 @@ final class BoxJsonSchemaValidatorTest {
     @DisplayName("item price field")
     class ItemPrice {
         @Test
-        @DisplayName("non-negative integer price is fine")
-        void validPrice() {
-            assertTrue(validate("""
+        @DisplayName("any leftover price field is reported (moved to _prices.json)")
+        void leftoverPriceReported() {
+            assertSingleIssue(validate("""
                     { "grade1": [ { "id": "x", "price": 12 } ] }
-                    """).isEmpty(), "valid price must produce no issues");
+                    """), "grade1[0].price");
         }
 
         @Test
-        @DisplayName("negative price reports price")
-        void negativePrice() {
+        @DisplayName("leftover negative price is still reported as removed")
+        void negativePriceStillRemoved() {
             assertSingleIssue(validate("""
                     { "grade1": [ { "id": "x", "price": -3 } ] }
                     """), "grade1[0].price");
         }
 
         @Test
-        @DisplayName("non-integer price reports price")
-        void fractionalPrice() {
+        @DisplayName("leftover fractional price is still reported as removed")
+        void fractionalPriceStillRemoved() {
             assertSingleIssue(validate("""
                     { "grade1": [ { "id": "x", "price": 2.5 } ] }
                     """), "grade1[0].price");
         }
 
         @Test
-        @DisplayName("non-numeric price reports price")
-        void nonNumericPrice() {
+        @DisplayName("non-numeric leftover price is still reported as removed")
+        void nonNumericPriceStillRemoved() {
             assertSingleIssue(validate("""
                     { "grade1": [ { "id": "x", "price": "abc" } ] }
                     """), "grade1[0].price");
@@ -419,5 +454,87 @@ final class BoxJsonSchemaValidatorTest {
                     { "grade1": [ { "id": "x" } ] }
                     """).isEmpty(), "item without price must be skipped");
         }
+    }
+
+// ---- v2.1.0 field validation ----
+
+    @Test
+    @DisplayName("requires must be an array of strings")
+    void requiresArray() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj("{\"requires\": \"apotheosis\"}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("requires")),
+                "non-array requires must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("enabled must be boolean")
+    void enabledBoolean() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj("{\"enabled\": \"yes\"}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("enabled")),
+                "non-boolean enabled must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("numeric constraint fields reject negatives below -1 and non-integers")
+    void numericConstraints() {
+        for (String field : new String[]{"stock", "restock_minutes", "max_per_player", "cooldown_seconds"}) {
+            var issues = BoxJsonSchemaValidator.validate(parseObj("{\"" + field + "\": -5}"));
+            assertTrue(issues.stream().anyMatch(i -> i.field().equals(field)),
+                    field + " = -5 must be flagged");
+            issues = BoxJsonSchemaValidator.validate(parseObj("{\"" + field + "\": 1.5}"));
+            assertTrue(issues.stream().anyMatch(i -> i.field().equals(field)),
+                    field + " = 1.5 must be flagged");
+        }
+    }
+
+    @Test
+    @DisplayName("icon accepts string model id or integer CMD; rejects booleans")
+    void iconType() {
+        // numeric CMD and string model id are both valid
+        assertTrue(BoxJsonSchemaValidator.validate(parseObj("{\"icon\": 12}")).isEmpty());
+        assertTrue(BoxJsonSchemaValidator.validate(parseObj("{\"icon\": \"minecraft:item/barrel\"}")).isEmpty());
+        var issues = BoxJsonSchemaValidator.validate(parseObj("{\"icon\": true}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("icon")),
+                "boolean icon must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("item entry rejects multiple sources id + tag + loot_table")
+    void itemSourceExclusivity() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"grade1\": [{\"id\": \"minecraft:diamond\", \"tag\": \"#minecraft:swords\", \"loot_table\": \"minecraft:chests/simple_dungeon\"}]}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().contains("grade1[0]") && i.reason().contains("exactly one")),
+                "multi-source item must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("count array must be [min,max] with min>=1")
+    void countRange() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"grade1\": [{\"id\": \"minecraft:diamond\", \"count\": [5, 2]}]}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("grade1[0].count")),
+                "reversed count range must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("weight must be non-negative integer")
+    void itemWeight() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"grade1\": [{\"id\": \"minecraft:diamond\", \"weight\": -1}]}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("grade1[0].weight")),
+                "negative weight must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("enchant must be boolean or object")
+    void enchantType() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"grade1\": [{\"id\": \"minecraft:diamond\", \"enchant\": 7}]}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("grade1[0].enchant")),
+                "numeric enchant must be flagged: " + issues);
+    }
+
+    private static com.google.gson.JsonObject parseObj(String json) {
+        return com.google.gson.JsonParser.parseString(json).getAsJsonObject();
     }
 }

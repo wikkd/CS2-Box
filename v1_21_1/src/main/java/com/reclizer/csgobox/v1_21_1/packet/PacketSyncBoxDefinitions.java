@@ -4,6 +4,7 @@ import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.jei.BoxJeiSync;
+import com.reclizer.csgobox.v1_21_1.emi.BoxEmiReload;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -47,6 +48,7 @@ public record PacketSyncBoxDefinitions(List<BoxDefinition> definitions) implemen
                 BoxRegistry.register(definition);
             }
             BoxJeiSync.onBoxRegistryChanged();
+            BoxEmiReload.onBoxRegistryChanged();
         });
     }
 }

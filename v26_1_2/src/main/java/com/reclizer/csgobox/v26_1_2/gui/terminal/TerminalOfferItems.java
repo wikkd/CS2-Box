@@ -68,15 +68,16 @@ public final class TerminalOfferItems {
         return NegotiationModel.rarityKeyForGrade(gradeFor(offer));
     }
 
-    /** The round's custom terminal price (-1 = use default grade price). */
+    /** The round's server-sampled table price (-1 = unpriced, defensive). */
     public static int priceForRoundRaw(int round) {
         return ROUND_PRICE.getOrDefault(round, -1);
     }
 
     /**
-     * Whole Armory Point price of the offered item: the per-item price (or
-     * the shared grade default) plus the wear surcharge when the item has no
-     * durability bar (matches the server's authoritative buy price).
+     * Whole Armory Point price of the offered item: the server-sampled table
+     * price (a range was drawn once per offer) plus the wear surcharge when
+     * the item has no durability bar (matches the server's authoritative buy
+     * price).
      */
     public static int priceFor(NegotiationModel.Offer offer) {
         return priceFor(itemFor(offer), gradeFor(offer), offer.wearVal(),
@@ -91,16 +92,17 @@ public final class TerminalOfferItems {
                 ROUND_PRICE.getOrDefault(round, -1));
     }
 
-    /** Base price without the wear surcharge (for the penalty breakdown). */
+    /** Base price without the wear surcharge (for the penalty breakdown).
+     *  The price is the server-sampled table price (a range is already drawn
+     *  once per offer); unpriced items are never offered. */
     public static int basePriceFor(NegotiationModel.Offer offer) {
-        int custom = ROUND_PRICE.getOrDefault(offer.round(), -1);
-        return custom >= 0 ? custom : NegotiationModel.priceForGrade(gradeFor(offer));
+        return ROUND_PRICE.getOrDefault(offer.round(), 0);
     }
 
     private static int priceFor(ItemStack item, int grade, float wearVal, int customPrice) {
-        int price = customPrice >= 0 ? customPrice : NegotiationModel.priceForGrade(grade);
+        int price = customPrice >= 0 ? customPrice : 0;
         if (!item.isEmpty() && !item.isDamageableItem()) {
-            price += WearPenalty.surcharge(wearVal);
+            price += WearPenalty.surcharge(price, wearVal);
         }
         return price;
     }

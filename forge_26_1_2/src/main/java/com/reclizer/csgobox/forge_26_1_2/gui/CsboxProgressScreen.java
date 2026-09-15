@@ -175,8 +175,8 @@ public class CsboxProgressScreen extends Screen {
         this.minecraft.options.hideGui = true;
 
         // CS2-style backdrop: the blur is applied by extractBlurredBackground;
-        // here we only dim the blurred world.
-        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
+        // here we only dim the blurred world (24% black — keep the blur visible).
+        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x3C000000);
 
         if (rejected) {
             Component msg = Component.translatable("gui.csgobox.progress.rejected");

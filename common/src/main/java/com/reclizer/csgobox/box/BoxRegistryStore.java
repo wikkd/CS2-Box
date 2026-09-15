@@ -3,6 +3,8 @@ package com.reclizer.csgobox.box;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -15,6 +17,15 @@ import java.util.function.Consumer;
  * <p>Extracted from the per-platform {@code BoxRegistry} container logic.
  * Platforms keep a thin shell that supplies the key/value types, the
  * invalidation callbacks (e.g. grade-pool cache eviction), and logging.</p>
+ *
+ * <p>Thread-safety (v2.1.0-fix): all mutations and reads are synchronized on
+ * the store instance, and {@link #getAll()} / {@link #getIds()} return
+ * immutable snapshots instead of live views. This makes the store safe to
+ * touch from the {@code BoxFileWatcher}'s reload thread while the main
+ * server thread opens boxes or runs {@code /csbox} commands — a live view
+ * backed by the internal {@link LinkedHashMap} could otherwise throw
+ * {@code ConcurrentModificationException} or expose a half-written state.
+ * Insertion order and the unmodifiable-view contract are preserved.</p>
  *
  * <p>Callback contract (mirrors the historical platform behavior exactly):
  * <ul>
@@ -44,35 +55,37 @@ public final class BoxRegistryStore<K, V> {
     }
 
     /** Registers (or replaces) the value under its key, then invalidates. */
-    public void register(K key, V value) {
+    public synchronized void register(K key, V value) {
         registry.put(key, value);
         onEntryChanged.accept(key);
     }
 
-    public V get(K key) {
+    public synchronized V get(K key) {
         return registry.get(key);
     }
 
-    public Collection<V> getAll() {
-        return Collections.unmodifiableCollection(registry.values());
+    /** Immutable snapshot of all values, in insertion order. */
+    public synchronized Collection<V> getAll() {
+        return List.copyOf(registry.values());
     }
 
-    public Set<K> getIds() {
-        return Collections.unmodifiableSet(registry.keySet());
+    /** Immutable snapshot of all keys, in insertion order. */
+    public synchronized Set<K> getIds() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(registry.keySet()));
     }
 
-    public int size() {
+    public synchronized int size() {
         return registry.size();
     }
 
     /** Removes the entry for the key (if any), then invalidates. */
-    public void remove(K key) {
+    public synchronized void remove(K key) {
         registry.remove(key);
         onEntryChanged.accept(key);
     }
 
     /** Removes every entry, then fires the clear callback. */
-    public void clear() {
+    public synchronized void clear() {
         registry.clear();
         onCleared.run();
     }

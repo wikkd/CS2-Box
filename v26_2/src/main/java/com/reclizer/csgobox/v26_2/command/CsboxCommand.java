@@ -2,6 +2,7 @@ package com.reclizer.csgobox.v26_2.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
@@ -11,12 +12,16 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.v26_2.CsgoBox;
@@ -26,13 +31,18 @@ import com.reclizer.csgobox.v26_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.box.GradeGroup;
 import com.reclizer.csgobox.v26_2.box.LoadError;
+import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_2.item.ModItems;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 @EventBusSubscriber(modid = CsgoBox.MODID)
 public final class CsboxCommand {
@@ -78,6 +88,20 @@ public final class CsboxCommand {
                         .executes(CsboxCommand::reloadBoxes)
                         .then(Commands.literal("tutorial")
                                 .executes(CsboxCommand::refreshTutorials)))
+                .then(Commands.literal("validate")
+                        .requires(CsboxCommand::isGameMaster)
+                        .executes(CsboxCommand::validateAll)
+                        .then(Commands.argument("box", IdentifierArgument.id())
+                                .suggests(BOX_SUGGESTIONS)
+                                .executes(ctx -> validateBox(ctx, IdentifierArgument.getId(ctx, "box")))))
+                .then(Commands.literal("give")
+                        .requires(CsboxCommand::isGameMaster)
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .then(Commands.argument("box", IdentifierArgument.id())
+                                        .suggests(BOX_SUGGESTIONS)
+                                        .executes(ctx -> giveBox(ctx, 1))
+                                        .then(Commands.argument("count", IntegerArgumentType.integer(1, 6400))
+                                                .executes(ctx -> giveBox(ctx, IntegerArgumentType.getInteger(ctx, "count")))))))
                 .then(Commands.literal("nbt")
                         .then(Commands.literal("hand")
                                 .executes(CsboxCommand::showHandNbt)))
@@ -90,6 +114,35 @@ public final class CsboxCommand {
         return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
+    /**
+     * v2.1.0: hands out a box definition. Registry entries are a fixed set now
+     * (a box is data, not an item id), so this is the supported way to obtain
+     * a box — it picks the fixed item when the id ships with the mod and the
+     * generic {@code csgo_box} / {@code terminal} item otherwise, then stamps
+     * {@code csgobox:box_id} into the data component.
+     */
+    private static int giveBox(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        Identifier boxId = IdentifierArgument.getId(ctx, "box");
+        BoxDefinition def = BoxRegistry.get(boxId);
+        if (def == null) {
+            throw BOX_NOT_FOUND.create(boxId.toString());
+        }
+        Item item = ModItems.itemForBox(boxId, def.isTerminal());
+        ItemStack stack = new ItemStack(item, count);
+        ItemCsgoBox.setBoxId(boxId, stack);
+        Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "targets");
+        for (ServerPlayer player : players) {
+            ItemStack give = stack.copy();
+            if (!player.getInventory().add(give)) {
+                player.drop(give, false);
+            }
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.give.success",
+                String.valueOf(count), boxId.toString(), String.valueOf(players.size())), true);
+        return players.size();
+    }
+
     /** Requires permission level 2; invisible for non-OP players. */
     private static int showHelp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
@@ -100,6 +153,7 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.info"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.nbt"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
@@ -124,7 +178,38 @@ public final class CsboxCommand {
                 }
             }
         }
+        showNamespaceSummary(source, ids);
         return showLoadErrors(source);
+    }
+
+    /**
+     * 来源模组统计：把所有箱子的全部档位物品按注册表命名空间分组计数，帮助
+     * 整合包作者一眼看出「这套箱子开得出哪些模组的货」（联动数据包核对用）。
+     */
+    private static void showNamespaceSummary(CommandSourceStack source, Set<Identifier> ids) {
+        Map<String, Integer> byNamespace = new TreeMap<>();
+        for (Identifier id : ids) {
+            BoxDefinition def = BoxRegistry.get(id);
+            if (def == null) {
+                continue;
+            }
+            for (GradeGroup grade : def.grades()) {
+                for (ItemStack item : grade.items()) {
+                    if (item.isEmpty()) {
+                        continue;
+                    }
+                    String ns = BuiltInRegistries.ITEM.getKey(item.getItem()).getNamespace();
+                    byNamespace.merge(ns, 1, Integer::sum);
+                }
+            }
+        }
+        if (byNamespace.isEmpty()) {
+            return;
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.list.mod_summary_header"), false);
+        byNamespace.forEach((ns, count) ->
+                source.sendSuccess(() -> Component.translatable("commands.csgobox.list.mod_summary_entry",
+                        ns, String.valueOf(count)), false));
     }
 
     /** Requires permission level 2. */
@@ -162,19 +247,55 @@ public final class CsboxCommand {
                 String.valueOf(def.grades().size())), false);
         for (int i = 0; i < def.grades().size(); i++) {
             GradeGroup grade = def.grades().get(i);
+            boolean weighted = grade.positiveItemWeightSum() != grade.items().size();
             source.sendSuccess(() -> Component.translatable("commands.csgobox.info.grade_entry",
                     grade.id(), String.valueOf(grade.weight()), String.valueOf(grade.items().size())), false);
             List<ItemStack> displayItems = grade.items().stream().limit(5).toList();
             for (int j = 0; j < displayItems.size(); j++) {
                 final int itemIndex = j;
                 ItemStack item = displayItems.get(j);
-                source.sendSuccess(() -> Component.translatable("commands.csgobox.info.item_entry",
-                        String.valueOf(itemIndex + 1), item.getHoverName().getString(), String.valueOf(item.getCount())), false);
+                if (weighted) {
+                    source.sendSuccess(() -> Component.translatable("commands.csgobox.info.item_entry_weighted",
+                            String.valueOf(itemIndex + 1), item.getHoverName().getString(),
+                            String.valueOf(grade.itemWeightAt(itemIndex))), false);
+                } else {
+                    source.sendSuccess(() -> Component.translatable("commands.csgobox.info.item_entry",
+                            String.valueOf(itemIndex + 1), item.getHoverName().getString(), String.valueOf(item.getCount())), false);
+                }
             }
             if (grade.items().size() > 5) {
                 source.sendSuccess(() -> Component.translatable("commands.csgobox.info.items_more",
                         String.valueOf(grade.items().size() - 5)), false);
             }
+        }
+        // v2.1.0 config flags.
+        if (!def.enabled()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_disabled"), false);
+        }
+        for (String req : def.requires()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_requires", req), false);
+        }
+        def.icon().ifPresent(icon -> source.sendSuccess(
+                () -> Component.translatable("commands.csgobox.info.flag_icon", icon), false));
+        if (def.discount() > 0F) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_discount",
+                    String.format("%.0f", def.discount() * 100)), false);
+        }
+        if (def.stock() >= 0) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_stock",
+                    String.valueOf(def.stock()), String.valueOf(def.restockMinutes())), false);
+        }
+        if (def.maxPerPlayer() >= 0) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_max_per_player",
+                    String.valueOf(def.maxPerPlayer())), false);
+        }
+        if (def.cooldownSeconds() > 0) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_cooldown",
+                    String.valueOf(def.cooldownSeconds())), false);
+        }
+        if (!def.permission().isBlank()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_permission",
+                    def.permission()), false);
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -206,7 +327,82 @@ public final class CsboxCommand {
         return BoxRegistry.size();
     }
 
-    /** Force re-download of the tutorial markdown files. */
+    // --- v2.1.0 dry-run validation ---
+
+    /** Validates every config/csbox JSON without registering anything. */
+    private static int validateAll(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        java.nio.file.Path dir = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("csbox");
+        int ok = 0;
+        int bad = 0;
+        try (var stream = java.nio.file.Files.newDirectoryStream(dir, "*.json")) {
+            for (java.nio.file.Path p : stream) {
+                String name = p.getFileName().toString();
+                if (name.startsWith("_")) continue;
+                BoxJsonLoader.ValidateResult r = BoxJsonLoader.validateFile(p);
+                if (r.ok()) {
+                    ok++;
+                } else {
+                    bad++;
+                    source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.fail",
+                            name), false);
+                    for (LoadError err : r.errors()) {
+                        source.sendSuccess(err::toChatMessage, false);
+                    }
+                }
+            }
+        } catch (java.io.IOException e) {
+            String msg = e.getMessage();
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.dir_error",
+                    msg), false);
+            return 0;
+        }
+        // v2.1.0+: the central price table (config/csbox/_prices.json) is part
+        // of the validate surface; a malformed table is reported like a box.
+        BoxJsonLoader.ValidateResult priceTable = BoxJsonLoader.validatePriceTable();
+        if (!priceTable.ok()) {
+            bad++;
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.fail",
+                    "_prices"), false);
+            for (LoadError err : priceTable.errors()) {
+                source.sendSuccess(err::toChatMessage, false);
+            }
+        }
+        final int okFinal = ok;
+        final int badFinal = bad;
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.summary",
+                String.valueOf(okFinal), String.valueOf(badFinal)), false);
+        return bad == 0 ? ok : -bad;
+    }
+
+    /** Validates one box file (by box id → {@code config/csbox/<id>.json}). */
+    private static int validateBox(CommandContext<CommandSourceStack> ctx, Identifier boxId)
+            throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        java.nio.file.Path dir = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("csbox");
+        java.nio.file.Path file = dir.resolve(boxId.getPath() + ".json").normalize();
+        if (!file.startsWith(dir.normalize()) || !java.nio.file.Files.exists(file)) {
+            throw new SimpleCommandExceptionType(
+                    Component.translatable("commands.csgobox.validate.not_found", boxId.getPath())).create();
+        }
+        BoxJsonLoader.ValidateResult r = BoxJsonLoader.validateFile(file);
+        if (r.ok()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.ok",
+                    boxId.getPath()), false);
+            for (LoadError err : r.errors()) {
+                source.sendSuccess(err::toChatMessage, false);
+            }
+            return 1;
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.validate.fail",
+                boxId.getPath()), false);
+        for (LoadError err : r.errors()) {
+            source.sendSuccess(err::toChatMessage, false);
+        }
+        return 0;
+    }
+
+    /** Force a refresh of the JAR-bundled tutorial markdown files (offline re-copy). */
     private static int refreshTutorials(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
         BoxDefaults.refreshTutorials(FMLPaths.CONFIGDIR.get().resolve("csbox"));
@@ -234,6 +430,10 @@ public final class CsboxCommand {
             } else {
                 source.sendSuccess(() -> copyable(Component.literal(json), json), false);
             }
+            source.sendSuccess(() -> copyable(
+                    Component.translatable("commands.csgobox.nbt.hand.copy_button")
+                            .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                    json), false);
         } catch (Exception e) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.hand.error",
                     e.getMessage()), false);

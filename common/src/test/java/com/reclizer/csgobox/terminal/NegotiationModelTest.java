@@ -339,6 +339,34 @@ final class NegotiationModelTest {
     }
 
     @Test
+    @DisplayName("never-started model (round 0) must never expire or build an offer on a big world clock")
+    void unstartedModelNeverExpires() {
+        NegotiationModel m = new NegotiationModel(); // no start()/restore() yet
+        assertEquals(NegotiationModel.Status.IDLE, m.status());
+        assertEquals(0, m.round());
+        // Regression: the client TerminalScreen ticks its fresh model for a few
+        // frames before the server state packet arrives; an old world clock
+        // (game ticks x 50) used to trip expire() with round 0, then
+        // currentOffer() hit ROUND_SKIN[-1] -> ArrayIndexOutOfBoundsException.
+        assertFalse(m.tickServer(40_000_000L));
+        m.tick(40_000_000L);
+        assertEquals(NegotiationModel.Status.IDLE, m.status());
+        assertEquals(0, m.round());
+        assertEquals(0, m.history().size(), "no fake timeout/offer entries for a never-started model");
+        // Deadline is unarmed -> display-only "unknown"; start()/restore() arm it.
+        assertEquals(Long.MAX_VALUE, m.countdownRemainingMs());
+    }
+
+    @Test
+    @DisplayName("start() arms the absolute deadline from the world clock, not the raw duration")
+    void startArmsAbsoluteDeadline() {
+        NegotiationModel m = new NegotiationModel();
+        m.start(500_000L);
+        assertEquals(500_000L + NegotiationModel.COUNT_INITIAL_MS, m.countdownDeadlineMs());
+        assertEquals(NegotiationModel.COUNT_INITIAL_MS, m.countdownRemainingMs());
+    }
+
+    @Test
     @DisplayName("cap round-trips; counter label follows status")
     void capAndCounter() {
         NegotiationModel m = new NegotiationModel();
@@ -382,9 +410,6 @@ final class NegotiationModelTest {
         // Clamped bounds behave like every other grade helper.
         assertEquals("consumer", NegotiationModel.rarityKeyForGrade(0));
         assertEquals("classified", NegotiationModel.rarityKeyForGrade(99));
-        // Prices stay indexed by the same box grade (monotonic).
-        assertEquals(6, NegotiationModel.priceForGrade(1));
-        assertEquals(30, NegotiationModel.priceForGrade(5));
     }
 
     @Test

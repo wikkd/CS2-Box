@@ -54,13 +54,14 @@
 - 自动化：`scripts/checkCommonArchitecture` 已挂载在 `compileJava`。若 CI 的 `common-test` 过了，该项基本可信，但 Review 时仍需**肉眼确认**有没有"为了编译通过把逻辑硬塞进平台、common 却留下隐式依赖"的取巧。
 
 ### 4.2 多平台镜像纪律 🔴/🟡
-三平台**不是纯拷贝**：`v26_2` 有 decoupled API 适配（`BuiltInRegistries.ITEM.get()` 返回 `Optional`、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent`、`setScreenAndShow`、PIP 渲染器等）。
+六个平台**不是纯拷贝**，各有 API 适配：NeoForge 侧 `v26_2` 有 decoupled API 适配（`BuiltInRegistries.ITEM.get()` 返回 `Optional`、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent`、`setScreenAndShow`、PIP 渲染器等）；Forge 侧三平台与 NeoForge 分属不同 loader（`SimpleChannel` vs `CustomPayload`），`forge_1_20_1` 更有 Networking / Capability / 渲染三大重写区。
 
 - 审查点：
   - 是否用 `v26_1_2` 整文件覆盖了 `v26_2`？→ **Blocker**（`v26_2` 适配会被破坏，历史教训）。
+  - 是否用 `v26_1_2` / `forge_26_1_2` 整文件覆盖了其它 Forge 模块？→ **Blocker**（同上，Forge 侧以 `forge_26_1_2` 为基准定点合入）。
   - 纯新增无适配差异的文件，是否走 `scripts/mirror.sh new <rel-path>`（`--dry-run` 预演、`--force` 覆盖）？
   - 有适配差异的文件，是否做了**定点合入**（`v26_1_2` → `v26_2` 手工适配），而非整文件覆盖？
-  - 改动是否应在三个活跃平台同步？是否漏改某平台（尤其 `v26_2` 的 API 适配点）？
+  - 改动是否应在六个正式发布平台同步？是否漏改某平台（尤其 `v26_2`、`forge_26_2`、`forge_1_20_1` 的 API 适配点）？
   - 涉及平台代码的改动，CI 是否用 **clean 编译**验证（增量缓存会造假象）？
 - 参考：`AGENTS.md`「平台模块镜像纪律」节与 `scripts/mirror.sh`。
 
@@ -110,10 +111,13 @@ legacy 门面内部强制 `SRC_ALPHA` blend；decoupled 走 `RenderPipelines`（
   - 26.2 的 HUD 显隐是否走 `HudVisibility.show()/toggle()/isHidden()`，而非直接调用已移除的 `Options.hideGui`？
   - 帧首三连（`setShaderColor(1,1,1,1)`+`enableBlend`+`defaultBlendFunc`）是否已统一收口到门面（不应再散落）？
 
-### 4.9 forge_26_1_2 实验模块边界 🟡
-`forge_26_1_2` 是同步开发模块（MinecraftForge 26.1.2，随 1.0.6 发行纳入 git、自 2.0.0 线起与 `v26_1_2` 特性同步；不在 CI、不入三平台正式发行矩阵），由 `scripts/port-forge-2612.py` 机械转换 + 手工适配；编译/门禁状态由 `scripts/test-forge-2612.sh` 守护，审查时不再忽略其编译状态。
+### 4.9 Forge 模块边界 🟡
+Forge 三平台（`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`）自 **2.0.0 起纳入正式发布**（与 NeoForge 三平台同步发行，共享同一 `mod_version`），**不再是实验平台**。
 
-- 审查点：是否误把 `forge_26_1_2` 当正式平台发布、或要求它进入 CI 矩阵 / NeoForge 镜像纪律？该模块随 1.0.6 发行纳入 git、自 2.0.0 线起与 `v26_1_2` 特性同步（经 `scripts/port-forge-2612.py` + 手工适配，见 AGENTS.md「forge_26_1_2 同步」），不入三平台正式发行矩阵；编译状态由 `scripts/test-forge-2612.sh` 门禁守护。
+- 同步链路：`v26_1_2` → `forge_26_1_2`（`scripts/port-forge-2612.py` 机械转换 + 手工适配）→ `forge_26_2`（`scripts/port-forge-262.py`）；`forge_1_20_1` 为向 MC 1.20.1 的回移，以 `forge_26_1_2` 为基准。
+- 门禁：`scripts/test-forge-2612.sh` / `scripts/test-forge-262.sh`（各 7 项）；5 个平台模块均有 `PlatformSmokeTest`。
+- 审查点：Forge 模块是否被误当「非正式平台」而降低审查标准？**不在 CI 矩阵**不等于可以不编译——改动涉及 Forge 时必须 `clean compileJava` 并跑对应门禁脚本。同时注意 Forge 三模块**不参与** NeoForge 三平台的镜像纪律（`v26_1_2` → `v26_2`）与 `AnimRenderOps` 漂移门禁，不要用这两项要求它们。
+- 参考：`AGENTS.md`「forge_26_1_2 同步」节、`docs/TESTING-FORGE-2612.md` / `TESTING-FORGE-262.md` / `TESTING-FORGE-1201.md`。
 
 ---
 
@@ -157,8 +161,8 @@ legacy 门面内部强制 `SRC_ALPHA` blend；decoupled 走 `RenderPipelines`（
 - [ ] `common/` 无 `net.minecraft.*` / `net.neoforged.*` 引用（§4.1）。
 - [ ] 跨平台改动已在 **所有活跃平台**同步（纯新增走 `mirror.sh`，适配差异走定点合入，未整文件覆盖 `v26_2`）（§4.2）。
 - [ ] 若动版本号：四处同步 + `mods.toml` 保留 `${mod_version}`（§4.3）。
-- [ ] 若动 `AnimRenderOps`：三平台签名一致、era 头正确（§4.4）。
-- [ ] 配置项三平台 + common 同步，`CONFIG` 无 null 守卫（§4.5）。
+- [ ] 若动 `AnimRenderOps`：三平台（NeoForge）签名一致、era 头正确（§4.4）。
+- [ ] 配置项六平台 + common 同步，`CONFIG` 无 null 守卫（§4.5）。
 - [ ] TACZ 代码包在 `isLoaded("tacz")` 内（§4.6）。
 - [ ] 不信任客户端数值，服务端权威 + 复核（§4.7）。
 - [ ] 渲染状态无泄漏，26.2 HUD 走 `HudVisibility`（§4.8）。

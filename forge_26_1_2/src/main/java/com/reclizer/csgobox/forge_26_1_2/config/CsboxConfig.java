@@ -75,6 +75,38 @@ public class CsboxConfig {
         return damageItemByWearValue.get();
     }
 
+    // --- writable bindings (Cloth Config GUI) ---
+    // The GUI writes through ForgeConfigSpec so config/csgobox.toml remains
+    // the single source of truth; call CsgoBox.CONFIG_SPEC.save() after.
+
+    public void setLoadDefaultBoxes(boolean value) {
+        loadDefaultBoxesValue.set(value);
+    }
+
+    public void setEnableAchievements(boolean value) {
+        enableAchievementsValue.set(value);
+    }
+
+    public void setEnableHotReload(boolean value) {
+        enableHotReloadValue.set(value);
+    }
+
+    public void setBulkOpenCount(int value) {
+        bulkOpenCountValue.set(value);
+    }
+
+    public void setGlobalDropRatePercent(int value) {
+        globalDropRatePercentValue.set(value);
+    }
+
+    public void setJsonErrorAudience(ErrorChatAudience value) {
+        jsonErrorAudienceValue.set(value);
+    }
+
+    public void setDamageItemByWear(boolean value) {
+        damageItemByWearValue.set(value);
+    }
+
     public enum ErrorChatAudience {
         OP_ONLY,
         EVERYONE

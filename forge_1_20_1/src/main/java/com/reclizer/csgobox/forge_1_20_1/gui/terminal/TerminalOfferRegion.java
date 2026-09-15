@@ -7,11 +7,15 @@ import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
+import com.reclizer.csgobox.forge_1_20_1.compat.TaczInspectViewport;
+import com.reclizer.csgobox.forge_1_20_1.event.FirstPersonInspectHandler;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -253,9 +257,26 @@ public final class TerminalOfferRegion {
 
     // ---- interaction ----
 
-    /** Click on the inspect capsule toggles the auto-spin. */
-    public boolean mouseDown(int mx, int my) {
+    /**
+     * Click on the inspect capsule. When the offer is a TACZ gun (and TACZ is
+     * loaded) this aligns with the box look screen's TACZ inspect: the capsule
+     * starts the native first-person inspect animation and returns to the
+     * terminal screen ({@code returnScreen}) when it finishes. For every other
+     * item it toggles the 3D auto-spin as before.
+     */
+    public boolean mouseDown(int mx, int my, Screen returnScreen) {
         if (mx >= inspectX && mx <= inspectX + inspectW && my >= inspectY && my <= inspectY + inspectH) {
+            if (currentOffer != null) {
+                ItemStack item = TerminalOfferItems.itemFor(currentOffer);
+                Minecraft mc = Minecraft.getInstance();
+                LocalPlayer lp = mc.player;
+                if (!item.isEmpty() && TaczInspectViewport.isAvailable(item) && lp != null) {
+                    if (FirstPersonInspectHandler.start(lp, item,
+                            TerminalOfferItems.gradeFor(currentOffer), returnScreen)) {
+                        return true; // TACZ inspect took over; keep auto-spin state
+                    }
+                }
+            }
             inspectOn = !inspectOn;
             return true;
         }

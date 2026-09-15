@@ -89,8 +89,6 @@ public final class NegotiationModel {
     };
     /** Offer price in whole Armory Points (no decimals — the mod's currency). */
     public static final String[] SKIN_PRICE = {"22", "16", "16"};
-    /** Whole Armory Point price per box grade (1..5, index 0 unused). */
-    public static final int[] GRADE_PRICE = {6, 10, 16, 22, 30};
     /** Dealer line when the player cancels a trade or lacks Armory Points. */
     public static final String LINE_RECONSIDER = "csgobox.terminal.line.reconsider";
     /**
@@ -107,11 +105,6 @@ public final class NegotiationModel {
     /** Rarity tier key for a box grade (1..5, clamped). */
     public static String rarityKeyForGrade(int grade) {
         return RARITY_TIER_KEYS[Math.max(0, Math.min(grade - 1, RARITY_TIER_KEYS.length - 1))];
-    }
-
-    /** Whole Armory Point price for a box grade (1..5, clamped). */
-    public static int priceForGrade(int grade) {
-        return GRADE_PRICE[Math.max(0, Math.min(grade - 1, GRADE_PRICE.length - 1))];
     }
     // ---- timings ----
 
@@ -180,7 +173,15 @@ public final class NegotiationModel {
     private long statusSinceMs;
     private long generation = 0;
     private int cap = CAP_UNLIMITED;
-    private long countdownDeadlineMs = COUNT_INITIAL_MS;
+    /**
+     * Absolute deadline on the world clock. {@link Long#MAX_VALUE} until
+     * {@link #start(long)} / {@link #restore(Snapshot, long)} arms it, so a
+     * freshly constructed (never-started) model can never be mistaken for an
+     * already-expired one — the GUI may tick it for a few frames before the
+     * server state arrives. {@link #COUNT_INITIAL_MS} is a DURATION, not an
+     * absolute clock value, so it must never be used as the default here.
+     */
+    private long countdownDeadlineMs = Long.MAX_VALUE;
     private long lastTickMs;
     private Offer pending;
     /** Dealer lines for this session's rounds: 5 unique picks from {@link #LINES}. */
@@ -301,7 +302,11 @@ public final class NegotiationModel {
      * @return true when the deadline just passed and the negotiation expired
      */
     public boolean tickServer(long nowMs) {
-        if (status == Status.CLOSED || status == Status.FAILED) {
+        // A never-started model (round 0, e.g. a client screen ticking a few
+        // frames before the server state packet restores it) has no deadline
+        // yet and must never "expire": there is no offer to mark and no lock
+        // to release. Expiring it would also try to build a round-0 offer.
+        if (status == Status.CLOSED || status == Status.FAILED || round < 1) {
             return false;
         }
         lastTickMs = nowMs;
@@ -529,8 +534,16 @@ public final class NegotiationModel {
 
     /** The server's model never ticks, so an offer card may be missing — add it. */
     private void ensureOfferEntry(long nowMs) {
+        if (round < 1 || round > MAX_ROUNDS) {
+            // No valid round — nothing to build an offer card for (a fresh
+            // model must never turn round 0 into a card / crash on ROUND_SKIN).
+            return;
+        }
         if (!hasOfferEntryFor(round)) {
-            appendHistory(new OfferEntry(currentOffer(), nowMs, OFFER_PENDING));
+            Offer offer = currentOffer();
+            if (offer != null) {
+                appendHistory(new OfferEntry(offer, nowMs, OFFER_PENDING));
+            }
         }
     }
 
@@ -552,6 +565,10 @@ public final class NegotiationModel {
     }
 
     private Offer currentOffer() {
+        if (round < 1 || round > MAX_ROUNDS) {
+            // No offer exists outside a scripted round; callers must skip null.
+            return null;
+        }
         if (pending != null && pending.round() == round) {
             return pending;
         }

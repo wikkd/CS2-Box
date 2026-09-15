@@ -1,0 +1,26 @@
+{
+  "name": "#AA66CC 法术书箱",
+  "key": "csgobox:csgo_key2",
+  "drop": 0.05,
+  "random": [625, 125, 25, 6, 4],
+  "grade5": [
+    { "id": "irons_spellbooks:scroll", "count": 1, "components": { "minecraft:custom_name": "{\"text\":\"稀有法术卷轴\",\"italic\":false}" } },
+    { "id": "irons_spellbooks:upgrade_orb", "count": 1 }
+  ],
+  "grade4": [
+    { "id": "irons_spellbooks:scroll", "count": 1 },
+    { "id": "irons_spellbooks:arcane_essence", "count": 4 }
+  ],
+  "grade3": [
+    { "id": "irons_spellbooks:arcane_essence", "count": 2 },
+    { "id": "irons_spellbooks:ink_common", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "irons_spellbooks:arcane_essence", "count": 1 },
+    { "id": "minecraft:book", "count": 2 }
+  ],
+  "grade1": [
+    { "id": "minecraft:paper", "count": 8 },
+    { "id": "minecraft:ink_sac", "count": 2 }
+  ]
+}

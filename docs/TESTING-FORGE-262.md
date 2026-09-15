@@ -80,8 +80,8 @@ forge-26.2 构建目标（当前仅 forge-26.1.2，见 TESTING-FORGE-2612.md §5
 >（`scripts/port-forge-262.py` + 手工适配），`build.gradle` 排除清单已删除，
 > `PlatformSmokeTest` 断言 2.0.0 物品存在。2026-08-18 全面审计：5 平台
 > `clean compileJava` 全通过、`test-forge-262.sh` 7/7 PASS、版本四同步 OK、
-> 资源一致性补齐（4 个物品定义从 `forge_26_1_2` 补入）。jar 产物
-> `csgobox-forge-26.2-1.0.6.jar`。
+> 资源一致性补齐（4 个物品定义从 `forge_26_1_2` 补入）。当前 jar 产物
+> `csgobox-forge-26.2-2.0.0.jar`。
 
 ## 7. 已知差异与注意
 

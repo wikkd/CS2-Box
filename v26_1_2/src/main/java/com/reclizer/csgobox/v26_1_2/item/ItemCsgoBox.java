@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_1_2.item;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
@@ -18,11 +19,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -84,6 +87,20 @@ public class ItemCsgoBox extends Item {
      */
     public static final Supplier<DataComponentType<String>> TERMINAL_OWNER =
             BOX_DATA_COMPONENTS.register("terminal_owner", () ->
+                    DataComponentType.<String>builder()
+                            .persistent(Codec.STRING)
+                            .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                            .build());
+
+    /**
+     * Optional JSON spec for box items that need open-time resolution (v2.1.0):
+     * count range {@code {"c":[min,max]}}, random enchant
+     * {@code {"e":{"id":"...","level":[3,5]}}}, loot-table reference
+     * {@code {"l":"namespace:path"}} — combined fields allowed. Absent on plain
+     * items so the default network payload stays unchanged.
+     */
+    public static final Supplier<DataComponentType<String>> ITEM_SPEC =
+            BOX_DATA_COMPONENTS.register("item_spec", () ->
                     DataComponentType.<String>builder()
                             .persistent(Codec.STRING)
                             .networkSynchronized(ByteBufCodecs.STRING_UTF8)
@@ -155,9 +172,31 @@ public class ItemCsgoBox extends Item {
             BoxDefinition def = BoxRegistry.get(boxId);
             if (def != null) {
                 stack.set(DataComponents.CUSTOM_NAME, def.name());
+                applyIcon(def, stack);
             }
         }
         return stack;
+    }
+
+    /**
+     * v2.1.0: applies the configured {@code icon} to a box stack. An integer
+     * value sets CustomModelData (pair with a resource pack); a {@code ns:path}
+     * value sets the item-model component (26.x renders it directly, no pack).
+     */
+    static void applyIcon(BoxDefinition def, ItemStack stack) {
+        def.icon().ifPresent(icon -> {
+            try {
+                int cmd = Integer.parseInt(icon);
+                stack.set(DataComponents.CUSTOM_MODEL_DATA,
+                        new CustomModelData(List.of(), List.of(), List.of(), List.of(cmd)));
+            } catch (NumberFormatException e) {
+                try {
+                    stack.set(DataComponents.ITEM_MODEL, Identifier.parse(icon));
+                } catch (Exception ex) {
+                    CsgoBox.LOGGER.warn("Invalid icon '{}' for box {} — ignored", icon, def.id());
+                }
+            }
+        });
     }
 
     /**
@@ -168,7 +207,14 @@ public class ItemCsgoBox extends Item {
      * {@link BoxScreenOpener} so server-side class loading stays client-free.
      */
     public void openScreen(ItemStack stack) {
-        BoxScreenOpener.openClassic(stack);
+        // v2.1.0: dispatch on the box definition rather than the item class.
+        // Box items are generic now (identity in the box_id component), so a
+        // terminal-type box handed out as csgo_box must still open the terminal UI.
+        if (getDefinition(stack).map(BoxDefinition::isTerminal).orElse(false)) {
+            BoxScreenOpener.openTerminal(stack);
+        } else {
+            BoxScreenOpener.openClassic(stack);
+        }
     }
 
     public static int[] getRandom(ItemStack stack) {
@@ -193,6 +239,31 @@ public class ItemCsgoBox extends Item {
         return itemsMap;
     }
 
+    /**
+     * v2.1.0: builds the weighted grade pool for opening. Items with a
+     * non-positive {@code weight} are excluded (authors disable entries
+     * without deleting them); the rest are weighted inside their grade.
+     */
+    public static com.reclizer.csgobox.logic.GradeMap<ItemStack> buildGradeMap(ItemStack box) {
+        Map<Integer, List<com.reclizer.csgobox.logic.GradeMap.Weighted<ItemStack>>> raw = new LinkedHashMap<>();
+        getDefinition(box).ifPresent(def -> {
+            for (GradeGroup grade : def.grades()) {
+                int gradeLevel = BoxGrades.gradeLevel(grade.id());
+                if (gradeLevel == 0) continue;
+                for (int i = 0; i < grade.items().size(); i++) {
+                    ItemStack item = grade.items().get(i);
+                    if (item == null || item.isEmpty()) continue;
+                    int w = grade.itemWeightAt(i);
+                    if (w <= 0) continue;
+                    raw.computeIfAbsent(gradeLevel, k -> new java.util.ArrayList<>())
+                            .add(new com.reclizer.csgobox.logic.GradeMap.Weighted<>(item, w));
+                }
+            }
+        });
+        return com.reclizer.csgobox.logic.GradeMap.fromWeighted(raw,
+                stack -> !stack.isEmpty(), ItemStack::copy);
+    }
+
     public static Identifier getKey(ItemStack stack) {
         return getDefinition(stack)
                 .map(BoxDefinition::keyItem)
@@ -215,11 +286,42 @@ public class ItemCsgoBox extends Item {
         }
         tooltipComponents.accept(Component.translatable("tooltips.csgobox.item.cs_box").withStyle(ChatFormatting.GRAY));
         getDefinition(stack).ifPresent(def -> {
+            int[] weights = def.getWeightArray();
             for (int i = 0; i < def.grades().size(); i++) {
                 GradeGroup grade = def.grades().get(i);
                 ChatFormatting color = i < TOOLTIP_GRADE_COLORS.length ? TOOLTIP_GRADE_COLORS[i] : ChatFormatting.WHITE;
-                for (ItemStack itemStack : grade.items()) {
-                    tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
+                // Server-authoritative odds, same source as /csbox info and JEI.
+                // Shown only while F3+H advanced tooltips are on (tooltipFlag.isAdvanced()).
+                if (i < weights.length && weights[i] > 0) {
+                    if (tooltipFlag.isAdvanced()) {
+                        tooltipComponents.accept(Component.translatable("tooltips.csgobox.item.grade_chance",
+                                String.valueOf(i + 1), BoxOdds.percent(BoxOdds.gradeChance(weights, i + 1)))
+                                .withStyle(color));
+                        double gradeChance = BoxOdds.gradeChance(weights, i + 1);
+                        long itemWeightSum = grade.positiveItemWeightSum();
+                        boolean weighted = itemWeightSum != grade.items().size();
+                        for (int j = 0; j < grade.items().size(); j++) {
+                            ItemStack itemStack = grade.items().get(j);
+                            Component name = itemStack.getItem().getName(itemStack).copy().withStyle(color);
+                            if (weighted) {
+                                double itemChance = BoxOdds.weightedItemChance(
+                                        gradeChance, grade.itemWeightAt(j), itemWeightSum);
+                                tooltipComponents.accept(Component.translatable(
+                                        "tooltips.csgobox.item.item_chance",
+                                        name, BoxOdds.percent(itemChance)).withStyle(ChatFormatting.GRAY));
+                            } else {
+                                tooltipComponents.accept(name);
+                            }
+                        }
+                    } else {
+                        for (ItemStack itemStack : grade.items()) {
+                            tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
+                        }
+                    }
+                } else {
+                    for (ItemStack itemStack : grade.items()) {
+                        tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
+                    }
                 }
             }
             if (def.grades().size() >= BoxGrades.GRADE_COUNT) {

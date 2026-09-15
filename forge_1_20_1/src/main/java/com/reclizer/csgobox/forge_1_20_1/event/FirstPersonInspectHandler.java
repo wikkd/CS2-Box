@@ -5,6 +5,7 @@ import com.reclizer.csgobox.forge_1_20_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.forge_1_20_1.gui.CsLookItemScreen;
 import com.reclizer.csgobox.forge_1_20_1.gui.FirstPersonInspectScreen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -33,6 +34,10 @@ public final class FirstPersonInspectHandler {
         ItemStack item;
         ItemStack restoreHand;
         int grade;
+        /** Screen to restore on finish; {@code null} in the box flow (the
+         *  look screen is then reopened). Non-null when started from the
+         *  terminal offer panel so the negotiation screen comes back. */
+        Screen returnScreen;
         int ticks;
         int doneStreak;
         boolean inspectTriggered;
@@ -42,12 +47,23 @@ public final class FirstPersonInspectHandler {
     }
 
     public static boolean start(LocalPlayer player, ItemStack item, int grade) {
+        return start(player, item, grade, null);
+    }
+
+    /**
+     * Begin a first-person inspect session, restoring {@code returnScreen}
+     * when the animation finishes instead of reopening the box look screen
+     * (used by the terminal offer panel — the negotiation screen comes back).
+     * Returns false if it could not start (caller keeps the GUI).
+     */
+    public static boolean start(LocalPlayer player, ItemStack item, int grade, Screen returnScreen) {
         if (player == null || item == null || item.isEmpty() || pending != null) {
             return false;
         }
         Session s = new Session();
         s.item = item.copy();
         s.grade = grade;
+        s.returnScreen = returnScreen;
         s.restoreHand = player.getMainHandItem().copy();
         if (!TaczInspectViewport.startFirstPersonInspect(s.item, player)) {
             return false;
@@ -124,7 +140,11 @@ public final class FirstPersonInspectHandler {
         if (player != null) {
             TaczInspectViewport.endFirstPersonInspect(s.item, player, s.restoreHand);
         }
-        CsLookItemScreen.openQuietly(s.item, s.grade, mc);
+        if (s.returnScreen != null) {
+            mc.setScreen(s.returnScreen);
+        } else {
+            CsLookItemScreen.openQuietly(s.item, s.grade, mc);
+        }
     }
 
     private static void cancel(Minecraft mc) {

@@ -48,10 +48,9 @@ public final class ModEvents {
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
             if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
-                Item item = BuiltInRegistries.ITEM.get(def.id());
-                if (item == null || item == Items.AIR) {
-                    item = ModItems.ITEM_CSGOBOX.get();
-                }
+                // Box items are a fixed set now (a box is data, not an item id):
+                // resolve the shipped fixed item, else the generic item.
+                Item item = ModItems.itemForBox(def.id(), def.isTerminal());
                 ItemStack stack = new ItemStack(item);
                 ItemCsgoBox.setBoxId(def.id(), stack);
                 mob.spawnAtLocation(stack);
@@ -99,6 +98,8 @@ public final class ModEvents {
     public static void serverTick(ServerTickEvent.Pre event) {
         if (event.getServer().getTickCount() % 100 == 0) {
             OpenBlockGuard.tick(event.getServer().overworld().getGameTime());
+            // v2.1.0: terminal stock restock check (minute-scale timer).
+            com.reclizer.csgobox.terminal.TerminalStockManager.tick(System.currentTimeMillis());
         }
         // 1 Hz authoritative terminal countdown on the WORLD clock (game ticks
         // × 50) — it advances only while the world runs, and the deadline

@@ -1,7 +1,10 @@
 package com.reclizer.csgobox.v26_2.terminal;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.box.PriceRange;
+import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.terminal.TerminalStockManager;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.box.GradeGroup;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalState;
@@ -53,6 +56,18 @@ public final class TerminalSession {
      */
     public static TerminalSession create(String playerUuid, String uid, Identifier boxId, BoxDefinition def,
                                          long nowMs) {
+        // v2.1.0: a stock-limited terminal that is sold out offers nothing —
+        // the screen shows an empty (unconfigured-like) state and the buy
+        // handler keeps refusing until a restock.
+        if (!TerminalStockManager.available(boxId.toString(), def.stock())) {
+            return null;
+        }
+        // v2.1.0: no grade default price fallback anymore — only items with
+        // an entry in _prices.json are sellable. A box without any priced
+        // item is treated like an unconfigured terminal (empty state).
+        if (!hasPricedItems(def)) {
+            return null;
+        }
         Random rnd = new Random();
         Map<Integer, TerminalRoundData> sampled = new LinkedHashMap<>();
         for (int r = 1; r <= NegotiationModel.MAX_ROUNDS; r++) {
@@ -64,6 +79,9 @@ public final class TerminalSession {
                     rnd.nextInt(1000),                 // pattern
                     r == NegotiationModel.MAX_ROUNDS);
             Sample sample = sampleItem(def, 1 + rnd.nextInt(5), rnd);
+            if (sample == null) {
+                continue; // defensive: create's pre-check guarantees one priced item
+            }
             sampled.put(r, new TerminalRoundData(r, offer, sample.item(), sample.grade(), sample.price()));
         }
         ItemStack slotItem = sampleSessionItem(def, rnd);
@@ -75,6 +93,18 @@ public final class TerminalSession {
         });
         model.start(nowMs);
         return new TerminalSession(playerUuid, uid, boxId, model, sampled, slotItem);
+    }
+
+    /** True when at least one item in any grade has a price-table entry. */
+    private static boolean hasPricedItems(BoxDefinition def) {
+        for (GradeGroup grade : def.grades()) {
+            for (PriceRange r : grade.prices()) {
+                if (r != null && !r.isUnpriced()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -140,21 +170,57 @@ public final class TerminalSession {
 
     // ---- sampling (mirrors the old client-side TerminalOfferItems logic) ----
 
-    /** One sample from the grade pool, falling back down the tiers; iron sword if empty. */
+    /** One sample from the priced items of the grade pool, falling back down
+     *  the tiers. v2.1.0: intra-grade weights are honoured and only items
+     *  with an {@code _prices.json} entry are offered (no grade-default
+     *  fallback); a table range {@code [min, max]} is sampled once per offer.
+     *  Returns null only if no priced item exists anywhere (create's
+     *  pre-check prevents that in practice). */
     private static Sample sampleItem(BoxDefinition def, int baseGrade, Random rnd) {
         for (int g = baseGrade; g >= 1; g--) {
             GradeGroup gradeGroup = findGrade(def, g);
-            List<ItemStack> pool = gradeGroup != null ? gradeGroup.items() : null;
-            if (pool != null && !pool.isEmpty()) {
-                int idx = rnd.nextInt(pool.size());
-                int price = gradeGroup != null ? gradeGroup.priceForIndex(idx) : -1;
-                if (price < 0) {
-                    price = NegotiationModel.priceForGrade(g);
-                }
-                return new Sample(pool.get(idx).copy(), g, price);
+            if (gradeGroup == null || gradeGroup.items().isEmpty()) {
+                continue;
+            }
+            int idx = pickWeightedPricedIndex(gradeGroup, rnd);
+            if (idx < 0) {
+                continue; // this tier holds no priced item — fall to a lower tier
+            }
+            PriceRange range = gradeGroup.priceForIndex(idx);
+            int price = range.sample(rnd::nextInt);
+            price = def.discountedPrice(price);
+            return new Sample(gradeGroup.items().get(idx).copy(), g, price);
+        }
+        return null;
+    }
+
+    /** Weighted pick restricted to priced items (uniform when every weight
+     *  is 1). Returns -1 when the tier has no priced item at all. */
+    private static int pickWeightedPricedIndex(GradeGroup gradeGroup, Random rnd) {
+        List<ItemStack> pool = gradeGroup.items();
+        long total = 0;
+        for (int i = 0; i < pool.size(); i++) {
+            PriceRange r = gradeGroup.priceForIndex(i);
+            if (r != null && !r.isUnpriced()) {
+                total += Math.max(0, gradeGroup.itemWeightAt(i));
             }
         }
-        return new Sample(new ItemStack(Items.IRON_SWORD), 1, NegotiationModel.priceForGrade(1));
+        if (total <= 0) {
+            return -1;
+        }
+        long roll = OddsCalculator.nextBoundedLong(rnd, total);
+        long running = 0;
+        for (int i = 0; i < pool.size(); i++) {
+            PriceRange r = gradeGroup.priceForIndex(i);
+            if (r == null || r.isUnpriced()) {
+                continue;
+            }
+            running += Math.max(0, gradeGroup.itemWeightAt(i));
+            if (roll < running) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** One fixed random item across all tiers for the region-10 slot; diamond if empty. */

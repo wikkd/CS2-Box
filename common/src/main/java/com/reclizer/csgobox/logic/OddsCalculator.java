@@ -36,7 +36,7 @@ public final class OddsCalculator {
             if (total <= 0L || grades.length == 0) {
                 return 1;
             }
-            long rn = nextLong(rng, total);
+            long rn = nextBoundedLong(rng, total);
             for (int i = 0; i < cumulative.length; i++) {
                 if (rn < cumulative[i]) {
                     return grades[i];
@@ -103,8 +103,13 @@ public final class OddsCalculator {
     /**
      * Bounded random long using rejection sampling. Mirrors the original
      * {@code RandomItem.nextLong} implementation.
+     *
+     * <p>Public (v2.1.0-fix) so {@code GradeMap.pickWeighted} and the
+     * platform {@code TerminalSession.pickWeightedIndex} share one unbiased
+     * implementation instead of the biased {@code Math.abs(nextLong()) % n}
+     * shortcut (which returns a negative roll for {@code Long.MIN_VALUE}).
      */
-    private static long nextLong(Random rng, long bound) {
+    public static long nextBoundedLong(Random rng, long bound) {
         if (bound <= Integer.MAX_VALUE) {
             return rng.nextInt((int) bound);
         }
@@ -115,5 +120,38 @@ public final class OddsCalculator {
             value = bits % bound;
         } while (bits - value + (bound - 1) < 0L);
         return value;
+    }
+
+    /** Result of a pity-aware roll: the 1-based grade and whether the roll
+     *  was forced by the pity policy (as opposed to a plain weighted roll). */
+    public record PityResult(int grade, boolean forced) {
+    }
+
+    /**
+     * v2.1.1 pity-aware grade roll. When {@code policy != null} and the miss
+     * streak reached the configured threshold, rolls ONLY within
+     * {@code [targetLevel .. weights.length]} (weighted by the existing
+     * per-grade weights) so the result is guaranteed to hit the target or
+     * above. Falls back to a normal weighted roll when the pity slice has no
+     * positive weight (misconfigured tiers — the box author must fix the
+     * weights; a forced roll must never produce nothing).
+     */
+    public static PityResult pickGradeWithPity(Random rng, int[] weights,
+                                               PityPolicy policy, int missStreak) {
+        boolean force = policy != null && policy.shouldForce(missStreak);
+        if (!force) {
+            return new PityResult(pickGrade(rng, weights), false);
+        }
+        int targetLevel = policy.targetLevel();
+        if (weights == null || targetLevel < 1 || targetLevel > weights.length) {
+            return new PityResult(pickGrade(rng, weights), false);
+        }
+        int[] slice = new int[weights.length - targetLevel + 1];
+        System.arraycopy(weights, targetLevel - 1, slice, 0, slice.length);
+        Precomputed pre = precomputeWeights(slice);
+        if (pre == null) {
+            return new PityResult(pickGrade(rng, weights), false);
+        }
+        return new PityResult(targetLevel - 1 + pre.pickGrade(rng), true);
     }
 }

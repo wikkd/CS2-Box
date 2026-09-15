@@ -9,13 +9,14 @@ import net.minecraftforge.eventbus.api.event.MutableEvent;
  * Fired on the Forge event bus ({@link #BUS}, rooted at {@code BusGroup.DEFAULT})
  * just before the Armory Recycler consumes an input item and produces Armory
  * Points. Canceling this event keeps the input item in the machine's input
- * slot and produces nothing — the machine skips the item (progress resets,
- * the player can retrieve it).
+ * slot and produces nothing — the machine skips the stack (progress resets,
+ * the player can retrieve it) and does not fire again for that same stack
+ * until it leaves the input slot.
  *
  * <p>Listeners can use this event to:</p>
  * <ul>
  *   <li>Blacklist items from being recycled (farm / exploit shields)</li>
- *   <li>Adjust the effective yield by tracking or intercepting specific items</li>
+ *   <li>Adjust the effective yield for specific items via {@link #setYield(int)}</li>
  *   <li>Observe recycling activity for statistics</li>
  * </ul>
  *
@@ -32,7 +33,7 @@ public class ArmoryRecycleEvent extends MutableEvent {
     private final ArmoryRecyclerBlockEntity blockEntity;
     private final ItemStack inputItem;
     private final int grade;
-    private final int yield;
+    private int yield;
     private boolean canceled;
 
     public ArmoryRecycleEvent(ArmoryRecyclerBlockEntity blockEntity, ItemStack inputItem, int grade, int yield) {
@@ -60,6 +61,16 @@ public class ArmoryRecycleEvent extends MutableEvent {
     /** Armory Points the recycle would produce. */
     public int getYield() {
         return yield;
+    }
+
+    /**
+     * Re-prices this recycle (Armory Points). {@code 0} (or negative) means
+     * "consume nothing": the machine keeps the input and produces no output,
+     * exactly like a cancellation. Raising the yield above what the output
+     * slot can still hold also leaves the input untouched.
+     */
+    public void setYield(int yield) {
+        this.yield = Math.max(0, yield);
     }
 
     /** Marks this recycle as refused; the input stays in the machine and nothing is produced. */

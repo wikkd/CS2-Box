@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_1_20_1.block.entity;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxItemCodec;
 
+import com.reclizer.csgobox.box.PriceRange;
 import com.reclizer.csgobox.box.PriceTable;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.forge_1_20_1.block.ModBlocks;
@@ -43,31 +44,23 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         super(ModBlocks.ARMORY_RECYCLER_BE.get(), pos, state);
     }
 
-    public static int yieldForGrade(int grade) {
-        switch (grade) {
-            case 1: return 3;
-            case 2: return 5;
-            case 3: return 7;
-            case 4: return 8;
-            case 5: return 8;
-            default: return 0;
-        }
-    }
-
     /**
      * v2.1.0 economy: recycle value of a graded stack — 90% of its central
-     * price-table price (rounded up), falling back to the grade ladder for
-     * items absent from the table. 0 = cannot be recycled.
+     * price-table price (rounded up). A range entry is sampled once per
+     * recycle through {@code nextBounded} (the level's random source on the
+     * server). Items without a price-table entry (including loot_table
+     * placeholders) are NOT recyclable — no grade-ladder fallback.
+     * 0 = cannot be recycled.
      */
-    public static int yieldForStack(ItemStack stack, int grade) {
+    public static int yieldForStack(ItemStack stack, java.util.function.IntUnaryOperator nextBounded) {
         if (stack == null || stack.isEmpty()) {
             return 0;
         }
-        int price = PriceTableRegistry.get().lookup(itemIdOf(stack), variantIdOf(stack));
-        if (price != PriceTable.UNPRICED) {
-            return PriceTable.recycleYield(price);
+        PriceRange range = PriceTableRegistry.get().lookupRange(itemIdOf(stack), variantIdOf(stack));
+        if (range != null) {
+            return PriceTable.recycleYield(range, nextBounded);
         }
-        return yieldForGrade(grade);
+        return 0;
     }
 
     /** Registry id string of the stack ({@code ns:path}). */
@@ -96,7 +89,8 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
             return;
         }
         Integer grade = ItemCsgoBox.getGrade(in);
-        int yield = grade != null && grade >= 1 && grade <= 5 ? yieldForStack(in, grade) : 0;
+        int yield = grade != null && grade >= 1 && grade <= 5
+                ? yieldForStack(in, level.getRandom()::nextInt) : 0;
         if (yield <= 0 || !canAcceptOutput(yield)) {
             resetProgress();
             return;

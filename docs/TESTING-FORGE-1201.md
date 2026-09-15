@@ -1,10 +1,11 @@
 # forge_1_20_1 (MinecraftForge 1.20.1) 测试流程
 
 > 适用范围：`forge_1_20_1` 平台模块——2.0.0 线功能向 MC 1.20.1 / MinecraftForge
-> 47.x 的回移实验模块（2026-08-18 首建，计划见
+> 47.x 的回移模块（2026-08-18 首建，计划见
 > `.opencode/plans/2026-08-18-forge-1-20-1-port.md`）。
 > **不在 CI 矩阵**，不参与 3 平台镜像纪律与 AnimRenderOps 漂移门禁
-> （与 `forge_26_1_2` / `forge_26_2` 同策略），不入正式发行矩阵。
+> （与 `forge_26_1_2` / `forge_26_2` 同策略）；自 **2.0.0 起纳入正式发布**，与其余
+> 五平台同步发行。
 
 ## 1. 模块定位
 
@@ -38,9 +39,25 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 | 阶段 | 命令 | 通过条件 |
 |---|---|---|
 | L0 clean 编译 | `./gradlew :forge_1_20_1:clean :forge_1_20_1:compileJava -Pactive_versions=forge-1.20.1` | exit 0（含 common 架构检查） |
-| L1 jar 产物 | `./gradlew :forge_1_20_1:jar -Pactive_versions=forge-1.20.1` | 产出 `csgobox-forge-1.20.1-<mod_version>.jar` 非空，`META-INF/mods.toml` 版本与 `mod_version` 一致 |
+| L1 jar 产物 | `./gradlew :forge_1_20_1:renameJar -Pactive_versions=forge-1.20.1` | 产出 `csgobox-forge-1.20.1-<mod_version>-srg.jar` 非空，`META-INF/mods.toml` 版本与 `mod_version` 一致，且字节码为 SRG 名（见 §3.1） |
 | L2 版本一致性 | `./scripts/check-version.sh` | 四同步通过（mods.toml 走模板变量注入） |
 | L3 冒烟测试 | `./gradlew :forge_1_20_1:test -Pactive_versions=forge-1.20.1` | `PlatformSmokeTest`（入口类可加载，不初始化 MC 运行时）通过 |
+
+### 3.1 生产 jar SRG 校验（必做）
+
+Forge 1.20.1 生产运行时是 **SRG 命名域**；`jar` 直出产物（official/MCP 名）会在
+第一个改名过的 Minecraft 成员调用处崩溃——2.0.0-beta 的
+`NoSuchMethodError: CriteriaTriggers.register` 就是这一根因（dev 环境是 official
+名所以复现不了）。发布前用 `renameJar` 产物做一次字节码抽查：
+
+```bash
+# CriteriaTriggers.register 在 SRG 域应显示为 m_10595_（Forge AT 转 public）
+"$JAVA_HOME/bin/javap" -classpath "forge_1_20_1/build/libs/csgobox-forge-1.20.1-<mod_version>-srg.jar" \
+  -c -p com.reclizer.csgobox.forge_1_20_1.CsgoBox | grep -A1 CriteriaTriggers
+# 期望：invokestatic ... CriteriaTriggers.m_10595_...
+```
+
+普通 `jar` 产物（无 `-srg`）**禁止作为发布物**。
 
 ## 4. 运行时 E2E 清单（L4，人工）
 
@@ -54,6 +71,16 @@ forge_1_20_1 = **MinecraftForge 1.20.1-47.4.22**（Java 17，ForgeGradle 7.x）�
 
 1. **物品注册**：`/give @p csgobox:csgo_box`、`csgo_key0`~`csgo_key3`、
    `terminal`、`armory_point`、`armory_recycler` 全部可给予；
+2. **固定箱子物品 + `/csbox give`（v2.1.0 注册表解耦回归）**：
+   - `/give @p csgobox:gun_crate` 等 5 个默认箱子 id 仍可给予，且 tooltip 显示箱子名与内容；
+   - `/csbox give @p csgobox:gun_crate 3` 生效（权限 2）；自建箱子
+     （`config/csbox/my_box.json`）用 `/csbox give @p csgobox:my_box` 发放后能正常开箱，
+     **且 `/give @p csgobox:my_box` 不存在**（预期：注册表已不随配置变化）；
+   - `type: "terminal"` 的箱子用 `/csbox give` 发放的是 `terminal` 物品（不可堆叠）并打开终端屏；
+   - 联机回归：**故意让客户端与服务端的 `config/csbox/` 不一致**（服务端多一个箱子 JSON），
+     客户端仍能正常进服（不再出现 "Failed to synchronize registry data from server"），
+     且服务端新增的箱子在客户端可见（`PacketSyncBoxDefinitions` 下发）；
+   - 两边都是默认配置时，`/csbox info` 的箱子清单一致；
 2. **开箱**：单开（右键）滚动条动画 → 出货屏；Shift+右键批量总览 → 点「开启」直接开箱 → 批量结果（无二次确认屏）；
 3. **数据持久化**：开箱后物品 NBT 正确读写（1.20.1 走 tag，非 DataComponent）；
 4. **终端机**：打开 → 启动屏 → 谈判（5 轮报价 / 接受长按 / 拒绝 / 上限下拉 /

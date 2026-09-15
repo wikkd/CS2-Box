@@ -1,7 +1,5 @@
 package com.reclizer.csgobox.forge_1_20_1.box;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.reclizer.csgobox.box.BoxGrades;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -16,6 +14,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+/**
+ * Immutable box definition loaded from JSON and referenced by box ItemStacks.
+ *
+ * <p>v2.1.0 config additions: {@code enabled}/{@code requires} gate loading,
+ * {@code icon} sets CustomModelData, {@code discount}/{@code stock}/
+ * {@code restock_minutes} drive terminal economy, and {@code max_per_player}/
+ * {@code cooldown_seconds}/{@code permission} constrain opening.</p>
+ *
+ * <p>This record carries no CODEC: the network path uses the manual
+ * {@link #encode}/{@link #decode} pair which serializes every field including
+ * the v2.1.0 additions (a 17-field {@code RecordCodecBuilder} group exceeds
+ * the framework's arity limit and the codec is not used anywhere else).</p>
+ */
 public record BoxDefinition(
         ResourceLocation id,
         Component name,
@@ -26,30 +37,22 @@ public record BoxDefinition(
         List<GradeGroup> grades,
         Optional<ResourceLocation> texture,
         Optional<ResourceLocation> sound,
-        Map<ResourceLocation, Float> entityDropRates
+        Map<ResourceLocation, Float> entityDropRates,
+        boolean enabled,
+        List<String> requires,
+        Optional<String> icon,
+        float discount,
+        int stock,
+        int restockMinutes,
+        int maxPerPlayer,
+        int cooldownSeconds,
+        String permission
 ) {
 
     private static final ResourceLocation NO_KEY = new ResourceLocation("minecraft:air");
 
-    private static final Codec<Component> COMPONENT_CODEC = Codec.STRING.xmap(
-            Component.Serializer::fromJson,
-            Component.Serializer::toJson
-    );
-
-    public static final Codec<BoxDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("id").forGetter(BoxDefinition::id),
-            COMPONENT_CODEC.fieldOf("name").forGetter(BoxDefinition::name),
-            Codec.STRING.optionalFieldOf("type", "csbox").forGetter(BoxDefinition::type),
-            ResourceLocation.CODEC.fieldOf("key").forGetter(BoxDefinition::keyItem),
-            Codec.FLOAT.fieldOf("drop_rate").forGetter(BoxDefinition::dropRate),
-            ResourceLocation.CODEC.listOf().fieldOf("drop_entities").forGetter(BoxDefinition::dropEntities),
-            GradeGroup.CODEC.listOf().fieldOf("grades").forGetter(BoxDefinition::grades),
-            ResourceLocation.CODEC.optionalFieldOf("texture").forGetter(BoxDefinition::texture),
-            ResourceLocation.CODEC.optionalFieldOf("sound").forGetter(BoxDefinition::sound),
-            Codec.unboundedMap(ResourceLocation.CODEC, Codec.FLOAT)
-                    .optionalFieldOf("entity_drop_rates", Map.of())
-                    .forGetter(BoxDefinition::entityDropRates)
-    ).apply(instance, BoxDefinition::new));
+    /** Sentinel values: -1 = unlimited (stock / maxPerPlayer). */
+    public static final int UNLIMITED = -1;
 
     public BoxDefinition {
         id = Objects.requireNonNull(id, "box id");
@@ -62,6 +65,10 @@ public record BoxDefinition(
         texture = texture == null ? Optional.empty() : texture;
         sound = sound == null ? Optional.empty() : sound;
         entityDropRates = entityDropRates == null ? Map.of() : Map.copyOf(entityDropRates);
+        requires = requires == null ? List.of() : List.copyOf(requires);
+        icon = icon == null ? Optional.empty() : icon;
+        discount = BoxGrades.clampDropRate(discount);
+        permission = permission == null ? "" : permission;
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -92,6 +99,21 @@ public record BoxDefinition(
             buf.writeResourceLocation(entry.getKey());
             buf.writeFloat(entry.getValue());
         }
+
+        // v2.1.0 fields.
+        buf.writeBoolean(enabled);
+        buf.writeVarInt(requires.size());
+        for (String req : requires) {
+            buf.writeUtf(req);
+        }
+        buf.writeBoolean(icon.isPresent());
+        icon.ifPresent(buf::writeUtf);
+        buf.writeFloat(discount);
+        buf.writeVarInt(stock);
+        buf.writeVarInt(restockMinutes);
+        buf.writeVarInt(maxPerPlayer);
+        buf.writeVarInt(cooldownSeconds);
+        buf.writeUtf(permission);
     }
 
     public static BoxDefinition decode(FriendlyByteBuf buf) {
@@ -119,7 +141,25 @@ public record BoxDefinition(
             ResourceLocation entityId = buf.readResourceLocation();
             entityDropRates.put(entityId, buf.readFloat());
         }
-        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades, texture, sound, entityDropRates);
+
+        // v2.1.0 fields.
+        boolean enabled = buf.readBoolean();
+        int requiresSize = buf.readVarInt();
+        List<String> requires = new ArrayList<>(requiresSize);
+        for (int i = 0; i < requiresSize; i++) {
+            requires.add(buf.readUtf());
+        }
+        Optional<String> icon = buf.readBoolean() ? Optional.of(buf.readUtf()) : Optional.empty();
+        float discount = buf.readFloat();
+        int stock = buf.readVarInt();
+        int restockMinutes = buf.readVarInt();
+        int maxPerPlayer = buf.readVarInt();
+        int cooldownSeconds = buf.readVarInt();
+        String permission = buf.readUtf();
+
+        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades,
+                texture, sound, entityDropRates, enabled, requires, icon, discount,
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
     }
 
     public static Builder builder(ResourceLocation id, String name) {
@@ -159,12 +199,43 @@ public record BoxDefinition(
         return Optional.empty();
     }
 
+    /** Whether any of the {@code requires} mods is missing. */
+    public boolean missingRequirement() {
+        for (String modId : requires) {
+            if (!com.reclizer.csgobox.forge_1_20_1.CsgoBox.isModLoaded(modId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** First missing required mod id, or null when all are loaded. */
+    public String firstMissingRequirement() {
+        for (String modId : requires) {
+            if (!com.reclizer.csgobox.forge_1_20_1.CsgoBox.isModLoaded(modId)) {
+                return modId;
+            }
+        }
+        return null;
+    }
+
+    /** Terminal price after the configured discount (0..1 off). */
+    public int discountedPrice(int basePrice) {
+        if (discount <= 0F || basePrice <= 0) {
+            return basePrice;
+        }
+        int price = (int) Math.floor(basePrice * (1.0F - discount));
+        return Math.max(1, price);
+    }
+
     public BoxDefinition withUpdatedGrade(String gradeId, GradeGroup updatedGrade) {
         List<GradeGroup> newGrades = new ArrayList<>(grades.size());
         for (GradeGroup grade : grades) {
             newGrades.add(grade.id().equals(gradeId) ? updatedGrade : grade);
         }
-        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades, texture, sound, entityDropRates);
+        return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades,
+                texture, sound, entityDropRates, enabled, requires, icon, discount,
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
     }
 
     public static class Builder {
@@ -179,6 +250,15 @@ public record BoxDefinition(
         private Optional<ResourceLocation> texture = Optional.empty();
         private Optional<ResourceLocation> sound = Optional.empty();
         private final Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
+        private boolean enabled = true;
+        private final List<String> requires = new ArrayList<>();
+        private Optional<String> icon = Optional.empty();
+        private float discount = 0.0F;
+        private int stock = UNLIMITED;
+        private int restockMinutes = 0;
+        private int maxPerPlayer = UNLIMITED;
+        private int cooldownSeconds = 0;
+        private String permission = "";
 
         public Builder(ResourceLocation id, String name) {
             this.id = Objects.requireNonNull(id, "box id");
@@ -237,6 +317,53 @@ public record BoxDefinition(
             return this;
         }
 
+        public Builder enabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
+
+        public Builder requires(List<String> requires) {
+            if (requires != null) {
+                this.requires.addAll(requires);
+            }
+            return this;
+        }
+
+        public Builder icon(String icon) {
+            this.icon = icon == null || icon.isBlank() ? Optional.empty() : Optional.of(icon.trim());
+            return this;
+        }
+
+        public Builder discount(float discount) {
+            this.discount = BoxGrades.clampDropRate(discount);
+            return this;
+        }
+
+        public Builder stock(int stock) {
+            this.stock = stock;
+            return this;
+        }
+
+        public Builder restockMinutes(int restockMinutes) {
+            this.restockMinutes = Math.max(0, restockMinutes);
+            return this;
+        }
+
+        public Builder maxPerPlayer(int maxPerPlayer) {
+            this.maxPerPlayer = maxPerPlayer;
+            return this;
+        }
+
+        public Builder cooldownSeconds(int cooldownSeconds) {
+            this.cooldownSeconds = Math.max(0, cooldownSeconds);
+            return this;
+        }
+
+        public Builder permission(String permission) {
+            this.permission = permission == null ? "" : permission;
+            return this;
+        }
+
         public BoxDefinition build() {
             Component finalName = name;
             if (nameColor.isPresent()) {
@@ -245,7 +372,8 @@ public record BoxDefinition(
             }
             return new BoxDefinition(id, finalName, type, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
-                    Map.copyOf(entityDropRates));
+                    Map.copyOf(entityDropRates), enabled, List.copyOf(requires), icon,
+                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
         }
     }
 }

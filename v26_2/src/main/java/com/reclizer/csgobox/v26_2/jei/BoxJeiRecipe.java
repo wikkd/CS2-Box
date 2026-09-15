@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_2.jei;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_2.item.ModItems;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
@@ -22,12 +23,8 @@ public record BoxJeiRecipe(BoxDefinition definition, ItemStack boxStack, ItemSta
     public static List<BoxJeiRecipe> fromRegistry() {
         List<BoxJeiRecipe> recipes = new ArrayList<>();
         for (BoxDefinition definition : BoxRegistry.getAll()) {
-            Item boxItem = BuiltInRegistries.ITEM.get(definition.id())
-                    .map(Holder.Reference::value)
-                    .orElse(null);
-            if (boxItem == null) {
-                continue;
-            }
+            // Box items are a fixed set (a box is data, not an item id).
+            Item boxItem = ModItems.itemForBox(definition.id(), definition.isTerminal());
             ItemStack boxStack = ItemCsgoBox.setBoxId(definition.id(), new ItemStack(boxItem));
             ItemStack keyStack = keyStack(definition);
             recipes.add(new BoxJeiRecipe(definition, boxStack, keyStack));

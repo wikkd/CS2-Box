@@ -186,8 +186,9 @@ public class CsboxProgressScreen extends Screen {
 
         // CS2-style backdrop: blur the live world and dim it, instead of an
         // opaque panel - mirrors the original case-opening depth-of-field look.
+        // 24% black keeps the blur clearly visible.
         // (The blur itself runs in renderBackground above, once per frame.)
-        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x8C000000);
+        AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height, 0x3C000000);
 
         if (rejected) {
             Component msg = Component.translatable("gui.csgobox.progress.rejected");

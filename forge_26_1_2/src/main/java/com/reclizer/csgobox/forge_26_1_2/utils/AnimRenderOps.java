@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_1_2.utils;
 
 import com.reclizer.csgobox.utils.Quat;
+import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_1_2.gui.pip.Icon3DRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -17,6 +18,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraftforge.fml.ModList;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -27,6 +29,9 @@ import org.joml.Vector3f;
  * era: decoupled
  */
 public final class AnimRenderOps {
+
+    /** Set once the first supports3D() call has logged the render environment. */
+    private static boolean logged3DEnvironment;
 
     private AnimRenderOps() {
     }
@@ -203,6 +208,13 @@ public final class AnimRenderOps {
         if (item == null || item.isEmpty() || player == null) {
             return;
         }
+        // Shader-mod fallback (Iris/Oculus): their shader packs ignore custom
+        // rendering paths; degrade to the 2D icon so the preview never renders
+        // black/blank under shaders (see docs/SHADER-COMPAT.md).
+        if (!supports3D()) {
+            renderItem2D(player, guiGraphics, item, cx, cy, scale);
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) {
@@ -284,7 +296,27 @@ public final class AnimRenderOps {
         guiGraphics.getRenderState().addPicturesInPictureState(pipState);
     }
 
+    /** Whether 3D item previews (PIP / drag-to-rotate / TACZ guns) can render
+     *  in this client. Only shader-pack mods (Iris/Oculus) force the 2D
+     *  fallback; Modern UI (modernui) deliberately does NOT: it officially
+     *  renders vanilla-GUI-system mods unchanged, so 3D previews stay 3D
+     *  under it. If a future Modern UI release is proven to break the 3D
+     *  path, add it to isShaderModActive() (docs/MODERN-UI-COMPAT.md). */
     public static boolean supports3D() {
-        return true;
+        if (!logged3DEnvironment) {
+            logged3DEnvironment = true;
+            CsgoBox.LOGGER.info("[csgobox] 3D preview env: supports3D={} iris={} oculus={} modernui={}",
+                    !isShaderModActive(), ModList.isLoaded("iris"),
+                    ModList.isLoaded("oculus"), ModList.isLoaded("modernui"));
+        }
+        return !isShaderModActive();
+    }
+
+    /** True when Iris (NeoForge/Fabric) or Oculus (Forge) is installed: their
+     *  shader packs intercept/ignore custom GUI 3D paths, so 3D previews
+     *  degrade to 2D for correctness (probabilities/gameplay unaffected).
+     *  Modern UI is intentionally excluded — see supports3D(). */
+    private static boolean isShaderModActive() {
+        return ModList.isLoaded("iris") || ModList.isLoaded("oculus");
     }
 }

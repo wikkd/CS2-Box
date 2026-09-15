@@ -3,6 +3,7 @@ package com.reclizer.csgobox.v26_1_2.rei;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.v26_1_2.item.ModItems;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.display.DisplaySerializer;
@@ -36,12 +37,8 @@ public record BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemSt
     public static List<BoxReiDisplay> fromRegistry() {
         List<BoxReiDisplay> displays = new ArrayList<>();
         for (BoxDefinition definition : BoxRegistry.getAll()) {
-            Item boxItem = BuiltInRegistries.ITEM.get(definition.id())
-                    .map(Holder.Reference::value)
-                    .orElse(null);
-            if (boxItem == null) {
-                continue;
-            }
+            // Box items are a fixed set (a box is data, not an item id).
+            Item boxItem = ModItems.itemForBox(definition.id(), definition.isTerminal());
             ItemStack boxStack = ItemCsgoBox.setBoxId(definition.id(), new ItemStack(boxItem));
             ItemStack keyStack = keyStack(definition);
             displays.add(new BoxReiDisplay(definition, boxStack, keyStack));

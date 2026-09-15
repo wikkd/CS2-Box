@@ -69,6 +69,8 @@ public class TerminalScreen extends Screen {
     private long buyRequestId;
     /** When the buy request was sent — the waiting dialog must not hang forever. */
     private long buySentAtMs;
+    /** Wear of the offer being bought — kept for the post-buy item showcase. */
+    private float pendingBuyWear = -1F;
     /** True once the server's locked session state has been applied. */
     private boolean stateReceived;
     private boolean closeSynced;
@@ -357,7 +359,7 @@ public class TerminalScreen extends Screen {
         if (actionBar.mouseDown(this.mouseX, this.mouseY, now, model)) {
             return true;
         }
-        if (offerRegion.mouseDown(this.mouseX, this.mouseY)) {
+        if (offerRegion.mouseDown(this.mouseX, this.mouseY, this)) {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -450,6 +452,7 @@ public class TerminalScreen extends Screen {
         }
         this.buyRequestId = System.nanoTime();
         this.buySentAtMs = now;
+        this.pendingBuyWear = offer.wearVal();
         confirmDialog.setWaiting();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {
@@ -499,6 +502,15 @@ public class TerminalScreen extends Screen {
         long now = worldNowMs();
         if (result == PacketTerminalBuyResult.RESULT_SUCCESS) {
             model.acceptNow(now);
+            // The terminal machine is consumed by the purchase, so the reward
+            // showcase closes to the world on Esc / the close button (no
+            // previous screen) and keeps the offer's exact wear value instead
+            // of re-rolling a random one.
+            if (!givenItem.isEmpty()) {
+                Integer grade = givenItem.get(ItemCsgoBox.GRADE.get());
+                Minecraft.getInstance().setScreen(new CsLookItemScreen(
+                        givenItem, grade != null ? grade : 1, pendingBuyWear));
+            }
         } else if (result == PacketTerminalBuyResult.RESULT_INSUFFICIENT) {
             model.dealerReconsider(now);
             model.addSystem("csgobox.terminal.sys.poor", now);

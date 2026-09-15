@@ -2,6 +2,7 @@ package com.reclizer.csgobox.forge_1_20_1.packet;
 
 import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
+import com.reclizer.csgobox.forge_1_20_1.emi.BoxEmiReload;
 import com.reclizer.csgobox.forge_1_20_1.jei.BoxJeiSync;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.FriendlyByteBuf;
@@ -58,6 +59,7 @@ public class PacketSyncBoxDefinitions {
                 BoxRegistry.register(definition);
             }
             BoxJeiSync.onBoxRegistryChanged();
+            BoxEmiReload.onBoxRegistryChanged();
         });
         ctx.get().setPacketHandled(true);
     }

@@ -1,0 +1,22 @@
+# 统一行尾策略：所有文本文件按 LF 存库（工作树随平台自动转换）
+* text=auto
+
+# Java / Gradle / 脚本 / 文档：强制 LF
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+
+# 二进制资源：不做行尾处理
+*.png binary
+*.ogg binary
+*.nbt binary
+*.jar binary
+*.zip binary

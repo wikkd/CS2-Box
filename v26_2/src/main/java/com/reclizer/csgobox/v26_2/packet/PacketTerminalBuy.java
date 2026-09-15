@@ -1,10 +1,14 @@
 package com.reclizer.csgobox.v26_2.packet;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.terminal.TerminalStockManager;
 import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.v26_2.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import com.reclizer.csgobox.v26_2.event.TerminalBuyEvent;
+import com.reclizer.csgobox.v26_2.box.BoxDefinition;
+import com.reclizer.csgobox.v26_2.box.BoxItemResolver;
+import com.reclizer.csgobox.v26_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ItemTerminal;
 import com.reclizer.csgobox.v26_2.item.ModItems;
@@ -21,6 +25,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Client-to-server request to buy the current terminal offer after the
@@ -130,20 +136,40 @@ public record PacketTerminalBuy(
         if (grade < 1 || grade > 5) {
             return invalid;
         }
-        // Use the per-item price from the JSON config, falling back to the
-        // default grade-level price if none was set.
-        int basePrice = roundData.price() >= 0 ? roundData.price() : NegotiationModel.priceForGrade(grade);
+        // Use the server-sampled table price (a range was drawn once per offer);
+        // unpriced items are never offered and unlisted ids fail to load.
+        int basePrice = roundData.price() >= 0 ? roundData.price() : 0;
         int price = basePrice;
         // Items without a durability bar can't take wear damage, so the
-        // offered wear becomes an Armory Point penalty — the more worn the
-        // item, the more points it costs. Durable items pay the base price.
+        // offered wear becomes a percentage markup on the base price (20% at
+        // full wear, see WearPenalty). Durable items pay the base price.
         if (!roundData.item().isDamageableItem()) {
-            price += WearPenalty.surcharge(roundData.offer().wearVal());
+            price += WearPenalty.surcharge(basePrice, roundData.offer().wearVal());
         }
         boolean creative = sp.getAbilities().instabuild;
+
+        // v2.1.0 stock gate: a stock-limited terminal refuses when exhausted.
+        BoxDefinition def = BoxRegistry.get(heldBox);
+        int stock = def != null ? def.stock() : BoxDefinition.UNLIMITED;
+        if (!TerminalStockManager.available(ItemCsgoBox.getBoxId(held).toString(), stock)) {
+            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+
         if (!creative && countArmoryPoints(sp) < price) {
             session.model().dealerReconsider(worldMs);
             session.model().addSystem("csgobox.terminal.sys.poor", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+
+        // Consume one unit of stock (after the price check, before granting).
+        int restockMinutes = def != null ? def.restockMinutes() : 0;
+        if (!TerminalStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), stock, restockMinutes)) {
+            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
             TerminalSessionManager.markDirty();
             return new PacketTerminalBuyResult(message.requestId(),
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
@@ -153,6 +179,15 @@ public record PacketTerminalBuy(
             consumeArmoryPoints(sp, price);
         }
         ItemStack toGive = offerItem.copy();
+        // v2.1.0-fix: resolve loot_table / count-range / enchant specs
+        // server-side BEFORE the 1-count clamp, so the terminal never sells
+        // a placeholder (barrel for loot_table, min-count or unenchanted).
+        toGive = BoxItemResolver.resolve(toGive, sp.level(), ThreadLocalRandom.current());
+        if (toGive == null || toGive.isEmpty()) {
+            // Empty resolve (e.g. an empty loot draw) must not charge the
+            // player — refuse the trade instead of delivering nothing.
+            return invalid;
+        }
         // The terminal sells ONE item per offer: isSameItemSameComponents
         // never compares count, so a crafted stack must not grant 64 items
         // for the price of one.

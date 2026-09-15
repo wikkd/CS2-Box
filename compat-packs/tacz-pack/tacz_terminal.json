@@ -1,0 +1,48 @@
+{
+  "name": "#AA3333 TACZ 军火终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "random": [625, 125, 25, 6, 4],
+  "requires": ["tacz"],
+  "grade5": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:deagle_golden\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:timeless50\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m107\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:ai_awp\"}" }
+  ],
+  "grade4": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:rpg7\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:minigun\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m249\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:rpk\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m1014\"}" },
+    { "id": "tacz:ammo", "count": 64, "tag": "{AmmoId:\"tacz:12g\"}" }
+  ],
+  "grade3": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:deagle\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:mk14\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:kar98\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m700\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:sks_tactical\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:spas_12\"}" }
+  ],
+  "grade2": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:ak47\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m4a1\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:hk416d\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:g36k\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m16a4\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:ump45\"}" },
+    { "id": "tacz:ammo", "count": 64, "tag": "{AmmoId:\"tacz:556x45\"}" },
+    { "id": "tacz:ammo", "count": 64, "tag": "{AmmoId:\"tacz:762x39\"}" }
+  ],
+  "grade1": [
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:glock_17\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:m1911\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:p320\"}" },
+    { "id": "tacz:modern_kinetic_gun", "count": 1, "tag": "{GunId:\"tacz:cz75\"}" },
+    { "id": "tacz:ammo", "count": 32, "tag": "{AmmoId:\"tacz:9mm\"}" },
+    { "id": "tacz:ammo", "count": 32, "tag": "{AmmoId:\"tacz:45acp\"}" },
+    { "id": "minecraft:gunpowder", "count": 8 }
+  ]
+}

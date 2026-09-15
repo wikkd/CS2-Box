@@ -1,6 +1,11 @@
 package com.reclizer.csgobox.forge_1_20_1.event;
 
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
+import com.reclizer.csgobox.forge_1_20_1.gui.CsLookItemScreen;
+import com.reclizer.csgobox.forge_1_20_1.gui.CsboxBulkOverviewScreen;
+import com.reclizer.csgobox.forge_1_20_1.gui.CsboxBulkResultScreen;
+import com.reclizer.csgobox.forge_1_20_1.gui.CsboxProgressScreen;
+import com.reclizer.csgobox.forge_1_20_1.gui.CsboxScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraftforge.api.distmarker.Dist;
@@ -52,13 +57,11 @@ public final class ScreenBlurBoost {
     }
 
     private static boolean isModScreen(Screen screen) {
-        // TODO: uncomment gui class checks as they are ported
-        // return screen instanceof CsboxScreen
-        //         || screen instanceof CsboxProgressScreen
-        //         || screen instanceof CsboxBulkOverviewScreen
-        //         || screen instanceof CsboxBulkResultScreen
-        //         || screen instanceof CsLookItemScreen;
-        return false;
+        return screen instanceof CsboxScreen
+                || screen instanceof CsboxProgressScreen
+                || screen instanceof CsboxBulkOverviewScreen
+                || screen instanceof CsboxBulkResultScreen
+                || screen instanceof CsLookItemScreen;
     }
 
     @SuppressWarnings("unchecked")

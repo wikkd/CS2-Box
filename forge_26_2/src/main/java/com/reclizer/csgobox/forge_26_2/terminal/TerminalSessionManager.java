@@ -89,6 +89,11 @@ public final class TerminalSessionManager {
         // Deadline in world time (game ticks × 50): expires only while the world runs.
         long worldMs = player.level().getGameTime() * 50L;
         TerminalSession created = TerminalSession.create(player.getStringUUID(), uid, boxId, def, worldMs);
+        // v2.1.0: a sold-out terminal (stock exhausted) yields no session —
+        // the screen shows the empty/unconfigured state. Never store null.
+        if (created == null) {
+            return null;
+        }
         ItemCsgoBox.stampTerminalOwner(terminalStack, player.getPlainTextName());
         SESSIONS.put(key, created);
         dirty = true;

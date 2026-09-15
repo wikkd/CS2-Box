@@ -354,7 +354,7 @@ public class TerminalScreen extends Screen {
         if (actionBar.mouseDown(this.mouseX, this.mouseY, now, model)) {
             return true;
         }
-        if (offerRegion.mouseDown(this.mouseX, this.mouseY)) {
+        if (offerRegion.mouseDown(this.mouseX, this.mouseY, this)) {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);

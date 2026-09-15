@@ -67,7 +67,8 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 ## 关键文件
 
 - `CsgoBox.java` — 平台入口；`CONFIG` 为 `public static final`（static 块初始化，勿改顺序）；`registerDynamicBoxItems` 注册 `config/csbox/*.json` 动态 item（用 `RegisterEvent` deferred supplier，**不要**用 `FMLCommonSetupEvent.enqueueWork`——registry 已 freeze）
-- `CsboxConfig.java` — NeoForge `ModConfigSpec`，builder 每个 `define*` 用 `.get()`；`bulkOpenCount`（0=无上限）服务端权威
+- `CsboxConfig.java` — NeoForge `ModConfigSpec` / Forge `ForgeConfigSpec`，builder 每个 `define*` 用 `.get()`；`bulkOpenCount`（0=无上限）服务端权威。v2.1.x 起带公开 `set*` 写方法（供 Cloth Config GUI 用）
+- `config/CsboxClothConfigScreen.java`（六平台各一份）— **可选** Cloth Config 配置屏：套在既有 `ConfigValue` 上（读 getter、写 setter、保存统一 `CsgoBox.CONFIG_SPEC.save()`），**不迁移配置存储**（TOML 仍是唯一来源）；注册点在各平台 `CsgoBox` 构造器内 `Dist.CLIENT && ModList.isLoaded("cloth_config")` 分支，Cloth 未装时无 Configure 按钮、功能不变；六平台同文（仅 package/loader 注册差异）
 - `packet/PacketCsgoProgress.java` — 服务端权威 RNG + `OPEN_BLOCKED_UNTIL_TICK`（ConcurrentHashMap，`tickOpenBlockMap` 每 100 tick 清理）
 - `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize）
 - `gui/CsboxBulkOverviewScreen.java` — 批量开箱总览屏（Shift+右键进入；点「开启」直接发包 `PacketCsgoBulkProgress` 并进 `CsboxProgressScreen`，无二次确认屏；服务端权威复核库存与扣减）
@@ -82,9 +83,10 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `box/GradeGroup.java` — v2.1.0 第 7 字段 `itemWeights`（平行列表，默认全 1 = 均匀）；`itemWeightAt` / `positiveItemWeightSum`
 - `box/BoxDefinition.java` — v2.1.0 新字段 `enabled`/`requires`/`icon`/`discount`/`stock`/`restockMinutes`/`maxPerPlayer`/`cooldownSeconds`/`permission`；`discountedPrice` / `missingRequirement`
 - `box/BoxJsonLoader.java` — v2.1.0 文件名校验 / enabled+requires 门控 / 空档位 warning / `/csbox validate` 干跑（`validateFile`）/ 新字段解析；`downloadTutorialsAsync()` 统一教程入口（服务端 `loadAll()` + 客户端 `ClientModEvents#onClientSetup` 共用，把包内教程复制到本地 `config/csbox/`，无网络）
-- `box/PriceTable.java`（v2.1.0 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 非负整数；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中回退档位默认价 `NegotiationModel.GRADE_PRICE`）；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
+- `box/PriceTable.java`（v2.1.0 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 固定非负整数或 `[min, max]` 随机范围，`PriceRange`；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中 = 无价格（终端机不售、拆解 0，装载器对未定价 id 物品报错，无默认价回退））；`lookupRange` + `PriceRange.sample(IntUnaryOperator)` 服务端每次报价/拆解采样；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
+- `box/PriceRange.java`（v2.1.0 新增）— 固定价/范围价值对象（`[min, max]` 闭区间、`UNPRICED` 哨兵、`sample` 取整），纯 Java 无 MC 依赖；六平台 `GradeGroup.priceForIndex` 返回 `PriceRange`，网络流按 `[min, max]` 双 int 序列化
 - `box/LegacyPriceMigration.java`
-- `box/PriceTableRegistry.java`（v2.1.0 新增）— 当前价格表的跨平台持有者：六平台 `BoxJsonLoader` 每次 load/reload 发布（/csbox validate 干跑不发布），武库拆解台只读消费，按 `PriceTable.recycleYield`(表价 × 90% 向上取整) 计价，表外回退等级价 3/5/7/8/8
+- `box/PriceTableRegistry.java`（v2.1.0 新增）— 当前价格表的跨平台持有者：六平台 `BoxJsonLoader` 每次 load/reload 发布（/csbox validate 干跑不发布），武库拆解台只读消费，按 `PriceTable.recycleYield`(表价 × 90% 向上取整) 计价，表外未定价物品不可拆解（产出 0）
 - **Create/自动化联动（v2.1.0）**：武库拆解台开放物品处理 capability——Forge 三平台
   `ArmoryRecyclerBlockEntity` 覆盖 `getCapability`（`ForgeCapabilities.ITEM_HANDLER` +
   内部 `RecyclerHandler`），NeoForge 1.21.1（v1_21_1）用 `RecyclerAutomation`
@@ -102,11 +104,11 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `scripts/add-biome.py` — 向 `has_structure/*` 群系标签追加 biome（去重/幂等/`--dry-run`/`--replace`），让武库商小屋在模组群系生成（机制见 `docs/BIOME-INTEGRATION.md`）
 - `scripts/boxgen.py` / `scripts/check-ids.py`（v2.1.0 新增）— 箱子配置生成器 / compat-packs id 核查工具
 - `scripts/sync-box-editor-data.py`（v2.1.0 新增）+ `box-editor/` — 可视化网页配置工具（纯前端零构建，`file://` 可离线打开，可整目录发布 GitHub Pages；中英双语、跟随六平台版本控制 TACZ 变体/Data Components 可见性（TACZ 专属字段另有手动开关可强制启用/禁用；撤销/重做、校验项点击定位、物品
-  复制/批量粘贴、价格批量导入、分享链接、悬浮教程、折叠记忆；改动后跑
+  复制/批量粘贴、价格批量导入（固定价或 `min-max` 范围价）、分享链接、悬浮教程、折叠记忆；改动后跑
   `npm run test:smoke`（Playwright 冒烟，CI `box-editor-smoke.yml` 已接线））；实时预览 + 轻量校验 + 旧版内联 `price` 自动迁移（平均/已有价优先，与 `LegacyPriceMigration` 一致）；**数据生成式**：schema/示例/版本元数据内嵌进 `js/data.js`，修改 `docs/box-schema/*.schema.json` 或 `docs/examples` 后必须重跑该脚本，勿手改 `data.js`）。本地部署套件：`server.mjs`（零依赖静态服务器）/ `build.mjs`（产出 `dist/`，已 gitignore）/ `start.bat`+`start.sh` / `package.json`（npm start|build|sync）；`scripts/sync-box-editor-data.py` 亦可由 `npm run sync` 触发（Windows `python` 为占位符时用 venv python 直跑）；GitHub Pages 自动发布走 `.github/workflows/box-editor-pages.yml`（Settings → Pages → Source: GitHub Actions）
 - `compat-packs/` — 官方联动数据包示例（Apotheosis / Iron's Spells / TACZ 各一个箱子包 + README，v2.1.0 示范 requires/weight/count 区间/enchant）
 - `docs/box-schema/box.schema.json`（v2.1.0 新增）— 箱子配置 JSON Schema（IDE 补全用）
-- `utils/AnimRenderOps.java` — **动画渲染唯一适配点**（各平台一份，`// era: legacy|decoupled` 头标注）：屏与逻辑助手只经它调用渲染原语（`blitTextured`×3 变体 / `fill` / `fillGradient` / `scissor` / `scissorDisable` / `setBlendNormal` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D` / `supports3D`，共 13 个公开 op）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（CI `common-test` job 已接线）。**新增原语须三平台同步补**，否则漂移检查失败。**Shader 兼容**：`supports3D()` 返回 `!isShaderModActive()`（检测 `iris`/`oculus`），shader 激活时 `renderItem3D` 内部回退 `renderItem2D`（公开 op 表面不变，drift 仍过）；见 `docs/SHADER-COMPAT.md`
+- `utils/AnimRenderOps.java` — **动画渲染唯一适配点**（各平台一份，`// era: legacy|decoupled` 头标注）：屏与逻辑助手只经它调用渲染原语（`blitTextured`×3 变体 / `fill` / `fillGradient` / `scissor` / `scissorDisable` / `setBlendNormal` / `flush` / `renderBlurredBackground` / `renderItem2D` / `renderItem3D` / `supports3D`，共 13 个公开 op）。跨平台签名一致性由 `scripts/check-animops-drift.sh` 守护（CI `common-test` job 已接线）。**新增原语须三平台同步补**，否则漂移检查失败。**Shader 兼容**：`supports3D()` 返回 `!isShaderModActive()`（检测 `iris`/`oculus`），shader 激活时 `renderItem3D` 内部回退 `renderItem2D`（公开 op 表面不变，drift 仍过）；见 `docs/SHADER-COMPAT.md`。**Modern UI 软兼容**：装 `modernui` **不降级 3D**（官方声明兼容 vanilla GUI 系统模组），首次 `supports3D()` 调用打印渲染环境诊断（`[csgobox] 3D preview env: ... modernui=...`）；策略与验证清单见 `docs/MODERN-UI-COMPAT.md`
 - `docs/SHADER-COMPAT.md` / `docs/DESIGN-jade-wthit-integration.md` / `docs/DESIGN-rarity-mapping.md` / `docs/DESIGN-terminal-protocol.md` — 批次 B 与立项待办的设计/兼容文档（Jade/WTHIT 待联网接线，RFC 与终端机协议待评审）
 - `utils/IconListTools.java` — 2D 物品网格（26.x/1.21.8+ 有 per-item bounding box 居中；渲染原语已委托 AnimRenderOps）
 - `utils/GuiItemMove.java` — 3D 拖拽预览（`renderRotAngleX/Y` 纯数学保留，渲染委托 `AnimRenderOps.renderItem3D`）

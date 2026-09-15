@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,17 +17,37 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-    /**
- * Tutorial downloader: on first load, fetches version-stamped markdown
- * tutorials into {@code config/csbox/}. Version mismatch deletes every
- * {@code _tutorial_v*_.md} (pattern excludes user files like
- * {@code notes.md}); downloads only if all sources are reachable and never
- * overwrites existing files. Mod version comes from the jar manifest via
- * {@link Package#getImplementationVersion()}, so common/ stays platform-free.
+/**
+ * Tutorial installer: copies the bundled (JAR-embedded) version-stamped
+ * markdown tutorials into {@code config/csbox/}. No network is involved —
+ * the tutorial content ships inside the mod, so first launch works offline
+ * and no mirror configuration exists.
+ *
+ * <p>Deletion of stale {@code _tutorial_v*_.md} happens ONLY after the
+ * current version's files are fully in place (already present or freshly
+ * copied) — a copy failure never deletes what the player already has.
+ * Existing current-version files are never overwritten (player edits are
+ * respected).</p>
+ *
+ * <p>Mod version comes from the jar manifest via
+ * {@link Package#getImplementationVersion()}; when unavailable (dev/IDE
+ * run without a jar manifest) the whole tutorial flow is skipped so the
+ * "unknown" fallback can never trigger deletion. common/ stays platform-free.
  */
 public final class BoxDefaults {
 
     private static final Gson GSON = new Gson();
+
+    /**
+     * Classpath location of the bundled tutorial markdown files. Content
+     * ships in {@code common/src/main/resources/assets/csgobox/tutorials/}
+     * under fixed names; on-disk names are version-stamped by the current
+     * mod version (see {@link #onDiskName(String, String)}).
+     */
+    private static final String TUTORIAL_RESOURCE_PREFIX = "/assets/csgobox/tutorials/";
+
+    /** Bundled tutorial resources, in copy order (fixed resource names). */
+    private static final List<String> TUTORIAL_RESOURCES = List.of("tutorial.md", "tutorial_zh_cn.md");
 
     /**
      * Filename pattern for mod-managed, version-stamped tutorials. Files
@@ -48,60 +70,98 @@ public final class BoxDefaults {
             return cached;
         }
         String v = BoxDefaults.class.getPackage().getImplementationVersion();
-        String resolved = v == null ? "unknown" : v;
-        cachedModVersion = resolved;
-        return resolved;
+        if (v == null || v.isBlank()) {
+            // No jar manifest (dev/IDE run): return null instead of a fake
+            // "unknown" version. A fake version would both match no existing
+            // tutorial (triggering deletion) and stamp file names that can
+            // never be valid (_tutorial_vunknown.md).
+            return null;
+        }
+        cachedModVersion = v;
+        return v;
     }
 
     /**
-     * Downloads and writes each missing tutorial file from the first
-     * successful source in {@link TutorialSources}. If no tutorial file
-     * for the current mod version is present, every stale versioned
-     * {@code _tutorial_v*_.md} file is deleted.
+     * Copies each missing tutorial file from the bundled resources into
+     * {@code config/csbox/}.
+     *
+     * <p>Ordering guarantee (v2.1.0 fix): stale {@code _tutorial_v*_.md}
+     * files are deleted ONLY after the current version's tutorial files are
+     * fully in place — a copy failure keeps the player's existing tutorials
+     * instead of wiping them. Existing current-version files are never
+     * overwritten.</p>
+     *
+     * <p>If the mod version cannot be resolved (dev/IDE run without a jar
+     * manifest) the whole flow is skipped: no copy, no deletion, just a
+     * warning.</p>
      *
      * <p>The entire body is wrapped in a defensive try-catch so that no
-     * exception (offline, DNS failure, malformed user JSON, JVM resource
-     * exhaustion during HttpClient construction, etc.) can propagate out
-     * and break the surrounding box-loading flow. The worst that can
-     * happen is no tutorial file is written.</p>
+     * exception can propagate out and break the surrounding box-loading
+     * flow. The worst that can happen is no tutorial file is written.</p>
      */
-    public static void writeTutorialIfMissing(Path boxesDir) {
+    public static synchronized void writeTutorialIfMissing(Path boxesDir) {
+        String version = modVersion();
+        if (version == null) {
+            LOGGER.warn(
+                    "Mod version unavailable (dev/IDE run without jar manifest?); "
+                            + "skipping tutorial setup so existing tutorials are never deleted");
+            return;
+        }
+        writeTutorialIfMissing(boxesDir, version);
+    }
+
+    /**
+     * Package-visible for tests: same contract as
+     * {@link #writeTutorialIfMissing(Path)} with the version pinned.
+     */
+    static void writeTutorialIfMissing(Path boxesDir, String version) {
         try {
-            if (needsRefresh(boxesDir)) {
-                LOGGER.info(
-                        "Tutorial version mismatch (current mod is {}); deleting stale tutorials",
-                        modVersion());
-                deleteStaleTutorials(boxesDir);
-            }
+            ensureBoxesDir(boxesDir);
 
-            TutorialSources sources = TutorialSources.loadOrDefault(boxesDir);
-            TutorialFetcher fetcher = new TutorialFetcher();
-
-            for (String fileName : tutorialFileNames()) {
+            boolean currentVersionComplete = true;
+            for (String resource : TUTORIAL_RESOURCES) {
+                String fileName = onDiskName(resource, version);
                 Path file = boxesDir.resolve(fileName);
                 if (Files.exists(file)) {
                     continue;
                 }
 
-                String content = fetcher.fetch(fileName, sources.sources());
+                String content = readTutorialResource(resource);
                 if (content == null) {
                     LOGGER.warn(
-                            "No tutorial available for {} (offline or all sources failed); skipping",
-                            fileName);
+                            "Bundled tutorial resource {} missing; keeping existing tutorial files",
+                            resource);
+                    currentVersionComplete = false;
                     continue;
                 }
                 try {
                     Files.writeString(file, content);
-                    LOGGER.info("Wrote box configuration reference: {}", file);
+                    LOGGER.info("Wrote tutorial: {}", file);
                 } catch (IOException e) {
-                    LOGGER.warn("Failed to write tutorial markdown {}: {}",
-                            file, e.getMessage());
+                    LOGGER.warn("Failed to write tutorial {}: {}", file, e.getMessage());
+                    currentVersionComplete = false;
                 }
+            }
+
+            // Only now, with the current version's files guaranteed present,
+            // is it safe to remove tutorials from older versions.
+            if (currentVersionComplete) {
+                deleteStaleTutorials(boxesDir, version);
             }
         } catch (Exception e) {
             LOGGER.warn("Tutorial setup skipped due to unexpected error: {}",
                     e.getMessage());
         }
+    }
+
+    /**
+     * Ensures the tutorial target directory exists before any copy or stale
+     * scan. Client-side callers (dedicated-server players) have no server
+     * {@code loadAll()} to create {@code config/csbox/} for them, so the
+     * tutorial flow must not assume the directory is pre-created.
+     */
+    static void ensureBoxesDir(Path boxesDir) throws IOException {
+        Files.createDirectories(boxesDir);
     }
 
     /**
@@ -118,9 +178,9 @@ public final class BoxDefaults {
      * <p>Since 2.0.0 the terminal ships UNCONFIGURED (empty crate, same as
      * the default box), so no default is ever written back: an empty file is
      * left alone (the terminal simply stays unbound); a non-empty corrupt
-     * file is backed up as {@code terminal.json.corrupt-<millis>} and
-     * removed from the load path, preserving the player's data for manual
-     * recovery.</p>
+     * file is kept IN PLACE (so the loader keeps reporting it via
+     * {@code /csbox info error}) and a copy is preserved as
+     * {@code terminal.json.corrupt-<millis>} for manual recovery.</p>
      */
     public static void upgradeLegacyTerminalConfig(Path boxesDir) {
         Path file = boxesDir.resolve("terminal.json");
@@ -155,45 +215,64 @@ public final class BoxDefaults {
         }
     }
 
-    /** Backs up an unreadable terminal.json; no default replaces it (the terminal becomes unconfigured). */
+    /**
+     * Preserves an unreadable terminal.json: the original file is kept IN
+     * PLACE (the loader keeps surfacing its error via {@code /csbox info
+     * error}, and the author can fix it without hunting a backup), while a
+     * copy is written to {@code terminal.json.corrupt-<millis>} so no data
+     * is ever lost. No default replaces it (the terminal becomes
+     * unconfigured).
+     */
     private static void recoverCorruptTerminal(Path file) {
         try {
             Path backup = file.resolveSibling("terminal.json.corrupt-" + System.currentTimeMillis());
-            Files.move(file, backup, StandardCopyOption.REPLACE_EXISTING);
-            LOGGER.warn("Corrupt terminal.json backed up and left unconfigured (backup at {})", backup.getFileName());
+            Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
+            LOGGER.warn("Corrupt terminal.json kept in place for fixing; backup copy at {}",
+                    backup.getFileName());
         } catch (IOException e) {
             LOGGER.warn("Terminal config recovery failed: {}", e.getMessage());
         }
     }
 
     /**
-     * Forces a re-download of every tutorial file for the current mod
+     * Forces a re-copy of every bundled tutorial file for the current mod
      * version, overwriting existing copies. Used by
-     * {@code /csbox reload tutorial}; unlike {@link #writeTutorialIfMissing}
-     * this does not consult {@link #needsRefresh} and does not touch stale
-     * versioned tutorials.
+     * {@code /csbox reload tutorial}; does not touch stale versioned
+     * tutorials. No network involved — content comes from the jar.
      *
-     * <p>Same defensive try-catch contract as the startup path: a network
-     * failure leaves existing files untouched and only logs a warning.</p>
+     * <p>Same defensive try-catch contract as the startup path. Unresolved
+     * mod version (dev/IDE run) skips the whole refresh.</p>
      */
-    public static void refreshTutorials(Path boxesDir) {
+    public static synchronized void refreshTutorials(Path boxesDir) {
+        String version = modVersion();
+        if (version == null) {
+            LOGGER.warn(
+                    "Mod version unavailable (dev/IDE run without jar manifest?); "
+                            + "skipping tutorial refresh");
+            return;
+        }
+        refreshTutorials(boxesDir, version);
+    }
+
+    /**
+     * Package-visible for tests: same contract as
+     * {@link #refreshTutorials(Path)} with the version pinned.
+     */
+    static void refreshTutorials(Path boxesDir, String version) {
         try {
-            TutorialSources sources = TutorialSources.loadOrDefault(boxesDir);
-            TutorialFetcher fetcher = new TutorialFetcher();
-            for (String fileName : tutorialFileNames()) {
-                String content = fetcher.fetch(fileName, sources.sources());
+            ensureBoxesDir(boxesDir);
+            for (String resource : TUTORIAL_RESOURCES) {
+                String fileName = onDiskName(resource, version);
+                String content = readTutorialResource(resource);
                 if (content == null) {
-                    LOGGER.warn(
-                            "No tutorial available for {} (offline or all sources failed); skipping",
-                            fileName);
+                    LOGGER.warn("Bundled tutorial resource {} missing; skipping", resource);
                     continue;
                 }
                 try {
                     Files.writeString(boxesDir.resolve(fileName), content);
                     LOGGER.info("Refreshed tutorial: {}", fileName);
                 } catch (IOException e) {
-                    LOGGER.warn("Failed to write tutorial markdown {}: {}",
-                            fileName, e.getMessage());
+                    LOGGER.warn("Failed to write tutorial {}: {}", fileName, e.getMessage());
                 }
             }
         } catch (Exception e) {
@@ -202,45 +281,45 @@ public final class BoxDefaults {
         }
     }
 
-    /** File names that the mod will try to populate, in download order. */
-    private static List<String> tutorialFileNames() {
-        String v = modVersion();
-        return List.of(
-                "_tutorial_v" + v + ".md",
-                "_tutorial_v" + v + "_zh_cn.md"
-        );
-    }
-
-    /**
-     * Returns true if no {@code _tutorial_v<currentVersion>*.md} file is
-     * present in {@code boxesDir}. First install and any version change
-     * both trigger a refresh.
-     */
-    private static boolean needsRefresh(Path boxesDir) {
-        String prefix = "_tutorial_v" + modVersion();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.md")) {
-            for (Path file : stream) {
-                if (file.getFileName().toString().startsWith(prefix)) {
-                    return false;
-                }
-            }
-        } catch (IOException e) {
-            LOGGER.warn("Failed to scan tutorials in {}: {}", boxesDir, e.getMessage());
+    /** Bundled resource name -> version-stamped on-disk file name. */
+    private static String onDiskName(String resource, String version) {
+        if (resource.equals("tutorial_zh_cn.md")) {
+            return "_tutorial_v" + version + "_zh_cn.md";
         }
-        return true;
+        return "_tutorial_v" + version + ".md";
+    }
+
+    /** Reads one bundled tutorial resource from the classpath, or null on failure. */
+    private static String readTutorialResource(String name) {
+        try (InputStream in = BoxDefaults.class.getResourceAsStream(TUTORIAL_RESOURCE_PREFIX + name)) {
+            if (in == null) {
+                return null;
+            }
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to read bundled tutorial {}: {}", name, e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * Deletes every stale versioned tutorial in {@code boxesDir}. Only
-     * files matching {@link #STALE_TUTORIAL} are removed; user files
+     * Deletes stale versioned tutorials in {@code boxesDir}, i.e. files
+     * matching {@link #STALE_TUTORIAL} whose version prefix differs from
+     * {@code currentVersion}. Current-version files and user files
      * (e.g. {@code notes.md}) are never touched. Per-file failures are
-     * logged but do not abort the loop.
+     * logged but do not abort the loop. Callers must only invoke this after
+     * the current version's tutorials are guaranteed present.
      */
-    private static void deleteStaleTutorials(Path boxesDir) {
+    static void deleteStaleTutorials(Path boxesDir, String currentVersion) {
+        String currentPrefix = "_tutorial_v" + currentVersion;
         List<Path> deleted = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(boxesDir, "*.md")) {
             for (Path file : stream) {
-                if (!STALE_TUTORIAL.matcher(file.getFileName().toString()).matches()) {
+                String name = file.getFileName().toString();
+                if (!STALE_TUTORIAL.matcher(name).matches()) {
+                    continue;
+                }
+                if (name.startsWith(currentPrefix)) {
                     continue;
                 }
                 try {
@@ -256,7 +335,8 @@ public final class BoxDefaults {
         }
 
         if (!deleted.isEmpty()) {
-            LOGGER.info("Deleted {} stale tutorial(s): {}", deleted.size(), deleted);
+            LOGGER.info("Deleted {} stale tutorial(s) (current mod {}): {}",
+                    deleted.size(), currentVersion, deleted);
         }
     }
 }

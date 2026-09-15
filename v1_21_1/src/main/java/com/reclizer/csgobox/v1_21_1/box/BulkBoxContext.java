@@ -17,7 +17,7 @@ public record BulkBoxContext(
     public BulkBoxContext {
         weights = weights == null ? new int[0] : weights.clone();
         if (gradeMap == null) {
-            gradeMap = new GradeMap<>(null, stack -> !stack.isEmpty(), ItemStack::copy);
+            gradeMap = GradeMap.empty(stack -> !stack.isEmpty(), ItemStack::copy);
         }
     }
 }

@@ -7,8 +7,9 @@ import net.minecraft.world.item.ItemStack;
  * Server-sampled data for one terminal negotiation round: the script offer
  * (skin/style/serial/pattern) plus the ACTUAL item granted if the player
  * buys, its box grade and its terminal purchase price in Armory Points.
- * {@code price} comes from the item's JSON {@code price} field, or -1 to
- * use the default grade-level price ({@code NegotiationModel.GRADE_PRICE}).
+ * {@code price} is the already-sampled table price (a table range is drawn
+ * once in {@link TerminalSession}); unpriced items are never offered (id
+ * entries must be priced or the box refuses to load).
  */
 public record TerminalRoundData(
         int round,

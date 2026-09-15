@@ -37,7 +37,7 @@ CS2-Box/
 │       ├── java/com/reclizer/csgobox/
 │       │   ├── box/                  # BoxDefaults / BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验
 │       │   ├── logic/                # GradeMap / OddsCalculator / OpenBlockGuard
-│       │   ├── config/               # CsboxConfigDefaults(四平台配置默认值唯一来源)
+│       │   ├── config/               # CsboxConfigDefaults(六平台配置默认值唯一来源)
 │       │   ├── terminal/             # NegotiationModel / TerminalAnims / WearBands / WearPenalty(平台无关)
 │       │   └── utils/                # ColorTools / OverlayColor / GuiRegion / EntityChineseMap / Easing 等
 │       └── resources/                # 共享资源(纹理、音效、配方、advancement)
@@ -91,7 +91,7 @@ CS2-Box/
   - 公共 API 添加 Javadoc 注释
   - 使用 `Record` 类处理不可变数据结构(参见 `BoxDefinition.java`)
   - 使用 NeoForge 的 `Codec` 和 `StreamCodec` 进行数据序列化
-  - **不使用 Cloth Config**(已移除),仅用 `ModConfigSpec`
+  - **Cloth Config 可选（仅客户端 GUI）**：存储始终是 `ModConfigSpec`/`ForgeConfigSpec` TOML；Cloth 屏只读/写同一份 `ConfigValue`（见 `docs/CONFIGURATION.md`）
 - **构建命令**:
   - `./gradlew build` — 完整构建
   - `./gradlew :v26_1_2:compileJava` — 快速编译检查

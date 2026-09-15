@@ -1,22 +1,25 @@
 package com.reclizer.csgobox.v1_21_1.packet;
 
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
+import com.reclizer.csgobox.logic.BoxConstraintTracker;
 import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.box.BulkBoxContext;
 import com.reclizer.csgobox.v1_21_1.box.BulkOpenResult;
 import com.reclizer.csgobox.box.BoxStripGenerator;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
+import com.reclizer.csgobox.v1_21_1.box.BoxItemResolver;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpeningEvent;
 import com.reclizer.csgobox.v1_21_1.event.BoxOpenedEvent;
-import com.reclizer.csgobox.logic.GradeMap;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.logic.OddsCalculator;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -98,16 +101,47 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             }
 
             // Fetch the cached grade pool; the costly per-item deep-copy build
-            // (ItemCsgoBox.getItemGroup) only runs on a cache miss, not on every
-            // bulk request.
+            // (ItemCsgoBox.buildGradeMap) only runs on a cache miss, not on every
+            // bulk request. v2.1.0: pool carries per-item weights.
             var gradeMap = GradeMapCache.get(boxId.toString(),
-                    () -> GradeMap.build(ItemCsgoBox.getItemGroup(templateBox), stack -> !stack.isEmpty(), ItemStack::copy));
+                    () -> ItemCsgoBox.buildGradeMap(templateBox));
             if (gradeMap.isEmpty()) {
                 return;
             }
             int[] weights = ItemCsgoBox.getRandom(templateBox);
-            if (weights.length == 0) {
+            if (weights.length == 0 || !BoxOdds.hasOpenableWeights(weights)) {
                 return;
+            }
+
+            // v2.1.0 constraints (batch-level): per-player cap / cooldown /
+            // permission are checked once for the whole batch.
+            BoxDefinition constraintDef = BoxRegistry.get(boxId);
+            if (constraintDef != null) {
+                if (!BoxConstraintTracker.underPerPlayerCap(
+                        player.getStringUUID(), boxId.toString(), constraintDef.maxPerPlayer())) {
+                    if (player instanceof ServerPlayer sp) {
+                        sp.sendSystemMessage(Component.translatable(
+                                "commands.csgobox.constraint.capped", constraintDef.name(), constraintDef.maxPerPlayer()));
+                        PacketCsgoProgress.sendRejected(sp, message.requestId());
+                    }
+                    return;
+                }
+                if (!BoxConstraintTracker.cooldownElapsed(player.getStringUUID(), boxId.toString(),
+                        constraintDef.cooldownSeconds(), player.level().getGameTime())) {
+                    if (player instanceof ServerPlayer sp) {
+                        sp.sendSystemMessage(Component.translatable(
+                                "commands.csgobox.constraint.cooldown", constraintDef.name()));
+                        PacketCsgoProgress.sendRejected(sp, message.requestId());
+                    }
+                    return;
+                }
+                if (!constraintDef.permission().isBlank() && player instanceof ServerPlayer sp
+                        && !CsgoBox.PERMISSION_GATE.test(sp, constraintDef.permission())) {
+                    sp.sendSystemMessage(Component.translatable(
+                            "commands.csgobox.constraint.permission", constraintDef.name()));
+                    PacketCsgoProgress.sendRejected(sp, message.requestId());
+                    return;
+                }
             }
 
             Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getKey(templateBox));
@@ -251,7 +285,11 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     s = ItemStack.EMPTY;
                 }
                 float wear = rng.nextFloat();
-                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), 0L, -1, List.of(), List.of(), wear, fallback));
+                // v2.1.0-fix: every follow-up result needs its OWN seed — a
+                // constant 0L made the spec resolve (count-range / enchant /
+                // loot-table) in finalizeBulkOpen deterministic and identical
+                // for every non-first item across players and batches.
+                out.add(new BulkOpenResult(s, Mth.clamp(g, 1, 5), ThreadLocalRandom.current().nextLong(), -1, List.of(), List.of(), wear, fallback));
             }
         }
         return out;
@@ -328,6 +366,25 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             }
         }
 
+        // v2.1.0: resolve count-range / random-enchant / loot-table specs on
+        // every result, on the main thread (the resolver needs a ServerLevel).
+        for (int i = 0; i < truncated.size(); i++) {
+            BulkOpenResult r = truncated.get(i);
+            if (r.resultItem().isEmpty()) {
+                continue;
+            }
+            ItemStack resolved = BoxItemResolver.resolve(
+                    r.resultItem(), sp.serverLevel(), new Random(r.serverSeed() ^ 0x5DEECE66DL));
+            if (!resolved.isEmpty()) {
+                BulkOpenResult fixed = new BulkOpenResult(resolved, r.resultGrade(), r.serverSeed(),
+                        r.winningIndex(), r.animationItems(), r.animationGrades(), r.wear(), r.fallback());
+                truncated.set(i, fixed);
+                if (i == 0 && fixed.winningIndex() >= 0 && fixed.winningIndex() < fixed.animationItems().size()) {
+                    fixed.animationItems().set(fixed.winningIndex(), resolved.copy());
+                }
+            }
+        }
+
         // Wear-based durability damage, applied on the main thread. The first
         // box's animation strip shares the winner stack, so damage it too for a
         // consistent reveal.
@@ -396,10 +453,21 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 continue;
             }
             ItemStack toGive = r.resultItem().copy();
+            toGive.set(ItemCsgoBox.GRADE.get(), r.resultGrade());
             if (!sp.getInventory().add(toGive) && !toGive.isEmpty()) {
                 sp.drop(toGive, false);
             }
             NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, snapshot.boxId(), r.resultItem().copy(), r.resultGrade(), true));
+        }
+
+        // v2.1.0: record successful opens for max_per_player / cooldown
+        // (one entry per granted item).
+        long nowTicks = sp.level().getGameTime();
+        for (BulkOpenResult r : truncated) {
+            if (r.resultItem().isEmpty()) {
+                continue;
+            }
+            BoxConstraintTracker.recordOpen(sp.getStringUUID(), snapshot.boxId().toString(), nowTicks);
         }
 
         sp.awardStat(CsgoBox.OPENED_BOXES_STAT, actualK);

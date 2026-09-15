@@ -84,8 +84,6 @@ MANUAL_ADAPTATION_FILES = {
     "box/BulkBoxContext.java",
     "box/BulkOpenResult.java",
     "box/LoadError.java",
-    "box/TutorialFetcher.java",
-    "box/TutorialSources.java",
     "box/BoxItemCodec.java",
     "advancement/OpenedBoxTrigger.java",
     "advancement/ModLoadedTrigger.java",
