@@ -109,7 +109,40 @@ try {
   check('color picker writes #RRGGBB prefix',
     /^#00aa66\s/.test(nameAfterPick), nameAfterPick.slice(0, 24));
 
-  // entity id dropdown with every vanilla mob
+  // top-bar "Advanced" toggle gates the custom-icon (icon) field
+  const advToggle = page.locator('#advanced-toggle');
+  check('top bar has Advanced toggle', (await advToggle.count()) === 1);
+  await advToggle.uncheck(); // deterministic start
+  check('icon field hidden by default (Advanced off)',
+    (await page.locator('#card-meta [data-f="meta.icon"]').count()) === 0);
+  await advToggle.check();
+  check('icon field appears with Advanced on',
+    (await page.locator('#card-meta [data-f="meta.icon"]').count()) === 1);
+  const presetCount = await page.locator('#icon-preset option').count();
+  check('icon preset dropdown offers presets', presetCount >= 10, 'options=' + presetCount);
+  await page.selectOption('#icon-preset', 'minecraft:ender_chest');
+  const iconVal = await page.locator('#card-meta [data-f="meta.icon"]').inputValue();
+  check('preset pick fills the icon input', iconVal === 'minecraft:ender_chest', iconVal);
+  await page.waitForTimeout(250); // preview rebuild is debounced (~90 ms)
+  const previewHasIcon = (await page.locator('#json-preview').innerText())
+    .includes('"icon": "minecraft:ender_chest"');
+  check('preview JSON includes the picked icon', previewHasIcon);
+  await advToggle.uncheck();
+  check('icon field hidden again after Advanced off',
+    (await page.locator('#card-meta [data-f="meta.icon"]').count()) === 0);
+  check('configured icon still prompts a hint in basic mode',
+    (await page.locator('#card-meta .icon-hidden-hint').count()) === 1);
+
+  // TACZ card and per-item enchant fields are gated behind Advanced too
+  check('TACZ card hidden in basic mode', (await page.locator('#card-tacz').count()) === 0);
+  check('enchant selector hidden in basic mode',
+    (await page.locator('#grade-items-1 [data-f$=".enchantMode"]').count()) === 0);
+  await advToggle.check();
+  check('TACZ card appears with Advanced on', (await page.locator('#card-tacz').count()) === 1);
+  check('enchant selector appears with Advanced on',
+    (await page.locator('#grade-items-1 [data-f$=".enchantMode"]').count()) >= 1);
+
+  // entity id dropdown with every vanilla mob (independent of Advanced)
   const entityListAttr = await page.locator('[data-f="meta.entity.0.id"]').getAttribute('list');
   const entityOptionCount = await page.locator('#csbox-entity-list option').count();
   check('entity input offers vanilla mob dropdown',
@@ -231,6 +264,25 @@ try {
   check('grade action button does not collapse card',
     !(await gradesSec.evaluate((el) => el.classList.contains('collapsed'))));
 
+  // advanced-fields badge in basic mode: set an enchant while Advanced is on,
+  // then turn Advanced off and expect a ⚙ badge; clicking it re-enables.
+  await advToggle.check();
+  await page.waitForTimeout(150);
+  const encFirst = page.locator('#grade-items-0 [data-f$=".enchantMode"]').first();
+  await encFirst.selectOption('any');
+  await page.waitForTimeout(250);
+  await advToggle.uncheck();
+  await page.waitForTimeout(150);
+  const badgeCount = await page.locator('#grade-items-0 .hidden-adv-badge').count();
+  check('basic mode shows advanced-fields badge', badgeCount >= 1, 'count=' + badgeCount);
+  await page.click('#grade-items-0 .hidden-adv-badge');
+  check('badge click re-enables Advanced', await page.locator('#advanced-toggle').isChecked());
+  // cleanup: reset enchant to none and turn Advanced back off before continuing
+  const encReset = page.locator('#grade-items-0 [data-f$=".enchantMode"]').first();
+  if (await encReset.count()) { await encReset.selectOption('none'); }
+  await advToggle.uncheck();
+  await page.waitForTimeout(300);
+
   const fn = page.locator('[data-f="meta.fileName"]');
   await fn.fill('');
   await page.waitForTimeout(550);
@@ -243,6 +295,102 @@ try {
   } else {
     check('issue click highlights field', false, 'no issue row found');
   }
+
+  /* ================= probability table view ================= */
+  await page.click('#view-prob');
+  await page.waitForTimeout(250);
+  const probPanelVisible = await page.locator('#prob-panel').isVisible();
+  const jsonHidden = await page.locator('#json-preview').isHidden();
+  const probRows = await page.locator('#prob-panel tr.prob-grade').count();
+  const probItems = await page.locator('#prob-panel tr.prob-item').count();
+  check('probability view shows the table and hides JSON preview',
+    probPanelVisible && jsonHidden, 'panel=' + probPanelVisible + ' jsonHidden=' + jsonHidden);
+  check('probability table lists grade rows', probRows === 5, 'grades=' + probRows);
+  check('probability table lists pool items',
+    probItems >= 1 && ((await page.locator('#prob-panel').textContent()) || '').includes('%'),
+    'items=' + probItems);
+  await page.click('#view-json');
+  await page.waitForTimeout(200);
+  check('switching back to JSON preview restores it',
+    await page.locator('#json-preview').isVisible() &&
+    !(await page.locator('#prob-panel').isVisible()));
+
+  /* ================= legacy import (pre-v2.0.1 box JSON) ================= */
+  // No file-name field: "Choose file" carries the name, so a legacy
+  // terminal.json (no `type`, leftover key, inline prices) is recognized as a
+  // terminal, its key is dropped, prices migrate, and the export uses the new
+  // format. Pasting without a file name keeps it a crate (no name to infer).
+  await page.click('#btn-import-legacy');
+  check('legacy import button opens its own dialog',
+    await page.locator('#legacy-dialog').evaluate((el) => el.open));
+  check('legacy dialog asks for no file name',
+    (await page.locator('#legacy-filename').count()) === 0);
+  check('legacy dialog explains migration',
+    /price/i.test((await page.locator('#legacy-hint').textContent()) || ''));
+
+  await page.setInputFiles('#legacy-file-input', {
+    name: 'terminal.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      name: '#FF5555 旧终端机',
+      key: 'minecraft:air',
+      drop: 0.05,
+      random: [10, 20, 40, 80, 160],
+      grade5: [{ id: 'minecraft:netherite_sword', price: 4000 }],
+      grade4: [{ id: 'minecraft:diamond_sword', price: 1500 }],
+    }, null, 2)),
+  });
+  await page.waitForTimeout(250);
+  check('picked legacy file fills the textarea',
+    ((await page.locator('#legacy-textarea').inputValue()) || '').includes('netherite_sword'));
+  await page.click('#legacy-do');
+  await page.waitForTimeout(400);
+  const legacyType = await page.locator('[data-f="meta.type"]').inputValue();
+  const legacyPreview = (await page.locator('#json-preview').textContent()) || '';
+  const legacyToast = (await page.locator('#toast').textContent()) || '';
+  check('legacy terminal.json is inferred as terminal',
+    legacyType === 'terminal', 'type=' + legacyType);
+  check('legacy terminal export drops key and price',
+    /"type": "terminal"/.test(legacyPreview) &&
+    !/"key"/.test(legacyPreview) && !/"price"/.test(legacyPreview),
+    'preview ok=' + /"type": "terminal"/.test(legacyPreview));
+  check('legacy import migrates inline prices',
+    /迁移|Migrated/.test(legacyToast) && /2|two/i.test(legacyToast),
+    'toast=' + (legacyToast || '').slice(0, 50));
+
+  // pasting (no file name) a legacy crate stays a crate
+  await page.click('#btn-import-legacy');
+  await page.fill('#legacy-textarea',
+    JSON.stringify({ name: '旧宝箱', grade1: [{ id: 'minecraft:diamond' }] }, null, 2));
+  await page.click('#legacy-do');
+  await page.waitForTimeout(300);
+  const crateType = await page.locator('[data-f="meta.type"]').inputValue();
+  check('pasted legacy crate without a file name stays csbox', crateType === 'csbox', 'type=' + crateType);
+
+  // ChloePrime-style reversed grade weights are auto-reversed on import
+  await page.click('#btn-import-legacy');
+  await page.setInputFiles('#legacy-file-input', {
+    name: 'old_weights.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      name: '旧反序权重箱',
+      random: [2, 5, 25, 125, 625],
+      grade1: [{ id: 'minecraft:wooden_sword' }],
+      grade5: [{ id: 'minecraft:netherite_sword' }],
+    }, null, 2)),
+  });
+  await page.waitForTimeout(250);
+  await page.click('#legacy-do');
+  await page.waitForTimeout(400);
+  const revPreview = (await page.locator('#json-preview').textContent()) || '';
+  const revToast = (await page.locator('#toast').textContent()) || '';
+  const revRandom = /"random":\s*\[\s*625,\s*125,\s*25,\s*5,\s*2\s*\]/.test(revPreview);
+  check('legacy import auto-reverses ChloePrime ascending weights',
+    revRandom, 'preview random reversed=' + revRandom);
+  check('toast announces the auto-reversal', /反转|reversed/i.test(revToast),
+    'toast=' + (revToast || '').slice(0, 60));
+  await page.click('[data-action="undo"]');
+  await page.waitForTimeout(250);
 
   /* ================= price table page (prices.html) ================= */
   await page.goto(BASE + 'prices.html', { waitUntil: 'load' });

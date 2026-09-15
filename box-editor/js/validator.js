@@ -55,8 +55,13 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (!numOk(meta.drop, 0, 1)) add(issues, 'error', 'meta.drop', 'v.badDrop');
 
     const icon = String(meta.icon || '').trim();
-    if (icon !== '' && /^-?\d+$/.test(icon) && Number(icon) < 0) {
+    if (icon !== '' && /^-?\d+$/.test(icon) && (Number(icon) < 0 || Number(icon) > MAX_INT)) {
+      // CustomModelData is a Java int — anything above MAX_INT overflows.
       add(issues, 'error', 'meta.icon', 'v.badIcon');
+    } else if (icon !== '' && !/^-?\d+$/.test(icon) && !version.itemModel) {
+      // ns:path model-id icons only render on 26.x (minecraft:item_model);
+      // on 1.21.1 / 1.20.1 the runtime logs a warning and ignores them.
+      add(issues, 'warn', 'meta.icon', 'v.iconModelUnsupported');
     }
 
     if (!numOk(meta.discount, 0, 1)) add(issues, 'error', 'meta.discount', 'v.badDiscount');
@@ -65,13 +70,19 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (!intOk(meta.maxPerPlayer, -1)) add(issues, 'error', 'meta.maxPerPlayer', 'v.badMaxPer');
     if (!intOk(meta.cooldownSeconds, 0)) add(issues, 'error', 'meta.cooldownSeconds', 'v.badCooldown');
 
-    /* ------- pity (v2.1.1) ------- */
+    /* ------- pity (v2.0.1) ------- */
     const pityGrade = (meta.pityGrade || '').trim();
     const pityEveryStr = String(meta.pityEvery ?? '').trim();
     if (pityGrade || pityEveryStr !== '') {
       const PITY_GRADES = ['consumer', 'industrial', 'mil_spec', 'restricted', 'classified'];
-      if (!PITY_GRADES.includes(pityGrade)) add(issues, 'error', 'meta.pityGrade', 'v.badPityGrade');
+      const gradeOk = PITY_GRADES.includes(pityGrade);
+      if (!gradeOk) add(issues, 'error', 'meta.pityGrade', 'v.badPityGrade');
       if (!intOk(meta.pityEvery, 2)) add(issues, 'error', 'meta.pityEvery', 'v.badPityEvery');
+      // A half-filled pity is DROPPED silently by buildBox (both fields are
+      // required for export) — warn so the author does not lose the config.
+      if ((pityGrade && !pityEveryStr) || (!pityGrade && pityEveryStr)) {
+        add(issues, 'warn', 'meta.pity', 'v.pityHalfFilled');
+      }
     }
 
     /* ------- random ------- */
@@ -97,7 +108,12 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     /* ------- entity ------- */
     const entityRows = meta.entity || [];
     for (const r of entityRows) {
+      const eid = (r.id || '').trim();
       const ra = (r.rate || '').trim();
+      if (eid && !ID_RE.test(eid)) {
+        add(issues, 'warn', 'meta.entity', 'v.badEntityId');
+        break;
+      }
       if (ra !== '' && !numOk(ra, 0, 1)) {
         add(issues, 'error', 'meta.entity', 'v.badEntity');
         break;
@@ -117,10 +133,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     for (let gi = 0; gi < 5; gi++) {
       const items = state.grades[gi] || [];
       const gradeKey = 'grade' + (gi + 1);
-      const gradeLabel = (DATA.gradeNames[gi] || {}).zh || gradeKey;
       const hasContent = items.some((it) => (it.value || '').trim());
       if (!hasContent) {
-        add(issues, 'info', gradeKey, 'v.gradeEmpty', { grade: gradeLabel });
+        add(issues, 'info', gradeKey, 'v.gradeEmpty', { grade: gradeKey });
         continue;
       }
       gradeFilledCount++;

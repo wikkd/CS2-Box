@@ -27,6 +27,7 @@ VERSIONS = [
         "short": {"en": "1.21.1", "zh": "1.21.1"},
         "taczVariants": True,
         "components": True,
+        "itemModel": False,  # MC 1.21.1 has no minecraft:item_model component
         "note": {
             "en": "Data Components; TACZ GunId/AmmoId variants supported.",
             "zh": "Data Components；支持 TACZ GunId/AmmoId 变体键。",
@@ -38,6 +39,7 @@ VERSIONS = [
         "short": {"en": "26.1.2", "zh": "26.1.2"},
         "taczVariants": False,
         "components": True,
+        "itemModel": True,
         "note": {
             "en": "Data Components; no id#variant price keys.",
             "zh": "Data Components；价格表不使用 id#变体 子键。",
@@ -49,6 +51,7 @@ VERSIONS = [
         "short": {"en": "26.2", "zh": "26.2"},
         "taczVariants": False,
         "components": True,
+        "itemModel": True,
         "note": {
             "en": "Data Components; no id#variant price keys.",
             "zh": "Data Components；价格表不使用 id#变体 子键。",
@@ -60,6 +63,7 @@ VERSIONS = [
         "short": {"en": "Forge 26.1.2", "zh": "Forge 26.1.2"},
         "taczVariants": False,
         "components": True,
+        "itemModel": True,
         "note": {
             "en": "Data Components; no id#variant price keys.",
             "zh": "Data Components；价格表不使用 id#变体 子键。",
@@ -71,6 +75,7 @@ VERSIONS = [
         "short": {"en": "Forge 26.2", "zh": "Forge 26.2"},
         "taczVariants": False,
         "components": True,
+        "itemModel": True,
         "note": {
             "en": "Data Components; no id#variant price keys.",
             "zh": "Data Components；价格表不使用 id#变体 子键。",
@@ -82,6 +87,7 @@ VERSIONS = [
         "short": {"en": "Forge 1.20.1", "zh": "Forge 1.20.1"},
         "taczVariants": True,
         "components": False,
+        "itemModel": False,
         "note": {
             "en": "Legacy NBT tag (no Data Components); TACZ variants supported.",
             "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键。",

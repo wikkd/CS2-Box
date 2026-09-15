@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="CS2-Box 宝箱配置编辑器：可视化创建 config/csbox 下的宝箱 / 终端机与统一价格表（纯前端、可离线、GitHub Pages 在线可用）">
+<meta property="og:title" content="CS2-Box 宝箱配置编辑器">
+<meta property="og:description" content="可视化创建 CS2-Box 宝箱 / 终端机配置与统一价格表">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wikkd.github.io/CS2-Box/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90' fill='%23b5732f'%3E%E2%96%A3%3C/text%3E%3C/svg%3E">
 <title>CS2-Box Box Config Editor</title>
 <link rel="stylesheet" href="css/style.css?v=__VER__">
 </head>
@@ -30,8 +36,10 @@
     <button id="btn-redo" class="btn small" data-action="redo">Redo</button>
     <button id="btn-new" class="btn">New</button>
     <button id="btn-import" class="btn">Import</button>
+    <button id="btn-import-legacy" class="btn">Legacy Import</button>
     <button id="btn-example" class="btn accent">Examples</button>
     <button id="btn-share" class="btn small" data-action="share">Share</button>
+    <label class="chk advanced-toggle" title=""><input type="checkbox" id="advanced-toggle"><span id="advanced-label"></span></label>
   </div>
 </header>
 
@@ -52,7 +60,12 @@
       </div>
     </div>
     <div class="path-hint" id="path-hint"></div>
+    <div class="tab-row view-switch" role="tablist" aria-label="preview view">
+      <button id="view-json" class="tab active" role="tab" aria-selected="true">JSON</button>
+      <button id="view-prob" class="tab" role="tab" aria-selected="false">Probabilities</button>
+    </div>
     <pre class="json-preview" id="json-preview"></pre>
+    <section id="prob-panel" class="prob-panel" hidden></section>
     <section class="issues" id="issues-root"></section>
   </aside>
 </main>
@@ -69,6 +82,19 @@
     <button class="btn accent" id="import-do">Import</button>
   </div>
 </dialog>
+
+<dialog id="legacy-dialog" class="dlg">
+  <h2 id="legacy-title">Legacy Import</h2>
+  <p class="help" id="legacy-hint"></p>
+  <textarea id="legacy-textarea" rows="10" class="grow"></textarea>
+  <div class="dlg-actions">
+    <button class="btn" id="legacy-file-btn">Choose file</button>
+    <button class="btn" id="legacy-cancel">Cancel</button>
+    <button class="btn accent" id="legacy-do">Legacy Import</button>
+  </div>
+</dialog>
+
+<input type="file" id="legacy-file-input" accept=".json,application/json" hidden>
 
 <dialog id="example-dialog" class="dlg">
   <h2 id="example-title">Examples</h2>

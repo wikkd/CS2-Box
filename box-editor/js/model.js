@@ -69,8 +69,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       maxPerPlayer: '',
       cooldownSeconds: '',
       permission: '',
-      pityGrade: '', // v2.1.1 pity (保底) target grade id
-      pityEvery: '', // v2.1.1 pity (保底) force threshold
+      pityGrade: '', // v2.0.1 pity (保底) target grade id
+      pityEvery: '', // v2.0.1 pity (保底) force threshold
     };
   }
 
@@ -168,7 +168,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
 
   /* ------------------------------ building ------------------------------ */
 
-  function buildItem(it) {
+  /** Build one item object. `verbose` = emit explicit defaults (count 1,
+   *  weight 1) instead of omitting them (the "精简输出" toggle). */
+  function buildItem(it, verbose) {
     const value = (it.value || '').trim();
     if (!value) return null;
     const o = {};
@@ -182,14 +184,16 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       if (a === '') a = 1;
       if (b === '') b = 1;
       if (b < a) b = a;
-      if (!(a === 1 && b === 1)) o.count = [a, b];
+      if (!(a === 1 && b === 1) || verbose) o.count = [a, b];
     } else if (it.countMode === 'fixed') {
       const c = intOrEmpty(it.count);
-      if (c !== '' && c !== 1) o.count = c;
+      if (c !== '' && (c !== 1 || verbose)) o.count = c;
+    } else if (verbose) {
+      o.count = 1; // single = explicit 1
     }
 
     const w = intOrEmpty(it.weight);
-    if (w !== '' && w !== 1) o.weight = w;
+    if (w !== '' && (w !== 1 || verbose)) o.weight = w;
 
     if (it.enchantMode === 'any') {
       o.enchant = true;
@@ -229,8 +233,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return o;
   }
 
-  /** Serializes the editor state into a box JSON object. */
-  function buildBox(state) {
+  /** Serializes the editor state into a box JSON object. `verbose` emits
+   *  explicit defaults (type/enabled/count/weight) — the "精简输出" off state. */
+  function buildBox(state, verbose) {
     const obj = {};
     const meta = state.meta;
 
@@ -241,7 +246,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (name) obj.name = name;
 
     const type = meta.type === 'terminal' ? 'terminal' : 'csbox';
-    if (type === 'terminal') obj.type = 'terminal';
+    if (type === 'terminal') obj.type = type;
+    else if (verbose) obj.type = type; // csbox is the schema default; explicit only in verbose
 
     const key = (meta.key || '').trim();
     if (type !== 'terminal' && key) obj.key = key;
@@ -268,7 +274,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     }
     if (entity.length) obj.entity = entity;
 
-    if (meta.enabled === false) obj.enabled = false; // true is the default → omit
+    if (meta.enabled === false || verbose) obj.enabled = meta.enabled !== false; // true is the default → omitted unless verbose
 
     const reqs = (meta.requiresText || '').split(',').map((s) => s.trim()).filter(Boolean);
     if (reqs.length) obj.requires = reqs;
@@ -290,7 +296,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const perm = (meta.permission || '').trim();
     if (perm) obj.permission = perm;
 
-    // v2.1.1 pity: only emitted when BOTH fields are valid (grade in the
+    // v2.0.1 pity: only emitted when BOTH fields are valid (grade in the
     // five-tier ids, every >= 2); a half-filled pity config is dropped.
     const pityGrade = (meta.pityGrade || '').trim();
     const pityEveryStr = String(meta.pityEvery ?? '').trim();
@@ -302,7 +308,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     for (let gi = 1; gi <= 5; gi++) {
       const items = [];
       for (const it of state.grades[gi - 1]) {
-        const o = buildItem(it);
+        const o = buildItem(it, verbose);
         if (o) items.push(o);
       }
       if (items.length) obj['grade' + gi] = items;
@@ -413,14 +419,49 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return it;
   }
 
-  /** Box JSON → editor state (migrations collects legacy price entries). */
-  function boxToState(obj, fileName) {
+  /** Basename (no path, no .json) of a box file name — used to detect the
+   *  legacy `terminal.json` terminal before `type` existed (v2.0.0). */
+  function legacyBaseName(fileName) {
+    if (!fileName) return '';
+    const name = String(fileName).replace(/\\/g, '/').split('/').pop();
+    return name.replace(/\.json$/i, '');
+  }
+
+  /** Heuristic for the ChloePrime / pre-2.0.1 weight-order bug: those versions
+   *  stored the five grade weights REVERSED (random[0] was grade5's weight).
+   *  A strictly ascending 5-element array looks like such a reversed file;
+   *  strictly descending or non-monotonic arrays are left alone (custom
+   *  weights, already-correct files). Exported for the unit tests. */
+  function weightOrderIsReversed(randomArr) {
+    if (!Array.isArray(randomArr) || randomArr.length !== 5) return false;
+    const nums = randomArr.map(Number);
+    if (nums.some((n) => !Number.isFinite(n))) return false;
+    let asc = true;
+    for (let i = 1; i < 5; i++) {
+      if (nums[i] <= nums[i - 1]) { asc = false; break; }
+    }
+    return asc;
+  }
+
+  /** Box JSON → editor state (migrations collects legacy price entries).
+   *  `opts.legacy` enables pre-v2.0.1 migration semantics on top of the
+   *  always-on inline-`price` handling:
+   *    - a box with no `type` field whose file is named `terminal.json` was a
+   *      terminal before v2.0.0 (the game auto-migrates it); without this it
+   *      silently downgrades to a plain crate on export.
+   *    - an inferred terminal must not keep a `key` (v2.0.0 rule). */
+  function boxToState(obj, fileName, opts) {
     const st = emptyState();
     st.fileName = (fileName || 'my_box');
     const m = st.meta;
+    const legacy = !!(opts && opts.legacy);
     m.name = typeof obj.name === 'string' ? obj.name : '';
     m.type = obj.type === 'terminal' ? 'terminal' : (obj.type === 'csbox' ? 'csbox' : (typeof obj.type === 'string' ? obj.type : 'csbox'));
+    if (legacy && typeof obj.type !== 'string' && legacyBaseName(fileName) === 'terminal') {
+      m.type = 'terminal'; // pre-v2.0.0 terminal.json had no `type`
+    }
     m.key = typeof obj.key === 'string' ? obj.key : '';
+    if (legacy && m.type === 'terminal') m.key = ''; // terminals must not hold a key
     m.drop = numOrEmpty(obj.drop);
     m.icon = obj.icon === undefined ? '' : String(obj.icon);
     m.enabled = obj.enabled !== false;
@@ -510,12 +551,68 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return n;
   }
 
+  /* ------------------------------ probabilities ------------------------------ */
+
+  /** Compute the drop probability table for the current pool: per-grade
+   *  chance from the `random` weights and per-item in-grade share from each
+   *  item's `weight` (absent/empty = 1, `<= 0` = disabled entry with 0%).
+   *  Pure function — the UI renders it. An empty grade has no items and is
+   *  flagged for the UI to show the in-game fallback note. */
+  function computeProbabilities(state) {
+    const meta = state.meta || {};
+    const raw = Array.isArray(meta.random) ? meta.random : [];
+    const eff = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+    const weights = [0, 1, 2, 3, 4].map((i) => eff(raw[i]));
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+    const grades = [];
+    for (let gi = 0; gi < 5; gi++) {
+      const gw = weights[gi];
+      const itemsRaw = state.grades && state.grades[gi] ? state.grades[gi] : [];
+      const items = [];
+      let sumW = 0;
+      for (const it of itemsRaw) {
+        const value = (it.value || '').trim();
+        if (!value) continue;
+        // weight: empty/missing = 1 (game fills uniform defaults); <= 0 = disabled
+        const w = it.weight === '' || it.weight === null || it.weight === undefined
+          ? 1 : Number(it.weight);
+        const active = Number.isFinite(w) && w > 0;
+        items.push({
+          value,
+          disabled: !active,
+          weight: Number.isFinite(w) ? w : 0,
+          itemProb: 0,
+        });
+        if (active) sumW += w;
+      }
+      if (sumW > 0) {
+        for (const it of items) {
+          if (!it.disabled) it.itemProb = it.weight / sumW;
+        }
+      }
+      grades.push({
+        gi,
+        weight: gw,
+        gradeProb: totalWeight > 0 ? gw / totalWeight : 0,
+        items,
+        empty: items.length === 0,
+      });
+    }
+    return { totalWeight, openable: totalWeight > 0, grades };
+  }
+
   NS.emptyMeta = emptyMeta;
   NS.emptyItem = emptyItem;
   NS.emptyState = emptyState;
   NS.priceKeyOf = priceKeyOf;
   NS.parsePriceInput = parsePriceInput;
   NS.extractVariant = extractVariant;
+  NS.legacyBaseName = legacyBaseName;
+  NS.weightOrderIsReversed = weightOrderIsReversed;
   NS.collectPriceRows = collectPriceRows;
   NS.looksLikeId = looksLikeId;
   NS.buildItem = buildItem;
@@ -525,4 +622,5 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.boxToState = boxToState;
   NS.mergeMigrations = mergeMigrations;
   NS.mergePrices = mergePrices;
+  NS.computeProbabilities = computeProbabilities;
 })(window.CSBoxEdit);

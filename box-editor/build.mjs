@@ -69,17 +69,28 @@ async function main() {
   // sanity: the committed schema copy must match the authoritative docs copy —
   // a stale copy (e.g. missing a newly added top-level property like pity)
   // would make the editor reject valid configs (P0-3 regression gate).
+  // Full structural comparison (key-order insensitive): catches enum changes,
+  // nested property additions/removals, defaults drift, etc.
   try {
+    const canonical = (txt) => {
+      const norm = (v) => {
+        if (Array.isArray(v)) return v.map(norm);
+        if (v && typeof v === 'object') {
+          const out = {};
+          for (const k of Object.keys(v).sort()) out[k] = norm(v[k]);
+          return out;
+        }
+        return v;
+      };
+      return JSON.stringify(norm(JSON.parse(txt)));
+    };
     const [docs, shared] = await Promise.all([
       fs.readFile(join(here, '..', 'docs', 'box-schema', 'box.schema.json'), 'utf8'),
       fs.readFile(join(OUT, 'data/schemas/shared/box.schema.json'), 'utf8'),
     ]);
-    const props = (txt) => Object.keys(JSON.parse(txt).properties || {}).sort().join(',');
-    if (props(docs) !== props(shared)) {
+    if (canonical(docs) !== canonical(shared)) {
       console.error(
-        '[build] box-editor schema copy is out of sync with docs/box-schema — run `npm run sync` first.\n' +
-        `          docs:    ${props(docs)}\n` +
-        `          shared:  ${props(shared)}`);
+        '[build] box-editor schema copy is out of sync with docs/box-schema — run `npm run sync` first.');
       process.exitCode = 1;
     }
   } catch (e) {

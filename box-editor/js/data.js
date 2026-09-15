@@ -62,14 +62,14 @@ window.CSBDATA = {
         "enabled": {
           "type": "boolean",
           "default": true,
-          "description": "v2.1.0: false skips this box entirely (no error)."
+          "description": "v2.0.1: false skips this box entirely (no error)."
         },
         "requires": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "v2.1.0: list of mod ids that must be loaded; the box is skipped with an error when any is missing."
+          "description": "v2.0.1: list of mod ids that must be loaded; the box is skipped with an error when any is missing."
         },
         "icon": {
           "oneOf": [
@@ -83,42 +83,42 @@ window.CSBDATA = {
               "description": "CustomModelData value (pair with a resource pack)"
             }
           ],
-          "description": "v2.1.0: per-box icon override."
+          "description": "v2.0.1: per-box icon override."
         },
         "discount": {
           "type": "number",
           "minimum": 0.0,
           "maximum": 1.0,
           "default": 0.0,
-          "description": "v2.1.0: terminal price discount (0..1 off), e.g. 0.2 = 20% off."
+          "description": "v2.0.1: terminal price discount (0..1 off), e.g. 0.2 = 20% off."
         },
         "stock": {
           "type": "integer",
           "minimum": -1,
           "default": -1,
-          "description": "v2.1.0: terminal stock limit; -1 = unlimited."
+          "description": "v2.0.1: terminal stock limit; -1 = unlimited."
         },
         "restock_minutes": {
           "type": "integer",
           "minimum": 0,
           "default": 0,
-          "description": "v2.1.0: minutes between stock refills; 0 = never auto-restock."
+          "description": "v2.0.1: minutes between stock refills; 0 = never auto-restock."
         },
         "max_per_player": {
           "type": "integer",
           "minimum": -1,
           "default": -1,
-          "description": "v2.1.0: per-player open cap; -1 = unlimited (in-memory, resets on restart)."
+          "description": "v2.0.1: per-player open cap; -1 = unlimited (in-memory, resets on restart)."
         },
         "cooldown_seconds": {
           "type": "integer",
           "minimum": 0,
           "default": 0,
-          "description": "v2.1.0: per-box open cooldown; 0 = none."
+          "description": "v2.0.1: per-box open cooldown; 0 = none."
         },
         "permission": {
           "type": "string",
-          "description": "v2.1.0: permission node checked against the PERMISSION_GATE hook (default allow-all)."
+          "description": "v2.0.1: permission node checked against the PERMISSION_GATE hook (default allow-all)."
         },
         "pity": {
           "type": "object",
@@ -132,12 +132,12 @@ window.CSBDATA = {
                 "restricted",
                 "classified"
               ],
-              "description": "v2.1.1: the grade that must eventually drop; forces a roll at/above it."
+              "description": "v2.0.1: the grade that must eventually drop; forces a roll at/above it."
             },
             "every": {
               "type": "integer",
               "minimum": 2,
-              "description": "v2.1.1: after every-1 consecutive opens below the target grade, the next open is forced to roll the target grade or higher. In-memory per player+box, resets on restart."
+              "description": "v2.0.1: after every-1 consecutive opens below the target grade, the next open is forced to roll the target grade or higher. In-memory per player+box, resets on restart."
             }
           },
           "required": [
@@ -145,7 +145,7 @@ window.CSBDATA = {
             "every"
           ],
           "additionalProperties": false,
-          "description": "v2.1.1: pity (保底) policy. Invalid grade ids or every < 2 degrade to no pity (schema validator reports the mistake)."
+          "description": "v2.0.1: pity (保底) policy. Invalid grade ids or every < 2 degrade to no pity (schema validator reports the mistake)."
         },
         "grade1": {
           "$ref": "#/$defs/grade"
@@ -203,13 +203,13 @@ window.CSBDATA = {
                   }
                 }
               ],
-              "description": "Item count, or [min,max] rolled at open time (v2.1.0)."
+              "description": "Item count, or [min,max] rolled at open time (v2.0.1)."
             },
             "weight": {
               "type": "integer",
               "minimum": 0,
               "default": 1,
-              "description": "v2.1.0: intra-grade weight; 0 disables the entry."
+              "description": "v2.0.1: intra-grade weight; 0 disables the entry."
             },
             "enchant": {
               "oneOf": [
@@ -245,7 +245,7 @@ window.CSBDATA = {
                   "additionalProperties": false
                 }
               ],
-              "description": "v2.1.0: random-enchant shortcut (true = any enchant, or {id, level})."
+              "description": "v2.0.1: random-enchant shortcut (true = any enchant, or {id, level})."
             },
             "price": {
               "not": {},
@@ -324,6 +324,7 @@ window.CSBDATA = {
       },
       "taczVariants": true,
       "components": true,
+      "itemModel": false,
       "note": {
         "en": "Data Components; TACZ GunId/AmmoId variants supported.",
         "zh": "Data Components；支持 TACZ GunId/AmmoId 变体键。"
@@ -341,6 +342,7 @@ window.CSBDATA = {
       },
       "taczVariants": false,
       "components": true,
+      "itemModel": true,
       "note": {
         "en": "Data Components; no id#variant price keys.",
         "zh": "Data Components；价格表不使用 id#变体 子键。"
@@ -358,6 +360,7 @@ window.CSBDATA = {
       },
       "taczVariants": false,
       "components": true,
+      "itemModel": true,
       "note": {
         "en": "Data Components; no id#variant price keys.",
         "zh": "Data Components；价格表不使用 id#变体 子键。"
@@ -375,6 +378,7 @@ window.CSBDATA = {
       },
       "taczVariants": false,
       "components": true,
+      "itemModel": true,
       "note": {
         "en": "Data Components; no id#variant price keys.",
         "zh": "Data Components；价格表不使用 id#变体 子键。"
@@ -392,6 +396,7 @@ window.CSBDATA = {
       },
       "taczVariants": false,
       "components": true,
+      "itemModel": true,
       "note": {
         "en": "Data Components; no id#variant price keys.",
         "zh": "Data Components；价格表不使用 id#变体 子键。"
@@ -409,6 +414,7 @@ window.CSBDATA = {
       },
       "taczVariants": true,
       "components": false,
+      "itemModel": false,
       "note": {
         "en": "Legacy NBT tag (no Data Components); TACZ variants supported.",
         "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键。"

@@ -12,15 +12,33 @@
   const LS_VER = 'cs2box-editor-version';
   const LS_GRADE_OPEN = 'cs2box-editor-grade-open-v1';
   const LS_COLS = 'cs2box-editor-cols-v1';
+  const LS_ADV = 'cs2box-editor-advanced';
+
+  /** Common item-model icon presets for the advanced "custom icon" picker. */
+  const ICON_PRESETS = [
+    'minecraft:ender_chest',
+    'minecraft:barrel',
+    'minecraft:chest',
+    'minecraft:trapped_chest',
+    'minecraft:shulker_box',
+    'minecraft:anvil',
+    'minecraft:furnace',
+    'minecraft:crafting_table',
+    'minecraft:cauldron',
+    'minecraft:bookshelf',
+    'minecraft:spawner',
+  ];
 
   let state = NS.emptyState();
   let currentTab = 'box'; // 'box' | 'prices'
   let compact = true;
+  let advanced = false;
   let previewTimer = null;
   let saveTimer = null;
   let gradeOpen = [true, true, true, true, true];
   const history = { undo: [], redo: [] };
   let pasteContext = null; // { mode: 'items'|'prices', grade?: number }
+  let legacyFileName = null; // file name picked in the legacy dialog (drives terminal.json inference)
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -38,7 +56,7 @@
       if (/[#&]state=/.test(location.hash)) location.reload();
     });
     window.addEventListener('storage', (e) => {
-      if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG) return;
+      if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV) return;
       loadPrefs();
       if (!loadState()) renderAll();
     });
@@ -141,10 +159,18 @@
   }
 
   function undo() {
-    if (!history.undo.length) return;
-    history.redo.push(snapshotState());
-    applySnapshot(history.undo.pop());
-    schedulePreview(0);
+    // Skip snapshots identical to the current state (e.g. a debounced snapshot
+    // taken right before an undo click) so one click always visibly steps back.
+    while (history.undo.length) {
+      const snap = history.undo[history.undo.length - 1];
+      if (JSON.stringify(snap) === JSON.stringify(snapshotState())) {
+        history.undo.pop();
+        continue;
+      }
+      history.redo.push(snapshotState());
+      applySnapshot(history.undo.pop());
+      return;
+    }
   }
 
   function redo() {
@@ -235,6 +261,8 @@
     el._tm = setTimeout(() => { el.className = 'toast'; }, 3200);
   }
 
+  let storageWarned = false;
+
   function saveState() {
     try {
       const payload = {
@@ -250,7 +278,15 @@
         })),
       };
       localStorage.setItem(LS_STATE, JSON.stringify(payload));
-    } catch (e) { /* storage may be unavailable under file:// */ }
+      storageWarned = false;
+    } catch (e) {
+      // storage may be unavailable under file:// or quota exceeded — warn once
+      // so the user knows a refresh would lose their work.
+      if (!storageWarned) {
+        storageWarned = true;
+        toast(t('toast.saveFailed'), true);
+      }
+    }
   }
 
   function loadState() {
@@ -304,6 +340,9 @@
     let ver = localStorage.getItem(LS_VER);
     if (!DATA.versions.some((v) => v.key === ver)) ver = '1.21.1';
     state.versionKey = ver;
+    advanced = localStorage.getItem(LS_ADV) === '1';
+    const view = localStorage.getItem(LS_VIEW);
+    if (view === 'prob' || view === 'json') previewView = view;
   }
 
   /* ------------------------------ static text ------------------------------ */
@@ -314,11 +353,17 @@
       'app-subtitle': 'app.subtitle',
       'btn-new': 'app.new',
       'btn-import': 'app.import',
+      'btn-import-legacy': 'app.importLegacy',
       'btn-example': 'app.example',
       'app-foot': 'app.foot',
       'import-title': 'import.title',
       'import-do': 'import.do',
       'import-cancel': 'import.cancel',
+      'legacy-title': 'legacy.title',
+      'legacy-hint': 'legacy.hint',
+      'legacy-file-btn': 'legacy.fileBtn',
+      'legacy-do': 'legacy.do',
+      'legacy-cancel': 'legacy.cancel',
       'example-title': 'example.title',
       'example-close': 'example.close',
       'lang-label': 'app.lang',
@@ -327,6 +372,7 @@
       'btn-undo': 'app.undo',
       'btn-redo': 'app.redo',
       'btn-share': 'app.share',
+      'advanced-label': 'app.advanced',
       'tutorial-close': 'tutorial.close',
       'btn-copy': 'preview.copy',
       'btn-download': 'preview.download',
@@ -376,6 +422,7 @@
       state.versionKey = state.versionKey || '1.21.1';
       state.taczEnabled = prevTacz;
       renderAll();
+      pushHistory(); // snapshot the fresh state; undo then returns to it
       toast(t('toast.newDone'));
     });
 
@@ -383,10 +430,42 @@
       document.getElementById('import-dialog').showModal();
     });
 
+    const btnImportLegacy = $('#btn-import-legacy');
+    if (btnImportLegacy) {
+      btnImportLegacy.addEventListener('click', () => {
+        legacyFileName = null; // each open starts fresh; only "Choose file" sets a name
+        document.getElementById('legacy-dialog').showModal();
+      });
+    }
+
+    const viewJsonTab = $('#view-json');
+    const viewProbTab = $('#view-prob');
+    if (viewJsonTab && viewProbTab) {
+      setPreviewView(previewView); // apply remembered/inline view state + labels
+      viewJsonTab.addEventListener('click', () => {
+        setPreviewView('json');
+        rebuildPreview();
+      });
+      viewProbTab.addEventListener('click', () => {
+        setPreviewView('prob');
+        rebuildPreview();
+      });
+    }
+
     $('#btn-example').addEventListener('click', () => {
       renderExampleDialog();
       document.getElementById('example-dialog').showModal();
     });
+
+    const advToggle = $('#advanced-toggle');
+    if (advToggle) {
+      advToggle.checked = advanced;
+      advToggle.addEventListener('change', () => {
+        advanced = advToggle.checked;
+        try { localStorage.setItem(LS_ADV, advanced ? '1' : '0'); } catch (e) { /* file:// */ }
+        renderAll();
+      });
+    }
   }
 
   function setupDialogs() {
@@ -400,6 +479,23 @@
       }
       imp.close();
     });
+
+    const ldg = $('#legacy-dialog');
+    if (ldg) {
+      $('#legacy-cancel').addEventListener('click', () => ldg.close());
+      $('#legacy-file-btn').addEventListener('click', () => {
+        document.getElementById('legacy-file-input').click();
+      });
+      $('#legacy-do').addEventListener('click', () => {
+        const text = document.getElementById('legacy-textarea').value;
+        if (text.trim()) {
+          applyLegacyImportText(text, legacyFileName);
+          document.getElementById('legacy-textarea').value = '';
+        }
+        legacyFileName = null;
+        ldg.close();
+      });
+    }
 
     const exd = $('#example-dialog');
     $('#example-close').addEventListener('click', () => exd.close());
@@ -420,7 +516,6 @@
   function renderExampleDialog() {
     const list = $('#example-list');
     list.innerHTML = DATA.examples.map((ex, i) => {
-      const label = (DATA.gradeNames[0] || {}).zh; // unused guard; keep simple
       return '<li class="example-item">' +
         '<div class="example-desc">' +
         '<strong>' + esc(ex.desc[I18N.lang]) + '</strong>' +
@@ -432,6 +527,26 @@
   }
 
   /* ------------------------------ paste / share ------------------------------ */
+
+  /** UTF-8 → URL-safe base64 without the deprecated escape/unescape pair. */
+  function utf8Base64UrlEncode(text) {
+    const bytes = new TextEncoder().encode(text);
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  /** URL-safe base64 → UTF-8 string. */
+  function base64UrlDecodeToUtf8(s) {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
 
   function openPasteDialog(ctx) {
     const pd = $('#paste-dialog');
@@ -582,11 +697,36 @@
     pasteContext = null;
   }
 
+  /** execCommand fallback for environments without the async Clipboard API
+   *  (LAN http origins, old browsers, some file:// setups). */
+  function execCopyFallback(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '0';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function copyText(text, okMsg) {
     const done = () => toast(okMsg);
     const fail = () => toast(t('preview.copyFailed'), true);
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, fail);
+      navigator.clipboard.writeText(text).then(done, () => {
+        if (execCopyFallback(text)) done(); else fail();
+      });
+    } else if (execCopyFallback(text)) {
+      done();
     } else {
       fail();
     }
@@ -595,8 +735,7 @@
   function shareLink() {
     try {
       const json = JSON.stringify(snapshotState());
-      const enc = btoa(unescape(encodeURIComponent(json)))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const enc = utf8Base64UrlEncode(json);
       const url = location.href.split('#')[0] + '#state=' + enc;
       copyText(url, t('toast.linkCopied'));
       if (enc.length > 8000) toast(t('toast.linkTooLong', { n: enc.length }), true);
@@ -609,12 +748,41 @@
     const m = /[#&]state=([A-Za-z0-9_-]+)/.exec(location.hash);
     if (!m) return false;
     try {
-      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(escape(atob(b64)));
+      const json = base64UrlDecodeToUtf8(m[1]);
       const snap = JSON.parse(json);
       if (!snap || typeof snap !== 'object') return false;
-      state = Object.assign(NS.emptyState(), snap);
-      state.versionKey = state.versionKey || '1.21.1';
+      // Opening a share link silently overwrites the local draft — preserve the
+      // draft as the first undo entry so Ctrl+Z (or the button) brings it back.
+      try {
+        const raw = localStorage.getItem(LS_STATE);
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p && p.state && typeof p.state === 'object') {
+            const draft = {
+              fileName: p.state.fileName || 'my_box',
+              meta: Object.assign(NS.emptyMeta(), p.state.meta),
+              grades: normalizeGrades(p.state.grades),
+              priceRows: p.state.priceRows || {},
+              versionKey: p.versionKey || '1.21.1',
+              taczEnabled: p.taczEnabled == null ? null : !!p.taczEnabled,
+            };
+            history.undo.push(draft);
+            const undoBtn = $('#btn-undo');
+            if (undoBtn) undoBtn.disabled = false;
+          }
+        }
+      } catch (e) { /* storage unavailable under file:// */ }
+      // Normalize like loadState() so old/tampered share links cannot smuggle
+      // raw item objects with undefined fields into the renderer.
+      state = Object.assign(NS.emptyState(), {
+        fileName: typeof snap.fileName === 'string' ? snap.fileName : 'my_box',
+        meta: Object.assign(NS.emptyMeta(), snap.meta),
+        grades: normalizeGrades(snap.grades),
+        priceRows: snap.priceRows && typeof snap.priceRows === 'object' ? snap.priceRows : {},
+      });
+      state.versionKey = snap.versionKey || '1.21.1';
+      if (!DATA.versions.some((v) => v.key === state.versionKey)) state.versionKey = '1.21.1';
+      state.taczEnabled = snap.taczEnabled == null ? null : !!snap.taczEnabled;
       renderAll();
       toast(t('toast.linkLoaded'));
       return true;
@@ -669,6 +837,16 @@
         rebuildTaczCard();
         rebuildGrades();
         rebuildPrices();
+        schedulePreview();
+        return;
+      }
+      if (el.id === 'icon-preset' && el.value) {
+        pushHistory();
+        state.meta.icon = el.value;
+        const inp = document.querySelector('[data-f="meta.icon"]');
+        if (inp) inp.value = el.value;
+        el.value = '';
+        rebuildMeta();
         schedulePreview();
         return;
       }
@@ -816,6 +994,13 @@
           shareLink();
           break;
         }
+        case 'enable-advanced': {
+          advanced = true;
+          try { localStorage.setItem(LS_ADV, '1'); } catch (e) { /* file:// */ }
+          renderAll();
+          toast(t('toast.advancedOn'));
+          break;
+        }
         case 'tacz-tutorial': {
           const td = $('#tutorial-dialog');
           if (!td) break;
@@ -876,6 +1061,22 @@
       reader.readAsText(file);
       fi.value = '';
     });
+
+    const lfi = $('#legacy-file-input');
+    if (lfi) {
+      lfi.addEventListener('change', () => {
+        const file = lfi.files && lfi.files[0];
+        if (!file) return;
+        legacyFileName = file.name; // drives legacy terminal.json recognition
+        const reader = new FileReader();
+        reader.onload = () => {
+          const ta = document.getElementById('legacy-textarea');
+          if (ta) ta.value = String(reader.result || '');
+        };
+        reader.readAsText(file);
+        lfi.value = '';
+      });
+    }
   }
 
   /* ------------------------------ field updates ------------------------------ */
@@ -915,7 +1116,7 @@
   }
 
   function onPriceInput(el) {
-    pushHistory();
+    scheduleHistory(); // debounced like other text inputs (600 ms quiet burst)
     const key = el.dataset.key;
     if (!state.priceRows[key]) state.priceRows[key] = { price: '', pinned: true };
     state.priceRows[key].price = el.value;
@@ -941,6 +1142,8 @@
     verSel.value = state.versionKey;
     const langSel = $('#lang-select');
     langSel.value = I18N.lang;
+    const advToggle = $('#advanced-toggle');
+    if (advToggle) advToggle.checked = advanced;
     renderForm();
     rebuildPreview();
   }
@@ -953,7 +1156,7 @@
       ? '<section class="card" id="card-prices"></section>' +
         '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>'
       : '<section class="card" id="card-meta"></section>' +
-        '<section class="card" id="card-tacz"></section>' +
+        (advanced ? '<section class="card" id="card-tacz"></section>' : '') +
         '<section class="card" id="card-drop"></section>' +
         (state.meta.type === 'terminal' ? '<section class="card" id="card-term"></section>' : '') +
         '<section class="card" id="card-grades"></section>' +
@@ -962,7 +1165,7 @@
       rebuildPrices();
     } else {
       rebuildMeta();
-      rebuildTaczCard();
+      if (advanced) rebuildTaczCard();
       rebuildDrop();
       if (state.meta.type === 'terminal') rebuildTerm();
       rebuildGrades();
@@ -1019,7 +1222,7 @@
         '<input data-f="meta.key" list="csbox-key-list" value="' + esc(m.key) + '" placeholder="minecraft:iron_ingot"' +
         (m.type === 'terminal' ? ' disabled class="danger-input"' : '') + '>') +
       field('meta.drop', 'meta.dropHelp', input('meta.drop', m.drop, '0.05', false)) +
-      field('meta.icon', 'meta.iconHelp', input('meta.icon', m.icon, 'minecraft:ender_chest', false)) +
+      iconField(m) +
       '</div>' +
       '<div class="split-row">' +
       '<label class="chk"><input type="checkbox" data-f="meta.enabled" data-kind="checkbox"' + (m.enabled ? ' checked' : '') + '> ' + esc(t('meta.enabled')) + '</label>' +
@@ -1034,8 +1237,33 @@
       '</datalist>';
   }
 
-  function rebuildDrop() {
-    const el = card('card-drop');
+  /** 自定义贴图（icon）字段：默认收纳，仅「高级」开关开启时展示完整编辑；
+   *  已配置但处于普通模式时给出一条提示，避免配置静默不可见。 */
+  function iconField(m) {
+    if (!advanced) {
+      const icon = String(m.icon || '').trim();
+      if (!icon) return '';
+      return '<div class="icon-hidden-hint">' + esc(t('meta.iconHiddenHint')) + '</div>';
+    }
+    const v = version();
+    const itemModelNote = v.itemModel
+      ? t('icon.itemModelOk')
+      : t('icon.itemModelNo');
+    const presetOptions = ICON_PRESETS.map((id) =>
+      '<option value="' + esc(id) + '">' + esc(id) + '</option>').join('');
+    return field('meta.icon', 'meta.iconAdvancedHelp',
+      '<span class="icon-row">' +
+      '<input data-f="meta.icon" list="csbox-icon-list" value="' + esc(m.icon) + '" placeholder="' + esc(t('icon.placeholder')) + '" class="grow">' +
+      '<select id="icon-preset" data-role="icon-preset" aria-label="' + esc(t('icon.preset')) + '">' +
+      '<option value="">' + esc(t('icon.presetPh')) + '</option>' +
+      presetOptions +
+      '</select>' +
+      '</span>' +
+      '<datalist id="csbox-icon-list">' + ICON_PRESETS.map((id) => '<option value="' + esc(id) + '">').join('') + '</datalist>' +
+      '<span class="help">' + esc(itemModelNote) + '</span>');
+  }
+
+  function rebuildDrop() {    const el = card('card-drop');
     if (!el) return;
     const m = state.meta;
     el.innerHTML =
@@ -1044,7 +1272,7 @@
       '<label>' + esc(t('drop.random')) +
       '<div class="random-row">' +
       m.random.map((v, i) =>
-        '<span class="random-slot" data-help="drop.randomHelp"><b>' + esc((DATA.gradeNames[i] || {}).zh) + '</b>' +
+        '<span class="random-slot" data-help="drop.randomHelp"><b>' + esc((DATA.gradeNames[i] || {})[I18N.lang] || (DATA.gradeNames[i] || {}).zh || '') + '</b>' +
         '<input data-f="meta.random.' + i + '" value="' + esc(v) + '" type="number" min="0" max="10000"></span>').join('') +
       '</div>' +
       '<span class="help">' + esc(t('drop.randomHelp')) + '</span>' +
@@ -1063,7 +1291,7 @@
       '<div class="entity-row">' +
       '<input data-help="drop.entityIdHelp" data-f="meta.entity.' + i + '.id" list="csbox-entity-list" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +
       '<input data-help="drop.entityRateHelp" data-f="meta.entity.' + i + '.rate" value="' + esc(row.rate) + '" placeholder="0.1" type="number" min="0" max="1" step="0.01" class="rate">' +
-      '<button class="btn small danger" data-action="del-entity" data-index="' + i + '">✕</button>' +
+      '<button class="btn small danger" data-action="del-entity" data-index="' + i + '" aria-label="' + esc(t('drop.entityDel')) + '">✕</button>' +
       '</div>').join('');
   }
 
@@ -1142,6 +1370,11 @@
   /** Rebuild the DOM, then restore focus/caret to the element the user was
    *  editing (identified by data-f or id). Rebuilds destroy the focused
    *  select/input, which drops keyboard users back to <body>. */
+  const NON_SELECTABLE_INPUTS = new Set([
+    'checkbox', 'radio', 'file', 'number', 'range', 'color', 'date', 'time',
+    'datetime-local', 'month', 'week', 'submit', 'button', 'reset', 'image',
+  ]);
+
   function withFocusRestore(fn, preferField) {
     const active = document.activeElement;
     let mark = null;
@@ -1157,9 +1390,17 @@
       : document.querySelector('[data-f="' + CSS.escape(mark) + '"]');
     if (el) {
       el.focus();
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-        const len = el.value.length;
-        el.setSelectionRange(len, len);
+      // Restore the caret only for inputs that actually support a selection —
+      // setSelectionRange throws on checkbox/radio/number/file/etc., and an
+      // exception here would abort the caller's render loop (e.g. leaving
+      // later grade cards empty when the top-bar Advanced checkbox keeps focus).
+      const selectable = el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLInputElement && !NON_SELECTABLE_INPUTS.has(el.type));
+      if (selectable) {
+        try {
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        } catch (e) { /* defensive: exotic input types */ }
       }
     }
   }
@@ -1199,18 +1440,28 @@
       ['custom', t('item.enchant.custom')],
     ];
     const levelOptions = [
-      ['fixed', '固定 / Fixed'],
-      ['range', '区间 / Range'],
+      ['fixed', t('item.enchantLevel.fixed')],
+      ['range', t('item.enchantLevel.range')],
     ];
+    // Advanced fields configured but not editable in basic mode → a badge that
+    // flips the top-bar "Advanced" toggle on (same pattern as the icon hint).
+    const hiddenFields = [];
+    if (it.enchantMode !== 'none') hiddenFields.push(t('item.hiddenAdvEnchant'));
+    if ((it.variant || '').trim()) hiddenFields.push(t('item.hiddenAdvTacz'));
+    if ((it.tagRaw || '').trim()) hiddenFields.push(t('item.hiddenAdvNbt'));
+    const badge = (!advanced && hiddenFields.length)
+      ? '<button class="hidden-adv-badge btn small" data-action="enable-advanced" title="' + esc(t('item.hiddenAdvHint')) + '">⚙ ' + esc(hiddenFields.join(' / ')) + '</button>'
+      : '';
     const header = '<div class="item-head">' +
       '<span class="item-no">#' + (ii + 1) + '</span>' +
       select(p + 'source', srcOptions, it.source, 'item.sourceHelp') +
       '<input data-help="item.sourceHelp" data-f="' + esc(p + 'value') + '" value="' + esc(it.value) +
       '" placeholder="' + (it.source === 'tag' ? '#minecraft:swords' : it.source === 'loot_table' ? 'minecraft:chests/simple_dungeon' : 'minecraft:diamond_sword') + '" class="grow">' +
-      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="-1" data-help="item.up">↑</button>' +
-      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="1" data-help="item.down">↓</button>' +
-      '<button class="btn small" data-action="copy-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.copy">⧉</button>' +
-      '<button class="btn small danger" data-action="del-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.remove">✕</button>' +
+      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="-1" data-help="item.up" aria-label="' + esc(t('item.up')) + '">↑</button>' +
+      '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="1" data-help="item.down" aria-label="' + esc(t('item.down')) + '">↓</button>' +
+      '<button class="btn small" data-action="copy-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.copy" aria-label="' + esc(t('item.copy')) + '">⧉</button>' +
+      '<button class="btn small danger" data-action="del-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.remove" aria-label="' + esc(t('item.remove')) + '">✕</button>' +
+      badge +
       '</div>';
 
     const body = '<div class="item-body">' +
@@ -1224,8 +1475,10 @@
           ? '<label class="mini" data-help="item.countHelp">' + esc(t('item.count')) + ' <input data-f="' + esc(p + 'countMin') + '" value="' + esc(it.countMin) + '" type="number" min="1" class="w7"> … <input data-f="' + esc(p + 'countMax') + '" value="' + esc(it.countMax) + '" type="number" min="1" class="w7"></label>'
           : '') +
       '<label class="mini" data-help="item.weightHelp">' + esc(t('item.weight')) + '<input data-f="' + esc(p + 'weight') + '" value="' + esc(it.weight) + '" type="number" min="0" class="w7"></label>' +
-      '<label class="mini" data-help="item.enchantHelp">' + esc(t('item.enchant')) + ' ' + select(p + 'enchantMode', enchantOptions, it.enchantMode) + '</label>' +
-      (it.enchantMode === 'custom'
+      (advanced
+        ? '<label class="mini" data-help="item.enchantHelp">' + esc(t('item.enchant')) + ' ' + select(p + 'enchantMode', enchantOptions, it.enchantMode) + '</label>'
+        : '') +
+      (advanced && it.enchantMode === 'custom'
         ? '<label class="mini" data-help="item.enchantIdHelp">' + esc(t('item.enchantId')) + '<input data-f="' + esc(p + 'enchantId') + '" value="' + esc(it.enchantId) + '" placeholder="minecraft:sharpness" class="w14"></label>' +
           '<label class="mini" data-help="item.enchantLevelHelp">' + esc(t('item.enchantLevel')) + ' ' + select(p + 'enchantLevelMode', levelOptions, it.enchantLevelMode) + '</label>' +
           (it.enchantLevelMode === 'range'
@@ -1236,7 +1489,7 @@
         : '') +
       '</div>' +
 
-      (taczVisible()
+      (advanced && taczVisible()
         ? '<div class="row inline">' +
           '<label class="mini" data-help="item.variantHelp">' + esc(t('item.variant')) + '<input data-f="' + esc(p + 'variant') + '" value="' + esc(it.variant) + '" placeholder="tacz:ak47" class="w14"></label>' +
           '<label class="mini" data-help="item.variantFieldHelp">' + esc(t('item.variantField')) + ' ' +
@@ -1244,7 +1497,7 @@
           '</div>'
         : '') +
 
-      (taczVisible() || v.components || !!(it.components || '').trim() ? advancedBlock(it, p, v) : '') +
+      ((advanced && taczVisible()) || v.components || !!(it.components || '').trim() ? advancedBlock(it, p, v) : '') +
       '</div>';
 
     return '<div class="item-card">' + header + body + '</div>';
@@ -1257,7 +1510,7 @@
   function advancedBlock(it, p, v) {
     const has = !!((it.tagRaw || '').trim() || (it.components || '').trim());
     let inner = '';
-    if (taczVisible()) {
+    if (advanced && taczVisible()) {
       inner += '<div class="row inline">' +
         '<label class="mini" data-help="item.nbtHelp">' + esc(t('item.nbt')) + '<input data-f="' + esc(p + 'tagRaw') + '" value="' + esc(it.tagRaw) + '" placeholder=\'{GunId:"tacz:ak47"}\' class="w24"></label>' +
         '</div>';
@@ -1299,7 +1552,7 @@
         '<td><input data-help="prices.priceHelp" data-role="price-input" data-key="' + esc(r.key) + '" value="' + esc(price === '' ? '' : price) + '" type="text" inputmode="numeric" class="price-input" placeholder="—"></td>' +
         '<td class="recycle-cell">' + esc(recycle) + '</td>' +
         '<td class="status-cell status-' + (priced ? 'ok' : (r.key.includes('#') && !taczVisible() ? 'warn' : 'muted')) + '">' + esc(status) + '</td>' +
-        '<td>' + (removable ? '<button class="btn small danger" data-action="del-price-key" data-key="' + esc(r.key) + '">' + esc(t('prices.remove')) + '</button>' : '') + '</td>' +
+        '<td>' + (removable ? '<button class="btn small danger" data-action="del-price-key" data-key="' + esc(r.key) + '" aria-label="' + esc(t('prices.remove')) + '">' + esc(t('prices.remove')) + '</button>' : '') + '</td>' +
         '</tr>';
     }).join('');
     el.innerHTML =
@@ -1470,10 +1723,11 @@
   function rebuildPreview() {
     decorateCollapsibleCards();
     const pre = $('#json-preview');
-    const boxObj = NS.buildBox(state);
+    const boxObj = NS.buildBox(state, !compact);
     const pricesObj = NS.buildPrices(state);
     const out = isPricesPage() ? pricesObj : boxObj;
     pre.textContent = JSON.stringify(out, null, 2);
+    rebuildProbPanel();
 
     const navBox = $('#nav-box');
     const navPrices = $('#nav-prices');
@@ -1496,6 +1750,67 @@
     if (redoBtn) redoBtn.disabled = !history.redo.length;
   }
 
+  /** Right-sidebar view switch: JSON preview ↔ probability table. */
+  let previewView = 'json'; // 'json' | 'prob'
+  const LS_VIEW = 'cs2box-editor-view';
+
+  function setPreviewView(view) {
+    previewView = view === 'prob' ? 'prob' : 'json';
+    try { localStorage.setItem(LS_VIEW, previewView); } catch (e) { /* file:// */ }
+    const jsonTab = $('#view-json');
+    const probTab = $('#view-prob');
+    const pre = $('#json-preview');
+    const panel = $('#prob-panel');
+    if (jsonTab) jsonTab.classList.toggle('active', previewView === 'json');
+    if (probTab) probTab.classList.toggle('active', previewView === 'prob');
+    if (pre) pre.hidden = previewView !== 'json';
+    if (panel) panel.hidden = previewView !== 'prob';
+  }
+
+  /** Renders the probability table (or keeps the panel empty when the box
+   *  page is not the active view). Probabilities come from the pure
+   *  NS.computeProbabilities so they stay in sync with the in-game model. */
+  function rebuildProbPanel() {
+    const panel = $('#prob-panel');
+    if (!panel) return;
+    if (isPricesPage() || previewView !== 'prob') return;
+    const { openable, grades } = NS.computeProbabilities(state);
+    const rows = grades.map((g) => {
+      const gradeName = esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
+      const gradeRows = g.items.length
+        ? g.items.map((it) =>
+          '<tr class="prob-item">' +
+          '<td class="prob-item-name">' + esc(it.value) + (it.disabled ? ' <span class="prob-disabled">' + esc(t('prob.disabled')) + '</span>' : '') + '</td>' +
+          '<td>' + (it.disabled ? '—' : esc(fmtProb(it.itemProb))) + '</td>' +
+          '<td>' + (it.disabled ? '—' : esc(fmtProb(g.gradeProb * it.itemProb))) + '</td>' +
+          '</tr>').join('')
+        : '<tr class="prob-empty"><td colspan="3">' + esc(t('prob.emptyGrade')) + '</td></tr>';
+      return '<tr class="prob-grade">' +
+        '<td><b>' + gradeName + '</b></td>' +
+        '<td>' + esc(String(g.weight)) + '</td>' +
+        '<td>' + esc(fmtProb(g.gradeProb)) + '</td>' +
+        '</tr>' + gradeRows;
+    }).join('');
+    panel.innerHTML = '<h2>' + esc(t('prob.title')) + '</h2>' +
+      (openable ? '' : '<p class="prob-warn">' + esc(t('prob.unopenable')) + '</p>') +
+      '<table class="prob-table"><thead><tr>' +
+      '<th>' + esc(t('prob.item')) + '</th>' +
+      '<th>' + esc(t('prob.inGrade')) + '</th>' +
+      '<th>' + esc(t('prob.overall')) + '</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="help">' + esc(t('prob.note')) + '</p>';
+  }
+
+  /** Percent formatter: 0 → "0%"; small values keep 3 decimals so rare
+   *  drops stay readable (e.g. 0.026% for the default classified tier). */
+  function fmtProb(p) {
+    if (!(p > 0)) return '0%';
+    const pc = p * 100;
+    if (pc >= 0.1) return pc.toFixed(2).replace(/\.?0+$/, '') + '%';
+    if (pc >= 0.001) return pc.toFixed(3) + '%';
+    return pc.toFixed(4) + '%';
+  }
+
   let validateTimer = null;
   let lastIssuesKey = '';
 
@@ -1515,6 +1830,20 @@
     }, 300);
   }
 
+  /** Translates validator-reported vars into the current UI language (grade
+   *  tiers arrive as 'grade1'..'grade5' keys; the validator itself is
+   *  language-agnostic). */
+  function localizeIssueVars(vars) {
+    if (!vars) return vars;
+    const out = Object.assign({}, vars);
+    if (typeof out.grade === 'string' && /^grade[1-5]$/.test(out.grade)) {
+      const gi = Number(out.grade.slice(5)) - 1;
+      const g = DATA.gradeNames[gi] || {};
+      out.grade = g[I18N.lang] || g.zh || out.grade;
+    }
+    return out;
+  }
+
   function renderIssues(issues) {
     const root = $('#issues-root');
     const errors = issues.filter((i) => i.level === 'error').length;
@@ -1532,7 +1861,7 @@
         '<ul class="issue-list">' +
         issues.map((i) =>
           '<li class="issue ' + i.level + '" data-issue-path="' + esc(i.path) + '" title="' + esc(t('validate.jump')) + '"><span class="issue-path">' + esc(i.path) + '</span> ' +
-          esc(t(i.key, i.vars)) + '</li>').join('') +
+          esc(t(i.key, localizeIssueVars(i.vars))) + '</li>').join('') +
         '</ul>';
     }
     root.innerHTML = html;
@@ -1559,6 +1888,7 @@
       state.versionKey = state.versionKey || '1.21.1';
       const mig = NS.mergeMigrations(state, res.migrations);
       renderAll();
+      pushHistory(); // snapshot the imported state so undo can step back through it
       if (mig.migrated) toast(t('toast.migrated', { n: mig.migrated }));
       else if (mig.bad) toast(t('toast.ignoredBadPrice', { n: mig.bad }), true);
       else toast(t('toast.importBox', { file: fileName || base }));
@@ -1567,9 +1897,54 @@
       const n = NS.mergePrices(state, obj);
       rebuildPrices();
       schedulePreview();
+      pushHistory(); // snapshot imported prices so undo steps back through them
       toast(t('toast.importPrices', { n }));
     } else {
       toast(t('toast.unknownType'), true);
+    }
+  }
+
+  /** "Legacy import" entry: pre-v2.0.1 box JSON (items may carry inline
+   *  `price`). Same recognition as a normal import plus the legacy
+   *  terminal.json inference; everything is exported in the current-version
+   *  format (prices moved to _prices.json, terminal type explicit, key
+   *  dropped for terminals). ChloePrime / pre-2.0.1 files stored the five
+   *  grade weights REVERSED — if the `random` array looks ascending it is
+   *  auto-reversed (undoable) so exported weights mean grade1..grade5. */
+  function applyLegacyImportText(text, fileName) {
+    let obj;
+    try {
+      obj = JSON.parse(text);
+    } catch (e) {
+      toast(t('toast.invalidJson', { err: e.message }), true);
+      return;
+    }
+    if (detectType(obj) !== 'box') {
+      toast(t('toast.legacyNotBox'), true);
+      return;
+    }
+    let reversedWeights = false;
+    if (Array.isArray(obj.random) && NS.weightOrderIsReversed(obj.random)) {
+      obj = JSON.parse(text); // re-parse so we mutate a copy, not the pasted text
+      obj.random = obj.random.slice().reverse();
+      reversedWeights = true;
+    }
+    pushHistory();
+    const base = fileName ? String(fileName).replace(/\.json$/i, '') : (obj.name && String(obj.name).replace(/[^a-z0-9_.\/-]/gi, '_').toLowerCase()) || 'imported';
+    const prevTacz = state.taczEnabled;
+    const res = NS.boxToState(obj, base, { legacy: true });
+    state = res.state;
+    state.taczEnabled = prevTacz;
+    state.versionKey = state.versionKey || '1.21.1';
+    const mig = NS.mergeMigrations(state, res.migrations);
+    renderAll();
+    pushHistory(); // snapshot the imported state so undo can step back through it
+    const revNote = reversedWeights ? t('toast.legacyWeightsReversed') + '；' : '';
+    const typeName = state.meta.type === 'terminal' ? t('type.terminal') : t('type.csbox');
+    if (mig.migrated) {
+      toast(revNote + t('toast.legacyImported', { file: fileName || base, n: mig.migrated, type: typeName }));
+    } else {
+      toast(revNote + t('toast.legacyImportedNoPrice', { file: fileName || base, type: typeName }));
     }
   }
 
@@ -1607,6 +1982,7 @@
     NS.mergeMigrations(state, res.migrations);
     NS.mergePrices(state, ex.prices || {});
     renderAll();
+    pushHistory(); // snapshot the loaded state so undo restores it (not just the old draft)
     if (announce) toast(t('toast.example', { name: ex.desc[I18N.lang] }));
   }
 
@@ -1615,22 +1991,7 @@
   }
 
   function copyCurrent() {
-    const text = currentText();
-    const done = () => toast(t('preview.copied'));
-    const fail = () => {
-      const pre = $('#json-preview');
-      const range = document.createRange();
-      range.selectNodeContents(pre);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      toast(t('preview.copyFailed'), true);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, fail);
-    } else {
-      fail();
-    }
+    copyText(currentText(), t('preview.copied'));
   }
 
   function downloadBox() {

@@ -30,12 +30,27 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: box-editor/package.json
+          cache-dependency-path: box-editor/package-lock.json
 
-      - name: Regenerate embedded data from docs (optional)
+      - name: Regenerate embedded data from docs (fail when docs are on this ref)
         working-directory: box-editor
         run: |
-          npm run sync || echo "::warning title=sync skipped::docs/box-schema or docs/examples not on this ref; using committed js/data.js"
+          if [ -d ../docs/box-schema ]; then
+            npm run sync
+          else
+            echo "::warning title=sync skipped::docs/box-schema not on this ref; using committed js/data.js"
+          fi
+
+      - name: Syntax check and model/validator unit tests
+        working-directory: box-editor
+        run: |
+          node --check js/i18n.js
+          node --check js/data.js
+          node --check js/model.js
+          node --check js/validator.js
+          node --check js/app.js
+          node --check build.mjs
+          node --test tests/model.test.mjs tests/i18n.test.mjs
 
       - name: Build static site
         working-directory: box-editor

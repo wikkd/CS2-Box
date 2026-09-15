@@ -48,7 +48,7 @@ jobs:
 
       - name: Run pure model/validator unit tests (no browser)
         working-directory: box-editor
-        run: node --test tests/model.test.mjs
+        run: node --test tests/model.test.mjs tests/i18n.test.mjs
 
       - name: Run UI smoke tests
         working-directory: box-editor
