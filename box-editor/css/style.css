@@ -127,7 +127,7 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 /* ---------- layout ---------- */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 520px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
   gap: 18px;
   padding: 18px 20px 10px;
   align-items: start;
@@ -135,7 +135,7 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 .column { min-width: 0; }
 .right { position: sticky; top: 68px; }
 
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .layout { grid-template-columns: 1fr; }
   .right { position: static; }
 }
@@ -1430,3 +1430,7 @@ summary:focus-visible,
   padding-left: 22px;
 }
 .prob-panel .help { margin: 8px 0 0; }
+
+/* ---------- price table: never crush inside a narrow left column ---------- */
+#card-prices { overflow-x: auto; }
+.price-table { min-width: 560px; }
