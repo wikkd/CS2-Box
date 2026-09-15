@@ -52,4 +52,12 @@ jobs:
 
       - name: Run UI smoke tests
         working-directory: box-editor
-        run: node tests/smoke.mjs
+        run: node tests/smoke.mjs 2>&1 | tee smoke.log
+
+      - name: Upload smoke log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-log
+          path: box-editor/smoke.log
+          if-no-files-found: ignore
