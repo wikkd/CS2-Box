@@ -386,10 +386,18 @@
       'btn-download-all': 'preview.downloadAll',
       'nav-box': 'app.navBox',
       'nav-prices': 'app.navPrices',
+      'view-json': 'view.json',
+      'view-prob': 'view.prob',
     };
     for (const id of Object.keys(map)) {
       const el = document.getElementById(id);
       if (el) el.textContent = t(map[id]);
+    }
+    // aria-labels cannot ride the textContent map above
+    const ariaMap = { 'view-switch': 'view.switch' };
+    for (const id of Object.keys(ariaMap)) {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('aria-label', t(ariaMap[id]));
     }
     document.title = isPricesPage() ? t('app.titlePrices') : t('app.title');
     const importPh = document.getElementById('import-textarea');

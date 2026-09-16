@@ -83,6 +83,26 @@ try {
   check('no escaped ghost inputs',
     !(await page.locator('#card-meta').innerHTML()).includes('&lt;input'));
 
+  // view-switch tabs localize with the UI language; headless locale follows
+  // the host system (zh here), so assert both languages explicitly and
+  // restore whatever language the rest of the run expects.
+  const initialLang = await page.evaluate(() => document.querySelector('#lang-select').value);
+  const setLang = (l) => page.evaluate((lang) => {
+    const sel = document.querySelector('#lang-select');
+    sel.value = lang;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }, l);
+  await setLang('en');
+  await page.waitForTimeout(200);
+  const probTabEn = await page.locator('#view-prob').textContent();
+  check('view tab label localized (en)', /probabilities/i.test(probTabEn || ''), probTabEn || '');
+  await setLang('zh');
+  await page.waitForTimeout(200);
+  const probTabZh = await page.locator('#view-prob').textContent();
+  check('view tab label localized (zh)', probTabZh === '概率表', probTabZh || '');
+  await setLang(initialLang);
+  await page.waitForTimeout(200);
+
   const helpCount = await page.locator('[data-help]').count();
   check('data-help covers >= 100 widgets', helpCount >= 100, 'count=' + helpCount);
 
