@@ -374,6 +374,13 @@
       'btn-share': 'app.share',
       'advanced-label': 'app.advanced',
       'tutorial-close': 'tutorial.close',
+      'paste-title': 'prices.pasteTitle',
+      'paste-hint': 'prices.pastePh',
+      'crate-import-title': 'prices.crateTitle',
+      'crate-import-hint': 'prices.crateHint',
+      'crate-import-pick': 'prices.crateFiles',
+      'crate-import-do': 'import.do',
+      'crate-import-cancel': 'import.cancel',
       'btn-copy': 'preview.copy',
       'btn-download': 'preview.download',
       'btn-download-all': 'preview.downloadAll',
@@ -512,6 +519,28 @@
       document.getElementById('paste-textarea').value = '';
       pad.close();
     });
+
+    // prices-page only: multi-crate JSON import (dialog absent on index.html)
+    const cid = $('#crate-import-dialog');
+    if (cid) {
+      $('#crate-import-cancel').addEventListener('click', () => cid.close());
+      $('#crate-import-pick').addEventListener('click', () => $('#crate-import-files').click());
+      $('#crate-import-files').addEventListener('change', async (ev) => {
+        const files = [...((ev.target && ev.target.files) || [])];
+        if (!files.length) return;
+        const texts = await Promise.all(files.map((f) => f.text()));
+        const ta = document.getElementById('crate-import-textarea');
+        ta.value = (ta.value.trim() ? ta.value.trimEnd() + '\n\n' : '') + texts.join('\n\n');
+        ev.target.value = ''; // allow re-picking the same file later
+        toast(t('toast.crateFilesLoaded', { n: files.length }));
+      });
+      $('#crate-import-do').addEventListener('click', () => {
+        const text = document.getElementById('crate-import-textarea').value;
+        applyCrateImport(text);
+        document.getElementById('crate-import-textarea').value = '';
+        cid.close();
+      });
+    }
   }
 
   function renderExampleDialog() {
@@ -696,6 +725,55 @@
       if (res.bad) toast(t('toast.pasteBad', { n: res.bad }), true);
     }
     pasteContext = null;
+  }
+
+  function openCrateImportDialog() {
+    const cid = $('#crate-import-dialog');
+    if (!cid) return;
+    document.getElementById('crate-import-textarea').value = '';
+    cid.showModal();
+  }
+
+  /** Multi-crate import: parse every JSON document in the blob, auto-detect
+   *  each as a box (grades) or a price table, and merge both into the price
+   *  table. Inline legacy prices fill the table (existing prices win,
+   *  duplicates averaged); unpriced item keys land as empty rows to fill. */
+  function applyCrateImport(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const { docs, bad } = NS.parseJsonDocuments(trimmed);
+    const entries = [];
+    const priceObjs = [];
+    let boxes = 0;
+    for (const doc of docs) {
+      const kind = detectType(doc);
+      if (kind === 'box') {
+        boxes++;
+        const res = NS.collectCratePriceEntries(doc);
+        for (const e of res.keys) entries.push(e);
+      } else if (kind === 'prices') {
+        priceObjs.push(doc);
+      }
+    }
+    if (!boxes && !priceObjs.length) {
+      toast(t('toast.crateImportNone'), true);
+      return;
+    }
+    pushHistory();
+    let priceRowsMerged = 0;
+    for (const po of priceObjs) priceRowsMerged += NS.mergePrices(state, po);
+    const merged = NS.mergeCratePriceEntries(state, entries);
+    rebuildPrices();
+    schedulePreview();
+    const parts = [];
+    if (boxes) parts.push(t('toast.crateImportedBoxes', { n: boxes }));
+    if (merged.priced) parts.push(t('toast.crateImportedPriced', { n: merged.priced }));
+    if (priceRowsMerged) parts.push(t('toast.crateImportedPriceRows', { n: priceRowsMerged }));
+    if (merged.addedEmpty) parts.push(t('toast.crateImportedEmpty', { n: merged.addedEmpty }));
+    if (merged.keptPrices) parts.push(t('toast.crateImportedKept', { n: merged.keptPrices }));
+    let msg = parts.join('；');
+    if (bad) msg += '；' + t('toast.crateBadDocs', { n: bad });
+    toast(msg, !parts.length);
   }
 
   /** execCommand fallback for environments without the async Clipboard API
@@ -989,6 +1067,10 @@
         }
         case 'paste-prices': {
           openPasteDialog({ mode: 'prices' });
+          break;
+        }
+        case 'import-crate-prices': {
+          openCrateImportDialog();
           break;
         }
         case 'share': {
@@ -1558,6 +1640,7 @@
     }).join('');
     el.innerHTML =
       '<div class="card-head"><h2>' + esc(t('prices.title')) + '</h2>' +
+      '<button class="btn small" data-action="import-crate-prices">' + esc(t('prices.importCrates')) + '</button>' +
       '<button class="btn small" data-action="paste-prices">' + esc(t('prices.paste')) + '</button></div>' +
       '<p class="help">' + esc(t('prices.help')) + '</p>' +
       '<table class="price-table"><thead><tr>' +

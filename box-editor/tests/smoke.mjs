@@ -425,6 +425,39 @@ try {
     (await page.locator('tr[data-price-key="minecraft:test_range"] input.price-input').inputValue()) === '1500-3000',
     'serialized=' + JSON.stringify(rangeObj['minecraft:test_range']));
 
+  /* ---- multi-crate JSON import (terminals + plain crates at once) ---- */
+  const crateDoc1 = JSON.stringify({
+    name: '矿物终端机', type: 'terminal',
+    grade1: [{ id: 'minecraft:iron_ingot', price: 200 }, { id: 'minecraft:raw_iron' }],
+    grade2: [{ id: 'minecraft:gold_ingot', price: 300 }],
+  });
+  const crateDoc2 = JSON.stringify({
+    name: '重复价格箱', type: 'csbox',
+    grade1: [{ id: 'minecraft:iron_ingot', price: 400 }, { id: 'minecraft:bow' }],
+  });
+  await page.click('[data-action="import-crate-prices"]');
+  check('crate import dialog opens', await page.locator('#crate-import-dialog').isVisible());
+  await page.fill('#crate-import-textarea', crateDoc1 + '\n' + crateDoc2);
+  await page.click('#crate-import-do');
+  await page.waitForTimeout(350);
+  check('crate import dialog closes after import',
+    !(await page.locator('#crate-import-dialog').isVisible()));
+  const crateIron = await page.locator('tr[data-price-key="minecraft:iron_ingot"] input.price-input').inputValue();
+  check('crate import averages duplicate inline prices (200/400 -> 300)', crateIron === '300', 'iron=' + crateIron);
+  check('crate import adds priced key from second doc',
+    (await page.locator('tr[data-price-key="minecraft:gold_ingot"] input.price-input').inputValue()) === '300');
+  check('crate import adds unpriced keys',
+    (await page.locator('tr[data-price-key="minecraft:raw_iron"]').count()) === 1 &&
+    (await page.locator('tr[data-price-key="minecraft:bow"]').count()) === 1);
+  const cratePreview = JSON.parse((await page.locator('#json-preview').textContent()) || '{}');
+  check('crate import serializes into _prices.json',
+    cratePreview['minecraft:iron_ingot'] === 300 && cratePreview['minecraft:gold_ingot'] === 300 &&
+    cratePreview['minecraft:raw_iron'] === undefined,
+    'iron=' + JSON.stringify(cratePreview['minecraft:iron_ingot']));
+  const crateToast = await page.locator('#toast').textContent();
+  check('crate import toast summarizes', /箱子文档|crate document/.test(crateToast || ''),
+    'toast=' + (crateToast || '').slice(0, 70));
+
   // imported rows survive a round-trip to the box page
   await page.goto(BASE, { waitUntil: 'load' });
   const storedState = await page.evaluate(() => localStorage.getItem('cs2box-editor-state-v1') || '');

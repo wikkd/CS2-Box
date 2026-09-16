@@ -551,6 +551,135 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return n;
   }
 
+  /* --------------------- crate JSON → price table ------------------------------ */
+
+  /** Parse a blob that may hold several pretty-printed JSON documents
+   *  (several box/terminal files pasted back to back, or a JSON array of
+   *  boxes). First tries the whole text as one JSON value; otherwise scans
+   *  for top-level `{...}` fragments balanced across lines while ignoring
+   *  braces inside quoted strings (so SNBT in a "tag" value cannot derail
+   *  the scan) and keeps the fragments that parse as plain objects.
+   *  Returns { docs: [object], bad: n }. */
+  function parseJsonDocuments(text) {
+    const docs = [];
+    let bad = 0;
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return { docs, bad };
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        for (const o of parsed) {
+          if (o && typeof o === 'object' && !Array.isArray(o)) docs.push(o);
+          else bad++;
+        }
+      } else if (parsed && typeof parsed === 'object') {
+        docs.push(parsed);
+      } else {
+        bad++;
+      }
+      return { docs, bad };
+    } catch (e) { /* multiple documents -> sequential scan */ }
+    let i = 0;
+    const n = trimmed.length;
+    while (i < n) {
+      const start = trimmed.indexOf('{', i);
+      if (start < 0) break;
+      let depth = 0, inStr = false, esc = false, end = -1;
+      for (let j = start; j < n; j++) {
+        const ch = trimmed[j];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (ch === '\\') esc = true;
+          else if (ch === '"') inStr = false;
+          continue;
+        }
+        if (ch === '"') inStr = true;
+        else if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) { end = j; break; }
+        }
+      }
+      if (end < 0) { bad++; break; } // unclosed braces -> truncated, stop
+      const frag = trimmed.slice(start, end + 1);
+      try {
+        const v = JSON.parse(frag);
+        if (v && typeof v === 'object' && !Array.isArray(v)) docs.push(v);
+        else bad++;
+      } catch (e) { bad++; }
+      i = end + 1;
+    }
+    return { docs, bad };
+  }
+
+  /** Extract price-table entries from one parsed box/terminal document:
+   *  every id-source pool item (including TACZ `id#variant` keys derived from
+   *  a legacy GunId/AmmoId tag) becomes a key; a legacy inline `price` fills
+   *  its price. tag / loot_table entries cannot carry a price key and count
+   *  as skipped. Duplicate keys are preserved — mergeCratePriceEntries does
+   *  the averaging. Returns { keys: [{ key, price }], skipped: n }. */
+  function collectCratePriceEntries(obj) {
+    const keys = [];
+    let skipped = 0;
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { keys, skipped };
+    const res = boxToState(obj, '');
+    const st = res.state;
+    const inline = new Map();
+    for (const mig of res.migrations) {
+      if (mig.ok && mig.key != null) inline.set(mig.key, mig.price);
+    }
+    for (const items of st.grades) {
+      for (const it of items) {
+        const key = priceKeyOf(it);
+        if (!key) { skipped++; continue; }
+        if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/.test(key)) { skipped++; continue; }
+        keys.push({ key, price: inline.has(key) ? inline.get(key) : null });
+      }
+    }
+    return { keys, skipped };
+  }
+
+  /** Merge extracted crate price entries into state.priceRows. Semantics
+   *  mirror mergeMigrations: existing table prices win; duplicate prices for
+   *  one key are averaged (round half up); keys without an inline price land
+   *  as pinned empty rows the user can fill in.
+   *  Returns { priced, addedEmpty, keptPrices } for toast reporting. */
+  function mergeCratePriceEntries(state, entries) {
+    const blank = (p) => p === '' || p === null || p === undefined;
+    const pricedAgg = new Map();
+    const unpriced = new Set();
+    let priced = 0;
+    let addedEmpty = 0;
+    let keptPrices = 0;
+    for (const e of entries) {
+      if (e.price == null) {
+        unpriced.add(e.key);
+        continue;
+      }
+      const row = state.priceRows[e.key];
+      if (row && !blank(row.price)) { keptPrices++; continue; } // existing wins
+      const a = pricedAgg.get(e.key) || { sum: 0, count: 0 };
+      a.sum += e.price;
+      a.count++;
+      pricedAgg.set(e.key, a);
+    }
+    for (const [key, a] of pricedAgg) {
+      if (!state.priceRows[key]) state.priceRows[key] = { price: '', pinned: true };
+      if (blank(state.priceRows[key].price)) {
+        state.priceRows[key].price = Math.round(a.sum / a.count);
+        priced++;
+      }
+    }
+    for (const key of unpriced) {
+      if (pricedAgg.has(key)) continue;
+      if (!state.priceRows[key]) {
+        state.priceRows[key] = { price: '', pinned: true };
+        addedEmpty++;
+      }
+    }
+    return { priced, addedEmpty, keptPrices };
+  }
+
   /* ------------------------------ probabilities ------------------------------ */
 
   /** Compute the drop probability table for the current pool: per-grade
@@ -622,5 +751,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.boxToState = boxToState;
   NS.mergeMigrations = mergeMigrations;
   NS.mergePrices = mergePrices;
+  NS.parseJsonDocuments = parseJsonDocuments;
+  NS.collectCratePriceEntries = collectCratePriceEntries;
+  NS.mergeCratePriceEntries = mergeCratePriceEntries;
   NS.computeProbabilities = computeProbabilities;
 })(window.CSBoxEdit);

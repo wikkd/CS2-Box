@@ -375,3 +375,130 @@ test('computeProbabilities: all-zero weights -> unopenable, empty grade flagged'
   assert.equal(p.grades[1].items.length, 0);
   assert.equal(p.grades[0].empty, false);
 });
+/* ---------------- crate JSON -> price table (multi-document import) ---------------- */
+
+function emptyPriceState() {
+  const st = NS.emptyState();
+  return st;
+}
+
+test('parseJsonDocuments: whole text is one JSON object', () => {
+  const r = NS.parseJsonDocuments('{"name":"A","grade1":[]}');
+  assert.equal(r.docs.length, 1);
+  assert.equal(r.bad, 0);
+  assert.equal(r.docs[0].name, 'A');
+});
+
+test('parseJsonDocuments: array of boxes', () => {
+  const r = NS.parseJsonDocuments('[{"grade1":[]},{"grade2":[]}, 42]');
+  assert.equal(r.docs.length, 2);
+  assert.equal(r.bad, 1);
+});
+
+test('parseJsonDocuments: concatenated pretty-printed documents', () => {
+  const text = '{\n  "name": "A",\n  "grade1": []\n}\n{\n  "name": "B",\n  "grade2": []\n}\n';
+  const r = NS.parseJsonDocuments(text);
+  assert.equal(r.docs.length, 2);
+  assert.equal(r.docs[0].name, 'A');
+  assert.equal(r.docs[1].name, 'B');
+  assert.equal(r.bad, 0);
+});
+
+test('parseJsonDocuments: braces inside strings do not derail the scan', () => {
+  const a = JSON.stringify({ name: 'A', grade1: [{ id: 'minecraft:x', tag: '{"GunId:\\"tacz:ak47\\""}' }] });
+  const b = JSON.stringify({ name: 'B', grade1: [] });
+  const r = NS.parseJsonDocuments(a + '\n' + b);
+  assert.equal(r.docs.length, 2);
+});
+
+test('parseJsonDocuments: counts unparseable fragments as bad', () => {
+  const r = NS.parseJsonDocuments('{"name":"A","grade1":[]} {"broken":');
+  assert.equal(r.docs.length, 1);
+  assert.equal(r.bad, 1);
+});
+
+test('collectCratePriceEntries: ids, variants, inline prices; tag/loot skipped', () => {
+  const doc = {
+    name: 'T', type: 'terminal',
+    grade1: [
+      { id: 'minecraft:iron_ingot', price: 200 },
+      { id: 'minecraft:bow' },
+      { tag: '#minecraft:swords' },
+      { loot_table: 'minecraft:chests/simple_dungeon' },
+      { id: 'tacz:ammo', tag: '{AmmoId:"tacz:9mm"}', price: 15 },
+    ],
+  };
+  const r = NS.collectCratePriceEntries(doc);
+  assert.equal(r.skipped, 2); // tag + loot_table cannot carry a price key
+  const byKey = new Map(r.keys.map((e) => [e.key, e.price]));
+  assert.equal(r.keys.length, 3);
+  assert.equal(byKey.get('minecraft:iron_ingot'), 200);
+  assert.equal(byKey.get('minecraft:bow'), null);
+  assert.equal(byKey.get('tacz:ammo#tacz:9mm'), 15);
+});
+
+test('collectCratePriceEntries: negative/invalid inline price yields unpriced key', () => {
+  const doc = {
+    grade1: [
+      { id: 'minecraft:x', price: -5 },
+      { id: 'minecraft:y', price: 1.5 },
+    ],
+  };
+  const r = NS.collectCratePriceEntries(doc);
+  assert.equal(r.keys.length, 2);
+  assert.ok(r.keys.every((e) => e.price === null));
+});
+
+test('mergeCratePriceEntries: new keys priced, duplicates averaged (round half up)', () => {
+  const st = emptyPriceState();
+  const res = NS.mergeCratePriceEntries(st, [
+    { key: 'minecraft:a', price: 100 },
+    { key: 'minecraft:a', price: 101 },
+    { key: 'minecraft:b', price: 7 },
+  ]);
+  assert.equal(res.priced, 2);
+  assert.equal(st.priceRows['minecraft:a'].price, 101); // (100+101)/2 = 100.5 -> 101
+  assert.equal(st.priceRows['minecraft:b'].price, 7);
+  assert.equal(st.priceRows['minecraft:a'].pinned, true);
+});
+
+test('mergeCratePriceEntries: existing priced row wins', () => {
+  const st = emptyPriceState();
+  st.priceRows['minecraft:a'] = { price: '999', pinned: true };
+  const res = NS.mergeCratePriceEntries(st, [{ key: 'minecraft:a', price: 1 }]);
+  assert.equal(res.priced, 0);
+  assert.equal(res.keptPrices, 1);
+  assert.equal(st.priceRows['minecraft:a'].price, '999');
+});
+
+test('mergeCratePriceEntries: price 0 is a real price, not blank', () => {
+  const st = emptyPriceState();
+  st.priceRows['minecraft:a'] = { price: 0, pinned: true };
+  const res = NS.mergeCratePriceEntries(st, [{ key: 'minecraft:a', price: 50 }]);
+  assert.equal(st.priceRows['minecraft:a'].price, 0);
+});
+
+test('mergeCratePriceEntries: unpriced keys become pinned empty rows once', () => {
+  const st = emptyPriceState();
+  const res = NS.mergeCratePriceEntries(st, [
+    { key: 'minecraft:a', price: null },
+    { key: 'minecraft:a', price: null },
+    { key: 'minecraft:b', price: null },
+  ]);
+  assert.equal(res.priced, 0);
+  assert.equal(res.addedEmpty, 2);
+  assert.ok(st.priceRows['minecraft:a']);
+  assert.equal(st.priceRows['minecraft:a'].price, '');
+  assert.equal(st.priceRows['minecraft:b'].price, '');
+  // re-import is a no-op for unpriced keys already present
+  const res2 = NS.mergeCratePriceEntries(st, [{ key: 'minecraft:a', price: null }]);
+  assert.equal(res2.addedEmpty, 0);
+});
+
+test('mergeCratePriceEntries: invalid keys are refused like buildPrices', () => {
+  const st = emptyPriceState();
+  const r1 = NS.collectCratePriceEntries({ grade1: [{ id: 'Not A Valid Id', price: 10 }] });
+  // 'Not A Valid Id' is a non-empty id-source value; the merge must not add it
+  NS.mergeCratePriceEntries(st, r1.keys);
+  assert.equal(Object.keys(st.priceRows).length, 0);
+});

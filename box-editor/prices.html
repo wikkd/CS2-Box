@@ -95,6 +95,20 @@
   </div>
 </dialog>
 
+<dialog id="crate-import-dialog" class="dlg">
+  <h2 id="crate-import-title">Import from crates</h2>
+  <p class="help" id="crate-import-hint"></p>
+  <div class="dlg-actions" style="justify-content:flex-start;margin-bottom:8px;">
+    <button class="btn small" id="crate-import-pick">Choose files</button>
+  </div>
+  <input type="file" id="crate-import-files" accept=".json,application/json" multiple hidden>
+  <textarea id="crate-import-textarea" rows="10" class="grow"></textarea>
+  <div class="dlg-actions">
+    <button class="btn" id="crate-import-cancel">Cancel</button>
+    <button class="btn accent" id="crate-import-do">Import</button>
+  </div>
+</dialog>
+
 <div id="toast" class="toast"></div>
 
 <script src="js/i18n.js?v=__VER__"></script>
