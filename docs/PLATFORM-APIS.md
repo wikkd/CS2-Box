@@ -5,7 +5,7 @@
 - **基准模块**：legacy 用 `v1_21_1`（Forge 侧 `forge_1_20_1`），new 用 `v26_1_2`（Forge 侧 `forge_26_1_2` → `forge_26_2`）
 - **平台列表**：NeoForge `v1_21_1` / `v26_1_2` / `v26_2` + Forge `forge_1_20_1` / `forge_26_1_2` / `forge_26_2`（六平台均为 2.0.0 正式发布平台）
 - **适用范围**：各平台 `src/main/java/com/reclizer/csgobox/<platform>/` 下的版本敏感代码
-- **配套文档**：架构总览见 [ARCHITECTURE.md](./ARCHITECTURE.md)；1.21.1→26.1.2 单次移植记录见 [port-26.1.2.md](./port-26.1.2.md)
+- **配套文档**：架构总览见 [ARCHITECTURE.md](./ARCHITECTURE.md)；1.21.1→26.1.2 单次移植记录见 [port-26.1.2.md](./archive/port-26.1.2.md)
 - **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库（tag `eol-legacy-21x-1.0.6`）；下文矩阵中的 legacy 中间断点行仅作历史参考
 - **注**：下方速查矩阵以 **NeoForge 三平台**为主干（legacy / decoupled 两条 API 线）；Forge 三平台的 loader 差异（`SimpleChannel` vs `CustomPayload`、`ForgeConfigSpec`、`LazyOptional` 能力、无 PIP 的 1.20.1 渲染降级）另见 [ARCHITECTURE.md](./ARCHITECTURE.md) §5 与各平台的 `TESTING-FORGE-*.md`
 

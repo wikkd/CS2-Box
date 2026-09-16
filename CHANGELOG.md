@@ -1,6 +1,159 @@
 # 更新日志
 
-## [2.1.0] - Unreleased
+## [Unreleased]
+
+### 新增
+
+- **军火商村民动态定价（1.20.1 / 1.21.1）**：村民交易价格不再写死，改为锚定 `config/csbox/_prices.json` 的通用模型——common 新增 `VillagerPricing`（纯计算：收购 = 表价 × `buy_rate`，key1/key2 = 合成成本 `3 × 矿物表价 × sell_markup`，key0 保持 9 点货币锚，box/terminal 由 key0 派生，每次刷新在 `±fluctuation` 内重采样）与 `VillagerPricingConfig`（`_villager_prices.json`，宽容解析 + 默认值 + 首启自动生成）。两个平台经 `VillagerTrades` 代码注册，每次 `ItemListing.apply` 现场报价；顺带补齐 forge_1_20_1 缺失的 L3 交易并把静态回退数值与 26.x datapack 对齐。`enabled=false` 时回退静态值。
+- **26.x 村民动态定价接入 datapack 注册机制（v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2）**：26.x 交易是 datapack `trade_set` / `villager_trade` 静态注册，无法运行时动态——现改为**纯 datapack + 自定义 loot NumberProvider**：`villager_trade` JSON 的价格字段全部引用新注册的 `csgobox:arms_dealer_price`（`loot_number_provider_type`，平台类 `ArmsDealerPriceProvider`，内部调 common `VillagerPricing.quote` + `LootContext` 随机源）；收购端（矿→点）因 `gives.count` 固定不可动态，改用 `minecraft:set_count` loot function 动态改写点数。无需 mixin / 自定义 trade codec / 迁回代码注册，保留 datapack 可服务端定制；村民生成 / 升级 / 数据包重载时重新采样。每 JSON 条目带 `quote_field` + `fallback`，`enabled=false` 或配置缺失时回退原静态数值（平台间对齐）；四个 26.x 模块 `commonSetup` 补写默认 `_villager_prices.json`。key2 钻石段 clamp ≥ 1，与 1.21.1 行为一致，避免双输入报价消失。四个模块 `compileJava` 通过。
+
+### 修复
+
+- **v1_21_1 无 TACZ 环境打开终端机崩溃（NoClassDefFoundError: com/tacz/guns/api/item/IGun）**：`AnimRenderOps.renderItem2D` / `renderItem3D` 直接执行 `instanceof IGun`，缺少 `ModList.isLoaded("tacz")` 前置门，未装永恒枪械工坊（TACZ）的客户端在渲染终端机槽位/3D 预览时触发类加载崩溃（2.0.1 报告复现）。已按 `forge_1_20_1` 同款门禁补上 optional-dependency gate，无 TACZ 时静默走普通物品渲染路径。
+
+### 变更
+
+- **终端机「报价上限」改为价格表动态档位（六平台）**：移除写死的 `30 / 64 / 200 / 400 / 800 / 无上限` 档位。服务端每次加载 / `/csbox reload` / 热重载 `_prices.json` 后，按表内最高价做**对数几何分档**，自动生成 4 个档位 + 无上限（空表或全 0 价仅剩「无上限」），随 `PacketSyncBoxDefinitions` 与箱子定义一并下发；客户端下拉菜单的行数/宽度随档位自适应，旧存档里的过期档位值自动归一化为「无上限」，服务端校验同样改为只接受当前档位集合。新增 common 纯函数 `QuoteCaps`（分档 / 白名单 / 归一化）与 `QuoteCapsTest` 单测。
+- **空箱子可批量开箱（六平台修复）**：未绑定奖池/无有效物品/全零权重的箱子在批量开箱总览屏仍显示可开数量、开启按钮可点；服务端空池/全零权重旧实现只静默 `return`，客户端切到进度屏后收不到结算（体验为"点了没反应/卡住"，服务端代码不一致时甚至可能被真开）。现在服务端与单开路径一致显式发送拒绝包（进度屏正常退出、箱子与钥匙零消耗），客户端总览屏用 `ItemCsgoBox.getDefinition` + `BoxOdds.hasOpenableWeights` 判定空箱并禁用开启（显示「无法开启」，与单开 `boxEmpty` 门禁对齐）。六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
+- **TACZ 弹药/附件 legacy tag 解析修复（v1_21_1）**：`BoxItemCodec.applyLegacyGunTag` 只迁移含 `GunId` 的旧版顶层 NBT；弹药 `{AmmoId:...}` 与附件 `{AttachmentId:...}` 被误当成 `DataComponentPatch` 解析（报 `NBT 'tag' components parse failed: No component with type: 'null'`），开出的弹药/附件丢失 id（裸弹药不能上膛、附件挂不上）。现迁移条件扩展为 `GunId` / `AmmoId` / `AttachmentId` / `Attachment<槽位>` 任一命中即整体迁入 `minecraft:custom_data`，并修正 `AttachmentId` 不再被误报为「遗留附件槽丢弃」警告；+2 单测（`parseItem_legacyAmmoTag_migratesIntoCustomData` / `parseItem_legacyAttachmentIdTag_migratesIntoCustomData`）。涉及 `v1_21_1`（1.21.1 TACZ 用 custom_data；`forge_1_20_1` 的 0.5.x 走顶层 NBT 无此问题）。
+- **配方 key 格式修复（common 数据，全平台）**：`data/csgobox/recipe/*.json` 的合成配方 key 与锻造配方 ingredient 使用裸字符串（`"I": "minecraft:iron_ingot"`），自 1.21.1 起配方 Ingredient 不再接受裸字符串，7 个配方（铁/金/钻石/铜钥匙、下界合金钥匙锻造、武库点兑换、回收台）全部 `Parsing error` 失效。统一改为 `{"item": "..."}` 对象形式（1.20.1 亦兼容），`csgobox:csgo_key3_smithing` 的 `template/base/addition` 同步修正。
+- **3D 模型拖拽上下/左右方向反转（forge_26_1_2 / forge_26_2 修复）**：开箱预览与批量开箱总览的 `mouseDragged` 把水平位移累加进 `rotX`（绕 X 轴上下翻转）、垂直位移累加进 `rotY`（绕 Y 轴左右旋转），与 1.21.1 / 26.x / 1.20.1 参考行为（水平拖 → 绕 Y 轴、垂直拖 → 绕 X 轴）完全相反。已在两个 Forge 26.x 平台的 `CsboxScreen` / `CsboxBulkOverviewScreen` 交换为 `renderRotAngleY(dragX, ...)` + `renderRotAngleX(dragY, ...)`，与 `forge_1_20_1` 及 `ItemDrag3D` 拖拽手感一致。
+- **报价上限改为服务端价格表驱动（六平台完成迁移）**：终端机成交价上限下拉档位原为固定 `{30, 64, 200, 400, 800, 无限}`（`NegotiationModel.CAPS`），与服务器实际经济无关。现统一由 `config/csbox/_prices.json` 经 `QuoteCaps` 生成几何阶梯（`PriceTableRegistry` 发布 / `PacketSyncBoxDefinitions` 随箱子注册表广播给客户端）。六平台 `TerminalActionBar`（下拉菜单 + 点击命中几何）改读 `PriceTableRegistry.quoteCaps()`、`PacketTerminalClose` 服务端校验改走 `isAllowedQuoteCap`；v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1 的箱定义同步包补齐 `quoteCaps` 字段（此前仅有 v1_21_1 携带）。修复 `NegotiationModel.CAPS` / `isValidCap` 删除后五个平台无法编译的中间态。
+- **机械手（机械动力）开箱改用 Create 官方配方 API（v1_21_1）**：弃用 `RightClickBlock` 拦截 + 反射写 `TransportedItemStackHandlerBehaviour` 的实现，改走 Create 6.0.10 官方 `DeployerRecipeSearchEvent` + `ManualApplicationRecipe` 子类（`DeployerBoxOpenRecipe` / `DeployerBoxOpenRecipeSearch`，优先级 10000）：匹配「平台箱子 + 手持钥匙」后经 `enforceNextResult` 在 Create 真正装配时才执行 `BoxOpenExecutor` 掷骰（约束/冷却/权限/保底/成就一次完成，按部署器坐标隔离身份），钥匙消耗与平台物品替换交给 Create 自身管线；真玩家右键路径保留。构建侧：Create 6.0.10 的 jar-in-jar 内嵌依赖（ponder / flywheel / Registrate）提取进 `local-repo` 并加入 `compileOnly`（运行时由 NeoForge jarjar 自动加载）。**修复「装配成功但无物品产出」**：Create 的传送带/置物台装配走 `RecipeApplier.applyRecipeOn → rollResults(getRollableResults(), rng)`，按**声明输出列表**遍历、仅 index 0 消费 `enforceNextResult` 的强制结果；事件注入的配方声明输出为空列表时该槽位不存在，机械手会吃掉平台箱子却什么都不掉。现构造时补一个 `ProcessingOutput.EMPTY` 占位输出（真奖励仍由强制供应商注入，EMPTY 掷骰被 `isEmpty` 过滤），产出物品经 `convertToAndLeaveHeld` 放回平台原位置。**forge_1_20_1 同步适配（Create 6.0.8）**：新增同款 `create.DeployerBoxOpenRecipe` / `create.DeployerBoxOpenRecipeSearch`（1.20.1 事件直接携带 `Recipe`（无 `RecipeHolder`）、配方参数走 `ProcessingRecipeBuilder`（6.0.8 无 `ItemApplicationRecipeParams`）、`RecipeWrapper` 为 Forge 版、物品键查 `ForgeRegistries.ITEMS`），`BoxOpenExecutor` 加 `consumeKey` 重载，旧 `DeployerBoxOpen` 的机械手分支让路（真玩家右键路径保留）；构建侧：Create 6.0.8 及其 jar-in-jar（Ponder-Forge / flywheel-forge / Registrate / mixinextras-forge）提取进 `local-repo` 并加 `compileOnly`。
+
+## [2.0.1] - 2026-09-13
+
+> **正式版**，合并此前三个平面化名称的未发布批次：
+> ① **2.0.1 联动批次 A**——开箱概率进 tooltip、武库商小屋群系接入、/csbox info 来源模组统计、
+> compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）；② **箱子配置优化**——档内物品权重、
+> count 区间、#tag/战利品表引用、随机附魔、终端价格表、每箱 icon、库存/补货/折扣、
+> 开箱约束（每人上限/冷却/权限）、/csbox validate 干跑、schema 校验、boxgen/check-ids 工具脚本；
+> ③ **抽奖算法收尾**——显示层概率对齐档内权重、全零权重拒开、开箱保底（pity）；
+> ④ **帮助与教程入口**——/csbox help 全员可用、可点击教程/配置目录链接、网页配置工具入口。六平台同步
+> （v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
+>
+> 玩家向更新说明见 `docs/PLAYER-CHANGELOG-2.0.1.md`。
+
+> 抽奖算法收尾批次：显示层概率对齐档内权重、全零权重语义修正（拒开而非静默掉 1 档）、
+> 开箱保底（pity）机制。六平台同步。
+
+### 新增（帮助与教程入口，六平台）
+- **`/csbox help` 全员可用**（不再要求 OP），文本中直接给出可点击链接——「打开教程
+  文件夹」（点击后由系统文件管理器打开游戏目录下的 `config/csbox/`，内置教程
+  `_tutorial_v<版本>.md` 就落在这里）与「在线教程」（浏览器打开 Gitee 教程目录）。
+  `info` / `reload` / `validate` / `give` 子命令权限不变；新增 lang key（中英）。
+- **网页配置工具入口并入帮助**：`/csbox help` 与 `/csbox editor` 共用同一 URL
+  （原 `/csbox editor` 子命令保留兼容），全员可打开网页版配置编辑器。
+
+### 变更
+
+- **显示层概率对齐档内权重（修复）**：JEI/REI/EMI 的开箱概率面板此前始终按「档内均匀」
+  显示单件概率，v2.0.1 引入 `weight` 后与实际抽取不一致；现在三种配方面板的单件概率
+  与 F3+H 物品 tooltip、`/csbox info` 使用同一入口
+  `BoxOdds.itemChance(gradeChance, itemWeight, itemCount, positiveItemWeightSum)`——
+  全 `weight=1` 时保持均匀数值不变，加权配置时显示真实概率，
+  `weight<=0`（已禁用条目）显示 0%。涉及 v1_21_1 / forge_1_20_1（JEI+REI+EMI）与
+  v26_1_2 / v26_2（JEI+REI）共 10 个显示文件，+ common 单测。
+- **全零权重 = 箱子不可开启**：`random` 五项全为 0/负（或缺失）时，单开与批量开箱
+  在**掷骰前**拒绝请求且不消耗钥匙/箱子（旧行为是静默全部掉 1 档）。`/csbox validate`
+  与 box-editor 同步提示「所有档位权重非正」。+ validator 单测。
+- **开箱保底（pity）**：箱子 JSON 新增可选字段
+  `"pity": { "grade": "classified", "every": 20 }`——连续 `every-1` 次开出低于目标档
+  后，下一次强制从目标档及以上按档位权重抽取；命中（≥ 目标档）即重置计数。按
+  「玩家 × 箱子」内存计数（与服务端约束同生命周期，重启清零），单开与批量均生效；
+  批量批次内独立推进、发放成功后才写回计数（中途失败/被拒不推进）。新增
+  `common/logic/PityPolicy`（纯策略）、`common/logic/PityTracker`（内存计数）、
+  `OddsCalculator.pickGradeWithPity`（强制切片抽取，目标档无正权重时安全回退普通抽），
+  + `PityPolicyTest`、`OddsCalculatorTest` 保底用例；`box.schema.json`、box-editor
+  （透传+校验）与 `docs/CONFIGURATION.md` 同步。
+- 工具/文档：`box.schema.json` 新增 `pity` 定义；box-editor 加载/保存不再丢弃 `pity`
+  字段（白名单之外新增特例），校验器与双语提示同步。
+- **KubeJS 适配扩展（v2.0.1）**：新增两个可监听事件（六平台同步）——
+  `TerminalBuyAttemptEvent`（终端机购买前可取消：限购/黑名单/门槛，扣库存与扣点数之前触发）
+  与 `BoxEntityDropEvent`（实体掉落箱子前可取消/调概率，RNG 之前触发）；
+  文档补齐 `ArmoryRecycleEvent.setYield`（双倍回收）、`CsgoBox.PERMISSION_GATE`
+  脚本接入示例与只读访问补充（PityTracker 保底计数 / 终端库存 / 价格表）。
+- **机械动力（Create）机械手开箱（v2.0.1）**：机械手手持箱子对应钥匙、**侧面**
+  指向传送带/置物台上的箱子物品即可直接开箱（产物替换台上物品可被传送带/机械臂运走；
+  无钥匙箱子空手可开）；真玩家手持钥匙右键台上箱子同样开箱（产物进背包）。开箱走与
+  手动开箱完全相同的服务端管线（`BoxOpenExecutor` 与 `PacketCsgoProgress` 共用核心：
+  守卫/约束/权限/保底/钥匙消耗/事件全量一致），随机源仍为 CSPRNG 派生且不回传。
+  不依赖 Create 编译产物（反射调用其稳定公开 API，无 Create 时装载零副作用）。
+  平台范围：`v1_21_1` + `forge_1_20_1`（对应 Create 0.6.x / 0.5.x）；26.x 待 Create
+  出对应构建。文档：`docs/CREATE-COMPAT.md`。
+- **随机源加固（种子安全）**：`TerminalSession`（6 平台）会话随机与
+  `ModEvents` 实体掉落判定、common `NegotiationModel` 全部从默认 `new Random()`
+  （nanoTime 种子）改为 CSPRNG 种子派生（`new Random(SecureRandom.nextLong())`），
+  与开箱路径同一安全随机源；开箱 `serverSeed` 处固化了「不得写日志/不得发客户端/
+  不得经事件暴露」的代码约定（`Random(seed)` 是 48 位 LCG，持 seed 即可复现整条流）。
+- **PityTracker 加固与 RNG 一致性（评审后追加）**：保底计数写入原子化（per-key compute），
+  条目带时间戳自动清理（7 天 stale + 100k 上限 + 最旧批次逐出）；批量开箱种子统一为
+  `SecureRandom`（与单开一致）；`BoxJsonLoader` 对「保底目标档及以上权重全零」加载告警
+  （fix-E/C/F/A）。
+- **保底口径修复（评审后追加）**：保底连败计数统一按**掷出的档位**（roll grade）推进，
+  不再被物品池 fallback/`resolveGrade` 的解析结果拉低——强制 roll 落在目标档但兜底换了
+  低档物品时，这次仍算命中（fix-B，单开与批量三路径口径一致，批量经 `BulkOpenResult.pityGrade`
+  传递）；批量中空结果（无物品可发）不再推进计数，与发放后写回口径一致（fix-D）。
+  校验器新增 `pity` 形状检查与「目标档及以上权重全零 → 保底永不触发」告警
+  （fix-A），`BoxJsonSchemaValidatorTest` 新增 7 组用例。
+- **box-editor 网站审查修复批次**（六平台共用同一编辑器，一处修复全平台受益）：
+  - 「精简输出（省略默认值）」开关从摆设变为可用：取消勾选后输出完整 JSON
+    （显式写入 `type`/`enabled`/物品 `count: 1`/`weight: 1`），勾选时保持省略；
+  - 撤销体验修正：价格输入与其余输入框一致按 600ms 防抖合并撤销点（原先每键一个），
+    undo 跳过与当前相同的快照（消除"空按"），载入示例/导入/新建后补快照使撤销可
+    逐步回到"加载后 → 加载前"；打开分享链接时本地草稿保留为撤销栈首项，
+    按 Ctrl+Z 即可撤回覆盖，toast 同步提示；
+  - 分享链接编解码改 UTF-8 安全 base64（移除已废弃的 `escape/unescape`），打开时
+    与本地载入同样做字段归一化（旧版/被篡改链接不再产生 undefined 字段）；
+  - 复制/分享在无 `navigator.clipboard` 的环境（局域网 http 等）自动降级
+    `execCommand` 选区复制；
+  - i18n 补漏：掉落权重行档位名、校验信息档位名不再硬编码中文（跟随界面语言），
+    附魔等级选项入字典；新增 `drop.entityDel`/`toast.saveFailed` 等键（zh/en 216 对全对称）；
+  - 可访问性与健壮性：图标按钮补 `aria-label`；本地存储写入失败（配额/隐私模式）
+    不再静默——toast 提示"刷新可能丢失更改"；新增 favicon 与 og 社交元数据；
+  - 构建/CI 加固：`build.mjs` 的 schema 一致性检查从"顶层键集合"升级为键序无关的
+    深度结构比较（捕捉枚举/嵌套字段漂移）；`box-editor-pages.yml` 在 schema 存在时
+    sync 失败直接中断（不再带警告发布旧规则），发布前执行 `node --check` + 模型单测，
+    缓存键改用 `package-lock.json`；`tests/model.test.mjs` 新增 verbose/compact
+    序列化回归用例（11 通过）；README 补充 Firefox `file://` 不保存状态、
+    compact 开关与分享链接撤回说明。
+  - **box-editor 排版优化（纯 CSS 覆盖层，标记不变）**：
+    - 超宽屏舒适化：`.layout` 限宽 1760px 居中，避免 21:9/4K 下表单区过度拉伸；
+    - 顶栏窄屏紧凑排布：≤1080px 收紧控件间距与按钮内边距、控件左对齐（换行更
+      整齐）；≤720px 隐藏副标题、缩小 logo，输入框字号提至 16px（规避 iOS
+      Safari 聚焦自动放大）；
+    - 物品行窄屏整齐折行：`<select>` 限宽、`.mini` 标签等宽分配、实体行可换行，
+      折行后不再参差；
+    - 价格表窄屏改为容器内横向滚动（表格保底 540px 不挤压列），页面本身无横向
+      溢出（1600/1366/1024/480 + 价格表页逐视口实测为 0）；
+    - 对话框限高（88vh）内滚，示例列表/导入文本框独立滚动，超长内容不再顶出
+      视口；键盘 `focus-visible` 轮廓补齐（按钮/标签页/折叠头）；
+    - 打印样式增强：白底无玻璃效果、卡片防拆分、JSON 预览取消最大高度；
+    - 小屏 toast 贴底、页脚留白收紧。
+  - **box-editor 顶部栏「高级」开关（自定义贴图收纳）**：默认关闭，开启后
+    「基本信息」显示完整的「自定义贴图（图标）」配置——整数 CustomModelData
+    （全平台 + 资源包）或 `ns:path` 物品模型 id（26.x 直接渲染）+ 12 个常用
+    模型快捷选择；按当前所选版本显示兼容提示（1.21.1 / 1.20.1 会警告
+    `ns:path` 不被支持并建议整数）。已配置图标的箱子在普通模式下显示黄色提示
+    条而非静默隐藏，导入/导出不受开关影响。版本元数据新增 `itemModel` 能力位
+    （sync 脚本权威生成）；校验器新增「模型 id 图标在非 26.x 上的兼容性告警」
+    （warn 而非 error，与运行时"忽略 + 日志"一致）；i18n zh/en 新增 9 键；
+    新增 `tests/i18n.test.mjs` 回归（字典对称、UI 引用键齐全、itemModel 标志
+    完备），顺带修复既有缺键 `meta.requires`（此前界面直接显示原始 key）；
+    smoke 新增 8 条高级开关断言（47/47）。
+  - **box-editor 高级模式扩展（TACZ + 附魔收纳）**：顶部栏「高级」开关的管辖范围
+    从自定义贴图扩展到「TACZ 专属字段」卡片（含三态变体开关与导入教程）与物品行
+    的附魔配置（随机/指定附魔 + 等级区间）；原始 NBT（`tagRaw`）行同样收纳。
+    普通模式下物品若已配置附魔 / TACZ 变体 / NBT，物品卡头部显示 `⚙ 附魔 / TACZ`
+    徽章，点击一键开启高级模式（`toast.advancedOn` 提示）；价格表页的 `id#变体`
+    键提示逻辑不受开关影响。i18n zh/en 新增 5 键；smoke 新增 TACZ/附魔收纳 +
+    徽章交互断言（47 → 53）。
+  - **修复既有渲染中断 bug（焦点恢复）**：`withFocusRestore` 对保持焦点的
+    checkbox（如顶栏「高级」开关——它不被重渲染、焦点不丢失）调用
+    `setSelectionRange` 会抛异常并中断 `rebuildGrades` 循环，导致第 2–5 档
+    奖池渲染为空。现在仅对支持选区（text 类）的输入恢复光标，checkbox/radio/
+    number/file 等跳过并加防御性 try/catch；已纳入 smoke 回归
+    （53/53 全绿，含此前失败场景）。
 
 > 箱子配置优化批次：档内物品权重、count 区间、物品标签 / 战利品表引用、随机附魔、
 > 缺模组 id 区分、空档位告警、文件名校验、enabled/requires 门控、每箱 icon、终端
@@ -203,8 +356,6 @@
   三平台 + forge_1_20_1（26.x Forge 无构建），**WTHIT 六平台全接入**（是 26.x Forge 双平台
   唯一的信息显示集成，衔接 JEI/REI/EMI 在这些平台上无构建的缺口）。
 
-## [2.0.1] - Unreleased
-
 > 联动批次 A：开箱信息可查性 + 世界生成/数据包生态接入。六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
 
 ### 新增（开箱概率进物品 tooltip）
@@ -241,7 +392,7 @@
   （主背包+护甲+副手），不支持 Curios / Trinkets 等模组扩展槽位」。
 
 ### 变更（箱子物品注册表与配置解耦 —— 联机修复，破坏性变更）
-- **物品注册不再读取 `config/csbox/`**：2.1.0 及以前每个 `<名字>.json` 都会在注册阶段
+- **物品注册不再读取 `config/csbox/`**：2.0.1 及以前每个 `<名字>.json` 都会在注册阶段
   生成独立物品 `csgobox:<名字>`。物品注册表是**同步且启动期冻结**的，客户端与服务端
   配置一有差异（或 `requires` 门控的可选模组只装在一侧）两侧注册表就分叉，联机被
   拒绝并显示「Failed to synchronize registry data from server / 模组版本不匹配」——
@@ -308,6 +459,19 @@
   `NoClassDefFoundError: mcjty.theoneprobe.api.IProbeInfoEntityProvider`；
   Jade/WTHIT 走 `@WailaPlugin` 注解扫描不受影响。修复平台：forge_1_20_1 /
   v1_21_1 / v26_1_2 / v26_2。
+
+### 工程（2.0.1 发布批次收尾）
+- **玩家名日志移除（六平台，隐私）**：各平台 `CsgoBox.onClientSetup` 删除
+  `'MINECRAFT NAME >>'` 日志（连带移除不再使用的 Minecraft import）——日志不再
+  记录玩家名，减小隐私噪音。
+- **批量开箱任务队列有界化（服务端稳健性）**：`BULK_COMPUTE_POOL` 改用
+  `ThreadPoolExecutor`（64 有界队列 + 拒绝日志）——高并发批量开箱请求不再无界积压。
+- **构建确定性**：ForgeGradle 按模块精确 pin（forge_26_1_2 / forge_26_2 → 7.0.34，
+  forge_1_20_1 → 7.0.31，取代动态区间 `[7.0.17,8)`），`gradle.properties` 清理
+  死属性/弃用项并补齐各模块构建脚本；jar 时间戳改用确定性来源，构建缓存可命中。
+- **CI 六平台构建矩阵 + 平台漂移门禁**：`.github/workflows/build.yml` 扩为六平台
+  矩阵；新增 `scripts/check-platform-drift.py` 与 `drift-baseline.json` 漂移门禁；
+  box-editor schema 一致性断言接入 `box-editor-smoke.yml`。
 
 ### 新增（Shader 兼容：Iris / Oculus 降级，P6）
 - 每平台 `AnimRenderOps` 新增私有 `isShaderModActive()`（检测 `iris`/`oculus`，
@@ -574,7 +738,7 @@
 - **修复开箱屏箱子"像素贴图化"**：箱子渲染改为高清 3D（PIP）路径，放大查看不再模糊、有立体感。
 - 本版本随带的玩法功能：教程文档自动下载与更新、动态箱子 JSON（`config/csbox/*.json`）、开箱排行榜、按磨损值扣耐久、JSON 加载错误红色提示等。
 - **安装**：将 `csgobox-forge-26.1.2-1.0.6.jar` 放入 `mods/` 文件夹，需要 MinecraftForge 26.1.2（Java 25）。
-- **本版分发 jar 已含同步并入的新增玩法**（批量开箱恢复、终端机、武库拆解台 / 武库点数、Blur 软兼容、`/csbox nbt hand`），玩家向更新日志见 `docs/PLAYER-CHANGELOG-FORGE-1.0.6.md`。
+- **本版分发 jar 已含同步并入的新增玩法**（批量开箱恢复、终端机、武库拆解台 / 武库点数、Blur 软兼容、`/csbox nbt hand`），玩家向更新日志见 `docs/archive/PLAYER-CHANGELOG-FORGE-1.0.6.md`。
 
 ### 上线前补充：TACZ 检视视口 / v1_21_0 平台 / 审美测试脚本
 ### 新增
@@ -841,3 +1005,4 @@
 - Minecraft 1.21.1
 - NeoForge 21.1.115+
 - Java 21
+

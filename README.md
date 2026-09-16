@@ -2,7 +2,7 @@
 
 > CS:GO 风格开箱体验的 Minecraft 模组 —— 同时支持 NeoForge 与 Forge，覆盖 MC 1.20.1 / 1.21.1 / 26.1.2 / 26.2 共 6 个平台（详见「多平台支持」）。
 
-CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打开预览，放入钥匙点开启按钮，服务端授权 RNG 决定结果，客户端播放滚动动画，揭晓稀有度分级物品。当前版本 `2.1.0`，仓库 License MIT（`LICENSE`）。
+CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打开预览，放入钥匙点开启按钮，服务端授权 RNG 决定结果，客户端播放滚动动画，揭晓稀有度分级物品。当前版本 `2.0.1`，仓库 License MIT（`LICENSE`）。
 
 ## 核心特性
 
@@ -12,14 +12,14 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
 - **Minecraft 1.21+ components 支持**：用 `components` 字段（同时兼容旧版 `tag` 字符串）
 - **成就系统**：`全新的开始`（首次主动开箱）+ 隐藏紫色挑战 `导购`（累计主动开 200 个箱）
 - **5 把钥匙**：铜 / 铁 / 金 / 钻石 / 下界合金（铜钥匙 = 3 铜锭合成；下界合金**仅**通过锻造台升级 `csgo_key2` 获得）
-- **`/csbox` 命令**：`/csbox info`（含物品来源模组统计）、`/csbox reload`、`/csbox validate`（v2.1.0 干跑校验）、`/csbox give <玩家> <箱子> [数量]`（v2.1.0 发放箱子）、`/csbox nbt hand` 等子命令
-- **开箱概率可查**：箱子物品 tooltip 显示 5 档稀有度概率（v2.1.0 起档内加权时逐物品显示；默认 tooltip 只列物品，按 **F3+H** 开启原版高级提示框后显示概率行），另有 JEI / REI / EMI 分类查询与 Jade / WTHIT / The One Probe 准星信息
+- **`/csbox` 命令**：`/csbox info`（含物品来源模组统计）、`/csbox reload`、`/csbox validate`（v2.0.1 干跑校验）、`/csbox give <玩家> <箱子> [数量]`（v2.0.1 发放箱子）、`/csbox nbt hand` 等子命令
+- **开箱概率可查**：箱子物品 tooltip 显示 5 档稀有度概率（v2.0.1 起档内加权时逐物品显示；默认 tooltip 只列物品，按 **F3+H** 开启原版高级提示框后显示概率行），另有 JEI / REI / EMI 分类查询与 Jade / WTHIT / The One Probe 准星信息
 - **联动数据包示例**：`compat-packs/` 提供 Apotheosis / Iron's Spells / TACZ 示例箱配置（详见 [compat-packs/README.md](./compat-packs/README.md)）
-- **配置表达力（v2.1.0）**：档内物品 `weight`、`count:[min,max]` 区间、`#tag` 物品标签引用、`loot_table` 战利品表引用、随机附魔 `enchant` 快捷
-- **联动门控与身份（v2.1.0）**：`requires`（缺模组整箱跳过）、`enabled`、每箱 `icon`；未知物品 id 区分「模组未装 vs 拼写错」
-- **终端经济（v2.1.0）**：`discount` 折扣、`stock` / `restock_minutes` 库存与补货
-- **开箱约束（v2.1.0）**：`max_per_player` 每人上限、`cooldown_seconds` 冷却、`permission` 权限节点
-- **工具脚本（v2.1.0）**：`scripts/boxgen.py` 生成箱子配置、`scripts/check-ids.py` 核查物品 id
+- **配置表达力（v2.0.1）**：档内物品 `weight`、`count:[min,max]` 区间、`#tag` 物品标签引用、`loot_table` 战利品表引用、随机附魔 `enchant` 快捷
+- **联动门控与身份（v2.0.1）**：`requires`（缺模组整箱跳过）、`enabled`、每箱 `icon`；未知物品 id 区分「模组未装 vs 拼写错」
+- **终端经济（v2.0.1）**：`discount` 折扣、`stock` / `restock_minutes` 库存与补货
+- **开箱约束（v2.0.1）**：`max_per_player` 每人上限、`cooldown_seconds` 冷却、`permission` 权限节点
+- **工具脚本（v2.0.1）**：`scripts/boxgen.py` 生成箱子配置、`scripts/check-ids.py` 核查物品 id
 
 ## 多平台支持
 
@@ -50,7 +50,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：玩家手持箱子右键打�
    - Forge 版 → MinecraftForge **26.1.2-64.1.0**，jar 名为 `csgobox-forge-26.1.2-<mod_version>.jar`
    - Forge 26.2 版 → MinecraftForge **26.2-65.1.1**，jar 名为 `csgobox-forge-26.2-<mod_version>.jar`
    - Forge 1.20.1 版 → MinecraftForge **47.4.22**，jar 名为 `csgobox-forge-1.20.1-<mod_version>-srg.jar`（SRG 重映射版，1.20.1 生产必需）
-2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：NeoForge 用 `csgobox-<mc>-2.1.0.jar`（如 `csgobox-26.1.2-2.1.0.jar`），Forge 用 `csgobox-forge-<mc>-2.1.0.jar`（Forge 1.20.1 为 `csgobox-forge-1.20.1-2.1.0-srg.jar`）。
+2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar：NeoForge 用 `csgobox-<mc>-2.0.1.jar`（如 `csgobox-26.1.2-2.0.1.jar`），Forge 用 `csgobox-forge-<mc>-2.0.1.jar`（Forge 1.20.1 为 `csgobox-forge-1.20.1-2.0.1-srg.jar`）。
 3. 将 jar 放入 Minecraft 客户端的 `mods/` 文件夹。
 4. 启动游戏，世界内用 `/give @p csgobox:csgo_box` 获取箱子即可开箱。
 
@@ -81,7 +81,7 @@ cd CS2-Box
 #    active_versions=26.1.2   # 可选值：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2
 
 # 3. 构建当前平台的 jar
-./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.1.0.jar
+./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.0.1.jar
 
 # 4. 启动开发客户端（自动下载并注入 NeoForge 到 run/ 目录）
 ./gradlew :v26_1_2:runClient
@@ -113,7 +113,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 # 下界合金钥匙 csgo_key3 只能通过锻造台升级 csgo_key2 获得（smithing_transform）
 ```
 
-- **`/csbox give <玩家> <箱子ID> [数量]`**（v2.1.0 起，OP）：按箱子 ID 直接发放配置箱，例如：
+- **`/csbox give <玩家> <箱子ID> [数量]`**（v2.0.1 起，OP）：按箱子 ID 直接发放配置箱，例如：
 
 ```bash
 /csbox give @p csgobox:weapon_supply_box 1
@@ -185,11 +185,12 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 ## 文档导航
 
 - [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) — 面向玩家的模组介绍与玩法说明
+- [docs/ROADMAP.md](./docs/ROADMAP.md) — 总体规划：后续可做方向、优先级、前置依赖与已否决项
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — 六平台模块拓扑、核心抽象、数据流、GUI 渲染管线（legacy/decoupled 双 era）、终端机子系统与工程门禁
 - [docs/PLATFORM-APIS.md](./docs/PLATFORM-APIS.md) — 多平台 API 差异速查矩阵 + 主题展开开发指南（含 AnimRenderOps 渲染门面章节）
 - [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) — 完整安装与首次运行步骤
 - [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) — 本地开发配置、构建命令、数据生成
-- [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) — TOML / JSON 配置参考（v2.1.0 全字段 + [JSON Schema](./docs/box-schema/box.schema.json)）
+- [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) — TOML / JSON 配置参考（v2.0.1 全字段 + [JSON Schema](./docs/box-schema/box.schema.json)）
 - [docs/BIOME-INTEGRATION.md](./docs/BIOME-INTEGRATION.md) — 让武库商小屋在模组群系/村庄生成（纯数据 + `add-biome.py` 脚本）
 - [docs/SHADER-COMPAT.md](./docs/SHADER-COMPAT.md) — Iris/Oculus shader 兼容策略与回归清单（3D 预览降级 2D）
 - [docs/DESIGN-jade-wthit-integration.md](./docs/DESIGN-jade-wthit-integration.md) — Jade/WTHIT 信息显示集成设计（待联网接线）
@@ -243,7 +244,7 @@ MIT License —— Copyright 2024 Reclizer。详见 [LICENSE](./LICENSE)。
 
 ## 项目状态
 
-**当前发布版本**： `2.1.0`（箱子配置优化批次；6 平台同步发行：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`；2.0.0 为前一个正式发布，基于 `2.0.0-beta`。6 平台同步发行：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`，NeoForge jar 名 `csgobox-<mc>-<mod_version>.jar`、Forge 名 `csgobox-forge-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
+**当前发布版本**： `2.0.1`（正式版，合并「联动批次 A + 箱子配置优化 + 抽奖收尾」三个批次；6 平台同步发行：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`；2.0.0 为前一个正式发布，基于 `2.0.0-beta`。6 平台同步发行：NeoForge v1_21_1 / v26_1_2 / v26_2 + Forge forge_26_1_2 / forge_26_2 / forge_1_20_1，共享同一 `mod_version`，NeoForge jar 名 `csgobox-<mc>-<mod_version>.jar`、Forge 名 `csgobox-forge-<mc>-<mod_version>.jar`；v1_21_0/3/4/5/8/10/11 七个 EOL 平台已归档，最后状态在 tag `eol-legacy-21x-1.0.6`）
 
 **开发中版本**： 无（下一版本线待规划）
 

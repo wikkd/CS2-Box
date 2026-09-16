@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_1_20_1.box;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.logic.PityPolicy;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -17,14 +18,14 @@ import java.util.OptionalInt;
 /**
  * Immutable box definition loaded from JSON and referenced by box ItemStacks.
  *
- * <p>v2.1.0 config additions: {@code enabled}/{@code requires} gate loading,
+ * <p>v2.0.1 config additions: {@code enabled}/{@code requires} gate loading,
  * {@code icon} sets CustomModelData, {@code discount}/{@code stock}/
  * {@code restock_minutes} drive terminal economy, and {@code max_per_player}/
  * {@code cooldown_seconds}/{@code permission} constrain opening.</p>
  *
  * <p>This record carries no CODEC: the network path uses the manual
  * {@link #encode}/{@link #decode} pair which serializes every field including
- * the v2.1.0 additions (a 17-field {@code RecordCodecBuilder} group exceeds
+ * the v2.0.1 additions (a 17-field {@code RecordCodecBuilder} group exceeds
  * the framework's arity limit and the codec is not used anywhere else).</p>
  */
 public record BoxDefinition(
@@ -46,7 +47,8 @@ public record BoxDefinition(
         int restockMinutes,
         int maxPerPlayer,
         int cooldownSeconds,
-        String permission
+        String permission,
+        Optional<PityPolicy> pity
 ) {
 
     private static final ResourceLocation NO_KEY = new ResourceLocation("minecraft:air");
@@ -69,6 +71,7 @@ public record BoxDefinition(
         icon = icon == null ? Optional.empty() : icon;
         discount = BoxGrades.clampDropRate(discount);
         permission = permission == null ? "" : permission;
+        pity = pity == null ? Optional.empty() : pity;
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -100,7 +103,7 @@ public record BoxDefinition(
             buf.writeFloat(entry.getValue());
         }
 
-        // v2.1.0 fields.
+        // v2.0.1 fields.
         buf.writeBoolean(enabled);
         buf.writeVarInt(requires.size());
         for (String req : requires) {
@@ -114,6 +117,12 @@ public record BoxDefinition(
         buf.writeVarInt(maxPerPlayer);
         buf.writeVarInt(cooldownSeconds);
         buf.writeUtf(permission);
+        Optional<PityPolicy> pity = this.pity;
+        buf.writeBoolean(pity.isPresent());
+        if (pity.isPresent()) {
+            buf.writeVarInt(pity.get().targetLevel());
+            buf.writeVarInt(pity.get().every());
+        }
     }
 
     public static BoxDefinition decode(FriendlyByteBuf buf) {
@@ -142,7 +151,7 @@ public record BoxDefinition(
             entityDropRates.put(entityId, buf.readFloat());
         }
 
-        // v2.1.0 fields.
+        // v2.0.1 fields.
         boolean enabled = buf.readBoolean();
         int requiresSize = buf.readVarInt();
         List<String> requires = new ArrayList<>(requiresSize);
@@ -157,9 +166,18 @@ public record BoxDefinition(
         int cooldownSeconds = buf.readVarInt();
         String permission = buf.readUtf();
 
+        Optional<PityPolicy> pity = Optional.empty();
+        if (buf.readBoolean()) {
+            int targetLevel = buf.readVarInt();
+            int every = buf.readVarInt();
+            // Invalid combinations (unknown tier, every < 2) silently degrade
+            // to no pity — the schema validator reports them at load time.
+            pity = Optional.ofNullable(PityPolicy.ofLevel(targetLevel, every));
+        }
+
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     public static Builder builder(ResourceLocation id, String name) {
@@ -235,7 +253,7 @@ public record BoxDefinition(
         }
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     public static class Builder {
@@ -259,6 +277,7 @@ public record BoxDefinition(
         private int maxPerPlayer = UNLIMITED;
         private int cooldownSeconds = 0;
         private String permission = "";
+        private Optional<PityPolicy> pity = Optional.empty();
 
         public Builder(ResourceLocation id, String name) {
             this.id = Objects.requireNonNull(id, "box id");
@@ -364,6 +383,11 @@ public record BoxDefinition(
             return this;
         }
 
+        public Builder pity(PityPolicy pity) {
+            this.pity = Optional.ofNullable(pity);
+            return this;
+        }
+
         public BoxDefinition build() {
             Component finalName = name;
             if (nameColor.isPresent()) {
@@ -373,7 +397,7 @@ public record BoxDefinition(
             return new BoxDefinition(id, finalName, type, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates), enabled, List.copyOf(requires), icon,
-                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
         }
     }
 }

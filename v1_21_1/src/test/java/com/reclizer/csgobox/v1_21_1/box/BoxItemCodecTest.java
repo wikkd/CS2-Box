@@ -221,6 +221,41 @@ class BoxItemCodecTest {
     }
 
     @Test
+    void parseItem_legacyAmmoTag_migratesIntoCustomData() {
+        // v2.0.1-fix: TACZ ammo uses a top-level {AmmoId:...} in legacy
+        // configs; it must migrate into minecraft:custom_data too, otherwise
+        // the ammo stack loses its id (mis-decoded as a DataComponentPatch).
+        JsonObject json = new JsonObject();
+        json.addProperty("id", "minecraft:stone");
+        json.addProperty("tag", "{AmmoId:\"tacz:9mm\"}");
+
+        ParseOutcome out = BoxItemCodec.parseItem(json, NO_TACZ);
+
+        assertTrue(out.isSuccess());
+        CustomData cd = out.stack().get(DataComponents.CUSTOM_DATA);
+        assertNotNull(cd, "legacy AmmoId tag must be wrapped into minecraft:custom_data");
+        assertEquals("tacz:9mm", cd.copyTag().getString("AmmoId"));
+        assertTrue(out.warnings().isEmpty());
+    }
+
+    @Test
+    void parseItem_legacyAttachmentIdTag_migratesIntoCustomData() {
+        // v2.0.1-fix: TACZ attachments use a top-level {AttachmentId:...} in
+        // legacy configs; migrate it into custom_data the same way.
+        JsonObject json = new JsonObject();
+        json.addProperty("id", "minecraft:stone");
+        json.addProperty("tag", "{AttachmentId:\"tacz:sight_pk06_rifle\"}");
+
+        ParseOutcome out = BoxItemCodec.parseItem(json, NO_TACZ);
+
+        assertTrue(out.isSuccess());
+        CustomData cd = out.stack().get(DataComponents.CUSTOM_DATA);
+        assertNotNull(cd, "legacy AttachmentId tag must be wrapped into minecraft:custom_data");
+        assertEquals("tacz:sight_pk06_rifle", cd.copyTag().getString("AttachmentId"));
+        assertTrue(out.warnings().isEmpty());
+    }
+
+    @Test
     void parseItem_legacyGunTagWithAttachments_warnsMigrationLoss() {
         JsonObject json = new JsonObject();
         json.addProperty("id", "minecraft:stone");

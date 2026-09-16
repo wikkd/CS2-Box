@@ -3,6 +3,7 @@ package com.reclizer.csgobox.box;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.reclizer.csgobox.villager.VillagerPricingConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +86,7 @@ public final class BoxDefaults {
      * Copies each missing tutorial file from the bundled resources into
      * {@code config/csbox/}.
      *
-     * <p>Ordering guarantee (v2.1.0 fix): stale {@code _tutorial_v*_.md}
+     * <p>Ordering guarantee (v2.0.1 fix): stale {@code _tutorial_v*_.md}
      * files are deleted ONLY after the current version's tutorial files are
      * fully in place — a copy failure keeps the player's existing tutorials
      * instead of wiping them. Existing current-version files are never
@@ -162,6 +163,28 @@ public final class BoxDefaults {
      */
     static void ensureBoxesDir(Path boxesDir) throws IOException {
         Files.createDirectories(boxesDir);
+    }
+
+    /**
+     * Writes a default {@code _villager_prices.json} when the file does not
+     * exist yet, so server owners can see and tune the arms-dealer's dynamic
+     * pricing. Existing files are never overwritten (player edits are
+     * respected). Same defensive try-catch contract as the tutorial flow —
+     * the worst case is no config file being written (the loader then uses
+     * {@link VillagerPricingConfig#DEFAULT}).
+     */
+    public static synchronized void writeVillagerPricesIfMissing(Path boxesDir) {
+        Path file = boxesDir.resolve(VillagerPricingConfig.FILE_NAME);
+        if (Files.exists(file)) {
+            return;
+        }
+        try {
+            ensureBoxesDir(boxesDir);
+            Files.writeString(file, VillagerPricingConfig.DEFAULT.toJson());
+            LOGGER.info("Wrote default villager pricing config: {}", file);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to write villager pricing config {}: {}", file, e.getMessage());
+        }
     }
 
     /**

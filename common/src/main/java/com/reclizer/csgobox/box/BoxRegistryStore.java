@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  * Platforms keep a thin shell that supplies the key/value types, the
  * invalidation callbacks (e.g. grade-pool cache eviction), and logging.</p>
  *
- * <p>Thread-safety (v2.1.0-fix): all mutations and reads are synchronized on
+ * <p>Thread-safety (v2.0.1-fix): all mutations and reads are synchronized on
  * the store instance, and {@link #getAll()} / {@link #getIds()} return
  * immutable snapshots instead of live views. This makes the store safe to
  * touch from the {@code BoxFileWatcher}'s reload thread while the main

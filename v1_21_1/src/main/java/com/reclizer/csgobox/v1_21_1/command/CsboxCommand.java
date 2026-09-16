@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -99,6 +100,8 @@ public final class CsboxCommand {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         LiteralArgumentBuilder<CommandSourceStack> csbox = Commands.literal("csbox")
                 .executes(CsboxCommand::showHelp)
+                .then(Commands.literal("help")
+                        .executes(CsboxCommand::showHelp))
                 .then(Commands.literal("info")
                         .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::showInfoOverview)
@@ -143,7 +146,7 @@ public final class CsboxCommand {
     }
 
     /**
-     * v2.1.0: hands out a box definition. Registry entries are a fixed set now
+     * v2.0.1: hands out a box definition. Registry entries are a fixed set now
      * (a box is data, not an item id), so this is the supported way to obtain
      * a box — it picks the fixed item when the id ships with the mod and the
      * generic {@code csgo_box} / {@code terminal} item otherwise, then stamps
@@ -171,12 +174,9 @@ public final class CsboxCommand {
         return players.size();
     }
 
-    /** Requires permission level 2; invisible for non-OP players. */
+    /** Help is visible to everyone; carries clickable links to the web editor, the local tutorial folder and the online tutorial mirror. */
     private static int showHelp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        if (!isGameMaster(source)) {
-            throw new SimpleCommandExceptionType(Component.translatable("commands.csgobox.help.need_op")).create();
-        }
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.title"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.info"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
@@ -184,9 +184,48 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.nbt"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.tacz"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.editor")
+                .append(editorLink()), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.tutorial")
+                .append(tutorialFolderLink()).append("  ").append(tutorialOnlineLink()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
     }
+    /** Folder opened by /csbox help (path is relative to the client game directory). */
+    private static final String TUTORIAL_DIR = "config/csbox";
+    /** Online tutorial mirror, kept in sync with docs/tutorials/ in the repo. */
+    private static final String TUTORIAL_URL = "https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/tutorials";
+
+    /** Web editor link shown by /csbox help — same URL as the /csbox editor subcommand. */
+    private static Component editorLink() {
+        return Component.literal(EditorCommand.EDITOR_URL)
+                .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, EditorCommand.EDITOR_URL))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("commands.csgobox.editor.hover"))));
+    }
+
+    /** Opens the local config/csbox folder, where the bundled tutorials are written. */
+    private static Component tutorialFolderLink() {
+        return Component.translatable("commands.csgobox.help.tutorial.folder")
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, TUTORIAL_DIR))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("commands.csgobox.help.tutorial.folder_hover"))));
+    }
+
+    /** Opens the online tutorial mirror in the player's browser. */
+    private static Component tutorialOnlineLink() {
+        return Component.translatable("commands.csgobox.help.tutorial.online")
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, TUTORIAL_URL))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("commands.csgobox.help.tutorial.online_hover"))));
+    }
+
 
     /** Requires permission level 2; lists all boxes then any load errors. */
     private static int showInfoOverview(CommandContext<CommandSourceStack> ctx) {
@@ -297,7 +336,7 @@ public final class CsboxCommand {
                         String.valueOf(grade.items().size() - 5)), false);
             }
         }
-        // v2.1.0 config flags.
+        // v2.0.1 config flags.
         if (!def.enabled()) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_disabled"), false);
         }
@@ -348,7 +387,7 @@ public final class CsboxCommand {
 
     // --- Admin handlers ---
 
-    /** v2.1.0 dry-run: validates every config/csbox JSON without registering anything. */
+    /** v2.0.1 dry-run: validates every config/csbox JSON without registering anything. */
     private static int validateAll(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
         java.nio.file.Path dir = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("csbox");
@@ -376,7 +415,7 @@ public final class CsboxCommand {
                     msg), false);
             return 0;
         }
-        // v2.1.0+: the central price table (config/csbox/_prices.json) is part
+        // v2.0.1+: the central price table (config/csbox/_prices.json) is part
         // of the validate surface; a malformed table is reported like a box.
         BoxJsonLoader.ValidateResult priceTable = BoxJsonLoader.validatePriceTable();
         if (!priceTable.ok()) {
@@ -394,7 +433,7 @@ public final class CsboxCommand {
         return bad == 0 ? ok : -bad;
     }
 
-    /** v2.1.0 dry-run: validates one box file (by box id → config/csbox/<id>.json). */
+    /** v2.0.1 dry-run: validates one box file (by box id → config/csbox/<id>.json). */
     private static int validateBox(CommandContext<CommandSourceStack> ctx, ResourceLocation boxId)
             throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();

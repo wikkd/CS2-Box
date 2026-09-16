@@ -1,0 +1,32 @@
+{
+  "name": "#FFD600 材料回收终端",
+  "type": "terminal",
+  "drop": 0.0,
+  "random": [15, 25, 35, 15, 10],
+  "grade1": [
+    { "id": "minecraft:iron_ingot", "count": 4 },
+    { "id": "minecraft:gold_ingot", "count": 2 },
+    { "id": "minecraft:cooked_beef", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:diamond", "count": [1, 3] },
+    { "id": "minecraft:emerald", "count": [4, 8] },
+    { "id": "minecraft:gunpowder", "count": 16 }
+  ],
+  "grade3": [
+    { "id": "minecraft:diamond_block", "count": 1 },
+    { "id": "minecraft:emerald_block", "count": 2 },
+    { "id": "minecraft:nautilus_shell", "count": [1, 2] }
+  ],
+  "grade4": [
+    { "id": "minecraft:netherite_ingot", "count": [1, 2] },
+    { "id": "minecraft:turtle_helmet" },
+    { "id": "minecraft:heart_of_the_sea" },
+    { "id": "minecraft:shulker_box", "count": 1 }
+  ],
+  "grade5": [
+    { "id": "minecraft:elytra" },
+    { "id": "minecraft:netherite_sword" },
+    { "id": "minecraft:trident" }
+  ]
+}

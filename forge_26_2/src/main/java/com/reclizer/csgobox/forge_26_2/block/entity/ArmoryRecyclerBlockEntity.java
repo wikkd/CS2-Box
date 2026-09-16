@@ -55,7 +55,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     }
 
     /**
-     * v2.1.0 economy: recycle value of a graded stack — 90% of its central
+     * v2.0.1 economy: recycle value of a graded stack — 90% of its central
      * price-table price (rounded up). A range entry is sampled once per
      * recycle through {@code nextBounded} (the level's random source on the
      * server). Items without a price-table entry (including loot_table
@@ -237,7 +237,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     // ---- Automation compat (Create arms/pipes/hoppers) ----------------------
 
     /**
-     * v2.1.0 compatibility: expose the standard {@link IItemHandler}
+     * v2.0.1 compatibility: expose the standard {@link IItemHandler}
      * capability so Create mechanical arms/tunnels, modded pipes and any
      * automation that talks to item handlers can feed graded items into the
      * input slot and pull Armory Points out of the output slot. The rules

@@ -8,13 +8,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * v2.1.0 end-to-end schema agreement: the full-feature box JSON that
+ * v2.0.1 end-to-end schema agreement: the full-feature box JSON that
  * {@code scripts/boxgen.py} emits (every new field at once) must pass the
  * runtime {@link BoxJsonSchemaValidator} with zero issues. This keeps the
  * authoring tools, the docs ({@code docs/box-schema/box.schema.json}) and the
  * in-game validator from drifting apart.
  */
-final class BoxJsonV21FullFeatureTest {
+final class BoxJsonV201FullFeatureTest {
 
     /** Mirrors the boxgen.py output exercised by the toolchain smoke test. */
     private static final String FULL_FEATURE_JSON = """
@@ -43,7 +43,7 @@ final class BoxJsonV21FullFeatureTest {
             """;
 
     @Test
-    @DisplayName("a full-feature v2.1.0 box JSON passes the runtime validator cleanly")
+    @DisplayName("a full-feature v2.0.1 box JSON passes the runtime validator cleanly")
     void fullFeatureBoxIsValid() {
         JsonObject json = JsonParser.parseString(FULL_FEATURE_JSON).getAsJsonObject();
         var issues = BoxJsonSchemaValidator.validate(json);

@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.event;
 
+import java.security.SecureRandom;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -27,7 +29,7 @@ import java.util.Random;
 
 @EventBusSubscriber(modid = CsgoBox.MODID)
 public final class ModEvents {
-    private static final Random RANDOM = new Random();
+    private static final Random RANDOM = new Random(new java.security.SecureRandom().nextLong());
 
     private ModEvents() {
     }
@@ -51,7 +53,20 @@ public final class ModEvents {
             effectiveRate *= CsgoBox.CONFIG.globalDropRatePercent() / 100F;
             effectiveRate = Math.min(effectiveRate, 1.0F);
 
-            if (effectiveRate > 0 && RANDOM.nextFloat() < effectiveRate) {
+            // v2.0.1 KubeJS: per-drop veto/rate hook — before the RNG roll and
+            // before the item spawns. Cancel suppresses the drop, setDropRate
+            // overrides the effective chance (clamped, 0 = no roll).
+            BoxEntityDropEvent dropEvent = new BoxEntityDropEvent(entityType, mob, def, effectiveRate);
+            NeoForge.EVENT_BUS.post(dropEvent);
+            if (dropEvent.isCanceled()) {
+                continue;
+            }
+            effectiveRate = dropEvent.getDropRate();
+            if (effectiveRate <= 0) {
+                continue;
+            }
+
+            if (RANDOM.nextFloat() < effectiveRate) {
                 Item item = ModItems.itemForBox(def.id(), def.isTerminal());
                 ItemStack stack = new ItemStack(item);
                 ItemCsgoBox.setBoxId(def.id(), stack);
@@ -101,7 +116,7 @@ public final class ModEvents {
     public static void serverTick(ServerTickEvent.Pre event) {
         if (event.getServer().getTickCount() % 100 == 0) {
             OpenBlockGuard.tick(event.getServer().overworld().getGameTime());
-            // v2.1.0: restock check (1 Hz equivalent is overkill; every 5s is
+            // v2.0.1: restock check (1 Hz equivalent is overkill; every 5s is
             // plenty for a minute-scale timer).
             com.reclizer.csgobox.terminal.TerminalStockManager.tick(System.currentTimeMillis());
         }

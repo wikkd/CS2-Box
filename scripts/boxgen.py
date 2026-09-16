@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """boxgen.py — CS2-Box 宝箱 JSON 生成器（config/csbox/*.json）
 
-生成符合 CS2-Box v2.1.0 box schema 的宝箱配置。文件名（不含 .json）即为
+生成符合 CS2-Box v2.0.1 box schema 的宝箱配置。文件名（不含 .json）即为
 箱子 id（加载后为 csgobox:<文件名>）。
 
 用法示例
@@ -28,7 +28,7 @@ python boxgen.py \\
     --max-per-player 5 --cooldown-seconds 300 --permission csbox.open \\
     --icon 1001 --id my_sword_box --dry-run
 
-# 终端售价统一入 _prices.json（v2.1.0：箱子 JSON 里不再写 price）
+# 终端售价统一入 _prices.json（v2.0.1：箱子 JSON 里不再写 price）
 python boxgen.py \
     --name 限购箱 --grade1 "minecraft:diamond x4" \
     --price 150 --dry-run
@@ -59,7 +59,7 @@ python boxgen.py --name 测试箱 --grade1 "minecraft:bread x8" --dry-run
 ------------
     name / key / drop / random / enabled / requires / icon / discount /
     stock / restock_minutes / max_per_player / cooldown_seconds / permission
-    grade1 ~ grade5（v2.1.0 schema，详见 docs/box-schema/box.schema.json）
+    grade1 ~ grade5（v2.0.1 schema，详见 docs/box-schema/box.schema.json）
 
 校验规则
 --------
@@ -415,7 +415,7 @@ def upsert_price_table(table_path, key, price, dry_run=False):
 def merge_box_price(args, box, out):
     """--price 时把价格合并进箱子同目录的 _prices.json。
 
-    v2.1.0 起箱子 JSON 里不再写 price；价格统一由 _prices.json 管理。
+    v2.0.1 起箱子 JSON 里不再写 price；价格统一由 _prices.json 管理。
     键缺省推导：全部物品条目只有一个纯 id 来源时用它，否则需 --price-key。
     """
     if args.price is None:
@@ -604,7 +604,7 @@ def build_parser():
     parser.add_argument("--id", default=None,
                         help="箱子 id = 文件名（小写蛇形，[a-z0-9_./-]+）；默认由 name 转换")
     parser.add_argument("--price", type=int, default=None,
-                        help="物品终端售价（武库点数，非负整数）。v2.1.0 起价格不写进箱子 "
+                        help="物品终端售价（武库点数，非负整数）。v2.0.1 起价格不写进箱子 "
                              "JSON，会合并进箱子同目录的 _prices.json（配合 --price-key / --prices）")
     parser.add_argument("--price-key", default=None, metavar="KEY",
                         help="价格表键（ns:path 或 ns:path#variant）。缺省时若全部物品只有一个 "

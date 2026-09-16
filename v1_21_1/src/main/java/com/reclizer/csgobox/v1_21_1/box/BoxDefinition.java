@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.box;
 
 import com.reclizer.csgobox.box.BoxGrades;
+import com.reclizer.csgobox.logic.PityPolicy;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -20,7 +21,7 @@ import java.util.OptionalInt;
 /**
  * Immutable box definition loaded from JSON and referenced by box ItemStacks.
  *
- * <p>v2.1.0 config additions: {@code enabled}/{@code requires} gate loading,
+ * <p>v2.0.1 config additions: {@code enabled}/{@code requires} gate loading,
  * {@code icon} sets CustomModelData, {@code discount}/{@code stock}/
  * {@code restock_minutes} drive terminal economy, and {@code max_per_player}/
  * {@code cooldown_seconds}/{@code permission} constrain opening.</p>
@@ -44,7 +45,8 @@ public record BoxDefinition(
         int restockMinutes,
         int maxPerPlayer,
         int cooldownSeconds,
-        String permission
+        String permission,
+        Optional<PityPolicy> pity
 ) {
 
     private static final ResourceLocation NO_KEY = ResourceLocation.parse("minecraft:air");
@@ -55,7 +57,7 @@ public record BoxDefinition(
     /**
      * This record carries no CODEC: the network path uses the manual
      * {@link #STREAM_CODEC} which serializes every field including the
-     * v2.1.0 additions (a 19-field {@code RecordCodecBuilder} group exceeds
+     * v2.0.1 additions (a 19-field {@code RecordCodecBuilder} group exceeds
      * the framework's arity limit and the codec is not used anywhere else).
      */
     public static final StreamCodec<RegistryFriendlyByteBuf, BoxDefinition> STREAM_CODEC = StreamCodec.of(
@@ -78,6 +80,7 @@ public record BoxDefinition(
         icon = icon == null ? Optional.empty() : icon;
         discount = BoxGrades.clampDropRate(discount);
         permission = permission == null ? "" : permission;
+        pity = pity == null ? Optional.empty() : pity;
     }
 
     private static void write(RegistryFriendlyByteBuf buf, BoxDefinition def) {
@@ -110,6 +113,12 @@ public record BoxDefinition(
         buf.writeVarInt(def.maxPerPlayer());
         buf.writeVarInt(def.cooldownSeconds());
         ByteBufCodecs.STRING_UTF8.encode(buf, def.permission());
+        Optional<PityPolicy> pity = def.pity();
+        buf.writeBoolean(pity.isPresent());
+        if (pity.isPresent()) {
+            ByteBufCodecs.INT.encode(buf, pity.get().targetLevel());
+            ByteBufCodecs.INT.encode(buf, pity.get().every());
+        }
     }
 
     private static BoxDefinition read(RegistryFriendlyByteBuf buf) {
@@ -144,9 +153,18 @@ public record BoxDefinition(
         int cooldownSeconds = buf.readVarInt();
         String permission = ByteBufCodecs.STRING_UTF8.decode(buf);
 
+        Optional<PityPolicy> pity = Optional.empty();
+        if (buf.readBoolean()) {
+            int targetLevel = ByteBufCodecs.INT.decode(buf);
+            int every = ByteBufCodecs.INT.decode(buf);
+            // Invalid combinations (unknown tier, every < 2) silently degrade
+            // to no pity — the schema validator reports them at load time.
+            pity = Optional.ofNullable(PityPolicy.ofLevel(targetLevel, every));
+        }
+
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     /** Whether this definition is a terminal machine: the JSON {@code type}
@@ -198,7 +216,7 @@ public record BoxDefinition(
         }
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     /** Whether any of the {@code requires} mods is missing. */
@@ -251,6 +269,7 @@ public record BoxDefinition(
         private int maxPerPlayer = UNLIMITED;
         private int cooldownSeconds = 0;
         private String permission = "";
+        private Optional<PityPolicy> pity = Optional.empty();
 
         public Builder(ResourceLocation id, String name) {
             this.id = Objects.requireNonNull(id, "box id");
@@ -361,6 +380,13 @@ public record BoxDefinition(
             return this;
         }
 
+        /** Optional pity (保底) policy; pass {@code null} (or an invalid
+         *  policy) to disable. */
+        public Builder pity(PityPolicy pity) {
+            this.pity = pity == null ? Optional.empty() : Optional.of(pity);
+            return this;
+        }
+
         public BoxDefinition build() {
             Component finalName = name;
             if (nameColor.isPresent()) {
@@ -370,7 +396,8 @@ public record BoxDefinition(
             return new BoxDefinition(id, finalName, type, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates), enabled, List.copyOf(requires), icon,
-                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission);
+                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds,
+                    permission, pity);
         }
     }
 }

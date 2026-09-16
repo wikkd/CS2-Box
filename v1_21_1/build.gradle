@@ -138,6 +138,20 @@ dependencies {
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.1-neoforge+mc1.21.1'
 
+    // Create (机械动力) — optional compileOnly for the official deployer
+    // recipe integration (DeployerRecipeSearchEvent / ManualApplicationRecipe /
+    // enforceNextResult). The jar is NOT committed (~19MB): copy your local
+    // create-1.21.1-<v>.jar into local-repo/com/simibubi/create/create/<v>/
+    // (with a minimal pom) before building; loading is optional at runtime.
+    compileOnly 'com.simibubi.create:create:6.0.10'
+    // Create's jar-in-jar bundles (ponder/flywheel/Registrate) are loaded by
+    // NeoForge at runtime, but javac needs them on the compile classpath to
+    // resolve DeployerBlockEntity's interfaces (net.createmod.ponder.api.*).
+    // Extracted from META-INF/jarjar/ inside create-6.0.10.jar.
+    compileOnly 'net.createmod.ponder:ponder-neoforge:1.0.82+mc1.21.1'
+    compileOnly 'dev.engine-room.flywheel:flywheel-neoforge-1.21.1:1.0.6'
+    compileOnly 'com.tterrag.registrate:Registrate:MC1.21-1.3.0+67'
+
     // JEI integration (optional client mod). compileOnly for the plugin API,
     // runtimeOnly so dev runs actually ship the JEI jar. Plugin discovery is
     // FML annotation scanning (@JeiPlugin), no ServiceLoader entry needed.

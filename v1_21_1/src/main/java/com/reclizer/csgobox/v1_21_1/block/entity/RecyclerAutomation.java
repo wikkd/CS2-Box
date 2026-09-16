@@ -8,7 +8,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 /**
- * v2.1.0 Create/automation compat: register the standard item-handler
+ * v2.0.1 Create/automation compat: register the standard item-handler
  * capability on the Armory Recycler so mechanical arms, tunnels, modded pipes
  * and hoppers can feed graded items into the input slot and pull Armory Points
  * out of the output slot. Registered through the NeoForge capability registry

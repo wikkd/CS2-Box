@@ -3,6 +3,19 @@
 
 > 本文档涵盖 CS2-Box Minecraft 模组的本地开发配置、构建命令、代码规范、分支约定与贡献流程。
 
+## 并发构建与多 Agent 协作（开发规则）
+
+工作区允许同时有多个 agent 会话/维护进程参与开发。为避免构建互相踩踏，**所有自动化流程（含 AI agent）必须遵守以下规则**：
+
+1. **启动 Gradle 构建前先探测**：只要命中任一信号，即视为「其他 agent 进程正在编译/改代码」，**本轮不启动编译**：
+   - 系统进程列表中存在命令行含 `gradle` 的 `java.exe`（Windows `tasklist` / `wmic` 可查）；
+   - `~/.gradle/daemon/<版本>/` 下 daemon 日志的 mtime 在最近 1–2 分钟内仍在更新；
+   - 工作区任意 `*/src/` 源码文件近 60 秒内出现成批 mtime 变化；
+   - 同一文件两次读取内容不一致（正被其他进程改写）。
+2. **命中后**：停止编译动作，向用户报告探测到的信号与冲突风险，**等待用户发起下一轮对话**再继续；不得自动重试，不得绕过（clean / 移走文件 / 修改他人领域文件）强行编译。
+3. **确认可编译时**：优先 `--no-build-cache` / `--rerun-tasks` 或先删除编译输出，避免陈旧 `UP-TO-DATE` / `FROM-CACHE` 快照掩盖真实结果；报告时注明重编译方式与平台清单。
+4. 单次 Gradle 调用只能构建一个 MC 版本（`-Pactive_versions=<v>`）；六平台全量验证需串行执行。
+
 ## 前置要求
 
 | 平台 | Java | Minecraft | NeoForge / Forge | Gradle | NeoGradle / ForgeGradle |

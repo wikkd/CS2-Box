@@ -83,7 +83,7 @@ class BoxOddsTest {
         assertEquals("100.0%", BoxOdds.percent(1.0));
     }
 
-// ---- v2.1.0 weighted item chance ----
+// ---- v2.0.1 weighted item chance ----
 
     @Test
     @DisplayName("weightedItemChance scales item chance by weight over grade sum")
@@ -117,7 +117,7 @@ class BoxOddsTest {
                 BoxOdds.weightedItemChance(gradeChance, 1, 4), 1e-12);
     }
 
-// ---- v2.1.1 weighted-aware display helper ----
+// ---- v2.0.1 weighted-aware display helper ----
 
     @Test
     @DisplayName("itemChance(4-arg) is uniform when weights sum to the item count")

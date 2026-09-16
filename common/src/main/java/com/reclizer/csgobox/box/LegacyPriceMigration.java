@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * One-time legacy migration for the terminal price system (v2.1.0):
+ * One-time legacy migration for the terminal price system (v2.0.1):
  * pre-price-table box configs still carry a per-item {@code price} field
  * inside the grade arrays. This migrator is the "old-version adapter" that
  * transfers those prices into {@code config/csbox/_prices.json} and strips

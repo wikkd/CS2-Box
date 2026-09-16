@@ -61,7 +61,7 @@ import java.util.Set;
  * which is migrated into {@code minecraft:custom_data} when it carries TACZ
  * data.</p>
  *
- * <p>v2.1.0 additions:</p>
+ * <p>v2.0.1 additions:</p>
  * <ul>
  *   <li>{@code weight} — intra-grade item weight (parallel to the item list).</li>
  *   <li>{@code count} may be {@code [min,max]} — a range resolved at open time
@@ -82,6 +82,7 @@ public final class BoxItemCodec {
     /** Mirrors com.tacz.guns.api.item.nbt.GunItemDataAccessor constants. */
     private static final String TACZ_GUN_ID_TAG = "GunId";
     private static final String TACZ_AMMO_ID_TAG = "AmmoId";
+    private static final String TACZ_ATTACHMENT_ID_TAG = "AttachmentId";
     private static final String TACZ_FIRE_MODE_TAG = "GunFireMode";
     private static final String TACZ_ATTACHMENT_PREFIX = "Attachment";
     private static final String TACZ_EMPTY_GUN_ID = "tacz:empty";
@@ -241,7 +242,7 @@ public final class BoxItemCodec {
         }
     }
 
-    // ---- v2.1.0 per-item spec: weight / count-range / enchant / loot table ----
+    // ---- v2.0.1 per-item spec: weight / count-range / enchant / loot table ----
 
     /** Reads the optional {@code weight} (default 1). A weight of 0 disables
      *  the entry; negatives are rejected with a warning. */
@@ -466,12 +467,27 @@ public final class BoxItemCodec {
      *  {@code minecraft:custom_data}, everything else is decoded as a
      *  {@link DataComponentPatch}. */
     private static void applyLegacyGunTag(ItemStack stack, CompoundTag tag, List<String> warnings) {
-        if (tag.contains(TACZ_GUN_ID_TAG, 8)) {
+        // v2.0.1-fix(TACZ ammo/attachment): TACZ 1.20-era configs stored gun /
+        // ammo / attachment data as plain top-level NBT ({GunId:...},
+        // {AmmoId:...}, {AttachmentId:...}, {Attachment<SLOT>:...}). 1.21.1
+        // TACZ reads all of them from minecraft:custom_data, so migrate the
+        // whole compound whenever ANY TACZ identity key is present — only
+        // then can a boxed ammo stack / attachment keep its id instead of
+        // being mis-decoded as a DataComponentPatch.
+        boolean taczLegacy = tag.contains(TACZ_GUN_ID_TAG, 8)
+                || tag.contains(TACZ_AMMO_ID_TAG, 8)
+                || tag.contains(TACZ_ATTACHMENT_ID_TAG, 8)
+                || tag.getAllKeys().stream().anyMatch(k -> k.startsWith(TACZ_ATTACHMENT_PREFIX));
+        if (taczLegacy) {
             // TACZ 1.20-era configs stored the gun NBT as a plain top-level
             // tag ({GunId:...}). 1.21.1 TACZ reads it from
             // minecraft:custom_data, so migrate the whole compound.
+            // Nested per-slot attachment blocks ({AttachmentSCOPE:...}) cannot
+            // be read in 1.21.1; the flat {AttachmentId:...} key is the new
+            // carrier and must NOT be counted as a legacy nested block.
             boolean legacyAttachments = tag.getAllKeys().stream()
-                    .anyMatch(k -> k.startsWith(TACZ_ATTACHMENT_PREFIX));
+                    .anyMatch(k -> k.startsWith(TACZ_ATTACHMENT_PREFIX)
+                            && !k.equals(TACZ_ATTACHMENT_ID_TAG));
             if (legacyAttachments) {
                 warnings.add("legacy 'tag' attachment data cannot be read in 1.21.1; attachments were dropped");
             }
@@ -840,7 +856,7 @@ public final class BoxItemCodec {
     }
 
     /**
-     * v2.1.0: price-table variant id of a stack — the legacy NBT {@code GunId}
+     * v2.0.1: price-table variant id of a stack — the legacy NBT {@code GunId}
      * or {@code AmmoId} (TACZ) that the central price table keys as
      * {@code id#variant}, or null. Best-effort and TACZ-class-free: reads the
      * item's {@code minecraft:custom_data}; a missing / blank field yields

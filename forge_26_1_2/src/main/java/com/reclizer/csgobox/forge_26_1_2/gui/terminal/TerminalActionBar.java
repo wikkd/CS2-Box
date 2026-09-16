@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.forge_26_1_2.gui.terminal;
 
+import com.reclizer.csgobox.box.PriceTableRegistry;
+import com.reclizer.csgobox.box.QuoteCaps;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
@@ -26,6 +28,8 @@ public final class TerminalActionBar {
     private static final int BAR_H = 10;
     private static final int CAPSULE_H = 9;
     private static final int HOLD_FULL = 1; // holdFill() >= 1 fires
+    /** Row height of the quote-cap dropdown (tier entries + "unlimited"). */
+    private static final int CAP_MENU_ROW_H = 7;
 
     /** Baked SVG->PNG textures: info badge (light disc + dark "i") and the
      *  upward chevron — the 1-gui fills and font glyphs they replace render as
@@ -81,10 +85,11 @@ public final class TerminalActionBar {
         }
 
         // ---- cap label + dropdown (opens upward) ----
-        String capText = model.cap() == NegotiationModel.CAP_UNLIMITED
+        int shownCap = PriceTableRegistry.normalizeQuoteCap(model.cap());
+        String capText = shownCap == QuoteCaps.UNLIMITED
                 ? Component.translatable("csgobox.terminal.cap.label",
                         Component.translatable("csgobox.terminal.cap.unlimited")).getString()
-                : Component.translatable("csgobox.terminal.cap.label", model.cap()).getString();
+                : Component.translatable("csgobox.terminal.cap.label", shownCap).getString();
         int capWText = Math.round(font.width(capText) * 0.47F) + Math.round(0.3F * (capText.length() - 1));
         capX = x1 - capWText - 6;
         capY = midY - 2;
@@ -97,7 +102,8 @@ public final class TerminalActionBar {
         AnimRenderOps.blitTextured(gg, TEX_CHEVRON, capX + capWText - 2, capY + 1, 3, 2,
                 0, 0, 32, 32, 32, 32, 0xFFFFFFFF);
         if (capOpen) {
-            drawCapMenu(gg, capX + capW - 27, capY - 5 * 7 - 1, nowMs, model, mx, my);
+            drawCapMenu(gg, capX + capW, capY - capRowCount() * CAP_MENU_ROW_H - 1,
+                    model, mx, my);
         }
 
         // ---- accept / reject capsules: content-sized, accept left / reject right ----
@@ -187,35 +193,67 @@ public final class TerminalActionBar {
                 x + (w - labelW) / 2F, y + (h - 3) / 2F - 1, 0.6F, 0.51F, textC);
     }
 
-    /** Dropdown anchored above the cap label, 6 options, selected green. */
-    private void drawCapMenu(GuiGraphicsExtractor gg, int x, int yTop, long nowMs,
+    /** Dropdown anchored above the cap label: one row per server-synced tier
+     *  plus the trailing "unlimited" entry; rows/width follow the actual
+     *  tier values so a table-driven ladder (4 tiers + unlimited) never
+     *  overflows the fixed 6-row box the old constant list used. */
+    private void drawCapMenu(GuiGraphicsExtractor gg, int rightX, int yTop,
                              NegotiationModel model, int mx, int my) {
-        int w = 25;
-        int rowH = 7;
-        AnimRenderOps.fill(gg, x, yTop, x + w, yTop + 6 * rowH, TerminalPalette.MENU_BG);
-        AnimRenderOps.fill(gg, x, yTop, x + w, yTop + 1, TerminalPalette.MENU_BORDER);
-        AnimRenderOps.fill(gg, x, yTop + 6 * rowH - 1, x + w, yTop + 6 * rowH, TerminalPalette.MENU_BORDER);
-        AnimRenderOps.fill(gg, x, yTop, x + 1, yTop + 6 * rowH, TerminalPalette.MENU_BORDER);
-        AnimRenderOps.fill(gg, x + w - 1, yTop, x + w, yTop + 6 * rowH, TerminalPalette.MENU_BORDER);
+        int[] tiers = PriceTableRegistry.quoteCaps();
+        int rows = tiers.length + 1;
         Font font = Minecraft.getInstance().font;
-        for (int i = 0; i < NegotiationModel.CAPS.length + 1; i++) {
-            int rowY = yTop + i * rowH;
-            boolean hover = mx >= x && mx <= x + w && my >= rowY && my <= rowY + rowH;
-            int cap = i < NegotiationModel.CAPS.length ? NegotiationModel.CAPS[i]
-                    : NegotiationModel.CAP_UNLIMITED;
-            boolean selected = cap == model.cap();
+        int w = capMenuWidth(font, tiers);
+        int x = rightX - w;
+        int h = rows * CAP_MENU_ROW_H;
+        AnimRenderOps.fill(gg, x, yTop, x + w, yTop + h, TerminalPalette.MENU_BG);
+        AnimRenderOps.fill(gg, x, yTop, x + w, yTop + 1, TerminalPalette.MENU_BORDER);
+        AnimRenderOps.fill(gg, x, yTop + h - 1, x + w, yTop + h, TerminalPalette.MENU_BORDER);
+        AnimRenderOps.fill(gg, x, yTop, x + 1, yTop + h, TerminalPalette.MENU_BORDER);
+        AnimRenderOps.fill(gg, x + w - 1, yTop, x + w, yTop + h, TerminalPalette.MENU_BORDER);
+        int shownCap = PriceTableRegistry.normalizeQuoteCap(model.cap());
+        for (int i = 0; i < rows; i++) {
+            int rowY = yTop + i * CAP_MENU_ROW_H;
+            boolean hover = mx >= x && mx <= x + w && my >= rowY && my <= rowY + CAP_MENU_ROW_H;
+            int cap = i < tiers.length ? tiers[i] : QuoteCaps.UNLIMITED;
+            boolean selected = cap == shownCap;
             if (hover) {
-                AnimRenderOps.fill(gg, x + 1, rowY, x + w - 1, rowY + rowH, TerminalPalette.MENU_OPT_HOVER);
+                AnimRenderOps.fill(gg, x + 1, rowY, x + w - 1, rowY + CAP_MENU_ROW_H, TerminalPalette.MENU_OPT_HOVER);
             }
-            String text = cap == NegotiationModel.CAP_UNLIMITED
-                    ? Component.translatable("csgobox.terminal.cap.unlimited").getString()
-                    : String.valueOf(cap);
+            String text = capMenuText(cap);
             int color = selected ? TerminalPalette.CAP_SELECTED : TerminalPalette.CAP_DIM;
             RenderFontTool.drawSpacedText(gg, font, text, x + 3, rowY + 1,
                     0.16F, 0.47F, color);
         }
     }
 
+    /** Priced tiers currently synced from the server's price table. */
+    private static int[] capTiers() {
+        return PriceTableRegistry.quoteCaps();
+    }
+
+    /** Row count of the dropdown: every priced tier plus "unlimited". */
+    private static int capRowCount() {
+        return capTiers().length + 1;
+    }
+
+    /** Localized text of one dropdown option. */
+    private static String capMenuText(int cap) {
+        return cap == QuoteCaps.UNLIMITED
+                ? Component.translatable("csgobox.terminal.cap.unlimited").getString()
+                : String.valueOf(cap);
+    }
+
+    /** Dropdown width: fits the widest option at the 0.47 action-bar scale
+     *  (same scale as the cap label), never narrower than the old 25px. */
+    private static int capMenuWidth(Font font, int[] tiers) {
+        int widest = 0;
+        for (int tier : tiers) {
+            widest = Math.max(widest, Math.round(font.width(String.valueOf(tier)) * 0.47F));
+        }
+        widest = Math.max(widest, Math.round(font.width(
+                Component.translatable("csgobox.terminal.cap.unlimited").getString()) * 0.47F));
+        return Math.max(25, widest + 10);
+    }
     private void drawTooltip(GuiGraphicsExtractor gg, int x, int y, Font font) {
         String tip = Component.translatable("csgobox.terminal.tip").getString();
         int w = Math.round(font.width(tip) * 0.43F) + 5;
@@ -236,13 +274,17 @@ public final class TerminalActionBar {
     public boolean mouseDown(int absX, int absY, long nowMs, NegotiationModel model) {
         if (capOpen) {
             // dropdown option hit? (same geometry as drawCapMenu)
-            int menuX = capX + capW - 27;
-            int menuY = capY - 5 * 7 - 1;
-            for (int i = 0; i < NegotiationModel.CAPS.length + 1; i++) {
-                int rowY = menuY + i * 7;
-                if (absX >= menuX && absX <= menuX + 25 && absY >= rowY && absY <= rowY + 7) {
-                    int cap = i < NegotiationModel.CAPS.length ? NegotiationModel.CAPS[i]
-                            : NegotiationModel.CAP_UNLIMITED;
+            int rows = capRowCount();
+            Font menuFont = Minecraft.getInstance().font;
+            int menuW = capMenuWidth(menuFont, capTiers());
+            int menuX = capX + capW - menuW;
+            int menuY = capY - rows * CAP_MENU_ROW_H - 1;
+            int[] tiers = capTiers();
+            for (int i = 0; i < rows; i++) {
+                int rowY = menuY + i * CAP_MENU_ROW_H;
+                if (absX >= menuX && absX <= menuX + menuW
+                        && absY >= rowY && absY <= rowY + CAP_MENU_ROW_H) {
+                    int cap = i < tiers.length ? tiers[i] : QuoteCaps.UNLIMITED;
                     model.setCap(cap);
                     capOpen = false;
                     return true;

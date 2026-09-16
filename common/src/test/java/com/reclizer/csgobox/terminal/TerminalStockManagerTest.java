@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link TerminalStockManager} (v2.1.0 terminal stock).
+ * Unit tests for {@link TerminalStockManager} (v2.0.1 terminal stock).
  */
 final class TerminalStockManagerTest {
 

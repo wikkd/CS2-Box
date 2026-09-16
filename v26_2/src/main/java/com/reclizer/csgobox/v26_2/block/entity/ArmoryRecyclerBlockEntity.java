@@ -52,7 +52,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     }
 
     /**
-     * v2.1.0 economy: recycle value of a graded stack — 90% of its central
+     * v2.0.1 economy: recycle value of a graded stack — 90% of its central
      * price-table price (rounded up). A range entry is sampled once per
      * recycle through {@code nextBounded} (the level's random source on the
      * server). Items without a price-table entry (including loot_table

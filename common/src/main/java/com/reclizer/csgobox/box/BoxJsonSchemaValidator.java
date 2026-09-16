@@ -36,6 +36,7 @@ public final class BoxJsonSchemaValidator {
         List<SchemaIssue> issues = new ArrayList<>();
         validateType(json, issues);
         validateRandom(json, issues);
+        validatePity(json, issues);
         validateDrop(json, issues);
         validateGrades(json, issues);
         validateEntity(json, issues);
@@ -46,7 +47,7 @@ public final class BoxJsonSchemaValidator {
     }
 
     /**
-     * v2.1.0 top-level fields: enabled / requires / icon / discount / stock /
+     * v2.0.1 top-level fields: enabled / requires / icon / discount / stock /
      * restock_minutes / max_per_player / cooldown_seconds / permission, plus
      * the per-item weight / count-range / tag-ref / loot_table / enchant
      * additions (validated inside {@link #validateV21Fields}).
@@ -229,7 +230,7 @@ public final class BoxJsonSchemaValidator {
                 anyPositive = true;
             }
         }
-        // v2.1.1: a box with no positive grade weight can never roll a grade;
+        // v2.0.1: a box with no positive grade weight can never roll a grade;
         // opens are rejected server-side (no key/box consumption). Surface it
         // here so authors see the mistake in /csbox validate instead of a
         // silent no-op box.
@@ -258,6 +259,72 @@ public final class BoxJsonSchemaValidator {
                         "Expected array of items, got " + typeOf(elem)));
             }
         }
+    }
+
+    /**
+     * v2.0.1 pity (保底) validation: shape of {@code pity} plus the
+     * "can never fire" case — no positive grade weight at/above the target
+     * tier in {@code random} (checked only when random is present; an absent
+     * random uses the built-in positive defaults).
+     */
+    private static void validatePity(JsonObject json, List<SchemaIssue> issues) {
+        if (!json.has("pity")) return;
+        JsonElement elem = json.get("pity");
+        if (!elem.isJsonObject()) {
+            issues.add(new SchemaIssue("pity",
+                    "Expected object {\"grade\": ..., \"every\": ...}, got " + typeOf(elem)));
+            return;
+        }
+        JsonObject pity = elem.getAsJsonObject();
+        String grade = "";
+        if (pity.has("grade")) {
+            JsonElement g = pity.get("grade");
+            if (!g.isJsonPrimitive() || !g.getAsJsonPrimitive().isString()) {
+                issues.add(new SchemaIssue("pity.grade", "Expected a grade id string"));
+            } else {
+                grade = g.getAsString();
+                if (BoxGrades.gradeLevel(grade) == 0) {
+                    issues.add(new SchemaIssue("pity.grade",
+                            "Unknown grade id '" + grade + "' (expected consumer/industrial/mil_spec/restricted/classified)"));
+                }
+            }
+        } else {
+            issues.add(new SchemaIssue("pity.grade", "Missing required field 'grade'"));
+        }
+        if (pity.has("every")) {
+            JsonElement ev = pity.get("every");
+            if (!ev.isJsonPrimitive() || !ev.getAsJsonPrimitive().isNumber()) {
+                issues.add(new SchemaIssue("pity.every", "Expected integer >= 2"));
+            } else {
+                double v = ev.getAsDouble();
+                if (v < 2 || v != Math.floor(v)) {
+                    issues.add(new SchemaIssue("pity.every", "Expected integer >= 2, got " + v));
+                }
+            }
+        } else {
+            issues.add(new SchemaIssue("pity.every", "Missing required field 'every'"));
+        }
+        int level = BoxGrades.gradeLevel(grade);
+        if (level > 0 && json.has("random") && json.get("random").isJsonArray()) {
+            JsonArray arr = json.getAsJsonArray("random");
+            boolean anyPositive = false;
+            for (int i = gradeLevelToIndex(level); i < arr.size(); i++) {
+                JsonElement w = arr.get(i);
+                if (w.isJsonPrimitive() && w.getAsJsonPrimitive().isNumber() && w.getAsDouble() > 0) {
+                    anyPositive = true;
+                    break;
+                }
+            }
+            if (!anyPositive) {
+                issues.add(new SchemaIssue("pity",
+                        "No positive weight at/above target grade '" + grade + "' in random — the pity can never fire"));
+            }
+        }
+    }
+
+    /** random array index (0-based) of a 1-based grade level. */
+    private static int gradeLevelToIndex(int level) {
+        return Math.max(0, level - 1);
     }
 
     private static void validateEntity(JsonObject json, List<SchemaIssue> issues) {
@@ -295,7 +362,7 @@ public final class BoxJsonSchemaValidator {
     }
 
     /**
-     * v2.1.0+: the per-item {@code price} field is removed from box JSON —
+     * v2.0.1+: the per-item {@code price} field is removed from box JSON —
      * terminal prices are centrally managed in {@code config/csbox/}
      * {@link PriceTable#FILE_NAME} (keyed by item id, optional {@code
      * #variant}). A leftover {@code price} is reported; on the next

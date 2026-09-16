@@ -50,6 +50,11 @@ import java.util.WeakHashMap;
  */
 public final class AnimRenderOps {
     private static final Logger LOGGER = LogUtils.getLogger();
+    /** TACZ (Timeless & Classics Guns: Zero) is an optional dependency; every
+     *  TACZ class reference below must be reachable only after a ModList gate,
+     *  or clients without the mod crash with NoClassDefFoundError (see the
+     *  2.0.1 TerminalScreen rendering crash). */
+    private static final String TACZ_MOD_ID = "tacz";
     /** Set once the first supports3D() call has logged the render environment. */
     private static boolean logged3DEnvironment;
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
@@ -167,8 +172,11 @@ public final class AnimRenderOps {
         // TACZ guns without a loaded display instance have no model to draw;
         // their custom renderer falls back to the missing-texture slot icon,
         // painting a magenta checkerboard across the card. Skip the draw so
-        // the card frame alone shows until the display is available.
-        if (stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
+        // the card frame alone shows until the display is available. The
+        // isLoaded gate keeps instanceof IGun from ever executing (and thus
+        // from class-loading TACZ) when the optional dependency is absent.
+        if (ModList.get() != null && ModList.get().isLoaded(TACZ_MOD_ID)
+                && stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
             return;
         }
         PoseStack pose = gg.pose();
@@ -210,7 +218,10 @@ public final class AnimRenderOps {
             renderItem2D(player, gg, item, cx, cy, scale);
             return;
         }
-        if (item.getItem() instanceof IGun) {
+        // Optional-dependency gate: without it the instanceof below would
+        // class-load TACZ and crash clients that don't have it installed.
+        if (ModList.get() != null && ModList.get().isLoaded(TACZ_MOD_ID)
+                && item.getItem() instanceof IGun) {
             Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(item);
             // No loaded display -> nothing to draw (TACZ would fall back to the
             // missing-texture slot icon, painting a magenta checkerboard).

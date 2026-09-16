@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Unit tests for {@link BoxDefaults}: the terminal.json legacy migration
  * paths (v2.0.0 strict type separation; since 2.0.0 the terminal ships
  * unconfigured — no default config is ever written) and the tutorial
- * lifecycle (stale-deletion whitelist + current-version protection, v2.1.0).
+ * lifecycle (stale-deletion whitelist + current-version protection, v2.0.1).
  */
 class BoxDefaultsTest {
 
@@ -89,7 +89,7 @@ class BoxDefaultsTest {
         assertTrue(content.contains("\"random\""));
     }
 
-    // --- tutorial lifecycle (v2.1.0 fixes) ---
+    // --- tutorial lifecycle (v2.0.1 fixes) ---
 
     @Test
     @DisplayName("stale tutorial deletion keeps current-version files and user files, removes only other _tutorial_v*.md")

@@ -13,6 +13,8 @@ CS2-Box 通过 **NeoForge 原生事件总线**（forge 实验模块为 Forge 事
 |------|------|--------|------|
 | `BoxOpeningEvent` | RNG 之前、消耗之前 | ✅ | 拒绝/放行开箱（权限、任务、活动门槛） |
 | `BoxOpenedEvent` | 开箱成功、物品已发放 | ❌ | 广播、统计、追加奖励 |
+| `TerminalBuyAttemptEvent` | 终端机购买前（扣库存/扣点数前） | ✅ | 限购、黑名单、购买门槛（v2.0.1） |
+| `BoxEntityDropEvent` | 实体掉落箱子前（掷骰前） | ✅ | 掉落黑名单、活动概率调整（v2.0.1） |
 | `TerminalBuyEvent` | 终端机成交后 | ❌ | 首次获得登记、武库点数经济记录 |
 | `ArmoryRecycleEvent` | 回收站消耗物品前 | ✅ | 物品黑名单（刷点屏蔽） |
 
@@ -28,7 +30,7 @@ CS2-Box 通过 **NeoForge 原生事件总线**（forge 实验模块为 Forge 事
 | `getBoxId()` | `ResourceLocation` / `Identifier` | 箱子定义 ID，如 `csgobox:weapon_case` |
 | `isBulk()` | `boolean` | 是否为批量开箱请求 |
 
-> **v2.1.0 配置约束在事件之前**：`max_per_player` / `cooldown_seconds` / `permission`
+> **v2.0.1 配置约束在事件之前**：`max_per_player` / `cooldown_seconds` / `permission`
 > 由 `BoxConstraintTracker` 与 `CsgoBox.PERMISSION_GATE` 在 `BoxOpeningEvent` 之前检查——
 > 被约束拒绝的开箱**不会**触发本事件（也不会消耗钥匙）。KubeJS 脚本仍可用本事件实现
 > 更灵活的门槛（任务、活动、VIP 等）；`permission` 字段默认放行，可在 `CsgoBox.PERMISSION_GATE`
@@ -186,7 +188,7 @@ NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.TerminalBuyEvent', e
 | `getBlockEntity()` | `ArmoryRecyclerBlockEntity` | 拆解台机器 |
 | `getInputItem()` | `ItemStack` | 即将被消耗的物品（**副本**，修改无效） |
 | `getGrade()` | `int` | 输入物品等级 1–5 |
-| `getYield()` | `int` | 本将产出的武库点数数（v2.1.0 起 = 价格表价 × 90% 向上取整；未定价物品不可拆解，产出 0） |
+| `getYield()` | `int` | 本将产出的武库点数数（v2.0.1 起 = 价格表价 × 90% 向上取整；未定价物品不可拆解，产出 0） |
 | `isCanceled()` / `setCanceled(boolean)` | — | 取消则跳过本次回收（KubeJS 脚本用 `event.cancel()`） |
 
 ```js
@@ -201,6 +203,123 @@ NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.ArmoryRecycleEvent',
 ```
 
 ---
+
+## TerminalBuyAttemptEvent（终端机购买前，可取消，v2.0.1）
+
+终端机谈判成交**之前**触发：会话/轮次/价格校验通过、但**还未扣库存、未扣武库点数、未发放物品**。
+取消后交易干净中止——不消耗任何东西，终端机保留在手上、谈判会话保持打开。
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `getEntity()` | `Player` | 购买玩家（继承 `PlayerEvent`） |
+| `getBoxId()` | `ResourceLocation` / `Identifier` | 终端机定义 ID |
+| `getGrade()` | `int` | 成交物品等级 1–5 |
+| `getPrice()` | `int` | **只读**：即将扣除的武库点数（该价已展示给客户端，改价会造成显示与扣款不一致） |
+| `getWearVal()` | `float` | 该报价磨损值 |
+| `getItem()` | `ItemStack` | 即将成交的物品（副本） |
+| `getOfferRound()` | `int` | 谈判轮次 1–5 |
+
+```js
+// kubejs/server_scripts/terminal_gate.js
+NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.TerminalBuyAttemptEvent', event => {
+    let player = event.getEntity()
+    let id = event.getItem().getId().toString()
+    // 黑名单：从终端机买来的物品不允许回购/转卖（配合 ArmoryRecycleEvent 黑名单）
+    if (global.cnrBlacklist?.includes(id)) {
+        player.tell('该物品禁止在此终端机购买')
+        event.cancel()
+    }
+    // 每日限购：按玩家 NBT 计数
+    let today = new Date().toISOString().slice(0, 10)
+    if (player.persistentData.cnrDay != today) {
+        player.persistentData.cnrDay = today
+        player.persistentData.cnrBuys = 0
+    }
+    if (player.persistentData.cnrBuys >= 10) {
+        player.tell('今日终端限额已用完')
+        event.cancel()
+    }
+})
+```
+
+## BoxEntityDropEvent（实体掉落箱子前，可取消，v2.0.1）
+
+配置了 `entity` 的箱子在对应实体死亡、即将掷骰掉落时触发——每个匹配的箱子定义各触发一次，
+在 RNG 掷骰与物品生成**之前**。可取消（禁止掉落）或 `setDropRate` 调整有效概率
+（钳制 0–1，0 等同取消）。
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `getEntityType()` | `ResourceLocation` / `Identifier` | 死亡实体类型（配置键，如 `minecraft:zombie`） |
+| `getMob()` | `LivingEntity` | 死亡的实体本身 |
+| `getDefinition()` | `BoxDefinition` | 即将掉落的箱子定义（只读） |
+| `getDropRate()` | `float` | 有效掉落概率（原配置 × 抢夺 × 全局掉率，钳制 0–1） |
+| `setDropRate(float)` | — | 覆盖有效概率（钳制 0–1；0 不掷骰） |
+
+```js
+// kubejs/server_scripts/drop_events.js
+NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.BoxEntityDropEvent', event => {
+    let type = event.getEntityType().toString()
+    let box = event.getDefinition().id().toString()
+    // 周末活动：所有实体掉落概率翻倍（上限 100%）
+    let day = new Date().getDay()
+    if (day === 0 || day === 6) {
+        event.setDropRate(Math.min(1, event.getDropRate() * 2))
+    }
+    // 特定箱子不从苦力怕掉落（配置了也要拦）
+    if (type === 'minecraft:creeper' && box === 'csgobox:wither_case') {
+        event.cancel()
+    }
+})
+```
+
+> 与 `BoxOpeningEvent` 一样，自定义掉落箱子的**取消与调概率是唯一安全干预点**；
+> 掷骰后、物品生成前没有可取消事件（保持「服务端权威 + 客户端动画一致」契约）。
+
+## 其他 KubeJS 用法（v2.0.1 补充）
+
+### 回收产出翻倍（ArmoryRecycleEvent.setYield）
+
+`ArmoryRecycleEvent` 早在 v2.0.1 就支持 `setYield(int)` 直接改产出点数——活动双倍回收：
+
+```js
+NeoForgeEvents.onEvent('com.reclizer.csgobox.<版本>.event.ArmoryRecycleEvent', event => {
+    // 周末双倍武库点数
+    event.setYield(event.getYield() * 2)
+})
+```
+
+### 权限节点接入（CsgoBox.PERMISSION_GATE）
+
+`CsgoBox.PERMISSION_GATE` 是 `public static BiPredicate<ServerPlayer, String>`（默认恒真）。
+KubeJS 可在服务端加载时替换它，让箱子 JSON 的 `permission` 字段接入任意后端：
+
+```js
+// kubejs/server_scripts/permission_gate.js
+ServerEvents.onServerLoad(event => {
+    const CsgoBox = Java.loadClass('com.reclizer.csgobox.<版本>.CsgoBox')
+    const gate = Java.loadClass('java.util.function.BiPredicate')
+
+    // 简单示例：csgobox.vip 节点 → 玩家 NBT 里是否有 vip 标签
+    CsgoBox.PERMISSION_GATE = new gate({
+        test: function (player, node) {
+            if (node === 'csgobox.vip') {
+                return player.persistentData.vip === true
+            }
+            return true // 其他节点默认放行
+        }
+    })
+})
+```
+
+> 该门控在 `BoxOpeningEvent` **之前**生效（v2.0.1 起）：`permission` 不满足的开箱请求
+> 不会触发开箱事件、不消耗钥匙。
+
+### 只读访问补充
+
+- 保底连败计数（只读）：`Java.loadClass('com.reclizer.csgobox.logic.PityTracker').missStreak(playerUuid, boxId)`（`PityTracker` 在 common 模块，任何平台包名一致）。
+- 终端库存：`Java.loadClass('com.reclizer.csgobox.<版本>.terminal.TerminalStockManager')` 的 `available(boxId, stock)` / `remaining(...)`（依各平台方法签名）。
+- 价格表：`Java.loadClass('com.reclizer.csgobox.<版本>.box.PriceTableRegistry')`（只读查价，勿调用注册方法）。
 
 ## 只读访问（查询箱子定义与配置）
 

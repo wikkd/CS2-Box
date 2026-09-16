@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2;
 
 import com.mojang.logging.LogUtils;
+import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v26_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
@@ -75,7 +76,7 @@ public class CsgoBox {
     public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
     /** Whether a mod with the given id is loaded. Used by the box JSON loader
-     *  to tell "item id typo" from "target mod not installed" (v2.1.0). */
+     *  to tell "item id typo" from "target mod not installed" (v2.0.1). */
     public static boolean isModLoaded(String modId) {
         if (modId == null || modId.isBlank()) {
             return false;
@@ -84,7 +85,7 @@ public class CsgoBox {
     }
 
     /**
-     * v2.1.0 permission gate for the {@code permission} box config field.
+     * v2.0.1 permission gate for the {@code permission} box config field.
      * Defaults to allow-all; a modpack wires this to its permission backend
      * (e.g. (player) -> LuckPerms...() ) once at startup. The gate receives the
      * player and the permission node from the box JSON.
@@ -202,6 +203,9 @@ public class CsgoBox {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        // Ship a tunable default villager-pricing config on first run (the
+        // datapack trades read it lazily through the loot number provider).
+        BoxDefaults.writeVillagerPricesIfMissing(FMLPaths.CONFIGDIR.get().resolve("csbox"));
         if (CONFIG.enableHotReload()) {
             event.enqueueWork(this::startBoxWatcher);
         }
@@ -209,7 +213,7 @@ public class CsgoBox {
         // entry point. The call itself must be guarded: merely loading
         // CsgoBoxTopPlugin for the call pulls in the TOP provider classes
         // during class verification, so without this guard an uninstalled
-        // TOP throws NoClassDefFoundError (see 2.1.0 crash reports).
+        // TOP throws NoClassDefFoundError (see 2.0.1 crash reports).
         if (isModLoaded("theoneprobe")) {
             com.reclizer.csgobox.v26_2.top.CsgoBoxTopPlugin.registerIfLoaded();
         }
@@ -269,8 +273,8 @@ public class CsgoBox {
         return false;
     }
 
-    // ===== Box items are a compile-time constant (v2.1.0 registry hotfix) =====
-    // Up to 2.1.0 every config/csbox/<name>.json was turned into its own item
+    // ===== Box items are a compile-time constant (v2.0.1 registry hotfix) =====
+    // Up to 2.0.1 every config/csbox/<name>.json was turned into its own item
     // (csgobox:<name>) during RegisterEvent. The item registry is synced over
     // the network and frozen before login, so as soon as the client and server
     // config folders differed (or a `requires` mod was installed on one side

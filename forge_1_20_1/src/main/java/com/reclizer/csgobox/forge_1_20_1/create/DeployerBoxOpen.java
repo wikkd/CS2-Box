@@ -59,6 +59,14 @@ public final class DeployerBoxOpen {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
+        // Mechanical deployer: Create's recipe-search path owns the
+        // interaction (DeployerBoxOpenRecipeSearch) — the fake-player right
+        // click must yield so the deployer assembles through the official
+        // recipe API (belt/depot pipeline, held-key consumption). Real
+        // players keep this legacy path.
+        if (player instanceof FakePlayer) {
+            return;
+        }
         Level level = event.getLevel();
         if (level.isClientSide) {
             return;

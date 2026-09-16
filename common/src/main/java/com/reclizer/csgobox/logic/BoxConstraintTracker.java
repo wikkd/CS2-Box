@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * v2.1.0 server-side open constraints: per-player per-box open counts and
+ * v2.0.1 server-side open constraints: per-player per-box open counts and
  * last-open world ticks, backing the {@code max_per_player} and
  * {@code cooldown_seconds} box config fields.
  *

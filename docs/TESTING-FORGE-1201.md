@@ -71,7 +71,7 @@ Forge 1.20.1 生产运行时是 **SRG 命名域**；`jar` 直出产物（officia
 
 1. **物品注册**：`/give @p csgobox:csgo_box`、`csgo_key0`~`csgo_key3`、
    `terminal`、`armory_point`、`armory_recycler` 全部可给予；
-2. **固定箱子物品 + `/csbox give`（v2.1.0 注册表解耦回归）**：
+2. **固定箱子物品 + `/csbox give`（v2.0.1 注册表解耦回归）**：
    - `/give @p csgobox:gun_crate` 等 5 个默认箱子 id 仍可给予，且 tooltip 显示箱子名与内容；
    - `/csbox give @p csgobox:gun_crate 3` 生效（权限 2）；自建箱子
      （`config/csbox/my_box.json`）用 `/csbox give @p csgobox:my_box` 发放后能正常开箱，

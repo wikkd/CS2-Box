@@ -37,7 +37,7 @@ import java.util.Map;
  * entries are reported as warnings, as are partially dropped legacy NBT
  * patches.</p>
  *
- * <p>v2.1.0 additions:</p>
+ * <p>v2.0.1 additions:</p>
  * <ul>
  *   <li>{@code weight} — intra-grade item weight (parallel to the item list).</li>
  *   <li>{@code count} may be {@code [min,max]} — a range resolved at open time

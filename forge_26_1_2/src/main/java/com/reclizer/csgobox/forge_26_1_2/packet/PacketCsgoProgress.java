@@ -115,14 +115,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            // v2.1.1-hardening: serverSeed comes from a CSPRNG and must NEVER be
+            // v2.0.1-hardening: serverSeed comes from a CSPRNG and must NEVER be
             // logged, sent to clients or exposed through events — Random(seed)
             // is a 48-bit LCG; anyone holding the seed can replay the roll.
             long serverSeed = SECURE_RANDOM.nextLong();
             var rng = new Random(serverSeed);
 
             // Grade pool is immutable per box id (shared cache with the bulk
-            // path, invalidated on reload). v2.1.0 builds the pool with
+            // path, invalidated on reload). v2.0.1 builds the pool with
             // per-item weights. pickRandom returns copies, so callers may
             // mutate freely.
             var gradeMap = GradeMapCache.get(boxId.toString(),
@@ -134,7 +134,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            // v2.1.0 constraints (in-memory, server-authoritative): per-player
+            // v2.0.1 constraints (in-memory, server-authoritative): per-player
             // open cap and per-box cooldown are checked before the roll so a
             // capped player never wastes a key.
             if (!BoxConstraintTracker.underPerPlayerCap(player.getStringUUID(), boxId.toString(), def.maxPerPlayer())) {
@@ -157,7 +157,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
-            // v2.1.1 pity (保底): snapshot the per-player miss streak before
+            // v2.0.1 pity (保底): snapshot the per-player miss streak before
             // the roll; a forced roll replaces the winning slot below.
             PityPolicy pity = def != null ? def.pity().orElse(null) : null;
             int pityStreak = pity != null
@@ -175,13 +175,13 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
 
             ItemStack giveItem = strip.items().get(winningIndex);
             int finalGrade = strip.grades().get(winningIndex);
-            // v2.1.1-fix(B): pity counts the ROLLED grade, never the resolved
+            // v2.0.1-fix(B): pity counts the ROLLED grade, never the resolved
             // (post-fallback) one — a forced roll that lands on the target
             // grade must reset the streak even when the item pool falls back
             // to a lower-tier item.
             int pityRollGrade = finalGrade;
 
-            // v2.1.1 pity: replace the winning slot with a forced roll from
+            // v2.0.1 pity: replace the winning slot with a forced roll from
             // [targetLevel..5] when the miss streak reached the threshold.
             // pickGradeWithPity returns forced=false when the pity slice has
             // no positive weight (misconfigured) — the plain roll stands.
@@ -217,7 +217,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 strip.grades().set(winningIndex, finalGrade);
             }
 
-            // v2.1.0: resolve count-range / random-enchant / loot-table specs
+            // v2.0.1: resolve count-range / random-enchant / loot-table specs
             // on the winning item BEFORE keys are consumed (a broken loot
             // table must never eat a key). player.level() returns ServerLevel
             // on ServerPlayer (covariant override).
@@ -262,7 +262,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             ), context);
 
             ItemStack toGive = giveItem.copy();
-            // v2.1.0: the rarity grade must ride on the granted stack — the
+            // v2.0.1: the rarity grade must ride on the granted stack — the
             // armory recycler only accepts items carrying csgobox:grade. Bulk
             // open (PacketCsgoBulkProgress) and terminal buys already stamp it;
             // this single-open path was missing it, so normally-opened items
@@ -280,7 +280,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
             // Record the successful open for max_per_player / cooldown.
             BoxConstraintTracker.recordOpen(player.getStringUUID(), boxId.toString(), player.level().getGameTime());
 
-            // v2.1.1 pity: advance the miss streak only after the item was
+            // v2.0.1 pity: advance the miss streak only after the item was
             // actually given (rejected/aborted opens never count). Uses the
             // ROLLED grade (pityRollGrade), not the resolved/final one.
             if (pity != null) {

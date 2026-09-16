@@ -20,6 +20,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
+import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_2.packet.Networking;
 import com.reclizer.csgobox.forge_26_2.packet.PacketCsgoBulkProgress;
@@ -89,11 +90,22 @@ public class CsboxBulkOverviewScreen extends Screen {
                 ? Integer.MAX_VALUE
                 : (noKeyRequired ? totalBoxes : totalKeys);
         this.openableCount = Math.min(totalBoxes, this.keyCount);
+        // v2.0.1-fix(empty-box bulk): an empty crate (no bound definition or
+        // valid items, or all-zero weights) is unopenable — the server refuses
+        // it, so never offer a bulk open that would just hang on the progress
+        // screen. Mirrors the single-open boxEmpty gate.
+        var def = ItemCsgoBox.getDefinition(this.templateBox);
+        boolean bulkOpenable = def.isPresent()
+                && !def.get().grades().isEmpty()
+                && BoxOdds.hasOpenableWeights(def.get().getWeightArray());
         // Mirror the server-enforced bulkOpenCount cap (0 = unlimited) so the
         // UI never promises more than the server will actually open.
         int limit = CsgoBox.CONFIG.bulkOpenCount();
         if (limit > 0) {
             this.openableCount = Math.min(this.openableCount, limit);
+        }
+        if (!bulkOpenable) {
+            this.openableCount = 0;
         }
     }
 
@@ -173,8 +185,8 @@ public class CsboxBulkOverviewScreen extends Screen {
         boolean isInRange = mouseX >= x && mouseX <= x + size
                 && mouseY >= y && mouseY <= y + size;
         if (event.button() == 0 && isInRange) {
-            this.rotX = GuiItemMove.renderRotAngleX(dragX, this.rotX);
-            this.rotY = GuiItemMove.renderRotAngleY(dragY, this.rotY);
+            this.rotY = GuiItemMove.renderRotAngleY(dragX, this.rotY);
+            this.rotX = GuiItemMove.renderRotAngleX(dragY, this.rotX);
         }
         return super.mouseDragged(event, dragX, dragY);
     }

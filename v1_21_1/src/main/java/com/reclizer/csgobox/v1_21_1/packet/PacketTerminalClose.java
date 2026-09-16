@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.packet;
 
+import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.terminal.TerminalSession;
@@ -81,9 +82,11 @@ public record PacketTerminalClose(
             // same as the countdown — the client renders them against the
             // world clock, so a mixed wall-clock timestamp would hide entries.
             // cap is a client-side display preference (action-bar selector);
-            // only accept values from the known set, keep the server's
-            // current value otherwise — a junk value must never be persisted.
-            int cap = NegotiationModel.isValidCap(message.cap()) ? message.cap() : session.model().cap();
+            // it must be the unlimited sentinel or one of the CURRENT
+            // price-table tiers (PriceTableRegistry.quoteCaps) — anything else
+            // keeps the server's current value so junk never gets persisted.
+            int cap = PriceTableRegistry.isAllowedQuoteCap(message.cap())
+                    ? message.cap() : session.model().cap();
             session.model().syncClose(message.round(), message.pending(), message.pendingAtMs(),
                     cap, sp.level().getGameTime() * 50L);
             TerminalSessionManager.markDirty();

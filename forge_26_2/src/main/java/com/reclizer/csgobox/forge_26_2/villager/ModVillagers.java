@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_2.villager;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.serialization.MapCodec;
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
 import com.reclizer.csgobox.forge_26_2.block.ModBlocks;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -13,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraftforge.eventbus.api.bus.BusGroup;
 import net.minecraftforge.registries.DeferredRegister;
 
@@ -45,6 +47,15 @@ public final class ModVillagers {
             DeferredRegister.create(Registries.POINT_OF_INTEREST_TYPE, CsgoBox.MODID);
     public static final DeferredRegister<VillagerProfession> PROFESSIONS =
             DeferredRegister.create(Registries.VILLAGER_PROFESSION, CsgoBox.MODID);
+
+    /** Registers the {@code csgobox:arms_dealer_price} loot number provider
+     *  referenced by the dynamic villager-trade datapack JSON. */
+    public static final DeferredRegister<MapCodec<? extends NumberProvider>> PRICE_PROVIDERS =
+            DeferredRegister.create(Registries.LOOT_NUMBER_PROVIDER_TYPE, CsgoBox.MODID);
+
+    static {
+        PRICE_PROVIDERS.register("arms_dealer_price", () -> ArmsDealerPriceProvider.MAP_CODEC);
+    }
 
     private static final ResourceKey<PoiType> POI_KEY = ResourceKey.create(
             Registries.POINT_OF_INTEREST_TYPE,
@@ -82,5 +93,6 @@ public final class ModVillagers {
     public static void register(BusGroup eventBus) {
         POI_TYPES.register(eventBus);
         PROFESSIONS.register(eventBus);
+        PRICE_PROVIDERS.register(eventBus);
     }
 }

@@ -64,7 +64,24 @@ public final class DeployerBoxOpen {
             return;
         }
         BlockPos pos = event.getPos();
+        CsgoBox.LOGGER.debug("[csgobox-create] right-click at {} block={} hand={} entity={}",
+                pos, BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()),
+                BuiltInRegistries.ITEM.getKey(player.getMainHandItem().getItem()),
+                player.getClass().getSimpleName());
         if (!isCreatePlatform(level, pos)) {
+            CsgoBox.LOGGER.debug("[csgobox-create] target {} is not create:belt / create:depot — ignored",
+                    BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()));
+            return;
+        }
+        CsgoBox.LOGGER.debug("[csgobox-create] create platform detected at {}", pos);
+
+        // v2.2.0 Create integration rewrite: mechanical deployers are handled
+        // by Create's official recipe-search hook (DeployerBoxOpenRecipeSearch)
+        // — Create itself consumes the deployer's held key and replaces the
+        // platform crate. Letting a deployer through this classic
+        // RightClickBlock path would double-handle the open. Real players keep
+        // this path (right-click the crate on a platform while holding a key).
+        if (player instanceof FakePlayer) {
             return;
         }
 
@@ -79,11 +96,15 @@ public final class DeployerBoxOpen {
             ResourceLocation boxId = ItemCsgoBox.getBoxId(stack);
             BoxDefinition def = boxId == null ? null : BoxRegistry.get(boxId);
             if (def == null || def.isTerminal()) {
+                CsgoBox.LOGGER.debug("[csgobox-create] platform item {} has no loaded definition ({} ) — ignored",
+                        stack, def == null ? "undefined" : "terminal");
                 return CreatePlatformItems.ProcessResult.none();
             }
 
             boolean byDeployer = player instanceof FakePlayer;
             if (!shouldOpen(player, def, byDeployer)) {
+                CsgoBox.LOGGER.debug("[csgobox-create] key mismatch: deployer={} hand={} required={}",
+                        byDeployer, player.getMainHandItem(), def.keyItem());
                 return CreatePlatformItems.ProcessResult.none();
             }
             // Deployer: prize replaces the crate on the platform; the caller
@@ -100,9 +121,12 @@ public final class DeployerBoxOpen {
                     : null;
             BoxOpenExecutor.Outcome outcome = BoxOpenExecutor.execute(player, stack, !byDeployer, false, trackerKey);
             if (outcome == null) {
+                CsgoBox.LOGGER.debug("[csgobox-create] BoxOpenExecutor refused the open (guard/constraints/roll)");
                 return CreatePlatformItems.ProcessResult.none();
             }
             handled[0] = true;
+            CsgoBox.LOGGER.debug("[csgobox-create] opened {} by {} -> {}", boxId,
+                    byDeployer ? "deployer" : "player", outcome.giveItem());
             return byDeployer
                     ? CreatePlatformItems.ProcessResult.replace(outcome.giveItem())
                     : CreatePlatformItems.ProcessResult.remove();

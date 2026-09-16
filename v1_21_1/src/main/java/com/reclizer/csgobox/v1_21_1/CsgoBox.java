@@ -83,7 +83,7 @@ public class CsgoBox {
     public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Whether a mod with the given id is loaded (v2.1.0: box JSON missing-mod
+    /** Whether a mod with the given id is loaded (v2.0.1: box JSON missing-mod
      *  detection). NeoForge 1.21.1 uses {@code ModList.get().isLoaded}. */
     public static boolean isModLoaded(String modId) {
         if (modId == null || modId.isBlank()) {
@@ -92,7 +92,7 @@ public class CsgoBox {
         return net.neoforged.fml.ModList.get().isLoaded(modId);
     }
 
-    /** v2.1.0 permission gate for the {@code permission} box config field.
+    /** v2.0.1 permission gate for the {@code permission} box config field.
      *  Defaults to allow-all; a modpack wires a permission backend at startup. */
     public static java.util.function.BiPredicate<net.minecraft.server.level.ServerPlayer, String> PERMISSION_GATE =
             (player, node) -> true;
@@ -221,7 +221,7 @@ public class CsgoBox {
             // entry point. The call itself must be guarded: merely loading
             // CsgoBoxTopPlugin for the call pulls in the TOP provider classes
             // during class verification, so without this guard an uninstalled
-            // TOP throws NoClassDefFoundError (see 2.1.0 crash reports).
+            // TOP throws NoClassDefFoundError (see 2.0.1 crash reports).
             if (isModLoaded("theoneprobe")) {
                 com.reclizer.csgobox.v1_21_1.top.CsgoBoxTopPlugin.registerIfLoaded();
             }
@@ -282,8 +282,8 @@ public class CsgoBox {
         return false;
     }
 
-    // ===== Box items are a compile-time constant (v2.1.0 registry hotfix) =====
-    // Up to 2.1.0 every config/csbox/<name>.json was turned into its own item
+    // ===== Box items are a compile-time constant (v2.0.1 registry hotfix) =====
+    // Up to 2.0.1 every config/csbox/<name>.json was turned into its own item
     // (csgobox:<name>) during RegisterEvent. The item registry is synced over
     // the network and frozen before login, so as soon as the client and server
     // config folders differed (or a `requires` mod was installed on one side

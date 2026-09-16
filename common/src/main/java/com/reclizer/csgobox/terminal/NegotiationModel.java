@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.terminal;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -120,25 +121,17 @@ public final class NegotiationModel {
 
     // ---- cap ----
 
-    public static final int[] CAPS = {30, 64, 200, 400, 800};
-    public static final int CAP_UNLIMITED = -1;
-
     /**
-     * The only cap values a client may report back (a display preference in
-     * the action bar). Anything else is rejected so junk values never get
-     * persisted into a session snapshot.
+     * Selector value meaning "no cap" (a display preference in the action
+     * bar). The priced tiers themselves are no longer a constant here: they
+     * are derived from {@code config/csbox/_prices.json} by
+     * {@link com.reclizer.csgobox.box.QuoteCaps} and published through
+     * {@link com.reclizer.csgobox.box.PriceTableRegistry#quoteCaps()}, so the
+     * selector follows the server's actual economy. Validation of a reported
+     * cap lives in {@code PriceTableRegistry#isAllowedQuoteCap(int)} (unlimited
+     * is always legal, anything else must be a current tier).
      */
-    public static boolean isValidCap(int cap) {
-        if (cap == CAP_UNLIMITED) {
-            return true;
-        }
-        for (int c : CAPS) {
-            if (c == cap) {
-                return true;
-            }
-        }
-        return false;
-    }
+    public static final int CAP_UNLIMITED = com.reclizer.csgobox.box.QuoteCaps.UNLIMITED;
 
     // ---- region 11 collection strip (HTML DOT_GROUPS) ----
 
@@ -165,7 +158,7 @@ public final class NegotiationModel {
     // ---- state ----
 
     private final List<Object> history = new ArrayList<>();
-    private final Random rnd = new Random();
+    private final Random rnd = new Random(new SecureRandom().nextLong());
     private OfferSource offerSource;
     private Status status = Status.IDLE;
     private int round = 0;

@@ -2,6 +2,7 @@ package com.reclizer.csgobox.forge_1_20_1.packet;
 
 import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
+import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.forge_1_20_1.emi.BoxEmiReload;
 import com.reclizer.csgobox.forge_1_20_1.jei.BoxJeiSync;
 import io.netty.handler.codec.DecoderException;
@@ -24,9 +25,11 @@ public class PacketSyncBoxDefinitions {
     private static final int MAX_BOXES = 512;
 
     private final List<BoxDefinition> definitions;
+    private final int[] quoteCaps;
 
-    public PacketSyncBoxDefinitions(List<BoxDefinition> definitions) {
+    public PacketSyncBoxDefinitions(List<BoxDefinition> definitions, int[] quoteCaps) {
         this.definitions = definitions == null ? List.of() : List.copyOf(definitions);
+        this.quoteCaps = quoteCaps != null ? quoteCaps.clone() : new int[0];
     }
 
     public PacketSyncBoxDefinitions(FriendlyByteBuf buf) {
@@ -39,6 +42,15 @@ public class PacketSyncBoxDefinitions {
             list.add(BoxDefinition.decode(buf));
         }
         this.definitions = List.copyOf(list);
+        int capCount = buf.readVarInt();
+        if (capCount < 0 || capCount > 256) {
+            throw new DecoderException("Invalid synced quote-cap count: " + capCount);
+        }
+        int[] caps = new int[capCount];
+        for (int i = 0; i < capCount; i++) {
+            caps[i] = buf.readVarInt();
+        }
+        this.quoteCaps = caps;
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -46,10 +58,14 @@ public class PacketSyncBoxDefinitions {
         for (BoxDefinition definition : definitions) {
             definition.encode(buf);
         }
+        buf.writeVarInt(quoteCaps.length);
+        for (int cap : quoteCaps) {
+            buf.writeVarInt(cap);
+        }
     }
 
     public static PacketSyncBoxDefinitions ofAll() {
-        return new PacketSyncBoxDefinitions(List.copyOf(BoxRegistry.getAll()));
+        return new PacketSyncBoxDefinitions(List.copyOf(BoxRegistry.getAll()), PriceTableRegistry.quoteCaps());
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
@@ -58,6 +74,7 @@ public class PacketSyncBoxDefinitions {
             for (BoxDefinition definition : definitions) {
                 BoxRegistry.register(definition);
             }
+            PriceTableRegistry.setQuoteCaps(quoteCaps);
             BoxJeiSync.onBoxRegistryChanged();
             BoxEmiReload.onBoxRegistryChanged();
         });

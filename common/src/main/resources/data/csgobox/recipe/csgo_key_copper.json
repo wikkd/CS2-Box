@@ -7,7 +7,7 @@
     "C"
   ],
   "key": {
-    "C": "minecraft:copper_ingot"
+    "C": { "item": "minecraft:copper_ingot" }
   },
   "result": {
     "count": 1,

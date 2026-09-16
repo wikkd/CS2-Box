@@ -456,7 +456,7 @@ final class BoxJsonSchemaValidatorTest {
         }
     }
 
-// ---- v2.1.0 field validation ----
+// ---- v2.0.1 field validation ----
 
     @Test
     @DisplayName("requires must be an array of strings")
@@ -532,6 +532,72 @@ final class BoxJsonSchemaValidatorTest {
                 "{\"grade1\": [{\"id\": \"minecraft:diamond\", \"enchant\": 7}]}"));
         assertTrue(issues.stream().anyMatch(i -> i.field().equals("grade1[0].enchant")),
                 "numeric enchant must be flagged: " + issues);
+    }
+
+// ---- v2.0.1 pity (保底) ----
+
+    @Test
+    @DisplayName("valid pity with positive target weights produces no issues")
+    void validPity() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 4], \"pity\": {\"grade\": \"classified\", \"every\": 20}}"));
+        assertTrue(issues.isEmpty(), "valid pity must be clean, got: " + issues);
+    }
+
+    @Test
+    @DisplayName("unknown pity grade is flagged")
+    void pityUnknownGrade() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 4], \"pity\": {\"grade\": \"legendary\", \"every\": 20}}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity.grade")),
+                "unknown grade must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("every < 2 is flagged")
+    void pityBadEvery() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 4], \"pity\": {\"grade\": \"classified\", \"every\": 1}}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity.every")),
+                "every=1 must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("missing pity fields are flagged")
+    void pityMissingFields() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 4], \"pity\": {}}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity.grade")),
+                "missing grade must be flagged: " + issues);
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity.every")),
+                "missing every must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("pity that can never fire (no positive weight at/above target) is flagged")
+    void pityCannotFire() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 0, 0], \"pity\": {\"grade\": \"classified\", \"every\": 20}}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity") && i.reason().contains("never fire")),
+                "dead pity must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("pity with positive target weights is not flagged as dead")
+    void pityCanFire() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 0], \"pity\": {\"grade\": \"restricted\", \"every\": 10}}"));
+        assertTrue(issues.stream().noneMatch(i -> i.reason().contains("never fire")),
+                "restricted target has weight 6 > 0, pity can fire: " + issues);
+    }
+
+    @Test
+    @DisplayName("pity that is not an object is flagged")
+    void pityNotObject() {
+        var issues = BoxJsonSchemaValidator.validate(parseObj(
+                "{\"random\": [625, 125, 25, 6, 4], \"pity\": \"classified\"}"));
+        assertTrue(issues.stream().anyMatch(i -> i.field().equals("pity")),
+                "non-object pity must be flagged: " + issues);
     }
 
     private static com.google.gson.JsonObject parseObj(String json) {

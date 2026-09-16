@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_1_20_1.terminal;
 
+import java.security.SecureRandom;
 import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.PriceRange;
 import com.reclizer.csgobox.logic.OddsCalculator;
@@ -37,21 +38,24 @@ public final class TerminalSession {
         this.sessionItem = sessionItem;
     }
 
+    /** v2.0.1-fix: server-authoritative CSPRNG for session seed (was the predictable default Random). */
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     public static TerminalSession create(String playerUuid, String uid, ResourceLocation boxId, BoxDefinition def,
                                          long nowMs) {
-        // v2.1.0: a stock-limited terminal that is sold out offers nothing —
+        // v2.0.1: a stock-limited terminal that is sold out offers nothing —
         // the screen shows an empty (unconfigured-like) state and the buy
         // handler keeps refusing until a restock.
         if (!TerminalStockManager.available(boxId.toString(), def.stock())) {
             return null;
         }
-        // v2.1.0: no grade default price fallback anymore — only items with
+        // v2.0.1: no grade default price fallback anymore — only items with
         // an entry in _prices.json are sellable. A box without any priced
         // item is treated like an unconfigured terminal (empty state).
         if (!hasPricedItems(def)) {
             return null;
         }
-        Random rnd = new Random();
+        Random rnd = new Random(SECURE_RANDOM.nextLong());
         Map<Integer, TerminalRoundData> sampled = new LinkedHashMap<>();
         for (int r = 1; r <= NegotiationModel.MAX_ROUNDS; r++) {
             int skinIdx = NegotiationModel.ROUND_SKIN[r - 1];
@@ -125,7 +129,7 @@ public final class TerminalSession {
     }
 
     /** One sample from the priced items of the grade pool, falling back down
-     *  the tiers. v2.1.0: intra-grade weights are honoured and only items
+     *  the tiers. v2.0.1: intra-grade weights are honoured and only items
      *  with an {@code _prices.json} entry are offered (no grade-default
      *  fallback); a table range {@code [min, max]} is sampled once per offer.
      *  Returns null only if no priced item exists anywhere (create's

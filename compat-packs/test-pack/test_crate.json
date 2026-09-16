@@ -1,0 +1,41 @@
+{
+  "name": "#00C853 测试补给箱",
+  "type": "csbox",
+  "key": "minecraft:air",
+  "drop": 0.05,
+  "entity": ["minecraft:zombie", 0.02, "minecraft:skeleton", 0.01],
+  "icon": 1001,
+  "random": [50, 30, 15, 4, 1],
+  "pity": { "grade": "restricted", "every": 5 },
+  "max_per_player": 10,
+  "cooldown_seconds": 60,
+  "grade1": [
+    { "id": "minecraft:gunpowder", "count": [2, 6], "weight": 3 },
+    { "id": "minecraft:bread", "count": 8 },
+    { "id": "minecraft:iron_ingot", "count": [2, 4], "weight": 2 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_sword" },
+    { "id": "minecraft:arrow", "count": 16 },
+    { "id": "minecraft:cooked_beef", "count": [4, 8] },
+    { "id": "minecraft:gold_ingot", "count": 2, "weight": 2 }
+  ],
+  "grade3": [
+    { "id": "minecraft:diamond_sword" },
+    { "id": "minecraft:diamond", "count": 2 },
+    { "id": "minecraft:golden_apple", "count": 1, "weight": 2 },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [3, 5] } }
+  ],
+  "grade4": [
+    { "id": "minecraft:experience_bottle", "count": 8 },
+    { "id": "minecraft:netherite_ingot" },
+    { "id": "minecraft:ender_pearl", "count": [2, 4] },
+    { "id": "minecraft:elytra", "weight": 2 }
+  ],
+  "grade5": [
+    { "id": "minecraft:netherite_sword", "enchant": { "id": "minecraft:sharpness", "level": 5 } },
+    { "id": "minecraft:trident" },
+    { "id": "minecraft:totem_of_undying", "weight": 2 },
+    { "id": "minecraft:shulker_box", "count": 2 }
+  ]
+}

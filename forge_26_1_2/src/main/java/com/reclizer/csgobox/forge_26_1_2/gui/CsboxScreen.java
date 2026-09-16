@@ -213,8 +213,8 @@ public class CsboxScreen extends Screen {
         boolean isInRange = (pMouseX >= x && pMouseX <= x + size)
                 && (pMouseY >= y && pMouseY <= y + size);
         if (event.button() == 0 && isInRange) {
-            this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
-            this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
+            this.itemRotY = GuiItemMove.renderRotAngleY(pDragX, this.itemRotY);
+            this.itemRotX = GuiItemMove.renderRotAngleX(pDragY, this.itemRotX);
         }
         return super.mouseDragged(event, pDragX, pDragY);
     }

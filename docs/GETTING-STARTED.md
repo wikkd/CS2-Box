@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # CS2-Box 快速入门
 
-> 5 分钟跑起来 CS2-Box 客户端 + 体验一次开箱。详细的开发配置见 [docs/DEVELOPMENT.md](./DEVELOPMENT.md),架构见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+> 5 分钟跑起来 CS2-Box 客户端 + 体验一次开箱。详细的开发配置见 [docs/DEVELOPMENT.md](./DEVELOPMENT.md),架构见 [docs/ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ## 前置要求
 
@@ -84,6 +84,8 @@ active_versions=26.1.2  # 或 1.21.1
 
 | 命令 | 功能 |
 |---|---|
+| `/csbox help`（或直接 `/csbox`）| 帮助文本，含网页配置工具与「打开教程文件夹」/「在线教程」的可点击链接（全员可用，无需 OP）|
+| `/csbox editor` | 打开网页配置工具（与 help 中的链接相同，保留兼容入口）|
 | `/csbox info` / `/csbox info error` | 列出箱子与加载错误 / 仅显示加载错误;加 `<箱子ID>` 查看详情 |
 | `/give @p csgobox:csgo_box` | 发放箱子(vanilla);用 `csgobox:box_id` 组件覆盖指定箱子 |
 | `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义;`/csbox reload tutorial` 同时刷新教程 |

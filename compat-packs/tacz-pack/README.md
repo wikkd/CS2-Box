@@ -14,7 +14,7 @@
 |---|---|
 | `gun_crate.json` | 军火枪械箱（csbox）：高稀有度掉真枪型 TACZ 枪械（`tacz:ak47` / `tacz:m4a1` / `tacz:ai_awp` / `tacz:kar98` / `tacz:rpk` / `tacz:sks_tactical` / `tacz:m1911` / `tacz:glock_17`），低档掉配套弹药（`tacz:ammo` + `AmmoId`）与火药材料 |
 | `tacz_terminal.json` | TACZ 军火终端（terminal）：5 档报价 TACZ 枪械 + 弹药，放置后右键进入交易；报价物品可用「检视」预览 / TACZ 第一人称检视 |
-| `_prices.json` | 全局价格表：`tacz:modern_kinetic_gun#<GunId>` / `tacz:ammo#<AmmoId>` 子键区分各枪/弹售价（v2.1.0 起终端价格统一由价格表管理，箱子 JSON 里不再写 `price`） |
+| `_prices.json` | 全局价格表：`tacz:modern_kinetic_gun#<GunId>` / `tacz:ammo#<AmmoId>` 子键区分各枪/弹售价（v2.0.1 起终端价格统一由价格表管理，箱子 JSON 里不再写 `price`） |
 
 ## 安装（1.20.1 示例）
 

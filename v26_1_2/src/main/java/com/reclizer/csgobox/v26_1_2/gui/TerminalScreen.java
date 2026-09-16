@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
+import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
@@ -144,6 +145,11 @@ public class TerminalScreen extends Screen {
                 state.round(), status, state.generation(), state.cap(),
                 state.countdownDeadlineMs(), state.pending(), state.history()),
                 worldNowMs());
+        // A stored cap from an older price-table ladder (e.g. the old fixed
+        // 30/64/200/400/800 set) is no longer selectable; normalize it to
+        // "unlimited" so the on-close report passes the server-side tiers
+        // check instead of pinning a stale value in the session forever.
+        model.setCap(PriceTableRegistry.normalizeQuoteCap(state.cap()));
         // Baseline for the offer-pop sound: cards already in the restored
         // history must not replay; only NEW cards (future rounds) pop.
         this.offerEntryCount = countOfferEntries(model);

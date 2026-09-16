@@ -167,7 +167,7 @@ final class GradeMapTest {
         assertTrue(sawA && sawB && sawC, "All items should be reachable");
     }
 
-// ---- v2.1.0 weighted-pool tests ----
+// ---- v2.0.1 weighted-pool tests ----
 
     @Test
     @DisplayName("build with weightOf skips zero-weight entries")

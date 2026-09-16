@@ -7,7 +7,7 @@
     "PPP"
   ],
   "key": {
-    "P": "csgobox:armory_point"
+    "P": { "item": "csgobox:armory_point" }
   },
   "result": {
     "id": "csgobox:csgo_key0",

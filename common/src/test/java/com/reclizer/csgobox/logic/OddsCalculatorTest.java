@@ -165,4 +165,69 @@ final class OddsCalculatorTest {
             assertEquals(1, pre.pickGrade(rng2));
         }
     }
+
+// ---- v2.0.1 pity-aware rolls ----
+
+    @Test
+    @DisplayName("pity roll is sequence-identical to plain pickGrade before the threshold")
+    void pityInactiveMatchesPlainRoll() {
+        int[] weights = {625, 125, 25, 6, 4};
+        PityPolicy policy = PityPolicy.of("classified", 20);
+        Random a = new Random(99);
+        Random b = new Random(99);
+        for (int i = 0; i < 500; i++) {
+            OddsCalculator.PityResult plain = OddsCalculator.pickGradeWithPity(a, weights, null, 0);
+            OddsCalculator.PityResult pity = OddsCalculator.pickGradeWithPity(b, weights, policy, 0);
+            assertEquals(plain.grade(), pity.grade(), "same RNG must give same grade before pity");
+            assertTrue(!pity.forced(), "streak 0 must never be forced");
+        }
+    }
+
+    @Test
+    @DisplayName("forced pity roll stays within target..5 and marks forced")
+    void forcedPityStaysAtOrAboveTarget() {
+        int[] weights = {625, 125, 25, 6, 4};
+        PityPolicy policy = PityPolicy.of("restricted", 3); // target level 4
+        Random rng = new Random(7);
+        boolean sawForced = false;
+        for (int i = 0; i < 2000; i++) {
+            OddsCalculator.PityResult r = OddsCalculator.pickGradeWithPity(rng, weights, policy, 2);
+            assertTrue(r.grade() >= 4 && r.grade() <= 5,
+                    "forced roll must be >= target level 4, got " + r.grade());
+            assertTrue(r.forced());
+            sawForced = true;
+        }
+        assertTrue(sawForced);
+    }
+
+    @Test
+    @DisplayName("forced pity slice with no positive weight falls back to a plain roll")
+    void forcedPityWithEmptySliceFallsBack() {
+        int[] weights = {625, 125, 25, 6, 0}; // grade 5 weight 0
+        PityPolicy policy = PityPolicy.of("classified", 3); // target 5, slice = [0] → fallback
+        Random rng = new Random(42);
+        for (int i = 0; i < 500; i++) {
+            OddsCalculator.PityResult r = OddsCalculator.pickGradeWithPity(rng, weights, policy, 2);
+            assertTrue(!r.forced(), "empty pity slice must degrade to a plain roll");
+            assertTrue(r.grade() >= 1 && r.grade() <= 5);
+        }
+    }
+
+    @Test
+    @DisplayName("forced roll distribution concentrates in the pity slice")
+    void forcedPityDistribution() {
+        // Half-and-half weights, target grade 4 → forced rolls must never be grade 1-3.
+        int[] weights = {50, 50, 50, 50, 50};
+        PityPolicy policy = PityPolicy.ofLevel(4, 2);
+        Random rng = new Random(555);
+        int forcedCount = 0;
+        for (int i = 0; i < 1000; i++) {
+            OddsCalculator.PityResult r = OddsCalculator.pickGradeWithPity(rng, weights, policy, 1);
+            if (!r.forced()) continue;
+            forcedCount++;
+            assertTrue(r.grade() >= 4,
+                    "forced roll out of pity slice: " + r.grade());
+        }
+        assertTrue(forcedCount > 0, "expected forced rolls");
+    }
 }

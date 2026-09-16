@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Central terminal price table ({@code config/csbox/_prices.json}).
  *
- * <p>v2.1.0+: per-item terminal prices are no longer written inside box
+ * <p>v2.0.1+: per-item terminal prices are no longer written inside box
  * JSONs — every grade entry's price is resolved from this single table so
  * all terminals share one economy. Keys are item registry ids
  * ({@code "minecraft:diamond_sword"}) or {@code id#variant} sub-keys for
@@ -184,7 +184,7 @@ public final class PriceTable {
     }
 
     /**
-     * v2.1.0 compatibility view: terminal price for an item id as an int —
+     * v2.0.1 compatibility view: terminal price for an item id as an int —
      * a random range resolves to its minimum, {@link #UNPRICED} when the
      * table has no entry. Consumers that need the actual sampled price
      * should use {@link #lookupRange} + {@link PriceRange#sample}.
@@ -246,7 +246,7 @@ public final class PriceTable {
     }
 
     /**
-     * v2.1.0 economy: Armory Recycler payout for a table price — 90% of the
+     * v2.0.1 economy: Armory Recycler payout for a table price — 90% of the
      * price, rounded UP. A 4500-point item recycles for 4050, a 10-point item
      * for 9, an 11-point item for 10; a 1-point item for 1. Non-positive
      * prices (including {@link #UNPRICED}) pay 0. Integer math

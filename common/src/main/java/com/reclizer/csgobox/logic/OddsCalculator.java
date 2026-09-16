@@ -104,7 +104,7 @@ public final class OddsCalculator {
      * Bounded random long using rejection sampling. Mirrors the original
      * {@code RandomItem.nextLong} implementation.
      *
-     * <p>Public (v2.1.0-fix) so {@code GradeMap.pickWeighted} and the
+     * <p>Public (v2.0.1-fix) so {@code GradeMap.pickWeighted} and the
      * platform {@code TerminalSession.pickWeightedIndex} share one unbiased
      * implementation instead of the biased {@code Math.abs(nextLong()) % n}
      * shortcut (which returns a negative roll for {@code Long.MIN_VALUE}).
@@ -128,7 +128,7 @@ public final class OddsCalculator {
     }
 
     /**
-     * v2.1.1 pity-aware grade roll. When {@code policy != null} and the miss
+     * v2.0.1 pity-aware grade roll. When {@code policy != null} and the miss
      * streak reached the configured threshold, rolls ONLY within
      * {@code [targetLevel .. weights.length]} (weighted by the existing
      * per-grade weights) so the result is guaranteed to hit the target or

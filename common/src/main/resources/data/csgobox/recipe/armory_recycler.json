@@ -7,10 +7,10 @@
     "IRI"
   ],
   "key": {
-    "I": "minecraft:iron_ingot",
-    "H": "minecraft:hopper",
-    "C": "minecraft:copper_ingot",
-    "R": "minecraft:redstone"
+    "I": { "item": "minecraft:iron_ingot" },
+    "H": { "item": "minecraft:hopper" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "R": { "item": "minecraft:redstone" }
   },
   "result": {
     "id": "csgobox:armory_recycler",

@@ -70,7 +70,7 @@ public final class ModItems {
      *  dynamic item registration skips this id ({@code containsKey}). */
     public static final Supplier<Item> ITEM_TERMINAL = ITEMS.registerItem("terminal", ItemTerminal::new, p -> p);
 
-    // ===== Fixed box items (v2.1.0, registry-safety hotfix) =====
+    // ===== Fixed box items (v2.0.1, registry-safety hotfix) =====
     // The item registry is synced over the network and frozen at startup, so
     // its contents MUST NOT depend on the local config/csbox/ folder: doing so
     // made a client and server registry diverge and killed the connection with

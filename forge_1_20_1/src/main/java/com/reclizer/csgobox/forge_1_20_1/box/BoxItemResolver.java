@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * v2.1.0 open-time item resolution: applies the {@code csgobox:item_spec}
+ * v2.0.1 open-time item resolution: applies the {@code csgobox:item_spec}
  * marker carried by box JSON items that cannot be fixed at load time —
  * count ranges ({@code {"c":[min,max]}}), random enchant
  * ({@code {"e":...}}) and loot-table references ({@code {"l":"ns:path"}}).

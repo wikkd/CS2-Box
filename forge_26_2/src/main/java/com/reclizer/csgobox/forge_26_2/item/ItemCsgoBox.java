@@ -93,7 +93,7 @@ public class ItemCsgoBox extends Item {
                             .build());
 
     /**
-     * Optional JSON spec for box items that need open-time resolution (v2.1.0):
+     * Optional JSON spec for box items that need open-time resolution (v2.0.1):
      * count range {@code {"c":[min,max]}}, random enchant
      * {@code {"e":{"id":"...","level":[3,5]}}}, loot-table reference
      * {@code {"l":"namespace:path"}} — combined fields allowed. Absent on plain
@@ -179,7 +179,7 @@ public class ItemCsgoBox extends Item {
     }
 
     /**
-     * v2.1.0: applies the configured {@code icon} to a box stack. An integer
+     * v2.0.1: applies the configured {@code icon} to a box stack. An integer
      * value sets CustomModelData (pair with a resource pack); a {@code ns:path}
      * value sets the item-model component (26.x renders it directly, no pack).
      */
@@ -207,7 +207,7 @@ public class ItemCsgoBox extends Item {
      * {@link BoxScreenOpener} so server-side class loading stays client-free.
      */
     public void openScreen(ItemStack stack) {
-        // v2.1.0: dispatch on the box definition rather than the item class.
+        // v2.0.1: dispatch on the box definition rather than the item class.
         // Box items are generic now (identity in the csgobox:box_id data
         // component), so a terminal-type box handed out as csgo_box must still
         // open the terminal UI.
@@ -241,7 +241,7 @@ public class ItemCsgoBox extends Item {
     }
 
     /**
-     * v2.1.0: builds the weighted grade pool for opening. Items with a
+     * v2.0.1: builds the weighted grade pool for opening. Items with a
      * non-positive {@code weight} are excluded (authors disable entries
      * without deleting them); the rest are weighted inside their grade.
      */

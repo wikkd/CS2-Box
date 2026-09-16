@@ -3,7 +3,7 @@ package com.reclizer.csgobox.logic;
 import com.reclizer.csgobox.box.BoxGrades;
 
 /**
- * v2.1.1 pity (保底) policy for box opening, parsed from the optional box
+ * v2.0.1 pity (保底) policy for box opening, parsed from the optional box
  * JSON field {@code "pity": { "grade": "classified", "every": 20 }}.
  *
  * <p>Semantics: after {@code every - 1} consecutive successful opens whose

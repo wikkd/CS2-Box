@@ -1,0 +1,37 @@
+{
+  "name": "#00B0FF 测试补给终端",
+  "type": "terminal",
+  "drop": 0.0,
+  "random": [10, 20, 40, 80, 160],
+  "discount": 0.2,
+  "stock": 50,
+  "restock_minutes": 30,
+  "grade1": [
+    { "id": "minecraft:bread", "count": 16 },
+    { "id": "minecraft:gunpowder", "count": 8 },
+    { "id": "minecraft:arrow", "count": 32 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_ingot", "count": 8 },
+    { "id": "minecraft:gold_ingot", "count": 4 },
+    { "id": "minecraft:cooked_beef", "count": [8, 16] }
+  ],
+  "grade3": [
+    { "id": "minecraft:diamond", "count": 4 },
+    { "id": "minecraft:iron_sword" },
+    { "id": "minecraft:bow", "count": 1 },
+    { "loot_table": "minecraft:chests/simple_dungeon" }
+  ],
+  "grade4": [
+    { "id": "minecraft:diamond_sword" },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [4, 5] } },
+    { "id": "minecraft:experience_bottle", "count": 16 },
+    { "id": "minecraft:ender_pearl", "count": 2 }
+  ],
+  "grade5": [
+    { "id": "minecraft:netherite_sword" },
+    { "id": "minecraft:elytra" },
+    { "id": "minecraft:trident" },
+    { "id": "minecraft:totem_of_undying", "weight": 2 }
+  ]
+}

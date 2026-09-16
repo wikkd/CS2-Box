@@ -1,5 +1,10 @@
 {
   "additional_wants": {
+    "count": {
+      "fallback": 1,
+      "quote_field": "key2_diamonds",
+      "type": "csgobox:arms_dealer_price"
+    },
     "id": "minecraft:diamond"
   },
   "gives": {
@@ -8,7 +13,11 @@
   "max_uses": 3,
   "reputation_discount": 0.05,
   "wants": {
-    "count": 45,
+    "count": {
+      "fallback": 45,
+      "quote_field": "key2_points",
+      "type": "csgobox:arms_dealer_price"
+    },
     "id": "csgobox:armory_point"
   },
   "xp": 30

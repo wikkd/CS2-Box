@@ -29,7 +29,7 @@
      类型与范围粗查
    - 物品条目：id / tag / loot_table 三选一（互斥）、weight >= 0、
      count 为 >=1 整数或 [min,max] 区间、enchant 为 true 或对象；
-     残留 price 字段报错（v2.1.0 已移除，价格统一入 _prices.json）
+     残留 price 字段报错（v2.0.1 已移除，价格统一入 _prices.json）
    - 价格表 _prices.json：键 = ns:path（可选 #variant 子键），值 = 非负整数
 
 输出汇总：每个文件「有效/无效」、无效条目原因、按 namespace 统计的 id
@@ -251,7 +251,7 @@ def check_item(item, where, errors, infos, ns_counts, registry):
 
     if "price" in item:
         errors.append(
-            f"{where}.price: price 已移除（v2.1.0）——终端价格统一写入目录下的 "
+            f"{where}.price: price 已移除（v2.0.1）——终端价格统一写入目录下的 "
             f"{PRICE_TABLE_NAME}（按物品 id，可选 #variant 子键）")
 
     if "weight" in item:
@@ -363,7 +363,7 @@ def _is_valid_price_value(value):
 
 def analyze_price_table(path):
     """_prices.json 全局价格表核查：键 = ns:path（可选 #variant），值 = 非负整数
-    或 [min, max] 范围（v2.1.0+）。
+    或 [min, max] 范围（v2.0.1+）。
     与运行时 PriceTable.parse 同口径：非法条目报错并跳过，其余条目照常生效。"""
     errors, infos = [], []
     try:

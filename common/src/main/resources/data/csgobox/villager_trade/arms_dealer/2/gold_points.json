@@ -1,6 +1,15 @@
 {
+  "given_item_modifiers": [
+    {
+      "count": {
+        "fallback": 4,
+        "quote_field": "gold",
+        "type": "csgobox:arms_dealer_price"
+      },
+      "function": "minecraft:set_count"
+    }
+  ],
   "gives": {
-    "count": 4,
     "id": "csgobox:armory_point"
   },
   "max_uses": 16,

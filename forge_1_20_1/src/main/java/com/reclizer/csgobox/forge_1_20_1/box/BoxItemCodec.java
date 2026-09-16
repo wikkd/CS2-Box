@@ -40,7 +40,7 @@ import java.util.Set;
 /**
  * Parses and serializes individual ItemStack entries within box JSON.
  *
- * <p>v2.1.0 additions:</p>
+ * <p>v2.0.1 additions:</p>
  * <ul>
  *   <li>{@code weight} — intra-grade item weight (parallel to the item list).</li>
  *   <li>{@code count} may be {@code [min,max]} — a range resolved at open time
@@ -709,7 +709,7 @@ public final class BoxItemCodec {
     }
 
     /**
-     * v2.1.0: price-table variant id of a stack — the legacy NBT {@code GunId}
+     * v2.0.1: price-table variant id of a stack — the legacy NBT {@code GunId}
      * or {@code AmmoId} (TACZ) that the central price table keys as
      * {@code id#variant}, or null. Best-effort and TACZ-class-free: reads the
      * stack's top-level tag; a missing / blank field yields null and the

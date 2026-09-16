@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * v2.1.0 server-side terminal stock: a global (not per-player) remaining
+ * v2.0.1 server-side terminal stock: a global (not per-player) remaining
  * stock per box id, decremented on each successful terminal purchase and
  * refilled after the box's configured {@code restock_minutes} of WORLD time
  * (game ticks × 50 ms). {@code stock == -1} (the default) means unlimited and

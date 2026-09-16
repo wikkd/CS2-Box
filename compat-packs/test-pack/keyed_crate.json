@@ -1,0 +1,33 @@
+{
+  "name": "#FF6D00 钥匙测试箱",
+  "type": "csbox",
+  "key": "csgobox:csgo_key3",
+  "drop": 0.03,
+  "icon": 1002,
+  "random": [40, 30, 20, 8, 2],
+  "max_per_player": 5,
+  "cooldown_seconds": 120,
+  "grade1": [
+    { "id": "minecraft:gunpowder", "count": 4 },
+    { "id": "minecraft:arrow", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_sword" },
+    { "id": "minecraft:bow", "count": 1, "weight": 2 }
+  ],
+  "grade3": [
+    { "id": "minecraft:diamond_sword" },
+    { "id": "minecraft:golden_apple" },
+    { "id": "minecraft:experience_bottle", "count": [4, 8] }
+  ],
+  "grade4": [
+    { "id": "minecraft:netherite_ingot", "count": [1, 2] },
+    { "id": "minecraft:ender_pearl", "count": 4 },
+    { "id": "minecraft:elytra" }
+  ],
+  "grade5": [
+    { "id": "minecraft:netherite_sword", "count": 1 },
+    { "id": "minecraft:trident" },
+    { "id": "minecraft:totem_of_undying", "count": 2, "weight": 2 }
+  ]
+}

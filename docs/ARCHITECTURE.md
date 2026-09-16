@@ -94,21 +94,21 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
   一次性 `type` 迁移。教程 markdown **随包内置**（`assets/csgobox/tutorials/tutorial.md` / `tutorial_zh_cn.md`，
   固定资源名；落盘文件名带版本号），首次启动复制到 `config/csbox/`，离线可用、**无网络依赖**。
   **当前版本教程全部就位后**才按 `^_tutorial_v.*\.md$` 白名单删除旧版教程；复制失败/无 jar 清单版本
-  （dev/IDE）时**跳过复制与删除**（v2.1.0 修复：杜绝 `_tutorial_vunknown.md` 与误删已有教程）
+  （dev/IDE）时**跳过复制与删除**（v2.0.1 修复：杜绝 `_tutorial_vunknown.md` 与误删已有教程）
 - **`BoxFileWatcher`** — `config/csbox/` 文件监听（300ms 防抖热重载），纯 JDK `WatchService`
-- **（v2.1.0 已移除）`TutorialFetcher` / `TutorialSources`** — 原教程联网下载与镜像源机制，换用包内嵌
+- **（v2.0.1 已移除）`TutorialFetcher` / `TutorialSources`** — 原教程联网下载与镜像源机制，换用包内嵌
   后彻底删除，运行时零网络外联
 - **`BoxOdds` / `NetworkLimits` / `BoxReloadCallback`** — 概率展示模型 / 包体上限常量 / 重载回调契约
 - **`BoxJsonLoader`**（平台）— 加载 `config/csbox/*.json`：首次启动保证目录存在、把包内教程复制到本机
   （`downloadTutorialsAsync()` 供服务端 `loadAll()` 与客户端 `onClientSetup` 共用，专用服务器玩家
   本机也落一份教程）、对遗留 `terminal.json` 做一次性 type 迁移；在 `ServerStartingEvent` 触发 `loadAll()`。
   **2.0.0 起终端机不再生成默认配置**——出厂即空箱，与普通箱一样由玩家自建 JSON。
-  **v2.1.0**：文件名合法性校验、`enabled`/`requires` 门控、空档位 warning、`validateFile`
+  **v2.0.1**：文件名合法性校验、`enabled`/`requires` 门控、空档位 warning、`validateFile`
   干跑（`/csbox validate`）、解析全部新字段；损坏文件**保留原位**（`/csbox info error` 持续报告）
 - **`GradeGroup` / `RandomItem`**（平台）— 5 档物品 + 加权随机选择（用 `long` 累加总权重避免溢出）。
-  **v2.1.0**：`GradeGroup` 新增平行 `itemWeights` 列表（档内物品权重，默认全 1 = 均匀；0 = 禁用条目）
+  **v2.0.1**：`GradeGroup` 新增平行 `itemWeights` 列表（档内物品权重，默认全 1 = 均匀；0 = 禁用条目）
 
-**物品 schema**（v2.1.0 扩展）：`{ "id" | "tag": "#..." | "loot_table": "...", "count": 1 | [min,max],
+**物品 schema**（v2.0.1 扩展）：`{ "id" | "tag": "#..." | "loot_table": "...", "count": 1 | [min,max],
 "weight": N, "enchant": true | {id,level}, "components": {...} }`。`#tag` 加载时展开为成员物品；
 `loot_table` 开箱时服务端掷表（预览显示桶占位 + `item_spec` 标记）；`count` 区间开箱时随机。
 未知物品 id 区分「目标模组未装」vs「id 拼写错」（`CsgoBox.isModLoaded`）。旧版 `tag` 字符串仍可加载。
@@ -122,10 +122,10 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
   不会误删（规避 ABA 竞态导致冷却失效）
 - **`GradeMap` / `GradeMapCache`** — 每箱的不可变等级池 + 按 box id 缓存（reload 时失效）。
   `pickRandom` 返回副本，调用方可自由修改。普通开箱与批量开箱共用同一份缓存。
-  **v2.1.0**：支持档内加权（`fromWeighted` / `Weighted<T>` / `empty()`），`pickRandom` 按权重选取
-- **`BoxConstraintTracker`**（v2.1.0）— 开箱约束内存追踪（每玩家每箱开箱计数 / 最后开箱 tick，
+  **v2.0.1**：支持档内加权（`fromWeighted` / `Weighted<T>` / `empty()`），`pickRandom` 按权重选取
+- **`BoxConstraintTracker`**（v2.0.1）— 开箱约束内存追踪（每玩家每箱开箱计数 / 最后开箱 tick，
   驱动 `max_per_player` 与 `cooldown_seconds`；重启清零，文档注明）
-- **`TerminalStockManager`**（v2.1.0，`common/terminal/`）— 终端全局库存 + 补货定时器（内存态）
+- **`TerminalStockManager`**（v2.0.1，`common/terminal/`）— 终端全局库存 + 补货定时器（内存态）
 - **`AnimationStrip`** — 滚动条动画的纯数学部分（tick → 位置插值）
 - **`OddsCalculator`** — 开箱概率计算（JEI / REI 展示与服务端同口径）
 
@@ -161,7 +161,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
   `csgo_key_copper`、`armory_point`、`terminal`，外加 5 个**随模组发布的默认箱子**固定物品
   （`ammo_crate` / `attachment_crate` / `gun_crate` / `normal_crate` / `tacz_terminal`，
   经私有 `fixedBoxItem(...)` 注册，默认实例自带 `box_id`）
-- **物品注册表是编译期常量（v2.1.0 联机修复）**：注册**不再**扫描 `config/csbox/`。物品注册表
+- **物品注册表是编译期常量（v2.0.1 联机修复）**：注册**不再**扫描 `config/csbox/`。物品注册表
   是同步且启动期冻结的，曾因"每个文件名注册一个物品"导致两侧配置不同（或 `requires` 模组只装在
   一侧）即注册表分叉，联机被以「Failed to synchronize registry data」拒绝。自建箱子统一使用通用
   物品 `csgo_box` / `terminal`，身份走 `csgobox:box_id` 标签，界面类型由**箱子定义**分派
@@ -309,7 +309,7 @@ sequenceDiagram
 统一提供（10 tick 窗口），packet record 本体与 StreamCodec 保留在平台。
 
 **`PacketSyncBoxDefinitions` 的意义**：专用服务器下，客户端的箱子定义内容（权重 / 价格 / 物品清单 /
-JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；v2.1.0 起**物品注册**同样不再读取本地 JSON
+JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；v2.0.1 起**物品注册**同样不再读取本地 JSON
 （编译期常量），因此联机只要求**模组版本一致**。
 
 ## 7. 事件订阅
@@ -352,7 +352,7 @@ JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；
 ## 9. 终端机谈判子系统
 
 终端机（`ItemTerminal` 物品）走**独立的服务端权威谈判会话**，与普通宝箱的 RNG 开箱流水线完全隔离。
-完整演进与边界见 [`REPORT-TERMINAL-DECOUPLING.md`](./REPORT-TERMINAL-DECOUPLING.md)。
+完整演进与边界见 [`REPORT-TERMINAL-DECOUPLING.md`](./archive/REPORT-TERMINAL-DECOUPLING.md)。
 
 ### 9.1 会话锁
 
@@ -402,7 +402,13 @@ JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；
 开箱 → 武库点数 → 拆解 / 终端购买 → 再开箱，构成完整循环。
 
 - **军火商职业村民**（`villager/ModVillagers`）— 防解雇 / 防消失加固；
-  `data/csgobox/trade_set/` + `villager_trade/` 定义 5 级交易表
+  `data/csgobox/trade_set/` + `villager_trade/` 定义 5 级交易表。
+  **动态定价**：价格锚定 `_prices.json`（common `VillagerPricing`，
+  `_villager_prices.json` 调参）——1.20.1 / 1.21.1 走 `VillagerTrades` 代码注册现场报价；
+  26.x 保持 datapack 注册，价格字段引用自定义 loot `NumberProvider`
+  `csgobox:arms_dealer_price`（`loot_number_provider_type`），收购端用
+  `minecraft:set_count` 动态改写点数，村民刷新交易时按 `LootContext` 随机源重采样；
+  `enabled=false` 回退 JSON 内静态 `fallback`（详见 `docs/CONFIGURATION.md` 3.4）
 - **武库商小屋**（`data/csgobox/structure/` + `worldgen/`）— 野外据点（`structure_set` + 商店宝箱
   `loot_table/chests/arms_dealer_hut.json`）+ **接入原版 5 群系村庄道路自然生成**
   （`data/minecraft/worldgen/template_pool/village/*/houses.json`）
@@ -424,7 +430,7 @@ common/src/main/resources/          ← 跨版本共享（六平台经 srcDir �
       ├── loot_table/chests/         (武库商小屋宝箱)
       ├── structure/ + worldgen/     (武库商小屋)
       ├── tags/worldgen/biome/       (生成群系标签)
-      └── trade_set/ + villager_trade/ (军火商交易表)
+      └── trade_set/ + villager_trade/ (军火商交易表；26.x 动态价格经 csgobox:arms_dealer_price provider)
 
 <平台>/src/main/resources/           ← 平台特化
   ├── META-INF/neoforge.mods.toml | mods.toml

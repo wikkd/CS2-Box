@@ -21,7 +21,7 @@ cp compat-packs/<pack>/*.json config/csbox/
 | `tacz-pack/` | TACZ（永恒枪械工坊） | 仅 `v1_21_1` / `forge_1_20_1` | 枪械 / 弹药 |
 
 
-## v2.1.0 新字段速览
+## v2.0.1 新字段速览
 
 示例包已改用/示范新配置能力（详见 `docs/CONFIGURATION.md` 与 `docs/box-schema/box.schema.json`）：
 

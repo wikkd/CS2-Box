@@ -5,7 +5,11 @@
   "max_uses": 12,
   "reputation_discount": 0.05,
   "wants": {
-    "count": 8,
+    "count": {
+      "fallback": 8,
+      "quote_field": "box",
+      "type": "csgobox:arms_dealer_price"
+    },
     "id": "csgobox:armory_point"
   },
   "xp": 5

@@ -14,6 +14,7 @@ import com.reclizer.csgobox.box.PriceTable;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.box.LegacyPriceMigration;
 import com.reclizer.csgobox.box.LegacyPriceMigration;
+import com.reclizer.csgobox.logic.PityPolicy;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -171,12 +172,12 @@ public final class BoxJsonLoader {
         // Pre-v2.0.0 terminal.json migration (no "type" field); must run before parsing.
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
-        // v2.1.0+: old-version adapter — transfer legacy per-item "price"
+        // v2.0.1+: old-version adapter — transfer legacy per-item "price"
         // fields into _prices.json (conflict prices averaged), then strip
         // them from the box files so the removed field stops erroring.
         LegacyPriceMigration.migrateLegacyPrices(BOXES_DIR);
 
-        // v2.1.0+: the central terminal price table is read once per scan and
+        // v2.0.1+: the central terminal price table is read once per scan and
         // baked into every box's GradeGroup prices.
         PriceTable priceTable = loadPriceTable();
         PriceTableRegistry.set(priceTable);
@@ -243,12 +244,12 @@ public final class BoxJsonLoader {
         }
         BoxDefaults.upgradeLegacyTerminalConfig(BOXES_DIR);
 
-        // v2.1.0+: old-version adapter — transfer legacy per-item "price"
+        // v2.0.1+: old-version adapter — transfer legacy per-item "price"
         // fields into _prices.json (conflict prices averaged), then strip
         // them from the box files so the removed field stops erroring.
         LegacyPriceMigration.migrateLegacyPrices(BOXES_DIR);
 
-        // v2.1.0+: central price table re-read on every reload, so editing
+        // v2.0.1+: central price table re-read on every reload, so editing
         // _prices.json picks up immediately (cache entries are keyed by hash).
         PriceTable priceTable = loadPriceTable();
         PriceTableRegistry.set(priceTable);
@@ -298,7 +299,7 @@ public final class BoxJsonLoader {
         int removed = 0;
         for (Identifier id : toRemove) {
             BoxRegistry.remove(id);
-            // v2.1.0-fix: drop the parse cache entry for the deleted file so a
+            // v2.0.1-fix: drop the parse cache entry for the deleted file so a
             // later re-creation of the same file name cannot serve a stale hash.
             PARSED_CACHE.remove(id.getPath() + ".json");
             removed++;
@@ -315,7 +316,7 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * v2.1.0 dry-run validation (backing {@code /csbox validate}): parses a
+     * v2.0.1 dry-run validation (backing {@code /csbox validate}): parses a
      * box JSON file WITHOUT registering anything or touching the parse cache,
      * so an author can iterate on a config without changing live state.
      * Returns the produced diagnostics; {@code -1} for both line/column means
@@ -436,7 +437,7 @@ public final class BoxJsonLoader {
         String fileName = file.getFileName().toString();
         String boxIdStr = fileName.substring(0, fileName.length() - 5);
 
-        // v2.1.0: validate the file name before it becomes the box id — an
+        // v2.0.1: validate the file name before it becomes the box id — an
         // identifier must be lowercase [a-z0-9_./-]; anything else (spaces,
         // uppercase, CJK, #...) would either crash Identifier.parse or produce
         // a silently different id. Underscore-prefixed files are mod metadata
@@ -471,7 +472,7 @@ public final class BoxJsonLoader {
         }
 
         try {
-            // v2.1.0 gating: "enabled":false skips cleanly (no error, the
+            // v2.0.1 gating: "enabled":false skips cleanly (no error, the
             // author chose to disable it); "requires" skips with a clear
             // "missing dependency" error when any mod is absent. Only a real
             // boolean is honoured — a string "false" is not silently coerced.
@@ -534,7 +535,7 @@ public final class BoxJsonLoader {
                             }
                             items.addAll(outcome.stacks());
                             itemWeights.addAll(outcome.weights());
-                            // v2.1.0+: prices come from the central price
+                            // v2.0.1+: prices come from the central price
                             // table (config/csbox/_prices.json), never from
                             // box JSON. UNPRICED = no price at all — the
                             // grade-default fallback was removed, so any
@@ -604,7 +605,7 @@ public final class BoxJsonLoader {
             for (GradeGroup grade : grades) {
                 builder.addGrade(grade);
             }
-            // v2.1.0 config fields: gating (enabled/requires), icon, terminal
+            // v2.0.1 config fields: gating (enabled/requires), icon, terminal
             // economy (discount/stock/restock), open constraints.
             if (json.has("icon")) {
                 String icon = getString(json, "icon", "");
@@ -629,6 +630,32 @@ public final class BoxJsonLoader {
             }
             if (json.has("permission")) {
                 builder.permission(getString(json, "permission", ""));
+            }
+            // v2.0.1 pity (保底): { "grade": "classified", "every": 20 } —
+            // an invalid config degrades to no pity (the schema validator
+            // reports the mistake at load time).
+            if (json.has("pity") && json.get("pity").isJsonObject()) {
+                JsonObject pity = json.getAsJsonObject("pity");
+                String gradeId = getString(pity, "grade", "");
+                int every = getInt(pity, "every", 0);
+                PityPolicy policy = PityPolicy.of(gradeId, every);
+                builder.pity(policy);
+                // v2.0.1-fix(A): warn when the guaranteed tier (target and up)
+                // has zero total weight — the forced roll could never fire
+                // and players would silently lose their pity.
+                if (policy != null) {
+                    int target = policy.targetLevel();
+                    int pityWeight = 0;
+                    for (int i = target - 1; i < weights.length; i++) {
+                        pityWeight += Math.max(0, weights[i]);
+                    }
+                    if (pityWeight <= 0) {
+                        recordLoadWarning(file, fileName,
+                                "Pity: target grade '" + gradeId + "' (level " + target
+                                        + ") and above have zero weight — guaranteed roll can never trigger, "
+                                        + "fix the 'random' weights");
+                    }
+                }
             }
 
             return Optional.of(builder.build());
@@ -747,7 +774,7 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * v2.1.0+: reads and parses the central price table
+     * v2.0.1+: reads and parses the central price table
      * ({@code config/csbox/} {@link PriceTable#FILE_NAME}). A missing file is
      * a valid empty table (grade default prices); malformed entries are
      * recorded as LoadErrors (visible via {@code /csbox info error}) and the
@@ -778,7 +805,7 @@ public final class BoxJsonLoader {
     }
 
     /**
-     * v2.1.0+: dry-run validation of the central price table (backing the
+     * v2.0.1+: dry-run validation of the central price table (backing the
      * {@code _prices.json} part of {@code /csbox validate}). Diagnostics are
      * rolled back like {@link #validateFile}; ok == false only when at least
      * one entry is malformed (a missing table is always ok).

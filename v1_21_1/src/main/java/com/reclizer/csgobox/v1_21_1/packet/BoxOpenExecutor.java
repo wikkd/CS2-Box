@@ -87,6 +87,18 @@ public final class BoxOpenExecutor {
      */
     public static Outcome execute(Player player, ItemStack box, boolean giveToPlayer, boolean consumeBox,
                                   String trackerKeyOverride) {
+        return execute(player, box, giveToPlayer, consumeBox, trackerKeyOverride, true);
+    }
+
+    /**
+     * {@link #execute(Player, ItemStack, boolean, boolean, String)} with key
+     * consumption made optional. Create's deployer recipe path
+     * ({@code DeployerBoxOpenRecipeSearch}) passes {@code consumeKey=false}:
+     * Create owns the held-item consumption there, so the executor must not
+     * also shrink a key from the fake player's inventory.
+     */
+    public static Outcome execute(Player player, ItemStack box, boolean giveToPlayer, boolean consumeBox,
+                                  String trackerKeyOverride, boolean consumeKey) {
         // v2.2.0-fix: fake-player isolation (Create deployer compat).
         String trackerKey = trackerKeyOverride != null ? trackerKeyOverride : player.getStringUUID();
         UUID guardKey = UUID.nameUUIDFromBytes(("csgobox|" + trackerKey).getBytes(StandardCharsets.UTF_8));
@@ -120,14 +132,14 @@ public final class BoxOpenExecutor {
             return null;
         }
 
-        // v2.1.1-hardening: serverSeed comes from a CSPRNG and must NEVER be
+        // v2.0.1-hardening: serverSeed comes from a CSPRNG and must NEVER be
         // logged, sent to clients or exposed through events — Random(seed)
         // is a 48-bit LCG; anyone holding the seed can replay the roll.
         long serverSeed = SECURE_RANDOM.nextLong();
         var rng = new Random(serverSeed);
 
         // Grade pool is immutable per box id (shared cache with the bulk
-        // path, invalidated on reload). v2.1.0 builds the pool with
+        // path, invalidated on reload). v2.0.1 builds the pool with
         // per-item weights. pickRandom returns copies, so callers may
         // mutate freely.
         var gradeMap = GradeMapCache.get(boxId.toString(),
@@ -136,7 +148,7 @@ public final class BoxOpenExecutor {
             return null;
         }
 
-        // v2.1.0 constraints (in-memory, server-authoritative): per-player
+        // v2.0.1 constraints (in-memory, server-authoritative): per-player
         // open cap and per-box cooldown are checked before the roll so a
         // capped player never wastes a key. Unknown definitions have no
         // constraints (parity with the pre-v2.2.0 packet path).
@@ -162,7 +174,7 @@ public final class BoxOpenExecutor {
             }
         }
 
-        // v2.1.1 pity (保底): snapshot the per-player miss streak before
+        // v2.0.1 pity (保底): snapshot the per-player miss streak before
         // the roll; a forced roll replaces the winning slot below.
         PityPolicy pity = def != null ? def.pity().orElse(null) : null;
         int pityStreak = pity != null
@@ -177,13 +189,13 @@ public final class BoxOpenExecutor {
 
         ItemStack giveItem = strip.items().get(winningIndex);
         int finalGrade = strip.grades().get(winningIndex);
-        // v2.1.1-fix(B): pity counts the ROLLED grade, never the resolved
+        // v2.0.1-fix(B): pity counts the ROLLED grade, never the resolved
         // (post-fallback) one — a forced roll that lands on the target
         // grade must reset the streak even when the item pool falls back
         // to a lower-tier item.
         int pityRollGrade = finalGrade;
 
-        // v2.1.1 pity: replace the winning slot with a forced roll from
+        // v2.0.1 pity: replace the winning slot with a forced roll from
         // [targetLevel..5] when the miss streak reached the threshold.
         // pickGradeWithPity returns forced=false when the pity slice has
         // no positive weight (misconfigured) — the plain roll stands.
@@ -216,7 +228,7 @@ public final class BoxOpenExecutor {
             strip.grades().set(winningIndex, finalGrade);
         }
 
-        // v2.1.0: resolve count-range / random-enchant / loot-table specs
+        // v2.0.1: resolve count-range / random-enchant / loot-table specs
         // on the winning item BEFORE keys are consumed (a broken loot
         // table must never eat a key).
         if (player instanceof ServerPlayer sp) {
@@ -228,7 +240,9 @@ public final class BoxOpenExecutor {
 
         // Consume keys (from anywhere: items, armor, offhand) only after the
         // whole roll is validated — a broken definition must never eat a key.
-        if (!PacketCsgoProgress.tryConsumeKeys(player, box, 1)) {
+        // Create's deployer recipe path disables this (Create consumes the
+        // deployer's held item itself).
+        if (consumeKey && !PacketCsgoProgress.tryConsumeKeys(player, box, 1)) {
             return null;
         }
 
@@ -266,7 +280,7 @@ public final class BoxOpenExecutor {
         // Record the successful open for max_per_player / cooldown.
         BoxConstraintTracker.recordOpen(trackerKey, boxId.toString(), player.level().getGameTime());
 
-        // v2.1.1 pity: advance the miss streak only after the item was
+        // v2.0.1 pity: advance the miss streak only after the item was
         // actually given (rejected/aborted opens never count). Uses the
         // ROLLED grade (pityRollGrade), not the resolved/final one.
         if (pity != null) {

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Concurrency regression for {@link BoxRegistryStore} (v2.1.0-fix): the store
+ * Concurrency regression for {@link BoxRegistryStore} (v2.0.1-fix): the store
  * must survive simultaneous mutations (the BoxFileWatcher reload thread) and
  * reads (main server thread opening boxes / running commands) without
  * {@code ConcurrentModificationException} or lost updates. Insertion-order and

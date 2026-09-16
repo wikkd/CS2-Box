@@ -188,8 +188,8 @@ run-data/
 .hvigor/
 .superpowers/
 .cw_skill/
-.opencode/
-.planning/
+/.opencode/
+/.planning/
 .planning/*.tmp
 
 # Runtime config backups

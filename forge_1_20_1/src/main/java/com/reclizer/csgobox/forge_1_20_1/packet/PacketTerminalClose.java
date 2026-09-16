@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_1_20_1.packet;
 
+import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSession;
@@ -63,7 +64,7 @@ public class PacketTerminalClose {
         if (message.round != session.model().round()) {
             return;
         }
-        int cap = NegotiationModel.isValidCap(message.cap) ? message.cap : session.model().cap();
+        int cap = PriceTableRegistry.isAllowedQuoteCap(message.cap) ? message.cap : session.model().cap();
         session.model().syncClose(message.round, message.pending, message.pendingAtMs,
                 cap, sp.level().getGameTime() * 50L);
         TerminalSessionManager.markDirty();

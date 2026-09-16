@@ -393,7 +393,9 @@ final class NegotiationModelTest {
         for (int r : NegotiationModel.ROUND_SKIN) {
             assertTrue(r >= 0 && r < 3);
         }
-        assertEquals(5, NegotiationModel.CAPS.length);
+        // Priced cap tiers moved to QuoteCaps (derived from _prices.json);
+        // the model only keeps the unlimited sentinel.
+        assertEquals(-1, NegotiationModel.CAP_UNLIMITED);
         assertFalse(NegotiationModel.SKIN_PRICE[0].isEmpty());
     }
 

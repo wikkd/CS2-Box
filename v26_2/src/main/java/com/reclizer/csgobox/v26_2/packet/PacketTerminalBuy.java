@@ -5,6 +5,7 @@ import com.reclizer.csgobox.terminal.TerminalStockManager;
 import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.v26_2.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.v26_2.CsgoBox;
+import com.reclizer.csgobox.v26_2.event.TerminalBuyAttemptEvent;
 import com.reclizer.csgobox.v26_2.event.TerminalBuyEvent;
 import com.reclizer.csgobox.v26_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_2.box.BoxItemResolver;
@@ -148,7 +149,19 @@ public record PacketTerminalBuy(
         }
         boolean creative = sp.getAbilities().instabuild;
 
-        // v2.1.0 stock gate: a stock-limited terminal refuses when exhausted.
+        // v2.0.1 KubeJS: purchase veto hook — fires AFTER price validation and
+        // BEFORE stock/point consumption, so a canceled attempt costs nothing.
+        // The price is intentionally read-only (it was already shown to the
+        // client; mutating it here would desync display from charge).
+        TerminalBuyAttemptEvent attempt = new TerminalBuyAttemptEvent(
+                sp, heldBox, grade, price, roundData.offer().wearVal(),
+                roundData.item(), message.offerRound());
+        NeoForge.EVENT_BUS.post(attempt);
+        if (attempt.isCanceled()) {
+            return invalid;
+        }
+
+        // v2.0.1 stock gate: a stock-limited terminal refuses when exhausted.
         BoxDefinition def = BoxRegistry.get(heldBox);
         int stock = def != null ? def.stock() : BoxDefinition.UNLIMITED;
         if (!TerminalStockManager.available(ItemCsgoBox.getBoxId(held).toString(), stock)) {
@@ -179,7 +192,7 @@ public record PacketTerminalBuy(
             consumeArmoryPoints(sp, price);
         }
         ItemStack toGive = offerItem.copy();
-        // v2.1.0-fix: resolve loot_table / count-range / enchant specs
+        // v2.0.1-fix: resolve loot_table / count-range / enchant specs
         // server-side BEFORE the 1-count clamp, so the terminal never sells
         // a placeholder (barrel for loot_table, min-count or unenchanted).
         toGive = BoxItemResolver.resolve(toGive, sp.level(), ThreadLocalRandom.current());

@@ -39,7 +39,7 @@ public class ItemCsgoBox extends Item {
     public static final String TAG_TERMINAL_OWNER = "csgobox:terminal_owner";
 
     /**
-     * v2.1.0: optional JSON spec for box items that need open-time resolution:
+     * v2.0.1: optional JSON spec for box items that need open-time resolution:
      * count range {@code {"c":[min,max]}}, random enchant
      * {@code {"e":{"id":"...","level":[3,5]}}}, loot-table reference
      * {@code {"l":"namespace:path"}} — combined fields allowed. Absent on
@@ -140,7 +140,7 @@ public class ItemCsgoBox extends Item {
     }
 
     /**
-     * v2.1.0: applies the configured {@code icon} to a box stack. 1.20.1 has
+     * v2.0.1: applies the configured {@code icon} to a box stack. 1.20.1 has
      * no item-model component, so only an integer icon is honored (sets NBT
      * {@code CustomModelData}, pair with a resource pack); any other value is
      * skipped with a warning.
@@ -167,7 +167,7 @@ public class ItemCsgoBox extends Item {
      * {@link com.reclizer.csgobox.forge_1_20_1.gui.BoxScreenOpener} so server-side class loading stays client-free.
      */
     public void openScreen(ItemStack stack) {
-        // v2.1.0: dispatch on the box definition rather than the item class.
+        // v2.0.1: dispatch on the box definition rather than the item class.
         // Box items are generic now (identity in NBT), so a terminal-type box
         // handed out as csgo_box must still open the terminal UI.
         if (getDefinition(stack).map(BoxDefinition::isTerminal).orElse(false)) {
@@ -200,7 +200,7 @@ public class ItemCsgoBox extends Item {
     }
 
     /**
-     * v2.1.0: builds the weighted grade pool for opening. Items with a
+     * v2.0.1: builds the weighted grade pool for opening. Items with a
      * non-positive {@code weight} are excluded (authors disable entries
      * without deleting them); the rest are weighted inside their grade.
      */
@@ -237,7 +237,7 @@ public class ItemCsgoBox extends Item {
                 .orElseGet(() -> super.getName(stack));
     }
 
-    /** Adds the configured box contents to the item tooltip (v2.1.0 weighted). */
+    /** Adds the configured box contents to the item tooltip (v2.0.1 weighted). */
     @Override
     public void appendHoverText(ItemStack stack, @Nullable net.minecraft.world.level.Level level,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
