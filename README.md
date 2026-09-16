@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎁 CS2-Box
+# CS2-Box
 
 **把 CS:GO 的开箱体验搬进 Minecraft**
 
@@ -20,14 +20,14 @@
 
 CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预览，放入钥匙点「开启」，**服务端权威 RNG** 决定结果，客户端只播放滚动动画，最后揭晓稀有度分级物品。不花真钱，一切都在游戏里。
 
-- 🎲 **五档稀有度** + 服务端真随机 + 批量开箱 + 开箱保底
-- 📝 **JSON 配置驱动**：改文件就上新箱子，无需重新编译
-- 🌐 **一套代码，六端同步**：同时覆盖 NeoForge 与 Forge 共 6 个平台
-- 🖥️ **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
+- **五档稀有度** + 服务端真随机 + 批量开箱 + 开箱保底
+- **JSON 配置驱动**：改文件就上新箱子，无需重新编译
+- **一套代码，六端同步**：同时覆盖 NeoForge 与 Forge 共 6 个平台
+- **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
 
 当前版本 **`2.0.1`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
 
-## 🚀 快速开始
+## 快速开始
 
 1. 安装对应 Minecraft 版本的 NeoForge（或 Forge），从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载 jar 放入 `mods/`
 2. 进入世界后获取物品：
@@ -40,11 +40,11 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 3. 手持箱子 **右键** 打开预览 → 放入钥匙 → 点 **「开启」**
 4. 手持箱子 **Shift+右键** 一次性批量开箱
 
-安装细节与各平台版本要求见下方 [安装](#-安装)。
+安装细节与各平台版本要求见下方 [安装](#安装)。
 
-## ✨ 核心特性
+## 核心特性
 
-### 🎲 开箱体验
+### 开箱体验
 
 - **5 档稀有度分级**：consumer / industrial / mil_spec / restricted / classified，每档独立权重
 - **服务端授权 RNG**：服务端在 `PacketCsgoProgress` 内计算中奖索引与物品，客户端只渲染动画，杜绝作弊
@@ -53,7 +53,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 - **成就系统**：「全新的开始」（首次主动开箱）+ 隐藏紫色挑战「导购」（累计主动开 200 箱）
 - **5 把钥匙**：铜 / 铁 / 金 / 钻石 / 下界合金（铜钥匙 = 3 铜锭合成；下界合金**仅**通过锻造台升级 `csgo_key2` 获得）
 
-### 📝 配置表达力（v2.0.1）
+### 配置表达力（v2.0.1）
 
 - **JSON 配置箱数据**：`config/csbox/*.json` 即可新增箱子类型，`/csbox reload` 或自动热重载生效，无需重编译
 - **档内物品加权**：每件物品独立 `weight`
@@ -65,13 +65,13 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 - **JSON Schema**：[docs/box-schema/box.schema.json](./docs/box-schema/box.schema.json)，IDE 补全与校验
 - **工具脚本**：`scripts/boxgen.py` 生成箱子配置、`scripts/check-ids.py` 核查物品 id
 
-### 🏪 终端经济（v2.0.1）
+### 终端经济（v2.0.1）
 
 - `discount` 折扣、`stock` / `restock_minutes` 库存与补货
 - 开箱约束：`max_per_player` 每人上限、`cooldown_seconds` 冷却、`permission` 权限节点
 - 武库商村民、武库拆解台与终端机围绕 `_prices.json` 价格表联动定价
 
-### 🔌 生态联动
+### 生态联动
 
 - **配方查看**：JEI / REI / EMI（可选客户端 mod，自动检测）
 - **准星信息**：Jade / WTHIT / The One Probe（可选，自动检测）
@@ -81,7 +81,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 - **Cloth Config（可选）**：安装后可获得配置 GUI；TOML 仍是唯一持久化来源
 - **联动数据包示例**：[compat-packs/](./compat-packs/README.md) 提供 Apotheosis / Iron's Spells / TACZ 示例箱配置
 
-## 🖥️ 多平台支持
+## 多平台支持
 
 仓库是 multiloader 结构，通过 `gradle.properties` 中的 `active_versions` 切换当前构建版本：
 
@@ -104,9 +104,9 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 `common/src/main/resources/` 由所有平台通过 `srcDir project(':common').file('src/main/resources')` 共享（v26_1_2 / v26_2 额外设置 `duplicatesStrategy = EXCLUDE`）。
 
-## 📦 安装
+## 安装
 
-### 🎮 玩家安装（使用发布版）
+### 玩家安装（使用发布版）
 
 1. 确认已安装对应 Minecraft 版本的 **NeoForge**（或 Forge）加载器：
 
@@ -136,7 +136,7 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 </details>
 
-### 🛠️ 开发者构建（从源码）
+### 开发者构建（从源码）
 
 **前置要求**
 
@@ -182,7 +182,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 </details>
 
-## 🎮 使用示例
+## 使用示例
 
 ### 获取物品
 
@@ -265,7 +265,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 > 修改 JSON 后执行 `/csbox reload` 即时生效；`enableHotReload`（默认开启）开启时 `config/csbox/*.json` 文件变化会自动热重载（300ms 防抖）。可用 `/csbox nbt hand` 把手中物品导成 JSON 片段直接复用。
 
-## ⚙️ 配置
+## 配置
 
 - `config/csgobox.toml`：TOML 配置（动画速度、稀有度权重、音量、调试开关等）—— 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
 - `config/csbox/*.json`：箱子数据文件，文件名即箱子 ID —— schema 见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
@@ -273,7 +273,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 - 配置持久化统一走 NeoForge/Forge 原生 `ModConfigSpec`（TOML 是唯一持久化来源）；安装可选 mod Cloth Config 可获得配置 GUI
 - **资源路径必须单数** `data/csgobox/recipe/`（Minecraft `RecipeManager` 的 `Registries.elementsDirPath(Registries.RECIPE)` 要求）
 
-## 📚 文档导航
+## 文档导航
 
 | 文档 | 内容 |
 |---|---|
@@ -301,7 +301,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 </details>
 
-## 🤝 贡献指南
+## 贡献指南
 
 欢迎通过 Issue 与 PR 参与贡献，完整流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
@@ -342,11 +342,11 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 在 [GitHub Issues](https://github.com/wikkd/CS2-Box/issues) 提交。报告 bug 请包含：MC 版本、NeoForge 版本、模组版本、重现步骤、预期/实际行为、相关日志（`runs/client/logs/latest.log` 或 `.minecraft/logs/latest.log`）。功能请求请描述使用场景与收益。
 
-## 📄 许可证
+## 许可证
 
 [MIT License](./LICENSE) —— Copyright 2024 Reclizer
 
-## 🧭 项目状态
+## 项目状态
 
 - **当前发布版本**：`2.0.1`（正式版，合并「联动批次 A + 箱子配置优化 + 抽奖收尾」三个批次，6 平台同步发行，共享同一 `mod_version`）
 - **开发中版本**：无（下一版本线待规划）
@@ -354,12 +354,12 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 <details>
 <summary><strong>近期进度</strong>（详见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
 
-- ✅ **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/补货/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口
-- ✅ **2.0.0**：批量开箱恢复 + UI 打磨（无二次确认、可滚动「显示全部」网格）、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊
-- ✅ **1.0.6**：容器化布局、per-item 视觉基线、三档设计 token、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展
-- ✅ **AnimRenderOps 渲染门面**：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护
-- ✅ **forge_26_2 追平 2.0.0 线**：以 `forge_26_1_2` 为基准迁移，5 平台 `clean compileJava` 全通过，门禁 7/7 PASS
-- ✅ **forge_1_20_1 回移**：MC 1.20.1 正式发布线（SRG 重映射、SimpleChannel 网络、NBT 存储、JEI/REI 接入）
+- **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/补货/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口
+- **2.0.0**：批量开箱恢复 + UI 打磨（无二次确认、可滚动「显示全部」网格）、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊
+- **1.0.6**：容器化布局、per-item 视觉基线、三档设计 token、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展
+- **AnimRenderOps 渲染门面**：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护
+- **forge_26_2 追平 2.0.0 线**：以 `forge_26_1_2` 为基准迁移，5 平台 `clean compileJava` 全通过，门禁 7/7 PASS
+- **forge_1_20_1 回移**：MC 1.20.1 正式发布线（SRG 重映射、SimpleChannel 网络、NBT 存储、JEI/REI 接入）
 
 </details>
 

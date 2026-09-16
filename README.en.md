@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎁 CS2-Box
+# CS2-Box
 
 **CS:GO-style crate opening for Minecraft**
 
@@ -20,14 +20,14 @@
 
 CS2-Box brings CS:GO's crate-opening loop into Minecraft: right-click while holding a crate to preview it, drop in a key and hit **Open**, and a **server-authoritative RNG** decides the result while the client plays the rolling animation before revealing rarity-tiered loot. No real money involved — it all happens in-game.
 
-- 🎲 **Five rarity tiers** + true server-side randomness + bulk opening + pity system
-- 📝 **JSON-driven**: add new crates by editing files — no recompiling
-- 🌐 **One codebase, six platforms**: NeoForge and Forge, all in sync
-- 🖥️ **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
+- **Five rarity tiers** + true server-side randomness + bulk opening + pity system
+- **JSON-driven**: add new crates by editing files — no recompiling
+- **One codebase, six platforms**: NeoForge and Forge, all in sync
+- **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
 
 Current version: **`2.0.1`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
 
-## 🚀 Quick Start
+## Quick Start
 
 1. Install the NeoForge (or Forge) loader matching your Minecraft version, grab the jar from [Releases](https://github.com/wikkd/CS2-Box/releases), and drop it into `mods/`
 2. Get your first crate and key:
@@ -40,11 +40,11 @@ Current version: **`2.0.1`**. This is a cleaned-up, maintained fork of Reclizer'
 3. Right-click while holding the crate → insert the key → hit **Open**
 4. Hold the crate and **Shift+right-click** to bulk-open in one go
 
-For installation details and per-platform requirements, see [Installation](#-installation) below.
+For installation details and per-platform requirements, see [Installation](#installation) below.
 
-## ✨ Features
+## Features
 
-### 🎲 Opening Experience
+### Opening Experience
 
 - **5 rarity tiers**: consumer / industrial / mil_spec / restricted / classified, each with its own weight
 - **Server-authoritative RNG**: the server computes the winning index and item inside `PacketCsgoProgress`; the client only renders the animation
@@ -53,7 +53,7 @@ For installation details and per-platform requirements, see [Installation](#-ins
 - **Achievements**: "A Brand New Start" (first active open) + hidden purple challenge "Salesperson" (200 active opens)
 - **5 keys**: copper / iron / gold / diamond / netherite (copper key = 3 copper ingots; netherite **only** via smithing-table upgrade of `csgo_key2`)
 
-### 📝 Configuration Power (v2.0.1)
+### Configuration Power (v2.0.1)
 
 - **JSON crate data**: add crate types via `config/csbox/*.json`, applied by `/csbox reload` or automatic hot reload — no recompiling
 - **In-tier item weights**: per-item `weight`
@@ -65,13 +65,13 @@ For installation details and per-platform requirements, see [Installation](#-ins
 - **JSON Schema**: [docs/box-schema/box.schema.json](./docs/box-schema/box.schema.json) for IDE completion and validation
 - **Tooling scripts**: `scripts/boxgen.py` generates crate configs, `scripts/check-ids.py` audits item ids
 
-### 🏪 Terminal Economy (v2.0.1)
+### Terminal Economy (v2.0.1)
 
 - `discount`, `stock` / `restock_minutes` — terminal inventory and restocking
 - Opening constraints: `max_per_player`, `cooldown_seconds`, `permission`
 - Arms-dealer villager trades, the Armory Recycler, and terminals all price against the `_prices.json` price table
 
-### 🔌 Ecosystem
+### Ecosystem
 
 - **Recipe viewers**: JEI / REI / EMI (optional client mods, auto-detected)
 - **Crosshair info**: Jade / WTHIT / The One Probe (optional, auto-detected)
@@ -81,7 +81,7 @@ For installation details and per-platform requirements, see [Installation](#-ins
 - **Cloth Config (optional)**: install it for a config GUI; TOML remains the single source of truth
 - **Official compat-pack examples**: [compat-packs/](./compat-packs/README.md) with Apotheosis / Iron's Spells / TACZ sample crates
 
-## 🖥️ Platform Support
+## Platform Support
 
 The repo is a multiloader workspace; switch the active build target via `active_versions` in `gradle.properties`:
 
@@ -104,9 +104,9 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 were remov
 
 `common/src/main/resources/` is shared by all platforms via `srcDir project(':common').file('src/main/resources')` (v26_1_2 / v26_2 additionally set `duplicatesStrategy = EXCLUDE`).
 
-## 📦 Installation
+## Installation
 
-### 🎮 Players (release jars)
+### Players (release jars)
 
 1. Make sure the matching loader is installed:
 
@@ -136,7 +136,7 @@ Archived EOL versions (1.21.0/3/4/5/8/10/11) keep using their existing release j
 
 </details>
 
-### 🛠️ Developers (build from source)
+### Developers (build from source)
 
 **Requirements**
 
@@ -182,7 +182,7 @@ TACZ inspect-viewport integration: the jar is not committed (repo convention ign
 
 </details>
 
-## 🎮 Usage
+## Usage
 
 ### Getting items
 
@@ -265,7 +265,7 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 
 > After editing, run `/csbox reload` for instant effect; when `enableHotReload` is on (default), file changes in `config/csbox/*.json` hot-reload automatically (300ms debounce). `/csbox nbt hand` exports any held item as a JSON snippet for reuse.
 
-## ⚙️ Configuration
+## Configuration
 
 - `config/csgobox.toml`: TOML config (animation speed, rarity weights, volume, debug toggles…) — see [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
 - `config/csbox/*.json`: crate data files, file name = box ID — schema in [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)
@@ -273,7 +273,7 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 - Config persistence always goes through native NeoForge/Forge `ModConfigSpec` (TOML is the single source of truth); the optional Cloth Config mod adds a GUI on top
 - **Resource paths must be singular**: `data/csgobox/recipe/` (required by `RecipeManager` via `Registries.elementsDirPath(Registries.RECIPE)`)
 
-## 📚 Documentation
+## Documentation
 
 | Document | Contents |
 |---|---|
@@ -301,7 +301,7 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 
 </details>
 
-## 🤝 Contributing
+## Contributing
 
 Issues and PRs are welcome — full workflow in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -342,11 +342,11 @@ Issues and PRs are welcome — full workflow in [CONTRIBUTING.md](./CONTRIBUTING
 
 Open them on [GitHub Issues](https://github.com/wikkd/CS2-Box/issues). Bug reports should include: MC version, NeoForge version, mod version, repro steps, expected/actual behavior, and relevant logs (`runs/client/logs/latest.log` or `.minecraft/logs/latest.log`). Feature requests should describe the use case and benefit.
 
-## 📄 License
+## License
 
 [MIT License](./LICENSE) — Copyright 2024 Reclizer
 
-## 🧭 Project Status
+## Project Status
 
 - **Current release**: `2.0.1` (merging "compat batch A + crate config power + odds finishing" into one release, published in sync across all 6 platforms with a shared `mod_version`)
 - **In development**: none (next version line to be planned)
@@ -354,12 +354,12 @@ Open them on [GitHub Issues](https://github.com/wikkd/CS2-Box/issues). Bug repor
 <details>
 <summary><strong>Recent progress</strong> (see <a href="./CHANGELOG.md">CHANGELOG.md</a>)</summary>
 
-- ✅ **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/restock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points
-- ✅ **2.0.0**: bulk opening restored + UI polish (no confirmation screen, scrollable "show all" grid), terminal negotiation sessions (random wear + wear-point penalty for undamageable items), arms-dealer cabin world structure, JEI odds category, `blurRadius` background blur
-- ✅ **1.0.6**: containerized layout, per-item visual baseline, 3-tier design tokens, dynamic box item, tutorial system, opening leaderboard, TACZ inspect viewport, v26_2 platform
-- ✅ **AnimRenderOps facade**: all rendering from 6 screens + 3 helpers funneled through the per-platform `utils/AnimRenderOps.java` (13 public ops), zero raw draw calls left, signature consistency guarded by `scripts/check-animops-drift.sh`
-- ✅ **forge_26_2 caught up**: migrated from `forge_26_1_2` as baseline, 5-platform `clean compileJava` all green, gates 7/7 PASS
-- ✅ **forge_1_20_1 backport**: MC 1.20.1 release line (SRG remap, SimpleChannel networking, NBT storage, JEI/REI integration)
+- **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/restock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points
+- **2.0.0**: bulk opening restored + UI polish (no confirmation screen, scrollable "show all" grid), terminal negotiation sessions (random wear + wear-point penalty for undamageable items), arms-dealer cabin world structure, JEI odds category, `blurRadius` background blur
+- **1.0.6**: containerized layout, per-item visual baseline, 3-tier design tokens, dynamic box item, tutorial system, opening leaderboard, TACZ inspect viewport, v26_2 platform
+- **AnimRenderOps facade**: all rendering from 6 screens + 3 helpers funneled through the per-platform `utils/AnimRenderOps.java` (13 public ops), zero raw draw calls left, signature consistency guarded by `scripts/check-animops-drift.sh`
+- **forge_26_2 caught up**: migrated from `forge_26_1_2` as baseline, 5-platform `clean compileJava` all green, gates 7/7 PASS
+- **forge_1_20_1 backport**: MC 1.20.1 release line (SRG remap, SimpleChannel networking, NBT storage, JEI/REI integration)
 
 </details>
 
