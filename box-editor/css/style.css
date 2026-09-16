@@ -1433,6 +1433,11 @@ summary:focus-visible,
   color: var(--warn);
   font-size: 11px;
 }
+.prob-table td.prob-item-name .prob-src-id {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
 .prob-table tr.prob-empty td {
   color: var(--muted);
   font-style: italic;

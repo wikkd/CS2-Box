@@ -383,11 +383,25 @@ try {
   check('probability table lists pool items',
     probItems >= 1 && ((await page.locator('#prob-panel').textContent()) || '').includes('%'),
     'items=' + probItems);
+
+  /* item note (备注): the probability table shows the note name over the raw id */
+  const noteIn = page.locator('[data-f="grades.0.0.note"]');
+  check('item row exposes a note input', (await noteIn.count()) === 1);
+  await noteIn.fill('铁锭备注');
+  await page.waitForTimeout(650);
+  const probHtml = await page.locator('#prob-panel').innerHTML();
+  check('probability table shows the note name with the dimmed source id',
+    probHtml.includes('铁锭备注') && probHtml.includes('prob-src-id'),
+    'note=' + probHtml.includes('铁锭备注') + ' srcId=' + probHtml.includes('prob-src-id'));
   await page.click('#view-json');
   await page.waitForTimeout(200);
   check('switching back to JSON preview restores it',
     await page.locator('#json-preview').isVisible() &&
     !(await page.locator('#prob-panel').isVisible()));
+  check('JSON preview serializes the note',
+    ((await page.locator('#json-preview').textContent()) || '').includes('"note": "铁锭备注"'));
+  await noteIn.fill('');
+  await page.waitForTimeout(300);
 
   /* ================= legacy import (pre-v2.0.1 box JSON) ================= */
   // No file-name field: "Choose file" carries the name, so a legacy

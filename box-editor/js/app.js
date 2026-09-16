@@ -1566,6 +1566,7 @@
           ? '<label class="mini" data-help="item.countHelp">' + esc(t('item.count')) + ' <input data-f="' + esc(p + 'countMin') + '" value="' + esc(it.countMin) + '" type="number" min="1" class="w7"> … <input data-f="' + esc(p + 'countMax') + '" value="' + esc(it.countMax) + '" type="number" min="1" class="w7"></label>'
           : '') +
       '<label class="mini" data-help="item.weightHelp">' + esc(t('item.weight')) + '<input data-f="' + esc(p + 'weight') + '" value="' + esc(it.weight) + '" type="number" min="0" class="w7"></label>' +
+      '<label class="mini" data-help="item.noteHelp">' + esc(t('item.note')) + '<input data-f="' + esc(p + 'note') + '" value="' + esc(it.note || '') + '" placeholder="' + esc(t('item.notePh')) + '" class="w14"></label>' +
       (advanced
         ? '<label class="mini" data-help="item.enchantHelp">' + esc(t('item.enchant')) + ' ' + select(p + 'enchantMode', enchantOptions, it.enchantMode) + '</label>'
         : '') +
@@ -1900,12 +1901,18 @@
     const rows = grades.map((g) => {
       const gradeName = esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
       const gradeRows = g.items.length
-        ? g.items.map((it) =>
-          '<tr class="prob-item">' +
-          '<td class="prob-item-name">' + esc(it.value) + (it.disabled ? ' <span class="prob-disabled">' + esc(t('prob.disabled')) + '</span>' : '') + '</td>' +
+        ? g.items.map((it) => {
+          // A note (备注) replaces the raw id as the display name; the source
+          // id stays visible in a muted style for traceability.
+          const nameHtml = it.note
+            ? esc(it.note) + ' <span class="prob-src-id">' + esc(it.value) + '</span>'
+            : esc(it.value);
+          return '<tr class="prob-item">' +
+          '<td class="prob-item-name">' + nameHtml + (it.disabled ? ' <span class="prob-disabled">' + esc(t('prob.disabled')) + '</span>' : '') + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(it.itemProb))) + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(g.gradeProb * it.itemProb))) + '</td>' +
-          '</tr>').join('')
+          '</tr>';
+        }).join('')
         : '<tr class="prob-empty"><td colspan="3">' + esc(t('prob.emptyGrade')) + '</td></tr>';
       return '<tr class="prob-grade">' +
         '<td><b>' + gradeName + '</b></td>' +

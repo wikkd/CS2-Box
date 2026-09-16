@@ -78,6 +78,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return {
       source: 'id', // id | tag | loot_table
       value: '',
+      note: '', // 备注 (display name), shown in the probability table
       countMode: 'single', // single | fixed | range
       count: 1,
       countMin: 1,
@@ -194,6 +195,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
 
     const w = intOrEmpty(it.weight);
     if (w !== '' && (w !== 1 || verbose)) o.weight = w;
+
+    const note = (it.note || '').trim();
+    if (note) o.note = note;
 
     if (it.enchantMode === 'any') {
       o.enchant = true;
@@ -371,6 +375,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     // weight
     const w = intOrEmpty(obj.weight);
     it.weight = w === '' ? 1 : w;
+
+    // note (备注): optional display name, shown in the probability table
+    if (typeof obj.note === 'string') it.note = obj.note.trim();
 
     // enchant
     if (obj.enchant === true) it.enchantMode = 'any';
@@ -712,6 +719,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
         const active = Number.isFinite(w) && w > 0;
         items.push({
           value,
+          note: (it.note || '').trim(),
           disabled: !active,
           weight: Number.isFinite(w) ? w : 0,
           itemProb: 0,

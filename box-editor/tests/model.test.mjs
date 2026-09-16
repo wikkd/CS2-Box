@@ -502,3 +502,33 @@ test('mergeCratePriceEntries: invalid keys are refused like buildPrices', () => 
   NS.mergeCratePriceEntries(st, r1.keys);
   assert.equal(Object.keys(st.priceRows).length, 0);
 });
+
+test('item note: parsed from box JSON, emitted on export, empty note omitted', () => {
+  const res = NS.boxToState({
+    type: 'csbox', name: 'N',
+    grade1: [{ id: 'minecraft:iron_ingot', weight: 3, note: '铁锭 备注', count: 2 }],
+  }, 'test');
+  assert.equal(res.state.grades[0][0].note, '铁锭 备注');
+
+  const out = NS.buildBox(res.state, false);
+  assert.equal(out.grade1[0].note, '铁锭 备注');
+  assert.equal(out.grade1[0].weight, 3);
+
+  // whitespace-only note is dropped on export
+  const res2 = NS.boxToState({
+    type: 'csbox',
+    grade1: [{ id: 'minecraft:gold_ingot', note: '   ' }],
+  }, 'test');
+  assert.equal(NS.buildBox(res2.state, false).grade1[0].note, undefined);
+});
+
+test('computeProbabilities carries the note through', () => {
+  const st = NS.emptyState();
+  const it = NS.emptyItem();
+  it.value = 'minecraft:iron_ingot';
+  it.note = '铁锭';
+  st.grades[0] = [it];
+  const p = NS.computeProbabilities(st);
+  assert.equal(p.grades[0].items[0].note, '铁锭');
+  assert.equal(p.grades[0].items[0].value, 'minecraft:iron_ingot');
+});
