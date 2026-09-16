@@ -399,6 +399,7 @@
     langSel.addEventListener('change', () => {
       I18N.setLang(langSel.value);
       localStorage.setItem(LS_LANG, I18N.lang);
+      lastIssuesKey = ''; // unchanged issues would skip renderIssues, leaving the old language
       renderAll();
     });
 
