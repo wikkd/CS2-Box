@@ -295,6 +295,60 @@ try {
   } else {
     check('issue click highlights field', false, 'no issue row found');
   }
+  await fn.fill('weapon_dealer');
+  await page.waitForTimeout(400);
+
+  /* A: a target hidden in a collapsed grade card gets expanded + flashed */
+  const wInput = page.locator('[data-f="grades.0.0.weight"]');
+  await wInput.fill('-5');
+  await page.waitForTimeout(550);
+  const wIssue = page.locator('.issue[data-issue-path="grade1[1].weight"]');
+  await page.evaluate(() => {
+    const d = document.querySelector('details.grade-card[data-grade="0"]');
+    if (d) { d.open = false; d.dispatchEvent(new Event('toggle')); }
+  });
+  await page.waitForTimeout(150);
+  if ((await wIssue.count()) > 0) {
+    await wIssue.click();
+    await page.waitForTimeout(400);
+    const cardOpen = await page.evaluate(() => {
+      const d = document.querySelector('details.grade-card[data-grade="0"]');
+      return !!(d && d.open);
+    });
+    const flashed = await wInput.evaluate((el) => el.classList.contains('flash-highlight'));
+    check('issue click expands collapsed grade card and flashes field', cardOpen && flashed,
+      'open=' + cardOpen + ' flash=' + flashed);
+  } else {
+    check('issue click expands collapsed grade card', false, 'no weight issue row');
+  }
+  await wInput.fill('1');
+  await page.waitForTimeout(400);
+
+  /* B: a target hidden in a collapsed section card gets revealed + flashed.
+     card-drop (drop & grade weights) exists for every box type and is
+     collapsed again by the toggle test above; the random weights live
+     inside it. */
+  const dropSecB = page.locator('#card-drop');
+  await dropSecB.locator('.col-head').click(); // expand so the field is fillable
+  await page.waitForTimeout(150);
+  const dInput = page.locator('[data-f="meta.random.0"]');
+  await dInput.fill('10001'); // out of the 0..10000 range -> v.badRandom
+  await page.waitForTimeout(550);
+  const dIssue = page.locator('.issue[data-issue-path="meta.random"]');
+  await dropSecB.locator('.col-head').click(); // collapse again over the bad value
+  await page.waitForTimeout(150);
+  if ((await dIssue.count()) > 0) {
+    await dIssue.click();
+    await page.waitForTimeout(400);
+    const revealed = await dropSecB.evaluate((el) => !el.classList.contains('collapsed'));
+    const flashed = await dInput.evaluate((el) => el.classList.contains('flash-highlight'));
+    check('issue click reveals collapsed section and flashes field', revealed && flashed,
+      'revealed=' + revealed + ' flash=' + flashed);
+  } else {
+    check('issue click reveals collapsed section', false, 'no random issue row');
+  }
+  await dInput.fill('');
+  await page.waitForTimeout(300);
 
   /* ================= probability table view ================= */
   await page.click('#view-prob');

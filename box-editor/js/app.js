@@ -1774,19 +1774,49 @@
       el = document.querySelector('[data-f="meta.random.0"]');
     } else if (path === 'meta.entity') {
       el = document.querySelector('[data-f="meta.entity.0.id"]');
+    } else if (path === 'meta.pity') {
+      el = document.querySelector('[data-f="meta.pityGrade"]');
     } else {
       el = document.querySelector('[data-f="' + CSS.escape(path) + '"]');
     }
     if (!el) el = document.getElementById('card-meta');
+    revealForFlash(el);
     flashElement(el);
+  }
+
+  /** A flash target hidden inside a collapsed container would scroll to
+   *  nothing visible, so expand every collapsed ancestor first: grade
+   *  <details>, advanced-data <details> and collapsible section cards
+   *  (updating their persisted open/collapsed state, same as manual
+   *  toggling). */
+  function revealForFlash(el) {
+    if (!el) return;
+    for (let n = el; n; n = n.parentElement) {
+      if (n.tagName === 'DETAILS' && !n.open) {
+        n.open = true;
+        if (n.classList.contains('grade-card') && n.dataset.grade !== undefined) {
+          const gi = Number(n.dataset.grade);
+          gradeOpen[gi] = true;
+          try { localStorage.setItem(LS_GRADE_OPEN, JSON.stringify(gradeOpen)); } catch (e) { /* file:// */ }
+        }
+      }
+      if (n.classList && n.classList.contains('collapsed') && (n.id || '').indexOf('card-') === 0) {
+        n.classList.remove('collapsed');
+        colCollapsed(); // initialize the persisted map on first use
+        colState[n.id.slice(5)] = false;
+        try { localStorage.setItem(LS_COLS, JSON.stringify(colState)); } catch (e) { /* file:// */ }
+      }
+    }
   }
 
   function flashElement(el) {
     if (!el) return;
     if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('flash-highlight');
+    void el.offsetWidth; // restart the pulse animation on repeated clicks
     el.classList.add('flash-highlight');
     clearTimeout(el._flashT);
-    el._flashT = setTimeout(() => el.classList.remove('flash-highlight'), 2000);
+    el._flashT = setTimeout(() => el.classList.remove('flash-highlight'), 2200);
   }
 
   /* ------------------------------ preview & validation ------------------------------ */
