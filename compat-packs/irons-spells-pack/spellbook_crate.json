@@ -2,6 +2,7 @@
   "name": "#AA66CC 法术书箱",
   "key": "csgobox:csgo_key2",
   "drop": 0.05,
+  "requires": ["irons_spellbooks"],
   "random": [625, 125, 25, 6, 4],
   "grade5": [
     { "id": "irons_spellbooks:scroll", "count": 1, "components": { "minecraft:custom_name": "{\"text\":\"稀有法术卷轴\",\"italic\":false}" } },

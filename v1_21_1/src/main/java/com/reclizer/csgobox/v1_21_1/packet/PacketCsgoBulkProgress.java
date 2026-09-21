@@ -163,6 +163,9 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             int availableKeys = avail.keys();
             int K = Math.min(availableBoxes, availableKeys);
             if (K <= 0) {
+                if (player instanceof ServerPlayer sp) {
+                    PacketCsgoProgress.sendRejected(sp, message.requestId());
+                }
                 return;
             }
             // Server-enforced per-open cap (0 = unlimited). The client overview
@@ -172,7 +175,18 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             if (limit > 0) {
                 K = Math.min(K, limit);
             }
+            // v2.0.1-fix(max_per_player): the batch is clamped to the player's
+            // remaining per-player allowance, not merely boolean-checked — a
+            // hoarded stack could otherwise drain the whole quota in one ask.
+            if (constraintDef != null && constraintDef.maxPerPlayer() > 0) {
+                int allowance = constraintDef.maxPerPlayer()
+                        - BoxConstraintTracker.openCount(player.getStringUUID(), boxId.toString());
+                K = Math.min(K, Math.max(0, allowance));
+            }
             if (K <= 0) {
+                if (player instanceof ServerPlayer sp) {
+                    PacketCsgoProgress.sendRejected(sp, message.requestId());
+                }
                 return;
             }
 

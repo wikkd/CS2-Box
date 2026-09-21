@@ -65,7 +65,10 @@ public final class BoxItemResolver {
                 int min = range.get(0).getAsInt();
                 int max = range.get(1).getAsInt();
                 int count = min + (max > min ? rng.nextInt(max - min + 1) : 0);
-                stack.setCount(count);
+                // A [min, max] wider than the item's stack size must not mint
+                // an illegal oversized stack (config authoring error, but the
+                // resolver runs server-side on every open).
+                stack.setCount(Math.min(count, stack.getMaxStackSize()));
             }
             if (obj.has("e")) {
                 applyRandomEnchant(stack, obj.get("e"), rng);

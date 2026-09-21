@@ -146,13 +146,23 @@ public class PacketCsgoBulkProgress {
         int availableKeys = avail.keys;
         int K = Math.min(availableBoxes, availableKeys);
         if (K <= 0) {
+            PacketCsgoProgress.sendRejectedToPlayer(message.requestId, (ServerPlayer) player);
             return;
         }
         int limit = CsgoBox.CONFIG.bulkOpenCount();
         if (limit > 0) {
             K = Math.min(K, limit);
         }
+        // v2.0.1-fix(max_per_player): the batch is clamped to the player's
+        // remaining per-player allowance, not merely boolean-checked — a
+        // hoarded stack could otherwise drain the whole quota in one ask.
+        if (def != null && def.maxPerPlayer() > 0) {
+            int allowance = def.maxPerPlayer()
+                    - BoxConstraintTracker.openCount(player.getStringUUID(), boxId.toString());
+            K = Math.min(K, Math.max(0, allowance));
+        }
         if (K <= 0) {
+            PacketCsgoProgress.sendRejectedToPlayer(message.requestId, (ServerPlayer) player);
             return;
         }
 

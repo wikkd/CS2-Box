@@ -32,9 +32,9 @@ import net.neoforged.neoforge.common.NeoForge;
  * graded box items (stamped with {@link ItemCsgoBox#GRADE}) into Armory
  * Points. One input item is consumed per {@link #SMELT_TICKS} ticks and the
  * yield appears in the output slot, which the player picks up (or a hopper
- * extracts). There is no automatic payout, no dismantle button and no fuel:
- * smelting only advances while the input holds a graded item and the output
- * can still accept the yield.
+ * extracts). Payouts larger than the output stack size stream into the slot
+ * across ticks (no input is stranded by an oversized price). There is no
+ * automatic payout, no dismantle button and no fuel.
  */
 public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer, ContainerData {
 
@@ -48,6 +48,10 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     /** Exact input stack a policy listener refused; while it stays in the input
      *  slot the recycle event is not re-fired (a veto must not become a loop). */
     private ItemStack refusedInput = ItemStack.EMPTY;
+    /** Points already earned but not yet fully moved into the output slot —
+     *  payouts larger than the stack size stream across ticks instead of
+     *  stranding the input (a 4500-point item yields 4050, far above 64). */
+    private int pendingPayout;
 
     public ArmoryRecyclerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.ARMORY_RECYCLER_BE.get(), pos, state);
@@ -85,6 +89,9 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
 
     public void tick() {
         if (level == null || level.isClientSide()) return;
+        // Stream owed payout into the output slot first; a payout larger than
+        // the stack size drains over several ticks once space frees up.
+        drainPendingPayout();
         ItemStack in = getItem(INPUT_SLOT);
         if (in.isEmpty()) {
             refusedInput = ItemStack.EMPTY;
@@ -100,7 +107,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         Integer grade = in.get(ItemCsgoBox.GRADE.get());
         int yield = grade != null && grade >= 1 && grade <= 5
                 ? yieldForStack(in, level.getRandom()::nextInt) : 0;
-        if (yield <= 0 || !canAcceptOutput(yield)) {
+        if (yield <= 0) {
             resetProgress();
             return;
         }
@@ -118,15 +125,16 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
                 return;
             }
             int payout = recycle.getYield();
-            if (payout <= 0 || !canAcceptOutput(payout)) {
-                // Zero yield, or a price the output slot cannot hold: keep the
-                // item and retry once the output drains.
+            if (payout <= 0) {
+                // Zero yield after the event hook: keep the item, retry next
+                // round once a listener stops zeroing it.
                 setChanged();
                 return;
             }
             refusedInput = ItemStack.EMPTY;
             in.shrink(1);
-            addOutput(payout);
+            pendingPayout += payout;
+            drainPendingPayout();
             level.playSound(null, worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D,
                     worldPosition.getZ() + 0.5D, SoundEvents.VILLAGER_WORK_ARMORER,
                     SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -142,27 +150,29 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         }
     }
 
-    private boolean canAcceptOutput(int amount) {
-        if (amount <= 0) {
-            return false;
+    /** Moves owed payout into the output slot while capacity remains. */
+    private void drainPendingPayout() {
+        if (pendingPayout <= 0) {
+            return;
         }
         ItemStack out = getItem(OUTPUT_SLOT);
-        if (out.isEmpty()) {
-            // A single payout must still be a valid stack — a listener may lift
-            // the yield through ArmoryRecycleEvent#setYield.
-            return amount <= ModItems.ITEM_ARMORY_POINT.get().getDefaultMaxStackSize();
+        if (!out.isEmpty() && !out.is(ModItems.ITEM_ARMORY_POINT.get())) {
+            // Foreign item in the output: wait until the player removes it.
+            return;
         }
-        return out.is(ModItems.ITEM_ARMORY_POINT.get())
-                && out.getCount() + amount <= out.getMaxStackSize();
-    }
-
-    private void addOutput(int amount) {
-        ItemStack out = getItem(OUTPUT_SLOT);
+        int capacity = out.isEmpty()
+                ? ModItems.ITEM_ARMORY_POINT.get().getDefaultMaxStackSize()
+                : out.getMaxStackSize() - out.getCount();
+        int moved = Math.min(pendingPayout, capacity);
+        if (moved <= 0) {
+            return;
+        }
         if (out.isEmpty()) {
-            setItem(OUTPUT_SLOT, new ItemStack(ModItems.ITEM_ARMORY_POINT.get(), amount));
+            setItem(OUTPUT_SLOT, new ItemStack(ModItems.ITEM_ARMORY_POINT.get(), moved));
         } else {
-            out.grow(amount);
+            out.grow(moved);
         }
+        pendingPayout -= moved;
     }
 
     // ---- ContainerData (progress bar sync to the GUI) ------------------------
@@ -330,6 +340,10 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         super.saveAdditional(tag, registries);
         ContainerHelper.saveAllItems(tag, items, registries);
         tag.putInt("Progress", progress);
+        tag.putInt("PendingPayout", pendingPayout);
+        if (!refusedInput.isEmpty()) {
+            tag.put("RefusedInput", refusedInput.save(registries));
+        }
     }
 
     @Override
@@ -338,5 +352,9 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, items, registries);
         progress = tag.getInt("Progress");
+        pendingPayout = tag.getInt("PendingPayout");
+        refusedInput = tag.contains("RefusedInput")
+                ? ItemStack.parse(registries, tag.get("RefusedInput")).orElse(ItemStack.EMPTY)
+                : ItemStack.EMPTY;
     }
 }

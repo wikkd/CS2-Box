@@ -293,7 +293,7 @@ public final class CsboxCommand {
         }
         if (def.stock() >= 0) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_stock",
-                    String.valueOf(def.stock()), String.valueOf(def.restockMinutes())), false);
+                    String.valueOf(def.stock())), false);
         }
         if (def.maxPerPlayer() >= 0) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.info.flag_max_per_player",
@@ -348,9 +348,18 @@ public final class CsboxCommand {
         ItemCsgoBox.setBoxId(boxId, stack);
         Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "targets");
         for (ServerPlayer player : players) {
-            ItemStack give = stack.copy();
-            if (!player.getInventory().add(give)) {
-                player.drop(give, false);
+            // Hand out legal stacks only: count can exceed maxStackSize (6400
+            // cap in the command tree), so split into per-slot stacks like the
+            // vanilla /give does instead of producing one oversized stack.
+            int remaining = count;
+            int maxStack = Math.max(1, stack.getMaxStackSize());
+            while (remaining > 0) {
+                int n = Math.min(remaining, maxStack);
+                ItemStack give = stack.copyWithCount(n);
+                if (!player.getInventory().add(give)) {
+                    player.drop(give, false);
+                }
+                remaining -= n;
             }
         }
         source.sendSuccess(() -> Component.translatable("commands.csgobox.give.success",
