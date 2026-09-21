@@ -8,6 +8,9 @@
 <meta property="og:description" content="可视化创建 CS2-Box 宝箱 / 终端机配置与统一价格表">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://wikkd.github.io/CS2-Box/">
+<meta name="theme-color" content="#f4f0e6">
+<link rel="manifest" href="manifest.webmanifest?v=__VER__">
+<link rel="icon" type="image/svg+xml" href="img/icon.svg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90' fill='%23b5732f'%3E%E2%96%A3%3C/text%3E%3C/svg%3E">
 <title>CS2-Box Price Table Editor</title>
 <link rel="stylesheet" href="css/style.css?v=__VER__">
@@ -34,6 +37,7 @@
     </label>
     <button id="btn-undo" class="btn small" data-action="undo">Undo</button>
     <button id="btn-redo" class="btn small" data-action="redo">Redo</button>
+    <button id="btn-theme" class="btn small" title="Theme">◐</button>
     <button id="btn-new" class="btn">New</button>
     <button id="btn-import" class="btn">Import</button>
     <button id="btn-example" class="btn accent">Examples</button>
@@ -43,6 +47,15 @@
 </header>
 
 <main class="layout">
+  <aside class="filebar" id="filebar">
+    <div class="filebar-head">
+      <button class="filebar-toggle" id="filebar-toggle" title="files">◂</button>
+      <span class="filebar-title" id="filebar-title">Files</span>
+      <button class="file-btn accent" id="file-add" title="new">＋</button>
+    </div>
+    <div class="file-list" id="file-list"></div>
+  </aside>
+
   <section class="left column" id="form-root"></section>
 
   <aside class="right column">
@@ -95,6 +108,16 @@
   </div>
 </dialog>
 
+<dialog id="file-dialog" class="dlg">
+  <h2 id="file-dialog-title">File</h2>
+  <p class="help" id="file-dialog-hint"></p>
+  <input type="text" id="file-dialog-input" class="grow" hidden>
+  <div class="dlg-actions">
+    <button class="btn" id="file-dialog-cancel">Cancel</button>
+    <button class="btn accent" id="file-dialog-do">OK</button>
+  </div>
+</dialog>
+
 <dialog id="crate-import-dialog" class="dlg">
   <h2 id="crate-import-title">Import from crates</h2>
   <p class="help" id="crate-import-hint"></p>
@@ -110,6 +133,8 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
+
+<datalist id="csbox-item-list" hidden></datalist>
 
 <script src="js/i18n.js?v=__VER__"></script>
 <script src="js/data.js?v=__VER__"></script>

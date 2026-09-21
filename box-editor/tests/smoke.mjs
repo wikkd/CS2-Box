@@ -514,6 +514,15 @@ try {
     'serialized=' + JSON.stringify(rangeObj['minecraft:test_range']));
 
   /* ---- multi-crate JSON import (terminals + plain crates at once) ---- */
+  // Run on a fresh draft: the example draft ships with its own price table and
+  // mergeCratePriceEntries gives existing prices precedence ("already priced
+  // wins"), which would swallow the average/keep assertions below.
+  await page.goto(BASE, { waitUntil: 'load' });
+  await page.waitForTimeout(200);
+  await page.click('#file-add'); // new empty draft (file workspace)
+  await page.waitForTimeout(300);
+  await page.goto(BASE + 'prices.html', { waitUntil: 'load' }); // crate import lives on the prices page
+  await page.waitForTimeout(200);
   const crateDoc1 = JSON.stringify({
     name: '矿物终端机', type: 'terminal',
     grade1: [{ id: 'minecraft:iron_ingot', price: 200 }, { id: 'minecraft:raw_iron' }],
@@ -548,7 +557,7 @@ try {
 
   // imported rows survive a round-trip to the box page
   await page.goto(BASE, { waitUntil: 'load' });
-  const storedState = await page.evaluate(() => localStorage.getItem('cs2box-editor-state-v1') || '');
+  const storedState = await page.evaluate(() => localStorage.getItem('cs2box-editor-files-v1') || '');
   check('imported prices persist across pages', storedState.includes('minecraft:test_shard'));
 
   /* ================= share link restore ================= */
@@ -568,6 +577,118 @@ try {
   await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
   check('share link restores prices',
     (await page.locator('tr[data-price-key="minecraft:emerald"]').count()) === 1);
+
+  /* ================= file workspace (multi-draft) ================= */
+  await page.goto(BASE, { waitUntil: 'load' });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(300);
+  check('filebar lists first draft', (await page.locator('.file-item').count()) >= 1,
+    'items=' + (await page.locator('.file-item').count()));
+  const firstDraftName = await page.locator('.file-item.active .file-name').textContent();
+  check('filebar shows box id as draft name', !!firstDraftName && firstDraftName.trim().length > 0,
+    'name=' + firstDraftName);
+  await page.click('#file-add');
+  await page.waitForTimeout(300);
+  check('filebar create adds a draft', (await page.locator('.file-item').count()) === 2);
+  check('new draft becomes active',
+    (await page.locator('.file-item').nth(0).getAttribute('class')).includes('active'));
+  await page.locator('.file-item').nth(0).hover(); // actions appear on hover
+  await page.locator('.file-item').nth(0).locator('[data-file-action="rename"]').click();
+  await page.fill('#file-dialog-input', 'renamed_box');
+  await page.click('#file-dialog-do');
+  await page.waitForTimeout(350);
+  const fnAfterRename = await page.locator('[data-f="meta.fileName"]').inputValue();
+  check('filebar rename updates box id', fnAfterRename === 'renamed_box', 'fn=' + fnAfterRename);
+  await page.locator('.file-item').nth(1).click();
+  await page.waitForTimeout(350);
+  const fnAfterSwitch = await page.locator('[data-f="meta.fileName"]').inputValue();
+  check('filebar switch restores the other draft', fnAfterSwitch === 'weapon_dealer', 'fn=' + fnAfterSwitch);
+  check('filebar active highlight follows switch',
+    (await page.locator('.file-item').nth(1).getAttribute('class')).includes('active'));
+  // delete the INACTIVE renamed draft; keep the example draft (with pool +
+  // prices) active for the EV / simulator checks that follow
+  await page.locator('.file-item').nth(0).hover();
+  await page.locator('.file-item').nth(0).locator('[data-file-action="del"]').click();
+  await page.click('#file-dialog-do');
+  await page.waitForTimeout(350);
+  check('filebar delete removes the draft', (await page.locator('.file-item').count()) === 1);
+  const fnAfterDelete = await page.locator('[data-f="meta.fileName"]').inputValue();
+  check('filebar delete keeps the active draft loaded', fnAfterDelete === 'weapon_dealer', 'fn=' + fnAfterDelete);
+
+  /* ================= dark theme toggle ================= */
+  const themeBefore = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  await page.click('#btn-theme');
+  const themeAfter = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  check('theme toggle flips data-theme', themeBefore !== themeAfter, themeBefore + '->' + themeAfter);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(200);
+  const themePersisted = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  check('theme persists after reload', themePersisted === themeAfter, themePersisted);
+  await page.click('#btn-theme'); // back to light for the visual checks below
+
+  /* ================= probability table: EV column ================= */
+  await page.click('#view-prob');
+  await page.waitForTimeout(250);
+  check('prob table gains EV column',
+    (await page.locator('#prob-panel .prob-table thead th').count()) === 4);
+  check('EV footer rows present',
+    (await page.locator('#prob-panel tr.prob-footer').count()) === 2);
+  const evCells = await page.locator('#prob-panel td.prob-ev').allTextContents();
+  check('EV column shows numbers or em dashes',
+    evCells.length > 0 && evCells.some((t) => /[0-9]/.test(t)), JSON.stringify(evCells.slice(0, 4)));
+  await page.click('#view-json');
+  await page.waitForTimeout(150);
+
+  /* ================= open simulator ================= */
+  await page.click('#view-sim');
+  await page.waitForTimeout(250);
+  check('simulator panel visible', await page.locator('#sim-panel').isVisible());
+  await page.click('[data-sim-action="run100"]');
+  await page.waitForTimeout(400);
+  const simCount100 = parseInt(await page.locator('.sim-count b').first().textContent(), 10);
+  check('simulator batch counts opens', simCount100 === 100, 'opened=' + simCount100);
+  check('simulator stats table rendered',
+    (await page.locator('#sim-panel .sim-table tbody tr').count()) >= 5);
+  await page.click('[data-sim-action="run1"]');
+  await page.waitForTimeout(500);
+  check('simulator roll strip has 48 cells',
+    (await page.locator('#sim-strip .sim-cell').count()) === 48);
+  await page.waitForTimeout(3800);
+  const simResult = (await page.locator('#sim-result').textContent()) || '';
+  check('simulator single roll shows result', simResult.trim().length > 0,
+    'result=' + simResult.slice(0, 40));
+  const simCount101 = parseInt(await page.locator('.sim-count b').first().textContent(), 10);
+  check('simulator single roll adds to stats', simCount101 === 101, 'opened=' + simCount101);
+
+  /* ================= item id autocomplete ================= */
+  const datalistCount = await page.evaluate(() =>
+    document.getElementById('csbox-item-list').children.length);
+  check('item datalist populated', datalistCount > 150, 'options=' + datalistCount);
+  const hasTacz = await page.evaluate(() =>
+    Array.from(document.getElementById('csbox-item-list').children).some((o) => o.value.startsWith('tacz:')));
+  check('tacz suggestions follow version visibility', hasTacz === true, 'tacz=' + hasTacz);
+  const listAttr = await page.locator('[data-f="grades.0.0.value"]').first().getAttribute('list');
+  check('pool value inputs linked to datalist', listAttr === 'csbox-item-list', 'list=' + listAttr);
+
+  /* ================= PWA: service worker + manifest ================= */
+  const swRes = await page.request.get(BASE + 'sw.js');
+  check('sw.js served', swRes.ok());
+  const manRes = await page.request.get(BASE + 'manifest.webmanifest');
+  check('manifest served with manifest type',
+    manRes.ok() && (manRes.headers()['content-type'] || '').includes('manifest'),
+    manRes.headers()['content-type']);
+  await page.waitForTimeout(600);
+  const swState = await page.evaluate(async () => {
+    if (!('serviceWorker' in navigator)) return 'unsupported';
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg ? 'registered' : 'none';
+  });
+  // dev server serves raw source (literal __VER__ in HTML) — the SW must NOT
+  // register there, or its cache-first strategy would serve stale assets
+  // after every code edit; dist/Pages builds register for real.
+  check('service worker skipped on raw dev source', swState === 'none' || swState === 'unsupported',
+    swState);
 
   const failed = results.filter((r) => !r.ok);
   console.log('\n' + (results.length - failed.length) + '/' + results.length + ' checks passed');

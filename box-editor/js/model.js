@@ -719,6 +719,11 @@ window.CSBoxEdit = window.CSBoxEdit || {};
           disabled: !active,
           weight: Number.isFinite(w) ? w : 0,
           itemProb: 0,
+          priceKey: priceKeyOf(it), // 'ns:id' | 'ns:id#variant' | null — EV column lookup
+          countMode: it.countMode || 'single',
+          count: it.count,
+          countMin: it.countMin,
+          countMax: it.countMax,
         });
         if (active) sumW += w;
       }
@@ -737,6 +742,87 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     }
     return { totalWeight, openable: totalWeight > 0, grades };
   }
+
+  /** Pure open-box simulator — samples n opens from the same probability
+   *  model computeProbabilities exposes (grade by `random` weight, item by
+   *  `weight`, then the count range). `rng` is injectable so tests can be
+   *  deterministic; defaults to Math.random.
+   *
+   *  Empty grades (weight > 0, no items) are conditioned out: sampling is
+   *  repeated until a non-empty grade hits, i.e. their mass redistributes
+   *  proportionally over the non-empty grades (a roll must yield an item).
+   *
+   *  Returns cumulative counts plus the FINAL single roll (`last`, used by
+   *  the UI roll animation when n === 1). */
+  function simulateOpens(state, n, rng) {
+    const rand = rng || Math.random;
+    const { openable, grades } = computeProbabilities(state);
+    const gradeCounts = [0, 0, 0, 0, 0];
+    const items = []; // aggregated per pool entry, in pool order
+    const byKey = new Map();
+    let last = null;
+    if (!openable || n <= 0) {
+      return { openable, opened: 0, gradeCounts, items, last };
+    }
+    const pick = (r, pairs) => {
+      // pairs: [[value, prob], ...] cumulative; returns value or last
+      for (const [v, c] of pairs) {
+        if (r <= c) return v;
+      }
+      return pairs[pairs.length - 1][0];
+    };
+    const active = grades.filter((g) => !g.empty && g.gradeProb > 0);
+    // condition on non-empty grades: normalize their gradeProb
+    const mass = active.reduce((a, g) => a + g.gradeProb, 0);
+    const gradeCum = [];
+    let c = 0;
+    for (const g of active) {
+      c += mass > 0 ? g.gradeProb / mass : 0;
+      gradeCum.push([g, c]);
+    }
+    for (let k = 0; k < n; k++) {
+      let g = null;
+      for (let guard = 0; guard < 100 && !g; guard++) {
+        const gv = pick(rand(), gradeCum);
+        if (gv && !gv.empty) g = gv;
+      }
+      if (!g) break;
+      gradeCounts[g.gi]++;
+      // item within grade
+      const itemCum = [];
+      let ic = 0;
+      for (let idx = 0; idx < g.items.length; idx++) {
+        const it = g.items[idx];
+        if (it.disabled) continue;
+        ic += it.itemProb;
+        itemCum.push([idx, ic]);
+      }
+      if (!itemCum.length) continue; // defensive: should not happen for non-empty grades
+      const idx = pick(rand(), itemCum);
+      const it = g.items[idx];
+      // count: single=1, fixed=N, range=random int in [min, max]
+      let count = 1;
+      if (it && it.countMode === 'range') {
+        const lo = Math.max(1, Math.floor(Number(it.countMin) || 1));
+        const hi = Math.max(lo, Math.floor(Number(it.countMax) || lo));
+        count = lo + Math.floor(rand() * (hi - lo + 1));
+      } else if (it && it.countMode === 'fixed') {
+        count = Math.max(1, Math.floor(Number(it.count) || 1));
+      }
+      const key = g.gi + ':' + idx;
+      let agg = byKey.get(key);
+      if (!agg) {
+        agg = { gi: g.gi, idx, value: it.value, note: it.note, hits: 0, itemTotal: 0, theory: g.gradeProb * it.itemProb };
+        byKey.set(key, agg);
+        items.push(agg);
+      }
+      agg.hits++;
+      agg.itemTotal += count;
+      last = { gi: g.gi, idx, value: it.value, note: it.note, count };
+    }
+    return { openable, opened: n, gradeCounts, items, last };
+  }
+
 
   NS.emptyMeta = emptyMeta;
   NS.emptyItem = emptyItem;
@@ -759,4 +845,5 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.collectCratePriceEntries = collectCratePriceEntries;
   NS.mergeCratePriceEntries = mergeCratePriceEntries;
   NS.computeProbabilities = computeProbabilities;
+  NS.simulateOpens = simulateOpens;
 })(window.CSBoxEdit);

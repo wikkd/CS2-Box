@@ -532,3 +532,91 @@ test('computeProbabilities carries the note through', () => {
   assert.equal(p.grades[0].items[0].note, '铁锭');
   assert.equal(p.grades[0].items[0].value, 'minecraft:iron_ingot');
 });
+
+/* ---------------- simulator (simulateOpens) ---------------- */
+
+/** Deterministic mulberry32 RNG so distribution tests are stable. */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function simState() {
+  const st = NS.emptyState();
+  st.meta.random = [10, 30, 0, 0, 0];
+  st.grades[0] = [
+    Object.assign(NS.emptyItem(), { value: 'minecraft:stone', weight: 1 }),
+    Object.assign(NS.emptyItem(), { value: 'minecraft:dirt', weight: 3 }),
+  ];
+  st.grades[1] = [
+    Object.assign(NS.emptyItem(), { value: 'minecraft:iron_ingot', weight: 1, countMode: 'range', countMin: 2, countMax: 5 }),
+  ];
+  return st;
+}
+
+test('simulateOpens: openable=false yields zero counts', () => {
+  const st = simState();
+  st.meta.random = [0, 0, 0, 0, 0];
+  const res = NS.simulateOpens(st, 10, mulberry32(1));
+  assert.equal(res.openable, false);
+  assert.equal(res.opened, 0);
+  assert.equal(res.last, null);
+});
+
+test('simulateOpens: grade distribution matches theory within tolerance', () => {
+  const st = simState();
+  const N = 20000;
+  const res = NS.simulateOpens(st, N, mulberry32(42));
+  // grade1 mass 10/40, grade2 30/40
+  assert.ok(Math.abs(res.gradeCounts[0] / N - 0.25) < 0.02, 'grade1 ' + res.gradeCounts[0] / N);
+  assert.ok(Math.abs(res.gradeCounts[1] / N - 0.75) < 0.02, 'grade2 ' + res.gradeCounts[1] / N);
+  assert.equal(res.gradeCounts[2] + res.gradeCounts[3] + res.gradeCounts[4], 0);
+});
+
+test('simulateOpens: item distribution matches weights (1:3) within tolerance', () => {
+  const st = simState();
+  const N = 20000;
+  const res = NS.simulateOpens(st, N, mulberry32(7));
+  const stone = res.items.find((i) => i.value === 'minecraft:stone');
+  const dirt = res.items.find((i) => i.value === 'minecraft:dirt');
+  const total = stone.hits + dirt.hits;
+  assert.ok(Math.abs(stone.hits / total - 0.25) < 0.02, 'stone ' + stone.hits / total);
+  assert.ok(Math.abs(dirt.hits / total - 0.75) < 0.02, 'dirt ' + dirt.hits / total);
+});
+
+test('simulateOpens: count range stays inside [min, max] and sums items', () => {
+  const st = simState();
+  const N = 5000;
+  const res = NS.simulateOpens(st, N, mulberry32(123));
+  const iron = res.items.find((i) => i.value === 'minecraft:iron_ingot');
+  assert.equal(iron.hits, res.gradeCounts[1]);
+  assert.ok(iron.itemTotal >= iron.hits * 2, 'itemTotal >= hits*2');
+  assert.ok(iron.itemTotal <= iron.hits * 5, 'itemTotal <= hits*5');
+});
+
+test('simulateOpens: empty grades are conditioned out (mass redistributes)', () => {
+  const st = simState();
+  // grade2 has weight but we add an EMPTY grade3 with weight to test conditioning
+  st.meta.random = [10, 30, 0, 40, 0];
+  st.grades[3] = []; // empty despite weight 40
+  const N = 20000;
+  const res = NS.simulateOpens(st, N, mulberry32(99));
+  // only grade1+grade2 have items -> their relative split must stay 10:30 = 1:3
+  const total = res.gradeCounts[0] + res.gradeCounts[1];
+  assert.ok(Math.abs(res.gradeCounts[0] / total - 0.25) < 0.02, 'grade1 share ' + res.gradeCounts[0] / total);
+  assert.equal(res.gradeCounts[3], 0, 'empty grade never counted');
+});
+
+test('simulateOpens: rng injectable -> fully deterministic output', () => {
+  const st = simState();
+  const a = NS.simulateOpens(st, 500, mulberry32(2026));
+  const b = NS.simulateOpens(st, 500, mulberry32(2026));
+  assert.deepEqual(a.gradeCounts, b.gradeCounts);
+  assert.deepEqual(a.items.map((i) => i.hits), b.items.map((i) => i.hits));
+  assert.deepEqual(a.last, b.last);
+});

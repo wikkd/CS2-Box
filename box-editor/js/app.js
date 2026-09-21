@@ -15,6 +15,60 @@
   const LS_ADV = 'cs2box-editor-advanced';
   const LS_FILES = 'cs2box-editor-files-v1';
   const LS_FILEBAR = 'cs2box-editor-filebar-v1';
+  const LS_THEME = 'cs2box-editor-theme';
+
+  /* Theme: 'light' | 'dark' stored explicitly once the user toggles; absent
+   * follows prefers-color-scheme. Applied at script eval (html exists already)
+   * so a dark-mode user does not get a cream flash before DOMContentLoaded. */
+  function systemPrefersDark() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function applyTheme() {
+    let stored = null;
+    try { stored = localStorage.getItem(LS_THEME); } catch (e) { /* file:// */ }
+    const theme = stored === 'dark' || stored === 'light'
+      ? stored
+      : (systemPrefersDark() ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = theme === 'dark' ? '☀' : '☾';
+  }
+
+  function initTheme() {
+    applyTheme();
+    const btn = $('#btn-theme');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem(LS_THEME, next); } catch (e) { /* file:// */ }
+        applyTheme();
+      });
+      btn.title = t('app.theme');
+    }
+    if (window.matchMedia) {
+      try {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          let stored = null;
+          try { stored = localStorage.getItem(LS_THEME); } catch (e) { /* file:// */ }
+          if (stored !== 'dark' && stored !== 'light') applyTheme();
+        });
+      } catch (e) { /* older browsers: addListener unsupported */ }
+    }
+  }
+
+  /** PWA: register the offline service worker — ONLY for built output
+   *  (dist / GitHub Pages, where build.mjs has rewritten __VER__). The dev
+   *  server serves the raw source with a literal __VER__, which would make
+   *  the SW cache name static and serve stale assets after every code edit. */
+  function initServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'https:' && location.protocol !== 'http:') return;
+    if (document.documentElement.innerHTML.includes('__VER__')) return;
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* blocked/unsupported — editor still works */ });
+    });
+  }
 
   /** Common item-model icon presets for the advanced "custom icon" picker. */
   const ICON_PRESETS = [
@@ -47,10 +101,13 @@
    * derived from payload.state.fileName (the box id itself). */
   let filesStore = null; // { files: [{id, payload, savedAt}], activeId } | null
 
+  applyTheme(); // immediate: avoid a cream flash before DOMContentLoaded
+
   const $ = (sel) => document.querySelector(sel);
 
   document.addEventListener('DOMContentLoaded', () => {
     bindStatics();
+    initTheme();
     loadPrefs();
     setupHeader();
     setupDialogs();
@@ -59,8 +116,16 @@
     setupShortcuts();
     initTooltip();
     initFileBar();
+    setupSimPanel();
+    initServiceWorker();
     filesStore = loadFilesStore();
     if (!loadHashState() && !loadState()) loadExample(0, false);
+    // Fresh browser (no drafts): adopt what is on screen (the default example
+    // or a shared link) as the first file entry so the sidebar lists it.
+    if (!filesStore || !filesStore.files.length) {
+      saveState();
+      renderFileBar();
+    }
     window.addEventListener('hashchange', () => {
       if (/[#&]state=/.test(location.hash)) location.reload();
     });
@@ -427,7 +492,7 @@
     state.versionKey = ver;
     advanced = localStorage.getItem(LS_ADV) === '1';
     const view = localStorage.getItem(LS_VIEW);
-    if (view === 'prob' || view === 'json') previewView = view;
+    if (view === 'prob' || view === 'json' || view === 'sim') previewView = view;
   }
 
   /* ------------------------------ file workspace ------------------------------ */
@@ -745,6 +810,7 @@
 
     const viewJsonTab = $('#view-json');
     const viewProbTab = $('#view-prob');
+    const viewSimTab = $('#view-sim');
     if (viewJsonTab && viewProbTab) {
       setPreviewView(previewView); // apply remembered/inline view state + labels
       probAnimateNext = false; // no entrance stagger on page load, only on user switch
@@ -756,6 +822,12 @@
         setPreviewView('prob');
         rebuildPreview();
       });
+      if (viewSimTab) {
+        viewSimTab.addEventListener('click', () => {
+          setPreviewView('sim');
+          rebuildPreview();
+        });
+      }
     }
 
     $('#btn-example').addEventListener('click', () => {
@@ -1230,6 +1302,7 @@
         else if (cur === true) state.taczEnabled = false;
         else state.taczEnabled = null;
         rebuildTaczCard();
+        buildItemDatalist();
         rebuildGrades();
         rebuildPrices();
         schedulePreview();
@@ -1556,10 +1629,24 @@
       '<option value="minecraft:' + esc(e.id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">').join('');
   }
 
+  /** Item-id autocomplete for pool value inputs and the price-table extra-key
+   *  input. TACZ entries are gated by the effective TACZ visibility. */
+  function buildItemDatalist() {
+    const list = document.getElementById('csbox-item-list');
+    if (!list) return;
+    const tacz = taczVisible();
+    list.innerHTML = (DATA.itemSuggestions || []).filter((e) => !e.tacz || tacz).map((e) => {
+      const ns = e.tacz ? 'tacz:' : 'minecraft:';
+      return '<option value="' + ns + esc(e.id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">';
+    }).join('');
+  }
+
   function renderAll() {
     bindStatics();
     buildEntityDatalist();
+    buildItemDatalist();
     fillVersionSelect($('#version-select'));
+    renderFileBar();
     const langSel = $('#lang-select');
     langSel.value = I18N.lang;
     const advToggle = $('#advanced-toggle');
@@ -1884,7 +1971,7 @@
       '<span class="item-no">#' + (ii + 1) + '</span>' +
       select(p + 'source', srcOptions, it.source, 'item.sourceHelp') +
       '<input data-help="item.sourceHelp" data-f="' + esc(p + 'value') + '" value="' + esc(it.value) +
-      '" placeholder="' + (it.source === 'tag' ? '#minecraft:swords' : it.source === 'loot_table' ? 'minecraft:chests/simple_dungeon' : 'minecraft:diamond_sword') + '" class="grow">' +
+      '" list="csbox-item-list" placeholder="' + (it.source === 'tag' ? '#minecraft:swords' : it.source === 'loot_table' ? 'minecraft:chests/simple_dungeon' : 'minecraft:diamond_sword') + '" class="grow">' +
       '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="-1" data-help="item.up" aria-label="' + esc(t('item.up')) + '">↑</button>' +
       '<button class="btn small" data-action="move-item" data-grade="' + gi + '" data-index="' + ii + '" data-dir="1" data-help="item.down" aria-label="' + esc(t('item.down')) + '">↓</button>' +
       '<button class="btn small" data-action="copy-item" data-grade="' + gi + '" data-index="' + ii + '" data-help="item.copy" aria-label="' + esc(t('item.copy')) + '">⧉</button>' +
@@ -1996,7 +2083,7 @@
       '<th>' + esc(t('prices.state')) + '</th><th></th>' +
       '</tr></thead><tbody>' + bodyRows + '</tbody></table>' +
       '<div class="add-key-row">' +
-      '<input id="extra-key-input" data-help="prices.addKeyHelp" placeholder="' + esc(t('prices.addKeyPh')) + '" class="grow">' +
+      '<input id="extra-key-input" data-help="prices.addKeyHelp" list="csbox-item-list" placeholder="' + esc(t('prices.addKeyPh')) + '" class="grow">' +
       '<button class="btn small accent" data-action="add-price-key">' + esc(t('prices.addKey')) + '</button>' +
       '</div>';
   }
@@ -2188,6 +2275,7 @@
     void pre.offsetWidth;
     pre.classList.add('json-sync');
     rebuildProbPanel();
+    renderSimPanel();
 
     const navBox = $('#nav-box');
     const navPrices = $('#nav-prices');
@@ -2203,6 +2291,7 @@
 
     scheduleValidation();
     saveStateDebounced();
+    syncFileBarLabels();
 
     const undoBtn = $('#btn-undo');
     const redoBtn = $('#btn-redo');
@@ -2210,25 +2299,29 @@
     if (redoBtn) redoBtn.disabled = !history.redo.length;
   }
 
-  /** Right-sidebar view switch: JSON preview ↔ probability table. */
-  let previewView = 'json'; // 'json' | 'prob'
+  /** Right-sidebar view switch: JSON preview ↔ probability table ↔ simulator. */
+  let previewView = 'json'; // 'json' | 'prob' | 'sim'
   const LS_VIEW = 'cs2box-editor-view';
   /** One-shot: the next rebuildProbPanel renders rows with an entrance
    *  stagger (set when the user switches to the probability view). */
   let probAnimateNext = false;
 
   function setPreviewView(view) {
-    previewView = view === 'prob' ? 'prob' : 'json';
+    previewView = view === 'prob' || view === 'sim' ? view : 'json';
     probAnimateNext = previewView === 'prob';
     try { localStorage.setItem(LS_VIEW, previewView); } catch (e) { /* file:// */ }
     const jsonTab = $('#view-json');
     const probTab = $('#view-prob');
+    const simTab = $('#view-sim');
     const pre = $('#json-preview');
     const panel = $('#prob-panel');
+    const sim = $('#sim-panel');
     if (jsonTab) jsonTab.classList.toggle('active', previewView === 'json');
     if (probTab) probTab.classList.toggle('active', previewView === 'prob');
+    if (simTab) simTab.classList.toggle('active', previewView === 'sim');
     if (pre) pre.hidden = previewView !== 'json';
     if (panel) panel.hidden = previewView !== 'prob';
+    if (sim) sim.hidden = previewView !== 'sim';
   }
 
   /** Renders the probability table (or keeps the panel empty when the box
@@ -2249,8 +2342,27 @@
       const delay = Math.min(rowIdx++ * 12, 180);
       return ' style="animation: prob-row-in .18s ease backwards; animation-delay:' + delay + 'ms"';
     };
+    // Expected value (Armory Points): mid of the configured fixed/range price;
+    // null when the key is unpriced (shown as an em dash).
+    const priceMidOf = (key) => {
+      if (!key) return null;
+      const row = state.priceRows[key];
+      if (!row) return null;
+      return NS.parsePriceInput(row.price); // {min, max} | null
+    };
+    const fmtMid = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1);
+    const evCell = (key) => {
+      const p = priceMidOf(key);
+      if (!p) return '<td class="prob-ev">—</td>';
+      const mid = (p.min + p.max) / 2;
+      const title = p.min === p.max ? '' : ' title="' + esc(t('ev.rangeTitle', { min: p.min, max: p.max, mid: fmtMid(mid) })) + '"';
+      return '<td class="prob-ev"' + title + '>' + esc(fmtMid(mid)) + '</td>';
+    };
+    let evTotal = 0;
+    let recycleTotal = 0;
     const rows = grades.map((g) => {
       const gradeName = esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
+      let gradeEv = 0;
       const gradeRows = g.items.length
         ? g.items.map((it) => {
           // A note (备注) replaces the raw id as the display name; the source
@@ -2258,26 +2370,43 @@
           const nameHtml = it.note
             ? esc(it.note) + ' <span class="prob-src-id">' + esc(it.value) + '</span>'
             : esc(it.value);
+          const p = priceMidOf(it.priceKey);
+          if (p && !it.disabled) gradeEv += it.itemProb * (p.min + p.max) / 2;
           return '<tr class="prob-item"' + rowStyle() + '>' +
           '<td class="prob-item-name">' + nameHtml + (it.disabled ? ' <span class="prob-disabled">' + esc(t('prob.disabled')) + '</span>' : '') + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(it.itemProb))) + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(g.gradeProb * it.itemProb))) + '</td>' +
+          evCell(it.priceKey) +
           '</tr>';
         }).join('')
-        : '<tr class="prob-empty"' + rowStyle() + '><td colspan="3">' + esc(t('prob.emptyGrade')) + '</td></tr>';
+        : '<tr class="prob-empty"' + rowStyle() + '><td colspan="4">' + esc(t('prob.emptyGrade')) + '</td></tr>';
+      evTotal += g.gradeProb * gradeEv;
+      recycleTotal += g.gradeProb * gradeEv * 0.9;
       return '<tr class="prob-grade"' + rowStyle() + '>' +
         '<td><b>' + gradeName + '</b></td>' +
         '<td>' + esc(String(g.weight)) + '</td>' +
         '<td>' + esc(fmtProb(g.gradeProb)) + '</td>' +
+        '<td class="prob-ev">' + (gradeEv > 0 ? esc(fmtMid(Math.round(gradeEv * 10) / 10)) : '—') + '</td>' +
         '</tr>' + gradeRows;
     }).join('');
+    const evFooter = openable
+      ? '<tr class="prob-footer">' +
+        '<td colspan="3">' + esc(t('ev.total')) + '</td>' +
+        '<td class="prob-ev">' + esc(fmtMid(Math.round(evTotal * 10) / 10)) + '</td>' +
+        '</tr>' +
+        '<tr class="prob-footer muted">' +
+        '<td colspan="3">' + esc(t('ev.recycle')) + '</td>' +
+        '<td class="prob-ev">' + esc(fmtMid(Math.ceil(recycleTotal))) + '</td>' +
+        '</tr>'
+      : '';
     panel.innerHTML = '<h2>' + esc(t('prob.title')) + '</h2>' +
       (openable ? '' : '<p class="prob-warn">' + esc(t('prob.unopenable')) + '</p>') +
       '<table class="prob-table"><thead><tr>' +
       '<th>' + esc(t('prob.item')) + '</th>' +
       '<th>' + esc(t('prob.inGrade')) + '</th>' +
       '<th>' + esc(t('prob.overall')) + '</th>' +
-      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<th>' + esc(t('ev.column')) + '</th>' +
+      '</tr></thead><tbody>' + rows + evFooter + '</tbody></table>' +
       '<p class="help">' + esc(t('prob.note')) + '</p>';
   }
 
@@ -2360,6 +2489,195 @@
         '</ul>';
     }
     root.innerHTML = html; /* esc-exempt: every dynamic part of `html` is esc()'d above */
+  }
+
+  /* ------------------------------ open simulator ------------------------------ */
+
+  const SIM_CELLS = 48;        // cells in the roll strip
+  const SIM_WIN_IDX = 42;      // winning cell (past the right edge of a narrow panel)
+  const SIM_CELL_W = 96;       // px, must match .sim-cell CSS
+  const SIM_ROLL_MS = 3800;    // must match the CSS transition duration
+
+  let simStats = null; // { opened, gradeCounts:[5], items:[{gi,idx,value,note,hits,itemTotal,theory}], gradeTheory:[5], configKey, lastResult }
+  let simRunning = false;
+
+  function simCurrentConfigKey() {
+    try { return JSON.stringify([state.grades, state.meta.random]); } catch (e) { return ''; }
+  }
+
+  function simEnsureStats() {
+    const configKey = simCurrentConfigKey();
+    if (!simStats || simStats.configKey !== configKey) {
+      const { grades } = NS.computeProbabilities(state);
+      simStats = {
+        opened: 0,
+        gradeCounts: [0, 0, 0, 0, 0],
+        items: [],
+        gradeTheory: grades.map((g) => g.gradeProb),
+        configKey,
+        lastResult: null,
+      };
+    }
+    return simStats;
+  }
+
+  function simApplyResult(res) {
+    const st = simEnsureStats();
+    st.opened += res.opened;
+    for (let i = 0; i < 5; i++) st.gradeCounts[i] += res.gradeCounts[i];
+    const map = new Map(st.items.map((e) => [e.gi + ':' + e.idx, e]));
+    for (const it of res.items) {
+      const key = it.gi + ':' + it.idx;
+      const agg = map.get(key);
+      if (agg) {
+        agg.hits += it.hits;
+        agg.itemTotal += it.itemTotal;
+      } else {
+        const copy = Object.assign({}, it);
+        st.items.push(copy);
+        map.set(key, copy);
+      }
+    }
+    if (res.last) st.lastResult = res.last;
+  }
+
+  function simBatch(n) {
+    if (simRunning) return;
+    const { openable } = NS.computeProbabilities(state);
+    if (!openable) { renderSimPanel(); return; }
+    simApplyResult(NS.simulateOpens(state, n));
+    renderSimPanel();
+  }
+
+  function simSingle() {
+    if (simRunning) return;
+    const { openable } = NS.computeProbabilities(state);
+    if (!openable) { renderSimPanel(); return; }
+    if (!prefersReducedMotion()) {
+      simRunning = true;
+      const res = NS.simulateOpens(state, 1);
+      renderSimPanel(); // fresh shell with disabled buttons before the roll
+      simRollStrip(res.last, () => {
+        simApplyResult(res);
+        simRunning = false;
+        renderSimPanel();
+      });
+    } else {
+      const res = NS.simulateOpens(state, 1);
+      simApplyResult(res);
+      renderSimPanel();
+    }
+  }
+
+  /** CS2-style roll: a strip of sampled items slides left and decelerates on
+   *  the pre-determined winner. The result is known before the animation —
+   *  same as the server-authoritative roll in-game. */
+  function simRollStrip(winner, onDone) {
+    const wrap = $('#sim-strip-wrap');
+    const strip = $('#sim-strip');
+    if (!wrap || !strip) { onDone(); return; }
+    const cells = [];
+    for (let i = 0; i < SIM_CELLS; i++) {
+      cells.push(i === SIM_WIN_IDX ? winner : (NS.simulateOpens(state, 1).last || winner));
+    }
+    strip.innerHTML = cells.map((c, i) => {
+      const gi = c ? c.gi : 0;
+      const label = c ? (c.note || c.value) : '';
+      return '<div class="sim-cell g' + (gi + 1) + (i === SIM_WIN_IDX ? ' sim-win" data-win="1"' : '"') + '>' +
+        '<span>' + esc(label) + '</span></div>';
+    }).join('');
+    const offset = SIM_WIN_IDX * SIM_CELL_W + SIM_CELL_W / 2 - wrap.clientWidth / 2;
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateX(0px)';
+    void strip.offsetWidth; // commit the start position before animating
+    strip.style.transition = 'transform ' + (SIM_ROLL_MS / 1000) + 's cubic-bezier(.12, .6, .08, 1)';
+    strip.style.transform = 'translateX(-' + offset + 'px)';
+    setTimeout(() => {
+      const win = strip.querySelector('.sim-win');
+      if (win) win.classList.add('hit');
+      const line = $('#sim-result');
+      if (line && winner) {
+        line.innerHTML = '<span class="sim-result-label">' + esc(t('sim.result')) + ':</span> ' +
+          '<span class="g' + (winner.gi + 1) + '">' + esc(winner.note || winner.value) + '</span>' +
+          (winner.count > 1 ? ' ×' + winner.count : '');
+      }
+      onDone();
+    }, SIM_ROLL_MS + 60);
+  }
+
+  function renderSimPanel() {
+    const panel = $('#sim-panel');
+    if (!panel || isPricesPage() || previewView !== 'sim') return;
+    if (simRunning) return; // never rebuild under an in-flight roll animation
+    const { openable } = NS.computeProbabilities(state);
+    const stale = simStats && simStats.configKey !== simCurrentConfigKey();
+    const dis = simRunning ? ' disabled' : '';
+    // last single-roll result survives re-renders (renderSimPanel rebuilds the
+    // panel after each run, which would otherwise wipe the line)
+    const lr = simStats && simStats.lastResult;
+    const resultHtml = lr
+      ? '<span class="sim-result-label">' + esc(t('sim.result')) + ':</span> ' +
+        '<span class="g' + (lr.gi + 1) + '">' + esc(lr.note || lr.value) + '</span>' +
+        (lr.count > 1 ? ' ×' + lr.count : '')
+      : '';
+    let html = '<h2>' + esc(t('sim.title')) + '</h2>' +
+      '<div class="sim-actions">' +
+      '<button class="btn small accent" data-sim-action="run1"' + dis + '>' + esc(t('sim.run1')) + '</button>' +
+      '<button class="btn small" data-sim-action="run10"' + dis + '>' + esc(t('sim.run10')) + '</button>' +
+      '<button class="btn small" data-sim-action="run100"' + dis + '>' + esc(t('sim.run100')) + '</button>' +
+      '<button class="btn small" data-sim-action="reset">' + esc(t('sim.reset')) + '</button>' +
+      '</div>' +
+      '<div class="sim-result-line" id="sim-result">' + resultHtml + '</div>' +
+      '<div class="sim-strip-wrap" id="sim-strip-wrap"><div class="sim-strip" id="sim-strip"></div><div class="sim-marker"></div></div>';
+    if (stale) html += '<p class="sim-stale">' + esc(t('sim.stale')) + '</p>';
+    if (!openable) {
+      html += '<p class="prob-warn">' + esc(t('sim.empty')) + '</p>';
+    } else if (!simStats || !simStats.opened) {
+      html += '<p class="help">' + esc(t('sim.intro')) + '</p>';
+    } else {
+      const st = simStats;
+      html += '<p class="sim-count">' + esc(t('sim.count')) + ': <b>' + st.opened + '</b></p>';
+      html += '<table class="prob-table sim-table"><thead><tr>' +
+        '<th>' + esc(t('sim.item')) + '</th>' +
+        '<th>' + esc(t('sim.hits')) + '</th>' +
+        '<th>' + esc(t('sim.actual')) + '</th>' +
+        '<th>' + esc(t('sim.theory')) + '</th>' +
+        '</tr></thead><tbody>';
+      const pct = (hits) => esc(fmtProb(st.opened ? hits / st.opened : 0));
+      for (let gi = 0; gi < 5; gi++) {
+        if (!st.gradeCounts[gi] && !(st.gradeTheory[gi] > 0)) continue;
+        const gname = esc((DATA.gradeNames[gi] || {})[I18N.lang] || (DATA.gradeNames[gi] || {}).zh || 'grade' + (gi + 1));
+        html += '<tr class="prob-grade"><td colspan="4"><span class="grade-badge g' + (gi + 1) + '">' + gname + '</span></td></tr>';
+        const items = st.items.filter((it) => it.gi === gi).sort((a, b) => b.hits - a.hits);
+        for (const it of items) {
+          html += '<tr class="prob-item">' +
+            '<td class="prob-item-name">' + esc(it.note || it.value) + (it.note ? ' <span class="prob-src-id">' + esc(it.value) + '</span>' : '') + '</td>' +
+            '<td>' + it.hits + '</td>' +
+            '<td>' + pct(it.hits) + '</td>' +
+            '<td>' + esc(fmtProb(it.theory)) + '</td>' +
+            '</tr>';
+        }
+        if (!items.length) {
+          html += '<tr class="prob-item"><td colspan="4" class="muted">' + esc(t('sim.noHits')) + '</td></tr>';
+        }
+      }
+      html += '</tbody></table>';
+    }
+    panel.innerHTML = html; /* esc-exempt: every dynamic part of `html` is esc()'d above */
+  }
+
+  function setupSimPanel() {
+    const panel = $('#sim-panel');
+    if (!panel) return;
+    panel.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sim-action]');
+      if (!btn || btn.disabled) return;
+      const act = btn.dataset.simAction;
+      if (act === 'run1') simSingle();
+      else if (act === 'run10') simBatch(10);
+      else if (act === 'run100') simBatch(100);
+      else if (act === 'reset') { simStats = null; renderSimPanel(); }
+    });
   }
 
   /* ------------------------------ import / export ------------------------------ */

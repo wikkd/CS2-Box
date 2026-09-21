@@ -109,13 +109,34 @@ npm start       # 本地部署：http://127.0.0.1:4173/
   - **价格表**（`prices.html`）：`_prices.json` 编辑，自动列出箱子页物品键
 - 两页共用一份本地状态：任一侧的修改都会同步到另一页（含跨标签页实时同步）。
 
+### 多草稿文件栏
+
+- 页面左侧「文件」侧栏可同时管理多份草稿：新建 / 复制 / 重命名 / 删除 / 一键切换，
+  各草稿独立保存在浏览器 localStorage（旧版单草稿数据首次打开自动迁移为第一个文件）
+- 草稿名即箱子 id（导出文件名），重命名改动可撤销（Ctrl+Z）；删除活动草稿时
+  自动落到剩余草稿（全部删光则新建空草稿）；侧栏可折叠，窄屏默认收起
+
+### 主题
+
+- 顶栏 ◐ 按钮切换 浅色（奶白毛玻璃）/ 深色（CS2 暗色）主题，选择持久保存；
+  未手动切换过时跟随系统 `prefers-color-scheme`
+
 ### 实时预览与校验
 
 - 右侧实时生成当前页面对应的 `箱子.json` 或 `_prices.json` 内容
 - **概率表视图**：右侧栏「JSON 预览 / 概率表」切换。概率表按
   `random` 等级权重 × 物品 `weight` 档内权重实时计算每个等级的抽中概率与
   每件物品的档内/综合概率（与游戏 `OddsCalculator` 规则一致；权重 0 的物品
-  标记禁用，空档显示游戏回退提示；random 全 0 时提示箱子不可开启）
+  标记禁用，空档显示游戏回退提示；random 全 0 时提示箱子不可开启）；
+  第 4 列「期望价值」按价格表（范围价取中点）计算每件物品/每档的期望军备点数，
+  表尾汇总单次开箱内容期望与拆解回收参考（约 90%）
+- **模拟开箱视图**（仅箱子页）：单次开箱播放 CS2 风格横向滚动动画（结果预采样确定，
+  与服务端权威同口径），批量 10 / 100 次直接统计；统计表按档位分组展示命中次数、
+  实际频率与理论概率对照，累计到手动清零；配置修改后面板显示「统计基于旧配置」提示。
+  系统开启「减弱动态效果」时跳过动画直接出结果
+- **物品 ID 自动补全**：物品池输入框与价格表「额外键」输入框内置约 200 个常用原版
+  物品（中英名称），TACZ 枪械 / 弹药条目跟随版本可见性自动显隐
+  （列表由 `scripts/sync-box-editor-data.py` 生成，改表后需重新 sync）
 - **精简输出（省略默认值）**：勾选时省略可省略的默认字段（`type: "csbox"`、
   `enabled: true`、物品 `count: 1` / `weight: 1` 等），文件更短；取消勾选则
   输出完整 JSON（显式写入默认值），方便对照 schema 检查
@@ -124,6 +145,13 @@ npm start       # 本地部署：http://127.0.0.1:4173/
   版本差异提示等）
 - 校验结果分 错误 / 警告 / 提示 三级展示；**点击任意一条校验项会滚动定位并
   高亮对应的输入框**
+
+### PWA 离线安装
+
+- 部署到 HTTPS（GitHub Pages 或 `npm start` 本地服务）后，浏览器地址栏会出现
+  「安装」入口，可把编辑器装成独立应用离线使用（Service Worker 预缓存全部静态
+  资源，HTML 导航 network-first、静态资源 cache-first，版本随构建自动换缓存）
+- `file://` 直接双击打开不受影响（无需也不注册 Service Worker）
 
 ### 导入 / 迁移 / 导出
 
@@ -206,19 +234,26 @@ python scripts/sync-box-editor-data.py
 
 ```
 box-editor/
-├── index.html            # 单页入口
-├── package.json          # npm scripts（start / build / sync）
+├── index.html            # 箱子配置页入口
+├── prices.html           # 价格表页入口
+├── sw.js                 # 【PWA】Service Worker（离线缓存，__VER__ 由 build 注入）
+├── manifest.webmanifest  # 【PWA】安装清单
+├── package.json          # npm scripts（start / build / sync / test）
 ├── server.mjs            # 零依赖本地静态服务器（Node ≥ 18）
 ├── build.mjs             # 静态构建 → dist/
 ├── start.bat             # Windows 一键启动（双击）
 ├── start.sh              # macOS / Linux / Git Bash 一键启动
-├── css/style.css         # 深色 UI
+├── css/style.css         # 奶白毛玻璃 + 深色主题层（html[data-theme="dark"] 切换）
 ├── js/
 │   ├── i18n.js           # 中/英字典
-│   ├── data.js           # 【生成】schema + 版本 + 示例
-│   ├── model.js          # 数据模型 / 序列化 / 旧版 price 迁移
+│   ├── data.js           # 【生成】schema + 版本 + 示例 + 物品/实体补全表
+│   ├── model.js          # 数据模型 / 序列化 / 概率 / 模拟器 / 旧版 price 迁移
 │   ├── validator.js      # 轻量校验（跟随运行时规则）
-│   └── app.js            # UI 渲染 / 事件 / 预览 / 导入导出
+│   └── app.js            # UI 渲染 / 文件栏 / 事件 / 预览 / 导入导出
+├── img/
+│   ├── bg.jpg            # 页面背景封面
+│   └── icon.svg          # 【PWA】应用图标
+├── tests/                # model / i18n / esc 单测 + Playwright 冒烟
 ├── data/schemas/shared/  # 【生成】原始 schema 副本
 ├── dist/                 # 【构建产物】npm run build 生成，可独立托管
 └── README.md

@@ -20,6 +20,9 @@ const FILES = [
   'js/validator.js',
   'js/app.js',
   'img/bg.jpg',
+  'img/icon.svg',
+  'sw.js',
+  'manifest.webmanifest',
   'data/schemas/shared/box.schema.json',
   'data/schemas/shared/prices.schema.json',
   'README.md',
@@ -36,8 +39,9 @@ async function copy(rel) {
   const dst = join(OUT, rel);
   await ensureDir(join(dst, '..'));
   let buf = await fs.readFile(src);
-  if (rel.endsWith('.html')) {
-    // cache-bust static refs so CDN/browsers pick up new assets immediately
+  if (rel.endsWith('.html') || rel === 'sw.js') {
+    // cache-bust static refs so CDN/browsers pick up new assets immediately;
+    // sw.js carries the version into its cache name (deploy = fresh cache)
     buf = Buffer.from(buf.toString('utf8').replace(/__VER__/g, VERSION), 'utf8');
   }
   await fs.writeFile(dst, buf);

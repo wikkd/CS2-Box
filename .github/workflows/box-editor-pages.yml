@@ -60,6 +60,7 @@ jobs:
         working-directory: box-editor
         run: |
           test -f dist/index.html && test -f dist/js/data.js && test -f dist/js/app.js
+          test -f dist/sw.js && test -f dist/manifest.webmanifest && test -f dist/img/icon.svg
           echo "dist contents:" && ls -R dist
 
       - uses: actions/upload-pages-artifact@v3

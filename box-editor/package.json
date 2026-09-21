@@ -11,7 +11,10 @@
     "sync": "python ../scripts/sync-box-editor-data.py || python3 ../scripts/sync-box-editor-data.py",
     "deploy:gh-pages": "npm run build && npx --yes gh-pages -d dist -a -m \"chore(box-editor): deploy build\"",
     "test:smoke": "node tests/smoke.mjs",
-    "test:model": "node --test tests/model.test.mjs"
+    "test:model": "node --test tests/model.test.mjs",
+    "test:i18n": "node --test tests/i18n.test.mjs",
+    "test:esc": "node --test tests/esc.test.mjs",
+    "test": "npm run test:model && npm run test:i18n && npm run test:esc"
   },
   "engines": {
     "node": ">=18.0.0"
