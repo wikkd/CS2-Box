@@ -127,6 +127,14 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 return;
             }
 
+            // v2.0.2-fix: explicit null guard (used to lean on the gradeMap
+            // check above happening to reject unbound boxes first - fragile
+            // order). An unbound box is refused outright, no def-dependent
+            // message.
+            if (def == null) {
+                sendRejected(context, requestId);
+                return;
+            }
             // v2.0.1 constraints (in-memory, server-authoritative): per-player
             // open cap and per-box cooldown are checked before the roll so a
             // capped player never wastes a key.

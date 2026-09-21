@@ -42,17 +42,25 @@ public final class TerminalStockManager {
     /**
      * Consumes one unit of stock; returns false when out of stock (or
      * unlimited). Call only after the purchase is fully validated.
+     * v2.0.2-fix: a single per-key {@code compute} (atomic read-modify-write)
+     * so the decrement and the refusal decision cannot interleave, matching
+     * the documented thread-safety contract.
      */
     public static boolean consume(String boxId, int configuredStock) {
         if (configuredStock < 0) {
             return true;
         }
-        StockEntry e = STOCK.computeIfAbsent(boxId, k -> new StockEntry(configuredStock, configuredStock));
-        if (e.remaining() <= 0) {
-            return false;
-        }
-        STOCK.put(boxId, new StockEntry(e.max(), e.remaining() - 1));
-        return true;
+        boolean[] ok = {false};
+        STOCK.compute(boxId, (k, cur) -> {
+            int max = cur != null ? cur.max() : configuredStock;
+            int remaining = cur != null ? cur.remaining() : configuredStock;
+            if (remaining <= 0) {
+                return new StockEntry(max, remaining);
+            }
+            ok[0] = true;
+            return new StockEntry(max, remaining - 1);
+        });
+        return ok[0];
     }
 
     /** Drops all stock state (server stop / world unload). */

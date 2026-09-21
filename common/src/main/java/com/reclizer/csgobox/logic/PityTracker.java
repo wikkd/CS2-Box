@@ -88,6 +88,32 @@ public final class PityTracker {
         maybeCleanup();
     }
 
+    /**
+     * v2.0.2-fix(lost update): applies the batch's <b>net streak delta</b>
+     * ({@code finalStreak - snapshotStreak}) instead of overwriting the entry
+     * with an absolute value. Additive composition stays correct no matter
+     * how a concurrent single open (its own {@code recordOpen}) interleaves
+     * inside the async compute window the 10-tick open guard cannot cover:
+     * delta >= 0 (batch all misses) adds on top of anything recorded since;
+     * delta < 0 (batch hit the pity target) decrements and clamps at 0,
+     * preserving concurrent misses instead of erasing them.
+     */
+    public static void applyStreakDelta(String playerUuid, String boxId, int delta) {
+        if (delta == 0) {
+            return;
+        }
+        String k = key(playerUuid, boxId);
+        MISS_STREAKS.compute(k, (key, cur) -> {
+            int base = cur == null ? 0 : cur.streak();
+            int next = Math.max(0, base + delta);
+            if (next == 0) {
+                return null;
+            }
+            return new Entry(next, System.currentTimeMillis());
+        });
+        maybeCleanup();
+    }
+
     /** Drops all pity state (server stop). */
     public static void reset() {
         MISS_STREAKS.clear();

@@ -179,17 +179,12 @@ public record PacketTerminalBuy(
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
         }
 
-        // Consume one unit of stock (after the price check, before granting).
-        if (!TerminalStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), stock)) {
-            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
-            TerminalSessionManager.markDirty();
-            return new PacketTerminalBuyResult(message.requestId(),
-                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
-        }
-
-        if (!creative) {
-            consumeArmoryPoints(sp, price);
-        }
+        // v2.0.2-fix(charging order): resolve the offer BEFORE consuming
+        // anything. The old order consumed stock + points first and only then
+        // resolved, so the "empty resolve must not charge the player" comment
+        // was a promise the code did not keep (it relied on the resolve path
+        // being unreachable). resolve is pure (level + rng only), so running
+        // it first costs nothing and makes the guarantee real.
         ItemStack toGive = offerItem.copy();
         // v2.0.1-fix: resolve loot_table / count-range / enchant specs
         // server-side BEFORE the 1-count clamp, so the terminal never sells
@@ -199,6 +194,17 @@ public record PacketTerminalBuy(
             // Empty resolve (e.g. an empty loot draw) must not charge the
             // player — refuse the trade instead of delivering nothing.
             return invalid;
+        }
+        // Consume one unit of stock (after the resolve, before granting);
+        // consume() re-checks the remaining count itself.
+        if (!TerminalStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), stock)) {
+            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+        if (!creative) {
+            consumeArmoryPoints(sp, price);
         }
         // The terminal sells ONE item per offer: isSameItemSameComponents
         // never compares count, so a crafted stack must not grant 64 items

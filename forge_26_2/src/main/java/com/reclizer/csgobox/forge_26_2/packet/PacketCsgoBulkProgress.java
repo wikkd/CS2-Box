@@ -200,29 +200,38 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     : 0;
 
             final Player playerFinal = player;
-            CompletableFuture
-                    .supplyAsync(() -> {
-                        try {
-                            return computeKResults(snapshot, requestedK, pityStreak, pity);
-                        } catch (Throwable t) {
-                            CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
-                            return List.<BulkOpenResult>of();
-                        }
-                    }, CsgoBox.BULK_COMPUTE_POOL)
-                    .thenAccept(results -> {
-                        if (playerFinal instanceof ServerPlayer sp && !sp.isRemoved() && sp.isAlive()) {
-                            sp.level().getServer().execute(() -> {
-                                try {
-                                    finalizeBulkOpen(sp, snapshot, requestedK, results, requestId, templateBox, pityStreak, pity);
-                                } catch (Throwable t) {
-                                    CsgoBox.LOGGER.error("[csgo-bulk] finalizeBulkOpen failed: player={} K={}",
-                                            sp.getName().getString(), requestedK, t);
-                                }
-                            });
-                        } else if (playerFinal instanceof ServerPlayer sp) {
-                            CsgoBox.LOGGER.warn("[csgo-bulk] no finalize for player {} (dead/logged-out)", sp.getName().getString());
-                        }
-                    });
+            try {
+                CompletableFuture
+                        .supplyAsync(() -> {
+                            try {
+                                return computeKResults(snapshot, requestedK, pityStreak, pity);
+                            } catch (Throwable t) {
+                                CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
+                                return List.<BulkOpenResult>of();
+                            }
+                        }, CsgoBox.BULK_COMPUTE_POOL)
+                        .thenAccept(results -> {
+                            if (playerFinal instanceof ServerPlayer sp && !sp.isRemoved() && sp.isAlive()) {
+                                sp.level().getServer().execute(() -> {
+                                    try {
+                                        finalizeBulkOpen(sp, snapshot, requestedK, results, requestId, templateBox, pityStreak, pity);
+                                    } catch (Throwable t) {
+                                        CsgoBox.LOGGER.error("[csgo-bulk] finalizeBulkOpen failed: player={} K={}",
+                                                sp.getName().getString(), requestedK, t);
+                                    }
+                                });
+                            } else if (playerFinal instanceof ServerPlayer sp) {
+                                CsgoBox.LOGGER.warn("[csgo-bulk] no finalize for player {} (dead/logged-out)", sp.getName().getString());
+                            }
+                        });
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                // v2.0.2-fix: the bounded queue overflowed - instead of dropping
+                // silently (client would wait out the full 10s screen timeout),
+                // reject the batch like every other refusal path. Nothing was
+                // consumed: OpenBlockGuard is still the only side effect.
+                CsgoBox.LOGGER.warn("[csgo-bulk] compute queue full, batch rejected (player={} K={})", player.getName().getString(), requestedK);
+                PacketCsgoProgress.sendRejected(context, message.requestId());
+            }
         });
     }
 
@@ -546,7 +555,11 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 }
                 finalStreak = pity.nextStreak(finalStreak, r.pityGrade());
             }
-            PityTracker.finishStreak(sp.getStringUUID(), snapshot.boxId().toString(), finalStreak);
+            // v2.0.2-fix(lost update): write the batch net delta, not an
+            // absolute value - a concurrent single open inside the async
+            // window must not be erased by the write-back.
+            PityTracker.applyStreakDelta(sp.getStringUUID(), snapshot.boxId().toString(),
+                    finalStreak - initialStreak);
         }
 
         sp.awardStat(CsgoBox.OPENED_BOXES_STAT, actualK);

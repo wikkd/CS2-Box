@@ -78,7 +78,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
             // Strict separation (v2.0.0): terminals are only buyable through
-            // the terminal negotiation protocol — never through the classic
+            // the terminal negotiation protocol â never through the classic
             // crate pipeline, which would open them for free (no key, no
             // Armory Points). A crafted packet holding a terminal is refused.
             if (templateBox.getItem() instanceof ItemTerminal) {
@@ -106,14 +106,14 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     () -> ItemCsgoBox.buildGradeMap(templateBox));
             if (gradeMap.isEmpty()) {
                 // v2.0.1-fix(empty-box bulk): an unbound/empty crate is
-                // unopenable — refuse explicitly so the client does not wait
+                // unopenable â refuse explicitly so the client does not wait
                 // on the bulk progress screen forever (server is authoritative).
                 PacketCsgoProgress.sendRejected(context, message.requestId());
                 return;
             }
             int[] weights = ItemCsgoBox.getRandom(templateBox);
             if (weights.length == 0 || !BoxOdds.hasOpenableWeights(weights)) {
-                // v2.0.1-fix(all-zero weights): unopenable crate — refuse.
+                // v2.0.1-fix(all-zero weights): unopenable crate â refuse.
                 PacketCsgoProgress.sendRejected(context, message.requestId());
                 return;
             }
@@ -165,7 +165,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 K = Math.min(K, limit);
             }
             // v2.0.1-fix(max_per_player): the batch is clamped to the player's
-            // remaining per-player allowance, not merely boolean-checked — a
+            // remaining per-player allowance, not merely boolean-checked â a
             // hoarded stack could otherwise drain the whole quota in one ask.
             if (def != null && def.maxPerPlayer() > 0) {
                 int allowance = def.maxPerPlayer()
@@ -192,7 +192,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
             final long requestId = message.requestId();
             BulkBoxContext snapshot = new BulkBoxContext(boxId, weights, gradeMap);
 
-            // v2.0.1 pity (保底): snapshot the shared streak once for the whole
+            // v2.0.1 pity (ä¿åº): snapshot the shared streak once for the whole
             // batch; computeKResults advances a batch-local copy so concurrent
             // single opens cannot corrupt the sequence, and finalizeBulkOpen
             // writes the final streak back only after the grant succeeded.
@@ -202,29 +202,38 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                     : 0;
 
             final Player playerFinal = player;
-            CompletableFuture
-                    .supplyAsync(() -> {
-                        try {
-                            return computeKResults(snapshot, requestedK, pityStreak, pity);
-                        } catch (Throwable t) {
-                            CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
-                            return List.<BulkOpenResult>of();
-                        }
-                    }, CsgoBox.BULK_COMPUTE_POOL)
-                    .thenAccept(results -> {
-                        if (playerFinal instanceof ServerPlayer sp && !sp.isRemoved() && sp.isAlive()) {
-                            sp.level().getServer().execute(() -> {
-                                try {
-                                    finalizeBulkOpen(sp, snapshot, requestedK, results, requestId, templateBox, pityStreak, pity);
-                                } catch (Throwable t) {
-                                    CsgoBox.LOGGER.error("[csgo-bulk] finalizeBulkOpen failed: player={} K={}",
-                                            sp.getName().getString(), requestedK, t);
-                                }
-                            });
-                        } else if (playerFinal instanceof ServerPlayer sp) {
-                            CsgoBox.LOGGER.warn("[csgo-bulk] no finalize for player {} (dead/logged-out)", sp.getName().getString());
-                        }
-                    });
+            try {
+                CompletableFuture
+                        .supplyAsync(() -> {
+                            try {
+                                return computeKResults(snapshot, requestedK, pityStreak, pity);
+                            } catch (Throwable t) {
+                                CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
+                                return List.<BulkOpenResult>of();
+                            }
+                        }, CsgoBox.BULK_COMPUTE_POOL)
+                        .thenAccept(results -> {
+                            if (playerFinal instanceof ServerPlayer sp && !sp.isRemoved() && sp.isAlive()) {
+                                sp.level().getServer().execute(() -> {
+                                    try {
+                                        finalizeBulkOpen(sp, snapshot, requestedK, results, requestId, templateBox, pityStreak, pity);
+                                    } catch (Throwable t) {
+                                        CsgoBox.LOGGER.error("[csgo-bulk] finalizeBulkOpen failed: player={} K={}",
+                                                sp.getName().getString(), requestedK, t);
+                                    }
+                                });
+                            } else if (playerFinal instanceof ServerPlayer sp) {
+                                CsgoBox.LOGGER.warn("[csgo-bulk] no finalize for player {} (dead/logged-out)", sp.getName().getString());
+                            }
+                        });
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                // v2.0.2-fix: the bounded queue overflowed — instead of dropping
+                // silently (client would wait out the full 10s screen timeout),
+                // reject the batch like every other refusal path. Nothing was
+                // consumed: OpenBlockGuard is still the only side effect.
+                CsgoBox.LOGGER.warn("[csgo-bulk] compute queue full, batch rejected (player={} K={})", player.getName().getString(), requestedK);
+                PacketCsgoProgress.sendRejected(context, message.requestId());
+            }
         });
     }
 
@@ -343,7 +352,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 if (s == null) {
                     s = ItemStack.EMPTY;
                 }
-                // v2.0.1-fix: every follow-up result needs its OWN seed — a
+                // v2.0.1-fix: every follow-up result needs its OWN seed â a
                 // constant 0L made the spec resolve (count-range / enchant /
                 // loot-table) in finalizeBulkOpen deterministic and identical
                 // for every non-first item across players and batches.
@@ -430,7 +439,7 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
         // v2.0.1: resolve count-range / random-enchant / loot-table specs on
         // every result, on the main thread (the resolver needs a ServerLevel).
         // A roll that resolves to empty is dropped from the batch (the box +
-        // key are still consumed for it — the pool entry existed, the table
+        // key are still consumed for it â the pool entry existed, the table
         // just drew nothing or was broken).
         for (int i = 0; i < truncated.size(); i++) {
             BulkOpenResult r = truncated.get(i);
@@ -549,7 +558,11 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 }
                 finalStreak = pity.nextStreak(finalStreak, r.pityGrade());
             }
-            PityTracker.finishStreak(sp.getStringUUID(), snapshot.boxId().toString(), finalStreak);
+            // v2.0.2-fix(lost update): write the batch's net delta, not an
+            // absolute value — a concurrent single open inside the async
+            // window must not be erased by the write-back.
+            PityTracker.applyStreakDelta(sp.getStringUUID(), snapshot.boxId().toString(),
+                    finalStreak - initialStreak);
         }
 
         sp.awardStat(CsgoBox.OPENED_BOXES_STAT, actualK);

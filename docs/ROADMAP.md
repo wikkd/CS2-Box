@@ -1,6 +1,6 @@
 # CS2-Box 路线图
 
-> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.1**（未发布批次，六平台同步）。
+> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.2**（2026-09-17 发布，六平台同步，CI 全绿）。
 > 每个方向给出目标、复用点、影响面与前置条件；**不承诺排期**，由维护者按收益/成本取舍。
 > 落地进度的权威记录仍是 `CHANGELOG.md`，本文件只做方向目录与决策依据。
 
@@ -28,6 +28,7 @@
 - **配置与工具**：`config/csbox/*.json` 热重载、`box.schema.json` / `prices.schema.json`、`box-editor/` 网页工具、`scripts/boxgen.py` / `check-ids.py`、内嵌双语教程
 - **联动**：JEI/REI/EMI 概率面板、Jade/WTHIT/TOP、TACZ 枪械（变体 / NBT / 检视）、KubeJS 事件（开箱 / 终端购买 / 实体掉落 / 拆解）、**Create**（机械手开箱 + 拆解台自动化，反射零编译依赖）
 - **安全与工程**：CSPRNG 种子（48 位 LCG 不外泄约定）、`OpenBlockGuard` 服务端权威冷却、common 纯业务约束（`checkCommonArchitecture`）、AnimRenderOps 渲染门面（漂移守护）、GitHub Actions 门禁（见 `docs/CI-PROTECTION.md`）
+- **2.0.2 体检批次**：终端 `restock_minutes` 整体移除、批量开箱按每玩家剩余额度裁剪、拆解台大额产出流转、同步包容量护栏、保底进度 UI 可见化、配置未知字段警告 + `format_version`、tooltip 缓存与行数上限；CI 补齐 Create compileOnly 依赖供给与平台漂移 baseline 修复
 
 ### 0.3 硬边界（历史决策，勿翻案）
 

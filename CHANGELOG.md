@@ -1,5 +1,7 @@
 # 更新日志
 
+## [Unreleased]
+
 ## [2.0.2] - 2026-09-17
 
 > 全项目体检修复批次：批量开箱约束、拆解台大额产出两大功能性缺陷修复，**移除终端机补货设定**（`restock_minutes`，六平台同步），
@@ -19,19 +21,20 @@
 - **未知字段静默忽略（优化批次）**：手写 JSON 里的拼写错误会带着全默认值无声加载，几乎无法排查。common 校验器新增顶层与物品级未知键检查（键名 + "Unknown field — loaded with defaults" 提示），仅诊断不阻断加载；2.0.2 移除的 `restock_minutes` 列入已知键白名单，旧配置降级为无警告兼容。schema 新增可选 `format_version`（整数，标记配置版本，缺省视为旧版），运行时校验类型；同步删除 schema 中无运行时消费的 `tag_nbt` 属性。
 - **批量开箱绕过 `max_per_player`**：批量路径只做布尔检查（还剩 ≥1 次额度即放行），批次大小 K 未裁剪到每玩家剩余额度，囤货后单次请求可整包清空配额。现按 `maxPerPlayer - openCount` 裁剪 K（六平台 `PacketCsgoBulkProgress`）；顺带修复 K≤0 的两条拒绝路径不发拒绝包导致客户端进度屏空等 10 秒的问题。
 - **武库拆解台对高价值物品永久卡死**：产出必须一次性塞进单输出槽（≤64 点），表价 ≥ 约 72 点的物品（90% 回收价值超 64）进度条每 tick 归零、物品卡在输入槽。现改为「应付点数余额 `pendingPayout`」逐 tick 流入输出槽（每 tick 搬满剩余容量为止），任意价额物品均可正常拆解；`pendingPayout` 与事件否决标记 `refusedInput` 一并持久化（区块重载后否决不再变成循环事件）。六平台 `ArmoryRecyclerBlockEntity` 同步（1.20.1/1.21.1 走 CompoundTag、26.x 走 ValueOutput.store）。
+- **终端购买扣款顺序矛盾**：先扣库存与点数、后 `BoxItemResolver.resolve`，空结果不退款——注释承诺 "must not charge the player" 但实现只是靠 resolve 路径不可达。现 resolve（纯函数，level + rng）前置到任何扣减之前，空结果直接拒绝、分文不扣，承诺成为真实实现。六平台同步。
+- **批量开箱保底丢失更新**：`finishStreak` 用快照推算的绝对值整体写回，异步计算窗口（2 线程池可超过 10 tick 的开箱冷却）内的并发单开 `recordOpen` 会被覆盖，保底进度倒退。现 `PityTracker.applyStreakDelta` 按**净增量**写回（miss 增量与并发单开天然可加；命中场景 clamp ≥ 0，不再抹除并发进度）。六平台同步。
+- **批量线程池队列满静默丢弃**：队列（64）溢出的批次任务被丢弃，客户端进度屏空等 10 秒。现捕获 `RejectedExecutionException` 显式发送拒绝包（零消耗，与其他拒绝路径一致）。六平台同步。
 
-## [Unreleased]
-
-### 新增
+### 新增（2.0.1 之后堆积的 Unreleased 批次，随 2.0.2 一并发行）
 
 - **军火商村民动态定价（1.20.1 / 1.21.1）**：村民交易价格不再写死，改为锚定 `config/csbox/_prices.json` 的通用模型——common 新增 `VillagerPricing`（纯计算：收购 = 表价 × `buy_rate`，key1/key2 = 合成成本 `3 × 矿物表价 × sell_markup`，key0 保持 9 点货币锚，box/terminal 由 key0 派生，每次刷新在 `±fluctuation` 内重采样）与 `VillagerPricingConfig`（`_villager_prices.json`，宽容解析 + 默认值 + 首启自动生成）。两个平台经 `VillagerTrades` 代码注册，每次 `ItemListing.apply` 现场报价；顺带补齐 forge_1_20_1 缺失的 L3 交易并把静态回退数值与 26.x datapack 对齐。`enabled=false` 时回退静态值。
 - **26.x 村民动态定价接入 datapack 注册机制（v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2）**：26.x 交易是 datapack `trade_set` / `villager_trade` 静态注册，无法运行时动态——现改为**纯 datapack + 自定义 loot NumberProvider**：`villager_trade` JSON 的价格字段全部引用新注册的 `csgobox:arms_dealer_price`（`loot_number_provider_type`，平台类 `ArmsDealerPriceProvider`，内部调 common `VillagerPricing.quote` + `LootContext` 随机源）；收购端（矿→点）因 `gives.count` 固定不可动态，改用 `minecraft:set_count` loot function 动态改写点数。无需 mixin / 自定义 trade codec / 迁回代码注册，保留 datapack 可服务端定制；村民生成 / 升级 / 数据包重载时重新采样。每 JSON 条目带 `quote_field` + `fallback`，`enabled=false` 或配置缺失时回退原静态数值（平台间对齐）；四个 26.x 模块 `commonSetup` 补写默认 `_villager_prices.json`。key2 钻石段 clamp ≥ 1，与 1.21.1 行为一致，避免双输入报价消失。四个模块 `compileJava` 通过。
 
-### 修复
+### 修复（Unreleased 批次）
 
 - **v1_21_1 无 TACZ 环境打开终端机崩溃（NoClassDefFoundError: com/tacz/guns/api/item/IGun）**：`AnimRenderOps.renderItem2D` / `renderItem3D` 直接执行 `instanceof IGun`，缺少 `ModList.isLoaded("tacz")` 前置门，未装永恒枪械工坊（TACZ）的客户端在渲染终端机槽位/3D 预览时触发类加载崩溃（2.0.1 报告复现）。已按 `forge_1_20_1` 同款门禁补上 optional-dependency gate，无 TACZ 时静默走普通物品渲染路径。
 
-### 变更
+### 变更（Unreleased 批次）
 
 - **终端机「报价上限」改为价格表动态档位（六平台）**：移除写死的 `30 / 64 / 200 / 400 / 800 / 无上限` 档位。服务端每次加载 / `/csbox reload` / 热重载 `_prices.json` 后，按表内最高价做**对数几何分档**，自动生成 4 个档位 + 无上限（空表或全 0 价仅剩「无上限」），随 `PacketSyncBoxDefinitions` 与箱子定义一并下发；客户端下拉菜单的行数/宽度随档位自适应，旧存档里的过期档位值自动归一化为「无上限」，服务端校验同样改为只接受当前档位集合。新增 common 纯函数 `QuoteCaps`（分档 / 白名单 / 归一化）与 `QuoteCapsTest` 单测。
 - **空箱子可批量开箱（六平台修复）**：未绑定奖池/无有效物品/全零权重的箱子在批量开箱总览屏仍显示可开数量、开启按钮可点；服务端空池/全零权重旧实现只静默 `return`，客户端切到进度屏后收不到结算（体验为"点了没反应/卡住"，服务端代码不一致时甚至可能被真开）。现在服务端与单开路径一致显式发送拒绝包（进度屏正常退出、箱子与钥匙零消耗），客户端总览屏用 `ItemCsgoBox.getDefinition` + `BoxOdds.hasOpenableWeights` 判定空箱并禁用开启（显示「无法开启」，与单开 `boxEmpty` 门禁对齐）。六平台同步（v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）。
