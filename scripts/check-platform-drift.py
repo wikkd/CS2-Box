@@ -66,7 +66,10 @@ def collect_files(module: str) -> dict[str, pathlib.Path]:
     base = module_src(module)
     if not base.is_dir():
         return {}
-    return {str(p.relative_to(base)): p for p in base.rglob("*.java")}
+    # as_posix(): the baseline is shared across Windows dev machines and
+    # Linux CI — a backslash key would never match a forward-slash key and
+    # every mirrored file would look NEW to the gate.
+    return {p.relative_to(base).as_posix(): p for p in base.rglob("*.java")}
 
 
 def diff_count(path_a: pathlib.Path, path_b: pathlib.Path) -> int:
