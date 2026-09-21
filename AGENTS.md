@@ -94,7 +94,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `box/BoxItemCodec.java` — v2.0.1 物品解析（`weight` / `count:[min,max]` / `#tag` 展开 / `loot_table` / `enchant` / 缺模组 id 区分；`item_spec` 标记）；forge_1_20_1 用 NBT 变体、v1_21_1 保留 TACZ 特判
 - `box/BoxItemResolver.java`（v2.0.1 新增，每平台一份）— 开箱/购买时解析 `item_spec`（count 区间、随机附魔、loot_table 掷表），仅服务端调用
 - `box/GradeGroup.java` — v2.0.1 第 7 字段 `itemWeights`（平行列表，默认全 1 = 均匀）；`itemWeightAt` / `positiveItemWeightSum`
-- `box/BoxDefinition.java` — v2.0.1 新字段 `enabled`/`requires`/`icon`/`discount`/`stock`/`restockMinutes`/`maxPerPlayer`/`cooldownSeconds`/`permission`；`discountedPrice` / `missingRequirement`
+- `box/BoxDefinition.java` — v2.0.1 新字段 `enabled`/`requires`/`icon`/`discount`/`stock`/`maxPerPlayer`/`cooldownSeconds`/`permission`；`discountedPrice` / `missingRequirement`
 - `box/BoxJsonLoader.java` — v2.0.1 文件名校验 / enabled+requires 门控 / 空档位 warning / `/csbox validate` 干跑（`validateFile`）/ 新字段解析；`downloadTutorialsAsync()` 统一教程入口（服务端 `loadAll()` + 客户端 `ClientModEvents#onClientSetup` 共用，把包内教程复制到本地 `config/csbox/`，无网络）
 - `box/PriceTable.java`（v2.0.1 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 固定非负整数或 `[min, max]` 随机范围，`PriceRange`；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中 = 无价格（终端机不售、拆解 0，装载器对未定价 id 物品报错，无默认价回退））；`lookupRange` + `PriceRange.sample(IntUnaryOperator)` 服务端每次报价/拆解采样；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
 - `box/PriceRange.java`（v2.0.1 新增）— 固定价/范围价值对象（`[min, max]` 闭区间、`UNPRICED` 哨兵、`sample` 取整），纯 Java 无 MC 依赖；六平台 `GradeGroup.priceForIndex` 返回 `PriceRange`，网络流按 `[min, max]` 双 int 序列化
@@ -111,7 +111,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
   待 Create 26.x 发布后按 transfer API 适配
 （v2.0.1 新增）— 旧版适配：每次 `loadAll`/`/csbox reload` 前把残留的旧 `price` 自动转移进 `_prices.json`（同物不同价按平均值四舍五入；表已有价优先；`#tag`/`loot_table`/非法价保留报错；表损坏则整体中止不写入），并幂等清除已迁移字段（六平台 `BoxJsonLoader` 各在 loadAll + reloadPreserving 调一次）
 - `common/logic/BoxConstraintTracker.java`（v2.0.1 新增）— 开箱约束（max_per_player / cooldown）内存追踪，六平台共用
-- `common/terminal/TerminalStockManager.java`（v2.0.1 新增）— 终端库存/补货内存态，六平台共用
+- `common/terminal/TerminalStockManager.java`（v2.0.1 新增）— 终端库存内存态（`stock` 售罄即止，重启回满；补货设定已于 2.0.2 移除），六平台共用
 - `command/CsboxCommand.java` — `/csbox` 命令树；`showInfoOverview` 末尾输出「物品来源模组」命名空间统计（v26 系 `BuiltInRegistries` / forge_1_20_1 `ForgeRegistries`）；v2.0.1 起 `/csbox validate [box]` 干跑 + info 展示新字段
 - `command/EditorCommand.java`（六平台各一份，v2.0.1 新增）— 独立类注册 `/csbox editor` 子命令（**全员可用，无需 OP**），聊天栏输出可点击的网页配置工具链接（https://wikkd.github.io/CS2-Box/）；`CsboxCommand` 的 `/csbox help` 复用 `EditorCommand.EDITOR_URL` 聚合同一链接，并另给两个可点击入口：**打开教程文件夹**（`open_file` 相对路径 `config/csbox`，客户端游戏目录下）与**在线教程**（Gitee `docs/tutorials/`），help 全员可用（`info`/`reload`/`validate`/`give` 权限不变）；新增/调整需六平台同步并逐平台编译验证
 - `scripts/add-biome.py` — 向 `has_structure/*` 群系标签追加 biome（去重/幂等/`--dry-run`/`--replace`），让武库商小屋在模组群系生成（机制见 `docs/BIOME-INTEGRATION.md`）
@@ -137,25 +137,32 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 
 ## 测试
 
-- `common` 有 JUnit 5（25 个测试类 / 210 用例，其中 `BoxJsonSchemaValidatorTest` 34 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
+- `common` 有 JUnit 5（2026-09-17 核对：35 个测试类 / 320 用例，其中 `BoxJsonSchemaValidatorTest` 34 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
 - `common` 架构约束检查由 `:common:checkCommonArchitecture` 自动挂载在编译上（见「架构约束」节）
 - AnimRenderOps 跨平台签名漂移检查：`scripts/check-animops-drift.sh`（3 平台，CI 已接线，本地改门面后必跑）
 - 平台层最小测试：`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 均有 `PlatformSmokeTest`（JUnit 5，验证入口类可加载，不初始化 MC 运行时）：`./gradlew :<module>:test -Pactive_versions=<v>`
 - 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`
 
-### 平台 Java 文件差异矩阵（2026-09 刷新：forge_1_20_1 接入 JEI/REI，文件数同步当前树）
+### 平台 Java 文件差异矩阵（2026-09-17 刷新：v2.0.2 体检批次后，文件数同步当前树）
 
 | 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
 |------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|
 | TACZ compat (2 文件) | ✅ | — | — | — | — | ✅ |
 | `ButtonPalette` | — | ✅ | ✅ | — | — | ✅ |
 | `HudVisibility` | — | — | ✅ | — | ✅ | — |
-| JEI (4 文件) | 4 文件 | ✅ | ✅ | ❌ | ❌ | ✅ |
-| REI (3 文件) | 3 文件 | ✅ | ✅ | ❌ | ❌ | 3 文件 |
+| JEI (4 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| REI (3 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| EMI (3 文件) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Jade (3 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| The One Probe (3 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| WTHIT (3 文件) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
-| **文件数** | **86** | **85** | **86** | **79** | **80** | **88** |
+| Create 集成 | 4 文件 | ❌ | ❌ | — | — | 4 文件 |
+| **文件数** | **108** | **98** | **99** | **86** | **87** | **109** |
+
+- **刷新纪律**：文件数格子易过期（上一次「刷新」只改了标题没改数字），改矩阵必须实际 `find <module>/src/main/java -name '*.java' | wc -l` 重数后再填。
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）与 `forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）

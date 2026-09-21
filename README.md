@@ -25,7 +25,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 - **一套代码，六端同步**：同时覆盖 NeoForge 与 Forge 共 6 个平台
 - **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
 
-当前版本 **`2.0.1`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
+当前版本 **`2.0.2`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
 
 ## 快速开始
 
@@ -67,7 +67,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 
 ### 终端经济（v2.0.1）
 
-- `discount` 折扣、`stock` / `restock_minutes` 库存与补货
+- `discount` 折扣、`stock` 终端全局库存（售罄即止）
 - 开箱约束：`max_per_player` 每人上限、`cooldown_seconds` 冷却、`permission` 权限节点
 - 武库商村民、武库拆解台与终端机围绕 `_prices.json` 价格表联动定价
 
@@ -128,7 +128,7 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 全部平台共享同一 `mod_version`：
 
-- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.1.jar`）
+- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.2.jar`）
 - Forge：`csgobox-forge-<mc>-<mod_version>.jar`
 - **唯一例外**：Forge 1.20.1 发布物为 `csgobox-forge-1.20.1-<mod_version>-srg.jar`（SRG 重映射版，1.20.1 生产必需）
 
@@ -278,7 +278,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 | 文档 | 内容 |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | 面向玩家的模组介绍与玩法说明 |
-| [docs/PLAYER-CHANGELOG-2.0.1.md](./docs/PLAYER-CHANGELOG-2.0.1.md) | 玩家向 2.0.1 更新说明 |
+| [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | 玩家向 2.0.2 更新说明 |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | 完整安装与首次运行步骤 |
 | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) | TOML / JSON 配置参考（v2.0.1 全字段 + [JSON Schema](./docs/box-schema/box.schema.json)） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 六平台模块拓扑、核心抽象、数据流、GUI 渲染管线（legacy/decoupled 双 era）、终端机子系统与工程门禁 |
@@ -354,7 +354,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 <details>
 <summary><strong>近期进度</strong>（详见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
 
-- **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/补货/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口
+- **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口
 - **2.0.0**：批量开箱恢复 + UI 打磨（无二次确认、可滚动「显示全部」网格）、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊
 - **1.0.6**：容器化布局、per-item 视觉基线、三档设计 token、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展
 - **AnimRenderOps 渲染门面**：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护

@@ -138,6 +138,8 @@ TestHelper 已提供 MinecraftForge 26.1.2 构建目标（`mc_tools` 的
 `:forge_26_1_2:runClient`），套件用 `--port` 直连即可，无需改动用例。
 
 ```bash
+# 以下命令均在仓库外的 mc_tools 目录（~/Desktop/mc_tools）内执行，
+# ./scripts/* 是 mc_tools 自己的脚本，不在本仓库 scripts/ 下。
 # mc_tools 内
 ./gradlew jar -Pactive_versions=forge-26.1.2
 MCP_PORT=41502 CSBOX_CLIENT=forge_26_1_2 ./scripts/deploy.sh --client forge_26_1_2

@@ -25,7 +25,7 @@ CS2-Box brings CS:GO's crate-opening loop into Minecraft: right-click while hold
 - **One codebase, six platforms**: NeoForge and Forge, all in sync
 - **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
 
-Current version: **`2.0.1`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
+Current version: **`2.0.2`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
 
 ## Quick Start
 
@@ -67,7 +67,7 @@ For installation details and per-platform requirements, see [Installation](#inst
 
 ### Terminal Economy (v2.0.1)
 
-- `discount`, `stock` / `restock_minutes` — terminal inventory and restocking
+- `discount`, `stock` — terminal pricing and a global per-terminal stock (sold out stays sold out)
 - Opening constraints: `max_per_player`, `cooldown_seconds`, `permission`
 - Arms-dealer villager trades, the Armory Recycler, and terminals all price against the `_prices.json` price table
 
@@ -128,7 +128,7 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 were remov
 
 All platforms share one `mod_version`:
 
-- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.1.jar`)
+- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.2.jar`)
 - Forge: `csgobox-forge-<mc>-<mod_version>.jar`
 - **Sole exception**: Forge 1.20.1 ships as `csgobox-forge-1.20.1-<mod_version>-srg.jar` (SRG-remapped; required for 1.20.1 production)
 
@@ -278,7 +278,7 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 | Document | Contents |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | Player-facing introduction and gameplay guide |
-| [docs/PLAYER-CHANGELOG-2.0.1.md](./docs/PLAYER-CHANGELOG-2.0.1.md) | Player-facing 2.0.1 release notes |
+| [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | Player-facing 2.0.2 release notes |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | Full installation and first-run steps |
 | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) | TOML / JSON config reference (all v2.0.1 fields + [JSON Schema](./docs/box-schema/box.schema.json)) |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Six-platform module topology, core abstractions, data flow, GUI rendering pipeline (legacy/decoupled eras), terminal subsystem and engineering gates |
@@ -354,7 +354,7 @@ Open them on [GitHub Issues](https://github.com/wikkd/CS2-Box/issues). Bug repor
 <details>
 <summary><strong>Recent progress</strong> (see <a href="./CHANGELOG.md">CHANGELOG.md</a>)</summary>
 
-- **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/restock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points
+- **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points
 - **2.0.0**: bulk opening restored + UI polish (no confirmation screen, scrollable "show all" grid), terminal negotiation sessions (random wear + wear-point penalty for undamageable items), arms-dealer cabin world structure, JEI odds category, `blurRadius` background blur
 - **1.0.6**: containerized layout, per-item visual baseline, 3-tier design tokens, dynamic box item, tutorial system, opening leaderboard, TACZ inspect viewport, v26_2 platform
 - **AnimRenderOps facade**: all rendering from 6 screens + 3 helpers funneled through the per-platform `utils/AnimRenderOps.java` (13 public ops), zero raw draw calls left, signature consistency guarded by `scripts/check-animops-drift.sh`

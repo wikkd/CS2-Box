@@ -1,5 +1,25 @@
 # 更新日志
 
+## [2.0.2] - 2026-09-17
+
+> 全项目体检修复批次：批量开箱约束、拆解台大额产出两大功能性缺陷修复，**移除终端机补货设定**（`restock_minutes`，六平台同步），
+> 以及四项优化——同步包容量护栏、保底进度 UI 可见化、未知字段警告 + format_version、tooltip 缓存与行数上限，
+> 连同 2.0.1 之后堆积的 Unreleased 批次（村民动态定价、报价上限动态档位、Create 机械手官方 API 等）一并发行。
+> 玩家向更新说明见 `docs/PLAYER-CHANGELOG-2.0.2.md`。
+
+### 移除（破坏性配置变更，六平台）
+
+- **终端机补货设定 `restock_minutes` 整体移除**（维护者决定，该设定从未被需求方提出）：`BoxDefinition` 删字段（含网络流序列化）、`TerminalStockManager` 删除补货计时逻辑（`tick`/`nextRestockMs`/计时器启动条件全部移除，`remaining`/`available`/`consume` 回退两参签名）、六平台 `ModEvents` 删除补货 tick 钩子、`BoxJsonLoader` 停止解析该字段、`/csbox info` 的库存行改为单参文案（lang 两语言同步）、schema（`docs/box-schema/box.schema.json` + 校验器）与 box-editor 表单/模型/校验/i18n 同步删除。**配置了 `restock_minutes` 的旧箱子 JSON 会被 schema 校验器报错**（与其它未知字段一致），删掉该字段即可。保留行为：`stock` 库存限量不变（内存态，售罄即止、重启恢复满库存）。
+
+### 修复（体检批次，六平台）
+
+- **箱子 tooltip 每帧全量重建且行数无上限（优化批次）**：悬停期间 vanilla 每帧重调 `appendHoverText`，原实现每次都遍历全部档位全部物品逐个构建组件（F3+H 下还要逐物品算加权概率），满配大箱子悬停即产生每帧数百次组件分配；且清单不截断，百件物品的箱子 tooltip 直接顶出屏幕。现按「定义实例 + 高级提示开关」缓存已构建行（reload 时旧定义实例被替换即自然失效，渲染线程单槽），每档超过 8 行截断并显示「…等 N 件」（新 lang 键 `tooltips.csgobox.item.more` 中英双语）；完整清单仍可经 `/csbox info` 与 JEI/REI 概率表查询。
+- **箱子定义同步包无容量护栏（优化批次）**：`PacketSyncBoxDefinitions` 把整份注册表编进一个自定义 payload，而 clientbound 自定义包上限为 1 MiB——超大注册表会直接踢掉每个加入的客户端。现编码前先写入临时缓冲逐箱测量：单箱超 128 KiB 的病态定义跳过、总量超 896 KiB 预算后余下丢弃，两者都以 ERROR 日志点名被略过的箱子与预算，客户端拿部分注册表而非被断线。六平台（1.20.1 走 FriendlyByteBuf、其余走 RegistryFriendlyByteBuf 的 scratch 方案）。
+- **保底（pity）进度对玩家不可见（优化批次）**：保底计数只有服务端在记，客户端界面零展示——玩家感知不到承诺机制的存在。现 `PacketSyncBoxItems` 新增 `pityRemaining` 字段（服务端按 `PityPolicy.every - missStreak` 计算，未配置保底为 -1），箱子预览屏（CsboxScreen）在页码旁渲染「保底：还差 N 次」提示（新 lang 键 `gui.csgobox.pity_remaining` 中英双语）。六平台同步。
+- **未知字段静默忽略（优化批次）**：手写 JSON 里的拼写错误会带着全默认值无声加载，几乎无法排查。common 校验器新增顶层与物品级未知键检查（键名 + "Unknown field — loaded with defaults" 提示），仅诊断不阻断加载；2.0.2 移除的 `restock_minutes` 列入已知键白名单，旧配置降级为无警告兼容。schema 新增可选 `format_version`（整数，标记配置版本，缺省视为旧版），运行时校验类型；同步删除 schema 中无运行时消费的 `tag_nbt` 属性。
+- **批量开箱绕过 `max_per_player`**：批量路径只做布尔检查（还剩 ≥1 次额度即放行），批次大小 K 未裁剪到每玩家剩余额度，囤货后单次请求可整包清空配额。现按 `maxPerPlayer - openCount` 裁剪 K（六平台 `PacketCsgoBulkProgress`）；顺带修复 K≤0 的两条拒绝路径不发拒绝包导致客户端进度屏空等 10 秒的问题。
+- **武库拆解台对高价值物品永久卡死**：产出必须一次性塞进单输出槽（≤64 点），表价 ≥ 约 72 点的物品（90% 回收价值超 64）进度条每 tick 归零、物品卡在输入槽。现改为「应付点数余额 `pendingPayout`」逐 tick 流入输出槽（每 tick 搬满剩余容量为止），任意价额物品均可正常拆解；`pendingPayout` 与事件否决标记 `refusedInput` 一并持久化（区块重载后否决不再变成循环事件）。六平台 `ArmoryRecyclerBlockEntity` 同步（1.20.1/1.21.1 走 CompoundTag、26.x 走 ValueOutput.store）。
+
 ## [Unreleased]
 
 ### 新增
@@ -268,8 +288,8 @@
 
 ### 新增（终端经济）
 - **`discount`**：终端售价按 0..1 折扣（`def.discountedPrice`）。
-- **`stock` / `restock_minutes`**：终端全局库存（-1 无限），购买扣减，`restock_minutes`
-  分钟补货（内存态，重启恢复满库存，文档注明）；售罄时终端显示空态并拒绝购买。
+- **`stock`**：终端全局库存（-1 无限），购买扣减（内存态，重启恢复满库存）；
+  售罄时终端显示空态并拒绝购买。（同批引入的 `restock_minutes` 补货设定已于 2.0.2 整体移除。）
 - 新 lang 键 `csgobox.terminal.sys.soldout`。
 
 ### 调整（终端磨损惩罚改为百分比加价）

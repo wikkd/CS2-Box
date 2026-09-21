@@ -51,7 +51,7 @@
   - 改动是否新增了 `common/` 对 MC/NeoForge 类的引用？若有 → **Blocker**，版本敏感代码必须下沉到平台模块（common 无 MC 依赖，2026-08 已移除 platform 接口层）。
   - 版本敏感代码是否真的下沉到了平台侧？平台专属逻辑是否留在了平台模块、common 只保留纯逻辑与共享资源？
   - 新共享资源（纹理/音效/lang/配方/advancement）是否放在 `common/src/main/resources/`？
-- 自动化：`scripts/checkCommonArchitecture` 已挂载在 `compileJava`。若 CI 的 `common-test` 过了，该项基本可信，但 Review 时仍需**肉眼确认**有没有"为了编译通过把逻辑硬塞进平台、common 却留下隐式依赖"的取巧。
+- 自动化：Gradle task `:common:checkCommonArchitecture`（`common/build.gradle` 定义，非 scripts/ 目录脚本）已挂载在 `compileJava`。若 CI 的 `common-test` 过了，该项基本可信，但 Review 时仍需**肉眼确认**有没有"为了编译通过把逻辑硬塞进平台、common 却留下隐式依赖"的取巧。
 
 ### 4.2 多平台镜像纪律 🔴/🟡
 六个平台**不是纯拷贝**，各有 API 适配：NeoForge 侧 `v26_2` 有 decoupled API 适配（`BuiltInRegistries.ITEM.get()` 返回 `Optional`、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent`、`setScreenAndShow`、PIP 渲染器等）；Forge 侧三平台与 NeoForge 分属不同 loader（`SimpleChannel` vs `CustomPayload`），`forge_1_20_1` 更有 Networking / Capability / 渲染三大重写区。
