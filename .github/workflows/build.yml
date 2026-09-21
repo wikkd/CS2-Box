@@ -70,9 +70,21 @@ jobs:
         if: matrix.module == 'v1_21_1'
         run: scripts/download-tacz.sh
 
+      - name: Download Create compileOnly jars + jar-in-jar bundles (v1_21_1 deployer)
+        if: matrix.module == 'v1_21_1'
+        run: python3 scripts/download-create-deps.py
+        env:
+          CREATE_SIDE: 6.0.10
+
       - name: Download TACZ compileOnly jar (forge_1_20_1 inspect viewport)
         if: matrix.module == 'forge_1_20_1'
         run: scripts/download-tacz-1201.sh
+
+      - name: Download Create compileOnly jars + jar-in-jar bundles (forge_1_20_1 deployer)
+        if: matrix.module == 'forge_1_20_1'
+        run: python3 scripts/download-create-deps.py
+        env:
+          CREATE_SIDE: 6.0.8
 
       - name: Compile ${{ matrix.module }}
         run: ./gradlew :${{ matrix.module }}:compileJava -Pactive_versions=${{ matrix.version_key }} --console=plain
