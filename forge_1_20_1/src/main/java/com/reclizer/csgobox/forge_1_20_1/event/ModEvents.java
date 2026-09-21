@@ -109,9 +109,6 @@ public final class ModEvents {
         if (server == null) return;
         if (server.getTickCount() % 100 == 0) {
             OpenBlockGuard.tick(server.overworld().getGameTime());
-            // v2.0.1: restock check (1 Hz equivalent is overkill; every 5s is
-            // plenty for a minute-scale timer).
-            com.reclizer.csgobox.terminal.TerminalStockManager.tick(System.currentTimeMillis());
         }
         if (server.getTickCount() % 20 == 0) {
             com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager.tickSessions(

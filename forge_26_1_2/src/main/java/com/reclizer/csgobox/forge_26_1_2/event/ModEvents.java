@@ -116,8 +116,6 @@ public final class ModEvents {
     public static void serverTick(TickEvent.ServerTickEvent.Pre event) {
         if (event.server().getTickCount() % 100 == 0) {
             OpenBlockGuard.tick(event.server().overworld().getGameTime());
-            // v2.0.1: terminal stock restock check (minute-scale timer).
-            com.reclizer.csgobox.terminal.TerminalStockManager.tick(System.currentTimeMillis());
         }
         // 1 Hz authoritative terminal countdown on the WORLD clock (game ticks
         // × 50) — it advances only while the world runs, and the deadline

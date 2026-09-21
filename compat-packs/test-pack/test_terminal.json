@@ -4,9 +4,7 @@
   "drop": 0.0,
   "random": [10, 20, 40, 80, 160],
   "discount": 0.2,
-  "stock": 50,
-  "restock_minutes": 30,
-  "grade1": [
+  "stock": 50,  "grade1": [
     { "id": "minecraft:bread", "count": 16 },
     { "id": "minecraft:gunpowder", "count": 8 },
     { "id": "minecraft:arrow", "count": 32 }

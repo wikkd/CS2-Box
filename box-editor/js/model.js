@@ -65,7 +65,6 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       random: ['', '', '', '', ''],
       discount: '',
       stock: '',
-      restockMinutes: '',
       maxPerPlayer: '',
       cooldownSeconds: '',
       permission: '',
@@ -291,8 +290,6 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (discount !== '') obj.discount = discount;
     const stock = intOrEmpty(meta.stock);
     if (stock !== '') obj.stock = stock;
-    const restock = intOrEmpty(meta.restockMinutes);
-    if (restock !== '') obj.restock_minutes = restock;
     const maxPer = intOrEmpty(meta.maxPerPlayer);
     if (maxPer !== '') obj.max_per_player = maxPer;
     const cooldown = intOrEmpty(meta.cooldownSeconds);
@@ -477,7 +474,6 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     m.random = Array.isArray(obj.random) && obj.random.length === 5 ? obj.random.map((v) => String(v)) : ['', '', '', '', ''];
     m.discount = numOrEmpty(obj.discount);
     m.stock = intOrEmpty(obj.stock);
-    m.restockMinutes = intOrEmpty(obj.restock_minutes);
     m.maxPerPlayer = intOrEmpty(obj.max_per_player);
     m.cooldownSeconds = intOrEmpty(obj.cooldown_seconds);
     m.permission = typeof obj.permission === 'string' ? obj.permission : '';

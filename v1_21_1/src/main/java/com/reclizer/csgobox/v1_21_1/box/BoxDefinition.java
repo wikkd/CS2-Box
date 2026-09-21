@@ -22,8 +22,7 @@ import java.util.OptionalInt;
  * Immutable box definition loaded from JSON and referenced by box ItemStacks.
  *
  * <p>v2.0.1 config additions: {@code enabled}/{@code requires} gate loading,
- * {@code icon} sets CustomModelData, {@code discount}/{@code stock}/
- * {@code restock_minutes} drive terminal economy, and {@code max_per_player}/
+ * {@code icon} sets CustomModelData, {@code discount}/{@code stock} drive terminal economy, and {@code max_per_player}/
  * {@code cooldown_seconds}/{@code permission} constrain opening.</p>
  */
 public record BoxDefinition(
@@ -42,7 +41,6 @@ public record BoxDefinition(
         Optional<String> icon,
         float discount,
         int stock,
-        int restockMinutes,
         int maxPerPlayer,
         int cooldownSeconds,
         String permission,
@@ -109,7 +107,6 @@ public record BoxDefinition(
         ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8).encode(buf, def.icon());
         buf.writeFloat(def.discount());
         buf.writeVarInt(def.stock());
-        buf.writeVarInt(def.restockMinutes());
         buf.writeVarInt(def.maxPerPlayer());
         buf.writeVarInt(def.cooldownSeconds());
         ByteBufCodecs.STRING_UTF8.encode(buf, def.permission());
@@ -148,7 +145,6 @@ public record BoxDefinition(
         Optional<String> icon = ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8).decode(buf);
         float discount = buf.readFloat();
         int stock = buf.readVarInt();
-        int restockMinutes = buf.readVarInt();
         int maxPerPlayer = buf.readVarInt();
         int cooldownSeconds = buf.readVarInt();
         String permission = ByteBufCodecs.STRING_UTF8.decode(buf);
@@ -164,7 +160,7 @@ public record BoxDefinition(
 
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
+                stock, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     /** Whether this definition is a terminal machine: the JSON {@code type}
@@ -216,7 +212,7 @@ public record BoxDefinition(
         }
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, restockMinutes, maxPerPlayer, cooldownSeconds, permission, pity);
+                stock, maxPerPlayer, cooldownSeconds, permission, pity);
     }
 
     /** Whether any of the {@code requires} mods is missing. */
@@ -265,7 +261,6 @@ public record BoxDefinition(
         private Optional<String> icon = Optional.empty();
         private float discount = 0.0F;
         private int stock = UNLIMITED;
-        private int restockMinutes = 0;
         private int maxPerPlayer = UNLIMITED;
         private int cooldownSeconds = 0;
         private String permission = "";
@@ -360,10 +355,6 @@ public record BoxDefinition(
             return this;
         }
 
-        public Builder restockMinutes(int restockMinutes) {
-            this.restockMinutes = Math.max(0, restockMinutes);
-            return this;
-        }
 
         public Builder maxPerPlayer(int maxPerPlayer) {
             this.maxPerPlayer = maxPerPlayer;
@@ -396,7 +387,7 @@ public record BoxDefinition(
             return new BoxDefinition(id, finalName, type, keyItem, dropRate,
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates), enabled, List.copyOf(requires), icon,
-                    discount, stock, restockMinutes, maxPerPlayer, cooldownSeconds,
+                    discount, stock, maxPerPlayer, cooldownSeconds,
                     permission, pity);
         }
     }

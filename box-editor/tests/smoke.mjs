@@ -26,7 +26,7 @@ function makeShareState(fn) {
     fileName: fn,
     meta: { name: 'Shared Box', type: 'csbox', key: 'minecraft:iron_ingot', drop: '', icon: '',
             enabled: true, requiresText: 'tacz', entity: [{ id: 'minecraft:zombie', rate: '' }],
-            random: ['', '', '', '', ''], discount: '', stock: '', restockMinutes: '',
+            random: ['', '', '', '', ''], discount: '', stock: '',
             maxPerPlayer: '', cooldownSeconds: '', permission: '' },
     grades: [[{ source: 'id', value: 'minecraft:diamond', countMode: 'single', count: 1, countMin: 1, countMax: 1, weight: 1, enchantMode: 'none', enchantId: '', enchantLevel: 1, enchantLevelMode: 'fixed', enchantLevelMin: 1, enchantLevelMax: 1, variant: 'tacz:ak47', variantField: 'GunId', tagRaw: '', components: '' }], [], [], [], []],
     priceRows: { 'minecraft:emerald': { price: '99', pinned: true } },

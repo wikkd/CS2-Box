@@ -24,7 +24,7 @@ python boxgen.py \\
     --tag #minecraft:swords \\
     --loot-table minecraft:chests/simple_dungeon \\
     --requires apotheosis --requires tacz \\
-    --enabled false --discount 0.2 --stock 10 --restock-minutes 60 \\
+    --enabled false --discount 0.2 --stock 10 \\
     --max-per-player 5 --cooldown-seconds 300 --permission csbox.open \\
     --icon 1001 --id my_sword_box --dry-run
 
@@ -58,7 +58,7 @@ python boxgen.py --name 测试箱 --grade1 "minecraft:bread x8" --dry-run
 顶层层级字段
 ------------
     name / key / drop / random / enabled / requires / icon / discount /
-    stock / restock_minutes / max_per_player / cooldown_seconds / permission
+    stock / max_per_player / cooldown_seconds / permission
     grade1 ~ grade5（v2.0.1 schema，详见 docs/box-schema/box.schema.json）
 
 校验规则
@@ -305,10 +305,6 @@ def build_box(args):
         if args.stock < -1:
             raise ValueError(f"stock 必须 >= -1（-1 = 无限）: {args.stock}")
         box["stock"] = args.stock
-    if args.restock_minutes is not None:
-        if args.restock_minutes < 0:
-            raise ValueError(f"restock_minutes 必须 >= 0: {args.restock_minutes}")
-        box["restock_minutes"] = args.restock_minutes
     if args.max_per_player is not None:
         if args.max_per_player < -1:
             raise ValueError(f"max_per_player 必须 >= -1: {args.max_per_player}")
@@ -523,9 +519,6 @@ def run_interactive():
                       blank_ok=True)
     ns.stock = ask("stock（-1=无限，留空=无）", None,
                    parse=lambda s: _int_min(s, "stock", -1), blank_ok=True)
-    ns.restock_minutes = ask("restock_minutes（留空=无）", None,
-                             parse=lambda s: _int_min(s, "restock_minutes", 0),
-                             blank_ok=True)
     ns.max_per_player = ask("max_per_player（-1=无限，留空=无）", None,
                             parse=lambda s: _int_min(s, "max_per_player", -1),
                             blank_ok=True)
@@ -590,10 +583,7 @@ def build_parser():
     parser.add_argument("--discount", type=float, default=None,
                         help="终端价格折扣 0.0~1.0")
     parser.add_argument("--stock", type=int, default=None,
-                        help="终端库存限制，-1 = 无限")
-    parser.add_argument("--restock-minutes", dest="restock_minutes", type=int,
-                        default=None, help="补货间隔分钟，0 = 不自动补货")
-    parser.add_argument("--max-per-player", dest="max_per_player", type=int,
+                        help="终端库存限制，-1 = 无限")    parser.add_argument("--max-per-player", dest="max_per_player", type=int,
                         default=None, help="每人开箱上限，-1 = 无限")
     parser.add_argument("--cooldown-seconds", dest="cooldown_seconds", type=int,
                         default=None, help="开箱冷却秒数，0 = 无冷却")

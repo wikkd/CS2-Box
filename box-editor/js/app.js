@@ -13,6 +13,8 @@
   const LS_GRADE_OPEN = 'cs2box-editor-grade-open-v1';
   const LS_COLS = 'cs2box-editor-cols-v1';
   const LS_ADV = 'cs2box-editor-advanced';
+  const LS_FILES = 'cs2box-editor-files-v1';
+  const LS_FILEBAR = 'cs2box-editor-filebar-v1';
 
   /** Common item-model icon presets for the advanced "custom icon" picker. */
   const ICON_PRESETS = [
@@ -40,6 +42,11 @@
   let pasteContext = null; // { mode: 'items'|'prices', grade?: number }
   let legacyFileName = null; // file name picked in the legacy dialog (drives terminal.json inference)
 
+  /* Multi-draft workspace: every box the user edits is a separate file entry.
+   * `payload` mirrors the legacy LS_STATE shape; the entry's display name is
+   * derived from payload.state.fileName (the box id itself). */
+  let filesStore = null; // { files: [{id, payload, savedAt}], activeId } | null
+
   const $ = (sel) => document.querySelector(sel);
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -51,13 +58,20 @@
     setupFileInput();
     setupShortcuts();
     initTooltip();
+    initFileBar();
+    filesStore = loadFilesStore();
     if (!loadHashState() && !loadState()) loadExample(0, false);
     window.addEventListener('hashchange', () => {
       if (/[#&]state=/.test(location.hash)) location.reload();
     });
     window.addEventListener('storage', (e) => {
-      if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV) return;
+      if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV && e.key !== LS_FILES) return;
       loadPrefs();
+      if (e.key === LS_FILES || e.key === null) {
+        const reloaded = loadFilesStore();
+        if (reloaded || e.key === null) filesStore = reloaded;
+        renderFileBar();
+      }
       if (!loadState()) renderAll();
     });
     schedulePreview(0);
@@ -69,6 +83,12 @@
     return String(s === undefined || s === null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /** OS-level "reduce motion" setting: motion helpers skip their timed parts
+   *  (the CSS layer also collapses durations to ~0 for safety). */
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
   function version() {
@@ -263,49 +283,114 @@
 
   let storageWarned = false;
 
+  function storageWarnOnce() {
+    // storage may be unavailable under file:// or quota exceeded — warn once
+    // so the user knows a refresh would lose their work.
+    if (!storageWarned) {
+      storageWarned = true;
+      toast(t('toast.saveFailed'), true);
+    }
+  }
+
+  function uid() {
+    return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function buildPayload() {
+    return {
+      versionKey: state.versionKey,
+      compact,
+      currentTab,
+      taczEnabled: state.taczEnabled,
+      state: JSON.parse(JSON.stringify({
+        fileName: state.fileName,
+        meta: state.meta,
+        grades: state.grades,
+        priceRows: state.priceRows,
+      })),
+    };
+  }
+
+  function loadFilesStore() {
+    try {
+      const raw = localStorage.getItem(LS_FILES);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.files) && s.files.length &&
+            s.files.every((f) => f && f.id && f.payload && f.payload.state) &&
+            s.activeId && s.files.some((f) => f.id === s.activeId)) {
+          return s;
+        }
+      }
+    } catch (e) { /* corrupted store — fall through to legacy migration */ }
+    // Legacy migration: adopt the pre-workspace single draft as the first file.
+    // The old key stays in place untouched as a fallback; it is never read again.
+    try {
+      const raw = localStorage.getItem(LS_STATE);
+      if (raw) {
+        const payload = JSON.parse(raw);
+        if (payload && payload.state) {
+          const entry = { id: uid(), payload, savedAt: Date.now() };
+          return { files: [entry], activeId: entry.id };
+        }
+      }
+    } catch (e) { /* no legacy draft */ }
+    return null;
+  }
+
+  function saveFilesStore() {
+    try {
+      localStorage.setItem(LS_FILES, JSON.stringify(filesStore));
+    } catch (e) {
+      storageWarnOnce();
+    }
+  }
+
+  function activeFileEntry() {
+    if (!filesStore) return null;
+    return filesStore.files.find((f) => f.id === filesStore.activeId) || null;
+  }
+
+  function applyPayload(payload) {
+    state = Object.assign(NS.emptyState(), {
+      fileName: payload.state.fileName || 'my_box',
+      meta: Object.assign(NS.emptyMeta(), payload.state.meta),
+      grades: normalizeGrades(payload.state.grades),
+      priceRows: payload.state.priceRows || {},
+    });
+    state.versionKey = payload.versionKey || state.versionKey || '1.21.1';
+    state.taczEnabled = payload.taczEnabled == null ? null : !!payload.taczEnabled;
+    compact = payload.compact !== false;
+    currentTab = isPricesPage() ? 'prices' : 'box';
+    renderAll();
+  }
+
   function saveState() {
     try {
-      const payload = {
-        versionKey: state.versionKey,
-        compact,
-        currentTab,
-        taczEnabled: state.taczEnabled,
-        state: JSON.parse(JSON.stringify({
-          fileName: state.fileName,
-          meta: state.meta,
-          grades: state.grades,
-          priceRows: state.priceRows,
-        })),
-      };
-      localStorage.setItem(LS_STATE, JSON.stringify(payload));
+      const payload = buildPayload();
+      let entry = activeFileEntry();
+      if (!entry) {
+        entry = { id: uid(), payload, savedAt: 0 };
+        if (!filesStore) filesStore = { files: [], activeId: null };
+        filesStore.files.unshift(entry);
+        filesStore.activeId = entry.id;
+      } else {
+        entry.payload = payload;
+      }
+      entry.savedAt = Date.now();
+      saveFilesStore();
+      syncFileBarLabels();
       storageWarned = false;
     } catch (e) {
-      // storage may be unavailable under file:// or quota exceeded — warn once
-      // so the user knows a refresh would lose their work.
-      if (!storageWarned) {
-        storageWarned = true;
-        toast(t('toast.saveFailed'), true);
-      }
+      storageWarnOnce();
     }
   }
 
   function loadState() {
+    const entry = activeFileEntry();
+    if (!entry || !entry.payload || !entry.payload.state) return false;
     try {
-      const raw = localStorage.getItem(LS_STATE);
-      if (!raw) return false;
-      const payload = JSON.parse(raw);
-      if (!payload || typeof payload !== 'object' || !payload.state) return false;
-      state = Object.assign(NS.emptyState(), {
-        fileName: payload.state.fileName || 'my_box',
-        meta: Object.assign(NS.emptyMeta(), payload.state.meta),
-        grades: normalizeGrades(payload.state.grades),
-        priceRows: payload.state.priceRows || {},
-      });
-      state.versionKey = payload.versionKey || state.versionKey || '1.21.1';
-      state.taczEnabled = payload.taczEnabled == null ? null : !!payload.taczEnabled;
-      compact = payload.compact !== false;
-      currentTab = isPricesPage() ? 'prices' : 'box';
-      renderAll();
+      applyPayload(entry.payload);
       return true;
     } catch (e) {
       return false;
@@ -343,6 +428,210 @@
     advanced = localStorage.getItem(LS_ADV) === '1';
     const view = localStorage.getItem(LS_VIEW);
     if (view === 'prob' || view === 'json') previewView = view;
+  }
+
+  /* ------------------------------ file workspace ------------------------------ */
+
+  function resetHistory() {
+    if (historyTimer !== null) {
+      clearTimeout(historyTimer);
+      historyTimer = null;
+    }
+    history.undo.length = 0;
+    history.redo.length = 0;
+    const undoBtn = $('#btn-undo');
+    const redoBtn = $('#btn-redo');
+    if (undoBtn) undoBtn.disabled = true;
+    if (redoBtn) redoBtn.disabled = true;
+  }
+
+  function defaultPayload() {
+    const s = NS.emptyState();
+    s.versionKey = state.versionKey || '1.21.1';
+    return {
+      versionKey: s.versionKey,
+      compact,
+      currentTab: 'box',
+      taczEnabled: state.taczEnabled,
+      state: JSON.parse(JSON.stringify({
+        fileName: s.fileName,
+        meta: s.meta,
+        grades: s.grades,
+        priceRows: {},
+      })),
+    };
+  }
+
+  function createFile(basePayload, toastKey) {
+    saveState(); // flush the current draft before moving away
+    if (!filesStore) filesStore = { files: [], activeId: null };
+    const entry = { id: uid(), payload: basePayload || defaultPayload(), savedAt: Date.now() };
+    filesStore.files.unshift(entry);
+    filesStore.activeId = entry.id;
+    saveFilesStore();
+    resetHistory();
+    loadState();
+    renderFileBar();
+    toast(t(toastKey || 'toast.fileCreated'));
+  }
+
+  function duplicateFile(id) {
+    const src = filesStore.files.find((f) => f.id === id);
+    if (!src) return;
+    const payload = JSON.parse(JSON.stringify(src.payload));
+    const name = ((payload.state && payload.state.fileName) || 'my_box') + '_copy';
+    payload.state.fileName = name;
+    createFile(payload, 'toast.fileDuplicated');
+  }
+
+  function switchFile(id) {
+    if (!filesStore || id === filesStore.activeId) return;
+    const entry = filesStore.files.find((f) => f.id === id);
+    if (!entry) return;
+    saveState(); // flush the current draft before moving away
+    filesStore.activeId = id;
+    saveFilesStore();
+    resetHistory();
+    loadState();
+    renderFileBar();
+  }
+
+  function deleteFile(id) {
+    if (!filesStore) return;
+    const idx = filesStore.files.findIndex((f) => f.id === id);
+    if (idx < 0) return;
+    const wasActive = filesStore.activeId === id;
+    filesStore.files.splice(idx, 1);
+    if (wasActive) {
+      if (!filesStore.files.length) {
+        const entry = { id: uid(), payload: defaultPayload(), savedAt: Date.now() };
+        filesStore.files.push(entry);
+        filesStore.activeId = entry.id;
+      } else {
+        filesStore.activeId = filesStore.files[Math.max(0, idx - 1)].id;
+      }
+      resetHistory();
+      loadState();
+    }
+    saveFilesStore();
+    renderFileBar();
+    toast(t('toast.fileDeleted'));
+  }
+
+  function renameFile(id, newName) {
+    const name = String(newName || '').trim();
+    if (!name) return;
+    const entry = filesStore.files.find((f) => f.id === id);
+    if (!entry) return;
+    if (id === filesStore.activeId) {
+      pushHistory(); // renaming the open draft is undoable like any field edit
+      state.fileName = name;
+      renderAll();
+      schedulePreview();
+      toast(t('toast.fileRenamed', { name }));
+    } else {
+      entry.payload.state.fileName = name;
+      entry.savedAt = Date.now();
+      saveFilesStore();
+      renderFileBar();
+      toast(t('toast.fileRenamed', { name }));
+    }
+  }
+
+  /** Cheap label refresh while typing in the file-name field (no structural
+   *  re-render — would eat clicks on the hover actions). */
+  function syncFileBarLabels() {
+    if (!filesStore) return;
+    const el = document.querySelector('.file-item.active .file-name');
+    if (el && el.textContent !== state.fileName) el.textContent = state.fileName;
+  }
+
+  function renderFileBar() {
+    const list = $('#file-list');
+    if (!list) return;
+    if (!filesStore || !filesStore.files.length) {
+      list.innerHTML = '<div class="file-empty">' + esc(t('files.empty')) + '</div>';
+      return;
+    }
+    list.innerHTML = filesStore.files.map((f) => {
+      const name = (f.payload && f.payload.state && f.payload.state.fileName) || 'my_box';
+      const active = f.id === filesStore.activeId;
+      return '<div class="file-item' + (active ? ' active' : '') + '" data-file-id="' + esc(f.id) + '" title="' + esc(name) + '">' +
+        '<span class="file-name">' + esc(name) + '</span>' +
+        '<span class="file-actions">' +
+        '<button class="file-btn" data-file-action="rename" title="' + esc(t('files.rename')) + '">✎</button>' +
+        '<button class="file-btn" data-file-action="dup" title="' + esc(t('files.dup')) + '">⧉</button>' +
+        '<button class="file-btn" data-file-action="del" title="' + esc(t('files.del')) + '">✕</button>' +
+        '</span></div>';
+    }).join('');
+  }
+
+  function initFileBar() {
+    const bar = $('#filebar');
+    if (!bar) return;
+    // default: collapsed on narrow screens unless the user chose otherwise
+    let collapsed = null;
+    try {
+      const pref = localStorage.getItem(LS_FILEBAR);
+      if (pref === '1' || pref === '0') collapsed = pref === '1';
+    } catch (e) { /* file:// */ }
+    if (collapsed === null) collapsed = window.innerWidth < 1080;
+    bar.classList.toggle('collapsed', collapsed);
+    const toggle = $('#filebar-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        const nowCollapsed = !bar.classList.contains('collapsed');
+        bar.classList.toggle('collapsed', nowCollapsed);
+        try { localStorage.setItem(LS_FILEBAR, nowCollapsed ? '1' : '0'); } catch (e) { /* file:// */ }
+      });
+    }
+    const add = $('#file-add');
+    if (add) add.addEventListener('click', () => createFile());
+    const list = $('#file-list');
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-file-action]');
+      if (btn) {
+        const item = btn.closest('.file-item');
+        if (!item) return;
+        const id = item.dataset.fileId;
+        const act = btn.dataset.fileAction;
+        if (act === 'del') openFileDialog('delete', id);
+        else if (act === 'rename') openFileDialog('rename', id);
+        else if (act === 'dup') duplicateFile(id);
+        return;
+      }
+      const item = e.target.closest('.file-item');
+      if (item) switchFile(item.dataset.fileId);
+    });
+  }
+
+  /* Generic small dialog for file rename / delete confirmation. */
+  let fileDialogMode = null; // 'rename' | 'delete'
+  let fileDialogId = null;
+
+  function openFileDialog(mode, id) {
+    const dlg = $('#file-dialog');
+    if (!dlg || !filesStore) return;
+    const entry = filesStore.files.find((f) => f.id === id);
+    if (!entry) return;
+    const name = (entry.payload && entry.payload.state && entry.payload.state.fileName) || 'my_box';
+    fileDialogMode = mode;
+    fileDialogId = id;
+    $('#file-dialog-title').textContent = t(mode === 'rename' ? 'files.renameTitle' : 'files.deleteTitle');
+    const hint = $('#file-dialog-hint');
+    if (mode === 'rename') {
+      hint.textContent = t('files.renameHint');
+      $('#file-dialog-input').value = name;
+      $('#file-dialog-input').hidden = false;
+      $('#file-dialog-do').textContent = t('files.renameDo');
+    } else {
+      hint.textContent = t('files.deleteHint', { name });
+      $('#file-dialog-input').hidden = true;
+      $('#file-dialog-do').textContent = t('files.deleteDo');
+    }
+    $('#file-dialog-do').classList.toggle('danger', mode === 'delete');
+    dlg.showModal();
+    if (mode === 'rename') $('#file-dialog-input').focus();
   }
 
   /* ------------------------------ static text ------------------------------ */
@@ -408,6 +697,15 @@
 
   /* ------------------------------ header / dialogs ------------------------------ */
 
+  /** Fills the version <select> and syncs its value; shared by setupHeader
+   *  and renderAll (the header is rebuilt after language switches). */
+  function fillVersionSelect(sel) {
+    if (!sel) return;
+    sel.innerHTML = DATA.versions.map((v) =>
+      '<option value="' + esc(v.key) + '">' + esc(v.label[I18N.lang]) + '</option>').join('');
+    sel.value = state.versionKey;
+  }
+
   function setupHeader() {
     const langSel = $('#lang-select');
     langSel.value = I18N.lang;
@@ -419,9 +717,7 @@
     });
 
     const verSel = $('#version-select');
-    verSel.innerHTML = DATA.versions.map((v) =>
-      '<option value="' + esc(v.key) + '">' + esc(v.label[I18N.lang]) + '</option>').join('');
-    verSel.value = state.versionKey;
+    fillVersionSelect(verSel);
     verSel.addEventListener('change', () => {
       pushHistory();
       state.versionKey = verSel.value;
@@ -432,14 +728,7 @@
     });
 
     $('#btn-new').addEventListener('click', () => {
-      pushHistory();
-      const prevTacz = state.taczEnabled;
-      state = NS.emptyState();
-      state.versionKey = state.versionKey || '1.21.1';
-      state.taczEnabled = prevTacz;
-      renderAll();
-      pushHistory(); // snapshot the fresh state; undo then returns to it
-      toast(t('toast.newDone'));
+      createFile();
     });
 
     $('#btn-import').addEventListener('click', () => {
@@ -458,6 +747,7 @@
     const viewProbTab = $('#view-prob');
     if (viewJsonTab && viewProbTab) {
       setPreviewView(previewView); // apply remembered/inline view state + labels
+      probAnimateNext = false; // no entrance stagger on page load, only on user switch
       viewJsonTab.addEventListener('click', () => {
         setPreviewView('json');
         rebuildPreview();
@@ -495,6 +785,26 @@
       }
       imp.close();
     });
+
+    const fdg = $('#file-dialog');
+    if (fdg) {
+      $('#file-dialog-cancel').addEventListener('click', () => fdg.close());
+      $('#file-dialog-do').addEventListener('click', () => {
+        const mode = fileDialogMode;
+        const id = fileDialogId;
+        fdg.close();
+        if (mode === 'rename') renameFile(id, $('#file-dialog-input').value);
+        else if (mode === 'delete') deleteFile(id);
+        fileDialogMode = null;
+        fileDialogId = null;
+      });
+      $('#file-dialog-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          $('#file-dialog-do').click();
+        }
+      });
+    }
 
     const ldg = $('#legacy-dialog');
     if (ldg) {
@@ -779,8 +1089,8 @@
     if (priceRowsMerged) parts.push(t('toast.crateImportedPriceRows', { n: priceRowsMerged }));
     if (merged.addedEmpty) parts.push(t('toast.crateImportedEmpty', { n: merged.addedEmpty }));
     if (merged.keptPrices) parts.push(t('toast.crateImportedKept', { n: merged.keptPrices }));
-    let msg = parts.join('；');
-    if (bad) msg += '；' + t('toast.crateBadDocs', { n: bad });
+    let msg = parts.join(t('common.sep'));
+    if (bad) msg += t('common.sep') + t('toast.crateBadDocs', { n: bad });
     toast(msg, !parts.length);
   }
 
@@ -841,22 +1151,20 @@
       // Opening a share link silently overwrites the local draft — preserve the
       // draft as the first undo entry so Ctrl+Z (or the button) brings it back.
       try {
-        const raw = localStorage.getItem(LS_STATE);
-        if (raw) {
-          const p = JSON.parse(raw);
-          if (p && p.state && typeof p.state === 'object') {
-            const draft = {
-              fileName: p.state.fileName || 'my_box',
-              meta: Object.assign(NS.emptyMeta(), p.state.meta),
-              grades: normalizeGrades(p.state.grades),
-              priceRows: p.state.priceRows || {},
-              versionKey: p.versionKey || '1.21.1',
-              taczEnabled: p.taczEnabled == null ? null : !!p.taczEnabled,
-            };
-            history.undo.push(draft);
-            const undoBtn = $('#btn-undo');
-            if (undoBtn) undoBtn.disabled = false;
-          }
+        const entry = activeFileEntry();
+        const p = entry && entry.payload;
+        if (p && p.state && typeof p.state === 'object') {
+          const draft = {
+            fileName: p.state.fileName || 'my_box',
+            meta: Object.assign(NS.emptyMeta(), p.state.meta),
+            grades: normalizeGrades(p.state.grades),
+            priceRows: p.state.priceRows || {},
+            versionKey: p.versionKey || '1.21.1',
+            taczEnabled: p.taczEnabled == null ? null : !!p.taczEnabled,
+          };
+          history.undo.push(draft);
+          const undoBtn = $('#btn-undo');
+          if (undoBtn) undoBtn.disabled = false;
         }
       } catch (e) { /* storage unavailable under file:// */ }
       // Normalize like loadState() so old/tampered share links cannot smuggle
@@ -974,17 +1282,41 @@
           pushHistory();
           const gi = Number(btn.dataset.grade);
           state.grades[gi].push(NS.emptyItem());
-          rebuildGrade(gi);
+          rebuildGrade(gi, { enterIndex: state.grades[gi].length - 1 });
           schedulePreview();
           break;
         }
         case 'del-item': {
-          pushHistory();
           const gi = Number(btn.dataset.grade);
           const ii = Number(btn.dataset.index);
-          state.grades[gi].splice(ii, 1);
-          rebuildGrade(gi);
-          schedulePreview();
+          const host = $('#grade-items-' + gi);
+          const card = host && host.querySelectorAll('.item-card')[ii];
+          if (card && !card.dataset.removing && !prefersReducedMotion()) {
+            card.dataset.removing = '1';
+            // State is authoritative immediately (same snapshot semantics as
+            // every other action); only the list DOM catches up after the
+            // collapse animation. Any interleaved undo/redo re-renders the
+            // grade from live state, so the pending rebuild stays consistent.
+            pushHistory();
+            state.grades[gi].splice(ii, 1);
+            schedulePreview();
+            card.style.height = card.offsetHeight + 'px';
+            card.classList.add('item-leave');
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              card.style.height = '0px';
+              card.style.opacity = '0';
+              card.style.marginTop = '0';
+              card.style.marginBottom = '0';
+              card.style.paddingTop = '0';
+              card.style.paddingBottom = '0';
+            }));
+            setTimeout(() => rebuildGrade(gi), 150);
+          } else {
+            pushHistory();
+            state.grades[gi].splice(ii, 1);
+            rebuildGrade(gi);
+            schedulePreview();
+          }
           break;
         }
         case 'move-item': {
@@ -1096,7 +1428,7 @@
           const td = $('#tutorial-dialog');
           if (!td) break;
           $('#tutorial-title').textContent = t('tacz.tutorialTitle');
-          $('#tutorial-body').innerHTML = t('tacz.tutorial');
+          $('#tutorial-body').innerHTML = t('tacz.tutorial'); /* esc-exempt: trusted i18n tutorial text (contains intentional markup) */
           td.showModal();
           break;
         }
@@ -1227,10 +1559,7 @@
   function renderAll() {
     bindStatics();
     buildEntityDatalist();
-    const verSel = $('#version-select');
-    verSel.innerHTML = DATA.versions.map((v) =>
-      '<option value="' + esc(v.key) + '">' + esc(v.label[I18N.lang]) + '</option>').join('');
-    verSel.value = state.versionKey;
+    fillVersionSelect($('#version-select'));
     const langSel = $('#lang-select');
     langSel.value = I18N.lang;
     const advToggle = $('#advanced-toggle');
@@ -1395,7 +1724,6 @@
       '<div class="grid2">' +
       field('term.discount', 'term.discountHelp', input('meta.discount', m.discount, '0.2', false)) +
       field('term.stock', 'term.stockHelp', input('meta.stock', m.stock, '-1', false)) +
-      field('term.restock', 'term.restockHelp', input('meta.restockMinutes', m.restockMinutes, '30', false)) +
       field('term.maxPer', 'term.maxPerHelp', input('meta.maxPerPlayer', m.maxPerPlayer, '-1', false)) +
       field('term.cooldown', 'term.cooldownHelp', input('meta.cooldownSeconds', m.cooldownSeconds, '0', false)) +
       field('term.permission', 'term.permissionHelp', input('meta.permission', m.permission, 'csgobox.open', false)) +
@@ -1496,7 +1824,7 @@
     }
   }
 
-  function rebuildGrade(gi) {
+  function rebuildGrade(gi, opts) {
     const host = $('#grade-items-' + gi);
     if (!host) return;
     const items = state.grades[gi];
@@ -1506,9 +1834,18 @@
       return;
     }
     withFocusRestore(() => {
-      host.innerHTML = items.map((it, ii) => renderItem(gi, ii, it, v)).join('');
+      host.innerHTML = items.map((it, ii) => renderItem(gi, ii, it, v)).join(''); /* esc-exempt: renderItem escapes its own output */
       const badge = document.querySelector('.grade-card[data-grade="' + gi + '"] .count-badge');
       if (badge) badge.textContent = items.length;
+      if (opts && opts.enterIndex != null) {
+        const card = host.querySelectorAll('.item-card')[opts.enterIndex];
+        if (card) {
+          card.classList.add('item-enter');
+          // Timeout-based cleanup: animationend is unreliable here (throttled
+          // / occluded panes never dispatch it and the class would linger).
+          setTimeout(() => card.classList.remove('item-enter'), 200);
+        }
+      }
     });
   }
 
@@ -1832,11 +2169,7 @@
 
   function schedulePreview(delay) {
     clearTimeout(previewTimer);
-    previewTimer = setTimeout(() => {
-      rebuildPreview();
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveState, 250);
-    }, delay === undefined ? 90 : delay);
+    previewTimer = setTimeout(() => rebuildPreview(), delay === undefined ? 90 : delay);
   }
 
   function currentJson() {
@@ -1846,10 +2179,14 @@
   function rebuildPreview() {
     decorateCollapsibleCards();
     const pre = $('#json-preview');
-    const boxObj = NS.buildBox(state, !compact);
-    const pricesObj = NS.buildPrices(state);
-    const out = isPricesPage() ? pricesObj : boxObj;
+    // Only the current page's JSON is shown; skip building the other one.
+    const out = isPricesPage() ? NS.buildPrices(state) : NS.buildBox(state, !compact);
     pre.textContent = JSON.stringify(out, null, 2);
+    // sync flash: light the left accent bar so the user sees the preview
+    // re-synced; restart the animation on rapid keystrokes.
+    pre.classList.remove('json-sync');
+    void pre.offsetWidth;
+    pre.classList.add('json-sync');
     rebuildProbPanel();
 
     const navBox = $('#nav-box');
@@ -1876,9 +2213,13 @@
   /** Right-sidebar view switch: JSON preview ↔ probability table. */
   let previewView = 'json'; // 'json' | 'prob'
   const LS_VIEW = 'cs2box-editor-view';
+  /** One-shot: the next rebuildProbPanel renders rows with an entrance
+   *  stagger (set when the user switches to the probability view). */
+  let probAnimateNext = false;
 
   function setPreviewView(view) {
     previewView = view === 'prob' ? 'prob' : 'json';
+    probAnimateNext = previewView === 'prob';
     try { localStorage.setItem(LS_VIEW, previewView); } catch (e) { /* file:// */ }
     const jsonTab = $('#view-json');
     const probTab = $('#view-prob');
@@ -1898,6 +2239,16 @@
     if (!panel) return;
     if (isPricesPage() || previewView !== 'prob') return;
     const { openable, grades } = NS.computeProbabilities(state);
+    // Entrance stagger runs once per view switch (inline animation styles on
+    // this render only; ordinary keystroke re-renders stay still).
+    const animate = probAnimateNext && !prefersReducedMotion();
+    probAnimateNext = false;
+    let rowIdx = 0;
+    const rowStyle = () => {
+      if (!animate) return '';
+      const delay = Math.min(rowIdx++ * 12, 180);
+      return ' style="animation: prob-row-in .18s ease backwards; animation-delay:' + delay + 'ms"';
+    };
     const rows = grades.map((g) => {
       const gradeName = esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
       const gradeRows = g.items.length
@@ -1907,14 +2258,14 @@
           const nameHtml = it.note
             ? esc(it.note) + ' <span class="prob-src-id">' + esc(it.value) + '</span>'
             : esc(it.value);
-          return '<tr class="prob-item">' +
+          return '<tr class="prob-item"' + rowStyle() + '>' +
           '<td class="prob-item-name">' + nameHtml + (it.disabled ? ' <span class="prob-disabled">' + esc(t('prob.disabled')) + '</span>' : '') + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(it.itemProb))) + '</td>' +
           '<td>' + (it.disabled ? '—' : esc(fmtProb(g.gradeProb * it.itemProb))) + '</td>' +
           '</tr>';
         }).join('')
-        : '<tr class="prob-empty"><td colspan="3">' + esc(t('prob.emptyGrade')) + '</td></tr>';
-      return '<tr class="prob-grade">' +
+        : '<tr class="prob-empty"' + rowStyle() + '><td colspan="3">' + esc(t('prob.emptyGrade')) + '</td></tr>';
+      return '<tr class="prob-grade"' + rowStyle() + '>' +
         '<td><b>' + gradeName + '</b></td>' +
         '<td>' + esc(String(g.weight)) + '</td>' +
         '<td>' + esc(fmtProb(g.gradeProb)) + '</td>' +
@@ -1973,19 +2324,34 @@
     return out;
   }
 
+  /** Counts from the previous renderIssues call, for the change-pulse on the
+   *  summary badges (null until the first render → no pulse on load). */
+  let lastIssueCounts = null;
+
   function renderIssues(issues) {
     const root = $('#issues-root');
     const errors = issues.filter((i) => i.level === 'error').length;
     const warns = issues.filter((i) => i.level === 'warn').length;
     const infos = issues.filter((i) => i.level === 'info').length;
+    let pulsedLevel = null;
+    if (lastIssueCounts) {
+      for (const lvl of ['error', 'warn', 'info']) {
+        const now = lvl === 'error' ? errors : lvl === 'warn' ? warns : infos;
+        if (now !== lastIssueCounts[lvl]) { pulsedLevel = lvl; break; }
+      }
+    }
+    lastIssueCounts = { error: errors, warn: warns, info: infos };
+    const badgeCls = (lvl, label) =>
+      '<span class="badge ' + lvl + (lvl === pulsedLevel ? ' badge-pulse' : '') + '">' +
+      esc(t(label, { n: lvl === 'error' ? errors : lvl === 'warn' ? warns : infos })) + '</span>';
     let html = '<h2>' + esc(t('validate.title')) + '</h2>';
     if (!issues.length) {
       html += '<div class="issue ok">' + esc(t('validate.ok')) + '</div>';
     } else {
       html += '<div class="issue-summary">' +
-        '<span class="badge error">' + esc(t('validate.errors', { n: errors })) + '</span>' +
-        '<span class="badge warn">' + esc(t('validate.warns', { n: warns })) + '</span>' +
-        '<span class="badge info">' + esc(t('validate.infos', { n: infos })) + '</span>' +
+        badgeCls('error', 'validate.errors') +
+        badgeCls('warn', 'validate.warns') +
+        badgeCls('info', 'validate.infos') +
         '</div>' +
         '<ul class="issue-list">' +
         issues.map((i) =>
@@ -1993,7 +2359,7 @@
           esc(t(i.key, localizeIssueVars(i.vars))) + '</li>').join('') +
         '</ul>';
     }
-    root.innerHTML = html;
+    root.innerHTML = html; /* esc-exempt: every dynamic part of `html` is esc()'d above */
   }
 
   /* ------------------------------ import / export ------------------------------ */
@@ -2068,7 +2434,7 @@
     const mig = NS.mergeMigrations(state, res.migrations);
     renderAll();
     pushHistory(); // snapshot the imported state so undo can step back through it
-    const revNote = reversedWeights ? t('toast.legacyWeightsReversed') + '；' : '';
+    const revNote = reversedWeights ? t('toast.legacyWeightsReversed') + t('common.sep') : '';
     const typeName = state.meta.type === 'terminal' ? t('type.terminal') : t('type.csbox');
     if (mig.migrated) {
       toast(revNote + t('toast.legacyImported', { file: fileName || base, n: mig.migrated, type: typeName }));

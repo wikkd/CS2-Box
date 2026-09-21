@@ -65,9 +65,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     }
 
     if (!numOk(meta.discount, 0, 1)) add(issues, 'error', 'meta.discount', 'v.badDiscount');
-    if (!intOk(meta.stock, -1)) add(issues, 'error', 'meta.stock', 'v.badStock');
-    if (!intOk(meta.restockMinutes, 0)) add(issues, 'error', 'meta.restockMinutes', 'v.badRestock');
-    if (!intOk(meta.maxPerPlayer, -1)) add(issues, 'error', 'meta.maxPerPlayer', 'v.badMaxPer');
+    if (!intOk(meta.stock, -1)) add(issues, 'error', 'meta.stock', 'v.badStock');    if (!intOk(meta.maxPerPlayer, -1)) add(issues, 'error', 'meta.maxPerPlayer', 'v.badMaxPer');
     if (!intOk(meta.cooldownSeconds, 0)) add(issues, 'error', 'meta.cooldownSeconds', 'v.badCooldown');
 
     /* ------- pity (v2.0.1) ------- */

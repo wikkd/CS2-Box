@@ -181,8 +181,7 @@ public record PacketTerminalBuy(
         }
 
         // Consume one unit of stock (after the price check, before granting).
-        int restockMinutes = def != null ? def.restockMinutes() : 0;
-        if (!TerminalStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), stock, restockMinutes)) {
+        if (!TerminalStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), stock)) {
             session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
             TerminalSessionManager.markDirty();
             return new PacketTerminalBuyResult(message.requestId(),

@@ -45,7 +45,7 @@ public final class TerminalSession {
                                          long nowMs) {
         // v2.0.1: a stock-limited terminal that is sold out offers nothing —
         // the screen shows an empty (unconfigured-like) state and the buy
-        // handler keeps refusing until a restock.
+        // handler keeps refusing (stock is in-memory and resets on restart).
         if (!TerminalStockManager.available(boxId.toString(), def.stock())) {
             return null;
         }

@@ -34,7 +34,7 @@ cp compat-packs/<pack>/*.json config/csbox/
 | `enchant` | 随机附魔快捷 | `{"enchant": {"level": [3,5]}}` |
 | `requires` | 目标模组未装时整箱跳过（推荐联动包都加） | `"requires": ["apotheosis"]` |
 | `enabled` | 一键整箱开关 | `"enabled": false` |
-| `discount`/`stock`/`restock_minutes` | 终端售价折扣 / 库存 / 补货 | `"discount": 0.2, "stock": 10, "restock_minutes": 60` |
+| `discount`/`stock` | 终端售价折扣 / 库存 | `"discount": 0.2, "stock": 10` |
 | `_prices.json`（价格表） | 全局统一物品售价（武库点数），`id#变体` 子键区分 NBT 变体；值可为固定整数或 `[min, max]` 范围（每次终端机报价/拆解随机取整） | `{"minecraft:diamond_sword": 1500, "tacz:modern_kinetic_gun#tacz:ak47": 2000, "minecraft:arrow": [200, 400]}` |
 | `max_per_player`/`cooldown_seconds`/`permission` | 开箱约束 | `"max_per_player": 5, "cooldown_seconds": 300` |
 | `icon` | 每箱图标（整数 CMD / 字符串 model id） | `"icon": "minecraft:item/barrel"` |

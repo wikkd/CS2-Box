@@ -25,7 +25,7 @@
 3. 结构粗查
    - 坏 JSON 报文件名 + 行号（json.JSONDecodeError 的 lineno）
    - random / drop / enabled / requires / icon / discount / stock /
-     restock_minutes / max_per_player / cooldown_seconds / permission
+     max_per_player / cooldown_seconds / permission
      类型与范围粗查
    - 物品条目：id / tag / loot_table 三选一（互斥）、weight >= 0、
      count 为 >=1 整数或 [min,max] 区间、enchant 为 true 或对象；
@@ -59,7 +59,7 @@ PRICE_KEY_RE = re.compile(r"^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$")
 PRICE_TABLE_NAME = "_prices.json"
 
 # (字段, 最小值) — 顶层整数类字段
-TOP_INT_FIELDS = (("stock", -1), ("restock_minutes", 0),
+TOP_INT_FIELDS = (("stock", -1),
                   ("max_per_player", -1), ("cooldown_seconds", 0))
 
 

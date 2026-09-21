@@ -611,11 +611,7 @@ public final class BoxJsonLoader {
             }
             if (json.has("stock")) {
                 builder.stock(getInt(json, "stock", BoxDefinition.UNLIMITED));
-            }
-            if (json.has("restock_minutes")) {
-                builder.restockMinutes(getInt(json, "restock_minutes", 0));
-            }
-            if (json.has("max_per_player")) {
+            }            if (json.has("max_per_player")) {
                 builder.maxPerPlayer(getInt(json, "max_per_player", BoxDefinition.UNLIMITED));
             }
             if (json.has("cooldown_seconds")) {
