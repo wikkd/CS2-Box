@@ -477,7 +477,7 @@ final class BoxJsonSchemaValidatorTest {
     @Test
     @DisplayName("numeric constraint fields reject negatives below -1 and non-integers")
     void numericConstraints() {
-        for (String field : new String[]{"stock", "restock_minutes", "max_per_player", "cooldown_seconds"}) {
+        for (String field : new String[]{"stock", "max_per_player", "cooldown_seconds"}) {
             var issues = BoxJsonSchemaValidator.validate(parseObj("{\"" + field + "\": -5}"));
             assertTrue(issues.stream().anyMatch(i -> i.field().equals(field)),
                     field + " = -5 must be flagged");
@@ -496,6 +496,35 @@ final class BoxJsonSchemaValidatorTest {
         var issues = BoxJsonSchemaValidator.validate(parseObj("{\"icon\": true}"));
         assertTrue(issues.stream().anyMatch(i -> i.field().equals("icon")),
                 "boolean icon must be flagged: " + issues);
+    }
+
+    @Test
+    @DisplayName("unknown top-level fields are reported; removed restock_minutes degrades to a pointed warning")
+    void unknownTopLevelKeys() {
+        var issues = BoxJsonSchemaValidator.validate(
+                parseObj("{\"name\": \"x\", \"grade1\": [{\"id\": \"minecraft:diamond\"}], \"resock_minutes\": 5}"));
+        assertSingleIssue(issues, "resock_minutes");
+
+        // removed-in-2.0.2 key is known (legacy) but still accepted without issue
+        assertTrue(BoxJsonSchemaValidator.validate(
+                parseObj("{\"name\": \"x\", \"grade1\": [{\"id\": \"minecraft:diamond\"}], \"restock_minutes\": 5}")).isEmpty());
+
+        // item-level typos are flagged too, with the item path
+        issues = BoxJsonSchemaValidator.validate(
+                parseObj("{\"grade1\": [{\"id\": \"minecraft:diamond\", \"wight\": 2}]}"));
+        assertSingleIssue(issues, "grade1[0].wight");
+    }
+
+    @Test
+    @DisplayName("format_version: absent = legacy (ok); integer = ok; non-integer = flagged")
+    void formatVersion() {
+        assertTrue(BoxJsonSchemaValidator.validate(
+                parseObj("{\"name\": \"x\", \"grade1\": [{\"id\": \"minecraft:diamond\"}]}")).isEmpty());
+        assertTrue(BoxJsonSchemaValidator.validate(
+                parseObj("{\"name\": \"x\", \"format_version\": 2, \"grade1\": [{\"id\": \"minecraft:diamond\"}]}")).isEmpty());
+        var issues = BoxJsonSchemaValidator.validate(
+                parseObj("{\"name\": \"x\", \"format_version\": \"two\", \"grade1\": [{\"id\": \"minecraft:diamond\"}]}"));
+        assertSingleIssue(issues, "format_version");
     }
 
     @Test

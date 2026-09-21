@@ -26,7 +26,8 @@ public record PacketSyncBoxItems(
         List<ItemStack> items,
         List<Integer> grades,
         List<Integer> weights,
-        ItemStack keyItem
+        ItemStack keyItem,
+        int pityRemaining
 ) implements CustomPacketPayload {
 
     private static final int MAX_ITEMS = 256;
@@ -79,6 +80,9 @@ public record PacketSyncBoxItems(
         }
 
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, packet.keyItem);
+        // v2.0.2: opens left until the configured pity (保底) force, -1 = no
+        // pity configured (drives the screen's pity hint line).
+        buf.writeVarInt(Math.max(-1, packet.pityRemaining));
     }
 
     private static PacketSyncBoxItems read(RegistryFriendlyByteBuf buf) {
@@ -108,7 +112,8 @@ public record PacketSyncBoxItems(
         }
 
         ItemStack keyItem = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
-        return new PacketSyncBoxItems(requestId, boxId, items, grades, weights, keyItem);
+        int pityRemaining = Math.max(-1, buf.readVarInt());
+        return new PacketSyncBoxItems(requestId, boxId, items, grades, weights, keyItem, pityRemaining);
     }
 
     @Override
@@ -127,7 +132,8 @@ public record PacketSyncBoxItems(
                     message.items,
                     message.grades,
                     message.weights,
-                    message.keyItem
+                    message.keyItem,
+                    message.pityRemaining
             ));
         });
     }
@@ -151,6 +157,7 @@ public record PacketSyncBoxItems(
             List<ItemStack> items,
             List<Integer> grades,
             List<Integer> weights,
-            ItemStack keyItem
+            ItemStack keyItem,
+            int pityRemaining
     ) {}
 }

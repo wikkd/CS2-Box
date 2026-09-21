@@ -202,6 +202,11 @@ public class CsboxScreen extends Screen {
 
     private int boxKeyCount;
 
+    /** v2.0.2: opens left until the configured pity (保底) force; -1 = the
+     *  box configures no pity (no hint line is drawn). Server-authoritative,
+     *  carried by PacketSyncBoxItems. */
+    private int pityRemaining = -1;
+
     private int countKeys() {
         int total = 0;
         if (this.entity != null && this.entity.getAbilities().instabuild) {
@@ -394,6 +399,13 @@ public class CsboxScreen extends Screen {
             renderText(guiGraphics, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
                     this.width * 90 / 100F, this.height * 54 / 100F, 0.6F);
         }
+        // v2.0.2 pity (保底) hint: the counter is server-authoritative, so the
+        // client can only render what the preview packet carried.
+        if (this.pityRemaining >= 0) {
+            renderText(guiGraphics, Component.translatable("gui.csgobox.pity_remaining",
+                    String.valueOf(this.pityRemaining)).getVisualOrderText(),
+                    this.width * 3 / 100F, this.height * 51 / 100F, 0.6F);
+        }
 
         renderText(guiGraphics, Component.translatable("gui.csgobox.csgo_box.label_box").getVisualOrderText(),
                 this.width * 46F / 100F, this.height * 13F / 100F, 0.8F);
@@ -550,6 +562,7 @@ public class CsboxScreen extends Screen {
             this.openClicked = this.itemGroup.isEmpty();
             this.boxEmpty = this.itemGroup.isEmpty();
             this.boxKeyCount = countKeys();
+            this.pityRemaining = data.pityRemaining();
             this.page = 0;
             this.animFromPage = -1;
             this.enterTicks = 0;

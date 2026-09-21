@@ -27,7 +27,6 @@ final class BoxJsonV201FullFeatureTest {
               "icon": 1001,
               "discount": 0.2,
               "stock": 10,
-              "restock_minutes": 60,
               "max_per_player": 5,
               "cooldown_seconds": 300,
               "permission": "csbox.vip",

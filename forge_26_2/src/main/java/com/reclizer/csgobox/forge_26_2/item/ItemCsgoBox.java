@@ -24,6 +24,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraftforge.eventbus.api.bus.BusGroup;
 import net.minecraftforge.registries.DeferredRegister;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -278,6 +279,24 @@ public class ItemCsgoBox extends Item {
                 .orElseGet(() -> super.getName(stack));
     }
 
+    /** Per-grade tooltip line cap. The full list stays reachable via
+     *  {@code /csbox info} and the JEI/REI probability tables; an oversized
+     *  crate otherwise pushes its tooltip past the screen edge. */
+    private static final int MAX_TOOLTIP_ITEMS_PER_GRADE = 8;
+
+    /**
+     * v2.0.2 perf: vanilla re-invokes {@link #appendHoverText} every frame the
+     * tooltip is visible, so the grade list is built once per (definition,
+     * advanced) pair and cached. Keyed on the definition instance — a reload
+     * builds new BoxDefinition objects, which invalidates the cache naturally.
+     * Render-thread only, single slot.
+     */
+    private record TooltipKey(BoxDefinition def, boolean advanced) {
+    }
+
+    private static TooltipKey sTooltipKey;
+    private static List<Component> sTooltipLines = List.of();
+
     /** Adds the configured box contents to the item tooltip. */
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
@@ -287,47 +306,62 @@ public class ItemCsgoBox extends Item {
         }
         tooltipComponents.accept(Component.translatable("tooltips.csgobox.item.cs_box").withStyle(ChatFormatting.GRAY));
         getDefinition(stack).ifPresent(def -> {
-            int[] weights = def.getWeightArray();
-            for (int i = 0; i < def.grades().size(); i++) {
-                GradeGroup grade = def.grades().get(i);
-                ChatFormatting color = i < TOOLTIP_GRADE_COLORS.length ? TOOLTIP_GRADE_COLORS[i] : ChatFormatting.WHITE;
-                // Server-authoritative odds, same source as /csbox info and JEI.
-                // Shown only while F3+H advanced tooltips are on (tooltipFlag.isAdvanced()).
-                if (i < weights.length && weights[i] > 0) {
-                    if (tooltipFlag.isAdvanced()) {
-                        tooltipComponents.accept(Component.translatable("tooltips.csgobox.item.grade_chance",
-                                String.valueOf(i + 1), BoxOdds.percent(BoxOdds.gradeChance(weights, i + 1)))
-                                .withStyle(color));
-                        double gradeChance = BoxOdds.gradeChance(weights, i + 1);
-                        long itemWeightSum = grade.positiveItemWeightSum();
-                        boolean weighted = itemWeightSum != grade.items().size();
-                        for (int j = 0; j < grade.items().size(); j++) {
-                            ItemStack itemStack = grade.items().get(j);
-                            Component name = itemStack.getItem().getName(itemStack).copy().withStyle(color);
-                            if (weighted) {
-                                double itemChance = BoxOdds.weightedItemChance(
-                                        gradeChance, grade.itemWeightAt(j), itemWeightSum);
-                                tooltipComponents.accept(Component.translatable(
-                                        "tooltips.csgobox.item.item_chance",
-                                        name, BoxOdds.percent(itemChance)).withStyle(ChatFormatting.GRAY));
-                            } else {
-                                tooltipComponents.accept(name);
-                            }
-                        }
-                    } else {
-                        for (ItemStack itemStack : grade.items()) {
-                            tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
-                        }
-                    }
-                } else {
-                    for (ItemStack itemStack : grade.items()) {
-                        tooltipComponents.accept(itemStack.getItem().getName(itemStack).copy().withStyle(color));
-                    }
-                }
+            TooltipKey key = new TooltipKey(def, tooltipFlag.isAdvanced());
+            if (key != sTooltipKey) {
+                sTooltipKey = key;
+                sTooltipLines = buildTooltipLines(def, key.advanced());
             }
-            if (def.grades().size() >= BoxGrades.GRADE_COUNT) {
-                tooltipComponents.accept(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
+            for (Component line : sTooltipLines) {
+                tooltipComponents.accept(line);
             }
         });
+    }
+
+    /** Builds the full grade/probability line list for one tooltip cache slot. */
+    private static List<Component> buildTooltipLines(BoxDefinition def, boolean advanced) {
+        List<Component> lines = new ArrayList<>();
+        int[] weights = def.getWeightArray();
+        for (int i = 0; i < def.grades().size(); i++) {
+            GradeGroup grade = def.grades().get(i);
+            ChatFormatting color = i < TOOLTIP_GRADE_COLORS.length ? TOOLTIP_GRADE_COLORS[i] : ChatFormatting.WHITE;
+            if (i < weights.length && weights[i] > 0 && advanced) {
+                double gradeChance = BoxOdds.gradeChance(weights, i + 1);
+                lines.add(Component.translatable("tooltips.csgobox.item.grade_chance",
+                        String.valueOf(i + 1), BoxOdds.percent(gradeChance)).withStyle(color));
+                appendGradeItems(grade, color, lines, true, gradeChance);
+            } else {
+                appendGradeItems(grade, color, lines, false, 0.0D);
+            }
+        }
+        if (def.grades().size() >= BoxGrades.GRADE_COUNT) {
+            lines.add(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
+        }
+        return List.copyOf(lines);
+    }
+
+    /** One line per item (weighted mode shows the per-item chance), capped at
+     *  {@link #MAX_TOOLTIP_ITEMS_PER_GRADE} lines with a "+N more" summary. */
+    private static void appendGradeItems(GradeGroup grade, ChatFormatting color, List<Component> lines,
+                                         boolean weighted, double gradeChance) {
+        int size = grade.items().size();
+        long itemWeightSum = grade.positiveItemWeightSum();
+        boolean useWeights = weighted && itemWeightSum != size;
+        for (int j = 0; j < size; j++) {
+            if (j == MAX_TOOLTIP_ITEMS_PER_GRADE) {
+                lines.add(Component.translatable("tooltips.csgobox.item.more",
+                        String.valueOf(size - j)).withStyle(ChatFormatting.GRAY));
+                break;
+            }
+            ItemStack itemStack = grade.items().get(j);
+            Component name = itemStack.getItem().getName(itemStack).copy().withStyle(color);
+            if (useWeights) {
+                lines.add(Component.translatable("tooltips.csgobox.item.item_chance",
+                        name, BoxOdds.percent(BoxOdds.weightedItemChance(
+                                gradeChance, grade.itemWeightAt(j), itemWeightSum)))
+                        .withStyle(ChatFormatting.GRAY));
+            } else {
+                lines.add(name);
+            }
+        }
     }
 }

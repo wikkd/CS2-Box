@@ -71,11 +71,10 @@
       "default": -1,
       "description": "v2.0.1: terminal stock limit; -1 = unlimited."
     },
-    "restock_minutes": {
+    "format_version": {
       "type": "integer",
-      "minimum": 0,
-      "default": 0,
-      "description": "v2.0.1: minutes between stock refills; 0 = never auto-restock."
+      "minimum": 1,
+      "description": "v2.0.2: config schema version marker. Optional today (absent = legacy); write 2 for current files. Unknown top-level/item fields are reported by the runtime validator, so version bumps should add themselves here."
     },
     "max_per_player": {
       "type": "integer",
@@ -133,7 +132,7 @@
         },
         "tag": {
           "type": "string",
-          "description": "Item tag reference starting with '#', e.g. #minecraft:swords. Expanded at load time."
+          "description": "Dual-purpose (matches runtime BoxItemCodec): a string starting with '#' is an item tag reference expanded at load time (e.g. '#minecraft:swords'); any other value is parsed as an SNBT string applied to the stack (e.g. '{GunId:\"tacz:modern_kinetics_gun_57\"}')."
         },
         "loot_table": {
           "type": "string",
@@ -179,10 +178,6 @@
         "components": {
           "type": "object",
           "description": "Data components (1.21+/26.x). Ignored on 1.20.1."
-        },
-        "tag_nbt": {
-          "type": "string",
-          "description": "Legacy NBT tag string (1.20.1 / old configs)."
         }
       },
       "oneOf": [

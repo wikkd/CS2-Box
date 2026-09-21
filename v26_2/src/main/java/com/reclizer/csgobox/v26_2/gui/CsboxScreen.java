@@ -163,6 +163,17 @@ public class CsboxScreen extends Screen {
 
     private int page;
 
+    // Page-turn transition: outgoing page slides out and fades while the
+    // incoming page slides in (direction matches the wheel). Ease-out cubic
+    // (same curve as the opening strip's easedScroll), ~200ms, interruptible:
+    // a new scroll restarts the transition from the page currently on screen.
+    private static final int PAGE_ANIM_TICKS = 12;
+    private static final float PAGE_ANIM_DIST_RATIO = 8F; // percent of height
+    private int animFromPage = -1;
+    private int animToPage;
+    private int animTicks;
+    private int animDir;
+
     private static final int ENTER_TICKS = 6;
     /** Armor + offhand slots walked when counting/consuming keys, all locations. */
     private static final EquipmentSlot[] LOCATION_SLOTS = new EquipmentSlot[]{
@@ -170,6 +181,21 @@ public class CsboxScreen extends Screen {
             EquipmentSlot.FEET, EquipmentSlot.OFFHAND};
     /** Grid fade-in on first server sync; 6 = settled (no enter anim). */
     private int enterTicks = ENTER_TICKS;
+
+    private float pageAnimEased(float partialTicks) {
+        if (animFromPage < 0) return 1.0F;
+        float t = Math.min(1.0F, (animTicks + partialTicks) / (float) PAGE_ANIM_TICKS);
+        float u = 1.0F - t;
+        return 1.0F - u * u * u;
+    }
+
+    private void changePage(int target) {
+        this.animFromPage = this.page;
+        this.animToPage = target;
+        this.animDir = target > this.page ? 1 : -1;
+        this.animTicks = 0;
+        this.page = target;
+    }
 
     private int renderableCount() {
         int count = 0;
@@ -186,6 +212,11 @@ public class CsboxScreen extends Screen {
     }
 
     private int boxKeyCount;
+
+    /** v2.0.2: opens left until the configured pity (保底) force; -1 = the
+     *  box configures no pity (no hint line is drawn). Server-authoritative,
+     *  carried by PacketSyncBoxItems. */
+    private int pityRemaining = -1;
 
     private int countKeys() {
         int total = 0;
@@ -276,32 +307,7 @@ public class CsboxScreen extends Screen {
         int y = 0;
 
         if (this.entity != null) {
-            float enterE = Easing.easeOutCubic(Math.min(1F, this.enterTicks / (float) ENTER_TICKS));
-            int gridOffsetY = Math.round(8F * (1F - enterE));
-            int gridAlpha = (int) (255F * enterE);
-            int startIdx = this.page * ITEMS_PER_PAGE;
-            for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
-                int py = 55;
-                int px = i - startIdx;
-                if (px > 9) {
-                    py = 73;
-                    px -= 10;
-                }
-                ItemStack itemStack1 = itemsList.get(i);
-                int grade = gradeList.get(i);
-                x = px;
-                y = py;
-                if (grade > 4) break;
-                IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
-                        listArea.x() + px * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, py) + gridOffsetY, this.width, this.height, grade, gridAlpha);
-            }
-            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
-                    && this.page == pageCount() - 1) {
-                IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
-                        listArea.x() + x * GuiRegion.pctW(this.width, 9),
-                        GuiRegion.pctH(this.height, y) + gridOffsetY, this.width, this.height, 5, gridAlpha);
-            }
+            renderGridAnimated(guiGraphics, partialTicks);
         }
 
         if (itemKey != null) {
@@ -331,6 +337,53 @@ public class CsboxScreen extends Screen {
         ButtonPalette.drawButton(guiGraphics, ButtonPalette.DANGER, x, y, w, h, hover);
     }
 
+    /** Draws the current page (or both pages during the page-turn
+     *  transition). Outgoing page slides away and fades; the incoming page
+     *  slides in from the wheel's direction with the frame fading in. */
+    private void renderGridAnimated(GuiGraphicsExtractor guiGraphics, float partialTicks) {
+        float e = pageAnimEased(partialTicks);
+        if (animFromPage < 0) {
+            float enterE = Easing.easeOutCubic(Math.min(1F, this.enterTicks / (float) ENTER_TICKS));
+            renderPageGrid(guiGraphics, this.page, Math.round(8F * (1F - enterE)),
+                    (int) (255F * enterE));
+            return;
+        }
+        float dist = this.height * PAGE_ANIM_DIST_RATIO / 100F;
+        renderPageGrid(guiGraphics, animFromPage, Math.round(-e * dist * animDir),
+                (int) (255F * (1.0F - e)));
+        renderPageGrid(guiGraphics, animToPage, Math.round((1.0F - e) * dist * animDir),
+                (int) (255F * e));
+    }
+
+    private void renderPageGrid(GuiGraphicsExtractor guiGraphics, int page, int offsetY, int alpha) {
+        GuiRegion.Region listArea = GuiRegion.list(this.width, this.height);
+        int x = 0;
+        int y = 0;
+        int startIdx = page * ITEMS_PER_PAGE;
+        for (int i = startIdx; i < Math.min(itemsList.size(), startIdx + ITEMS_PER_PAGE); i++) {
+            int py = 55;
+            int px = i - startIdx;
+            if (px > 9) {
+                py = 73;
+                px -= 10;
+            }
+            ItemStack itemStack1 = itemsList.get(i);
+            int grade = gradeList.get(i);
+            x = px;
+            y = py;
+            if (grade > 4) break;
+            IconListTools.renderItemFrame(this.entity, guiGraphics, itemStack1,
+                    listArea.x() + px * GuiRegion.pctW(this.width, 9),
+                    GuiRegion.pctH(this.height, py) + offsetY, this.width, this.height, grade, alpha);
+        }
+        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
+                && page == pageCount() - 1) {
+            IconListTools.renderItemFrame(this.entity, guiGraphics, ItemStack.EMPTY,
+                    listArea.x() + x * GuiRegion.pctW(this.width, 9),
+                    GuiRegion.pctH(this.height, y) + offsetY, this.width, this.height, 5, alpha);
+        }
+    }
+
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {
@@ -350,7 +403,7 @@ public class CsboxScreen extends Screen {
         if (scrollY != 0 && pageCount() > 1) {
             int target = this.page + (scrollY > 0 ? -1 : 1);
             if (target >= 0 && target < pageCount()) {
-                this.page = target;
+                changePage(target);
             }
             return true;
         }
@@ -397,6 +450,13 @@ public class CsboxScreen extends Screen {
         if (pageCount() > 1) {
             renderText(guiGraphics, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
                     this.width * 88 / 100F, this.height * 54 / 100F, 0.6F);
+        }
+        // v2.0.2 pity (保底) hint: the counter is server-authoritative, so the
+        // client can only render what the preview packet carried.
+        if (this.pityRemaining >= 0) {
+            renderText(guiGraphics, Component.translatable("gui.csgobox.pity_remaining",
+                    String.valueOf(this.pityRemaining)).getVisualOrderText(),
+                    this.width * 3 / 100F, this.height * 51 / 100F, 0.6F);
         }
 
         // Box item name rendered as a centered title-style heading. Max width
@@ -518,6 +578,9 @@ public class CsboxScreen extends Screen {
     }
 
     public void containerTick() {
+        if (animFromPage >= 0 && ++animTicks >= PAGE_ANIM_TICKS) {
+            animFromPage = -1;
+        }
         var data = PacketSyncBoxItems.consumeMatching(this.syncRequestId, this.expectedBoxId);
         if (data != null) {
             this.itemGroup = buildItemGroup(data);
@@ -530,7 +593,9 @@ public class CsboxScreen extends Screen {
             this.openClicked = this.itemGroup.isEmpty();
             this.boxEmpty = this.itemGroup.isEmpty();
             this.boxKeyCount = countKeys();
+            this.pityRemaining = data.pityRemaining();
             this.page = 0;
+            this.animFromPage = -1;
             this.enterTicks = 0;
         }
     }

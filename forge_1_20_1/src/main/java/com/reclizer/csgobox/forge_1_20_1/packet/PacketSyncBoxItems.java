@@ -29,16 +29,20 @@ public class PacketSyncBoxItems {
     private final List<Integer> grades;
     private final List<Integer> weights;
     private final ItemStack keyItem;
+    /** v2.0.2: opens left until the configured pity (保底) force, -1 = no pity. */
+    private final int pityRemaining;
 
     public PacketSyncBoxItems(long requestId, Optional<ResourceLocation> boxId,
                               List<ItemStack> items, List<Integer> grades,
-                              List<Integer> weights, ItemStack keyItem) {
+                              List<Integer> weights, ItemStack keyItem,
+                              int pityRemaining) {
         this.requestId = requestId;
         this.boxId = boxId == null ? Optional.empty() : boxId;
         this.items = items == null ? List.of() : List.copyOf(PacketValidation.copyStacks(items));
         this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, 5, 1));
         this.weights = weights == null ? List.of() : List.copyOf(PacketValidation.copyNonNegativeInts(weights));
         this.keyItem = keyItem == null ? ItemStack.EMPTY : keyItem.copy();
+        this.pityRemaining = Math.max(-1, pityRemaining);
         PacketValidation.requireSameSize("items", this.items, "grades", this.grades);
         PacketValidation.requireMaxSize("items", this.items, MAX_ITEMS);
         PacketValidation.requireMaxSize("weights", this.weights, MAX_WEIGHTS);
@@ -76,6 +80,9 @@ public class PacketSyncBoxItems {
 
         CompoundTag kiTag = buf.readNbt();
         this.keyItem = kiTag == null ? ItemStack.EMPTY : ItemStack.of(kiTag);
+        // v2.0.2: opens left until the configured pity (保底) force, -1 = no
+        // pity configured (drives the screen's pity hint line).
+        this.pityRemaining = Math.max(-1, buf.readVarInt());
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -95,6 +102,7 @@ public class PacketSyncBoxItems {
         }
 
         buf.writeNbt(keyItem.save(new CompoundTag()));
+        buf.writeVarInt(Math.max(-1, pityRemaining));
     }
 
     public long getRequestId() { return requestId; }
@@ -103,13 +111,14 @@ public class PacketSyncBoxItems {
     public List<Integer> getGrades() { return grades; }
     public List<Integer> getWeights() { return weights; }
     public ItemStack getKeyItem() { return keyItem; }
+    public int getPityRemaining() { return pityRemaining; }
 
     private static final Queue<BoxData> sPendingResponses = new ArrayDeque<>();
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             PacketValidation.trimQueue(sPendingResponses, MAX_PENDING_RESPONSES);
-            sPendingResponses.add(new BoxData(requestId, boxId, items, grades, weights, keyItem));
+            sPendingResponses.add(new BoxData(requestId, boxId, items, grades, weights, keyItem, pityRemaining));
         });
         ctx.get().setPacketHandled(true);
     }
@@ -133,6 +142,7 @@ public class PacketSyncBoxItems {
             List<ItemStack> items,
             List<Integer> grades,
             List<Integer> weights,
-            ItemStack keyItem
+            ItemStack keyItem,
+            int pityRemaining
     ) {}
 }

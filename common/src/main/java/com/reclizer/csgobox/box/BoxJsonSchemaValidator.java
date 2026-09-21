@@ -43,12 +43,51 @@ public final class BoxJsonSchemaValidator {
         validateNameColorPrefix(json, issues);
         validateRemovedPriceField(json, issues);
         validateV21Fields(json, issues);
+        validateTopLevelKeys(json, issues);
         return issues;
     }
 
     /**
+     * Every top-level field the loader reads (or has read historically —
+     * legacy keys are listed so an old config degrades to a pointed warning
+     * instead of a silent ignore). Anything else is reported: typos in
+     * hand-written configs otherwise load with all defaults and are nearly
+     * impossible to spot.
+     */
+    private static final java.util.Set<String> KNOWN_TOP_KEYS = java.util.Set.of(
+            "name", "key", "drop", "type", "random", "entity",
+            "grade1", "grade2", "grade3", "grade4", "grade5",
+            "enabled", "requires", "icon", "discount", "stock",
+            "max_per_player", "cooldown_seconds", "permission", "pity",
+            "format_version", "restock_minutes");
+
+    /** Item-level fields consumed by the item codec ({@code price} is
+     *  whitelisted here because {@link #validateRemovedPriceField} reports it
+     *  with a dedicated migration message). */
+    private static final java.util.Set<String> KNOWN_ITEM_KEYS = java.util.Set.of(
+            "id", "tag", "loot_table", "count", "weight", "enchant",
+            "components", "price");
+
+    private static void validateTopLevelKeys(JsonObject json, List<SchemaIssue> issues) {
+        for (String key : json.keySet()) {
+            if (KNOWN_TOP_KEYS.contains(key)) continue;
+            issues.add(new SchemaIssue(key,
+                    "Unknown top-level field — a typo is loaded with defaults, "
+                            + "and fields removed in a later format are ignored"));
+        }
+        if (json.has("format_version")) {
+            JsonElement fv = json.get("format_version");
+            if (!fv.isJsonPrimitive() || !fv.getAsJsonPrimitive().isNumber()
+                    || fv.getAsDouble() != Math.floor(fv.getAsDouble()) || fv.getAsDouble() < 1) {
+                issues.add(new SchemaIssue("format_version",
+                        "Expected a positive integer schema version, got " + typeOf(fv)));
+            }
+        }
+    }
+
+    /**
      * v2.0.1 top-level fields: enabled / requires / icon / discount / stock /
-     * restock_minutes / max_per_player / cooldown_seconds / permission, plus
+     * max_per_player / cooldown_seconds / permission, plus
      * the per-item weight / count-range / tag-ref / loot_table / enchant
      * additions (validated inside {@link #validateV21Fields}).
      */
@@ -89,7 +128,7 @@ public final class BoxJsonSchemaValidator {
                 issues.add(new SchemaIssue("discount", "Expected number 0.0-1.0, got " + typeOf(d)));
             }
         }
-        for (String numField : new String[]{"stock", "restock_minutes", "max_per_player", "cooldown_seconds"}) {
+        for (String numField : new String[]{"stock", "max_per_player", "cooldown_seconds"}) {
             if (!json.has(numField)) continue;
             JsonElement e = json.get(numField);
             if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber()) {
@@ -115,6 +154,14 @@ public final class BoxJsonSchemaValidator {
                 if (!e.isJsonObject()) continue;
                 JsonObject item = e.getAsJsonObject();
                 String base = key + "[" + i + "]";
+
+                // Unknown item-level fields: the codec ignores anything it
+                // does not read, so a typo silently degrades to defaults.
+                for (String itemKey : item.keySet()) {
+                    if (KNOWN_ITEM_KEYS.contains(itemKey)) continue;
+                    issues.add(new SchemaIssue(base + "." + itemKey,
+                            "Unknown item field — a typo is loaded with defaults"));
+                }
 
                 // Source exclusivity: id / tag / loot_table (only one).
                 int sources = 0;

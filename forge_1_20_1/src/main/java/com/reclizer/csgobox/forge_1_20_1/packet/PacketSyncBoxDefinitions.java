@@ -53,11 +53,44 @@ public class PacketSyncBoxDefinitions {
         this.quoteCaps = caps;
     }
 
+    /** A single definition above this is pathological (huge NBT / item
+     *  lists) and is skipped instead of kicking every joining client. */
+    private static final int MAX_DEFINITION_BYTES = 128 * 1024;
+
+    /** Total encoded-definitions budget, kept under the vanilla server →
+     *  client packet limit (breaching it disconnects the client). */
+    private static final int TOTAL_SYNC_BUDGET = 896 * 1024;
+
     public void encode(FriendlyByteBuf buf) {
-        buf.writeVarInt(definitions.size());
+        // v2.0.2 capacity guard: a too-large registry would breach the
+        // clientbound packet size limit and disconnect every client.
+        // Encode into a scratch buffer first: oversized single definitions
+        // are skipped, and once the total budget is hit the remainder is
+        // dropped — both with a loud log naming what was left out.
+        FriendlyByteBuf scratch = new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        int total = 0;
+        int sent = 0;
         for (BoxDefinition definition : definitions) {
-            definition.encode(buf);
+            int start = scratch.writerIndex();
+            definition.encode(scratch);
+            int size = scratch.writerIndex() - start;
+            if (size > MAX_DEFINITION_BYTES) {
+                com.reclizer.csgobox.forge_1_20_1.CsgoBox.LOGGER.error(
+                        "[csbox-sync] definition '{}' is {} bytes, above the {} byte per-box cap — NOT synced (trim its item list / NBT)",
+                        definition.id(), size, MAX_DEFINITION_BYTES);
+                continue;
+            }
+            if (total + size > TOTAL_SYNC_BUDGET) {
+                com.reclizer.csgobox.forge_1_20_1.CsgoBox.LOGGER.error(
+                        "[csbox-sync] box registry too large for one sync packet: sent {} of {} definitions ({} KiB budget) — trim or split the largest boxes",
+                        sent, definitions.size(), TOTAL_SYNC_BUDGET / 1024);
+                break;
+            }
+            total += size;
+            sent++;
         }
+        buf.writeVarInt(sent);
+        buf.writeBytes(scratch);
         buf.writeVarInt(quoteCaps.length);
         for (int cap : quoteCaps) {
             buf.writeVarInt(cap);

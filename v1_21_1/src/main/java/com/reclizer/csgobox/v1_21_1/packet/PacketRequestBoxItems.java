@@ -73,6 +73,20 @@ public record PacketRequestBoxItems(long requestId) implements CustomPacketPaylo
                 }
             }
 
+            // v2.0.2: pity (保底) hint - how many more opens until the policy
+            // forces the target grade; -1 when the box configures no pity.
+            int pityRemaining = -1;
+            var def = com.reclizer.csgobox.v1_21_1.box.BoxRegistry.get(
+                    ItemCsgoBox.getBoxId(box));
+            if (def != null) {
+                var policy = def.pity().orElse(null);
+                if (policy != null && policy.every() > 0) {
+                    pityRemaining = Math.max(0, policy.every()
+                            - com.reclizer.csgobox.logic.PityTracker.missStreak(
+                            player.getStringUUID(), ItemCsgoBox.getBoxId(box).toString()));
+                }
+            }
+
             if (player instanceof ServerPlayer sp) {
                 PacketDistributor.sendToPlayer(sp, new PacketSyncBoxItems(
                         message.requestId(),
@@ -80,7 +94,8 @@ public record PacketRequestBoxItems(long requestId) implements CustomPacketPaylo
                         items,
                         grades,
                         weights,
-                        keyStack
+                        keyStack,
+                        pityRemaining
                 ));
             }
         });
