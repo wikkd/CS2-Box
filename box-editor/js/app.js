@@ -44,7 +44,7 @@
         try { localStorage.setItem(LS_THEME, next); } catch (e) { /* file:// */ }
         applyTheme();
       });
-      btn.title = t('app.theme');
+      // title text is refreshed by bindStatics' titleMap on language switches
     }
     if (window.matchMedia) {
       try {
@@ -742,10 +742,24 @@
       'nav-prices': 'app.navPrices',
       'view-json': 'view.json',
       'view-prob': 'view.prob',
+      'view-sim': 'view.sim',
+      'filebar-title': 'files.title',
+      'file-dialog-title': 'files.title',
+      'file-dialog-cancel': 'files.cancel',
     };
     for (const id of Object.keys(map)) {
       const el = document.getElementById(id);
       if (el) el.textContent = t(map[id]);
+    }
+    // title attributes cannot ride the textContent map above
+    const titleMap = {
+      'file-add': 'files.add',
+      'filebar-toggle': 'files.title',
+      'btn-theme': 'app.theme',
+    };
+    for (const id of Object.keys(titleMap)) {
+      const el = document.getElementById(id);
+      if (el) el.title = t(titleMap[id]);
     }
     // aria-labels cannot ride the textContent map above
     const ariaMap = { 'view-switch': 'view.switch' };
