@@ -116,27 +116,43 @@ public final class IconListTools {
         }
     }
 
+    /**
+     * Shared frame rendering for the progress item card (grade 5 gold gem or
+     * rarity bar + item). Extracted so {@link #renderItemProgress} and
+     * {@link #renderItemProgressFocus} don't duplicate the same rendering.
+     * All parameters must match the callers' per-frame math exactly so the
+     * visuals are byte-for-byte identical to the pre-DRY versions (the focus
+     * glyph passes its focus-scaled frame size and the left-edge anchored
+     * origin; the passing strip card passes the plain layout values).
+     */
+    private static void renderProgressFrame(LivingEntity entity, GuiGraphicsExtractor guiGraphics,
+                                            ItemStack itemStack, int x0, int y0,
+                                            float frameWidth, float frameHeight,
+                                            float itemX, float itemY, float scale, int grade, int color) {
+        int toX = (int) (x0 + frameWidth);
+        int toY = (int) (y0 + frameHeight);
+        if (grade == 5) {
+            AnimRenderOps.fillGradient(guiGraphics, x0, y0, toX, toY, 0xFF533c00, 0xFFb69008);
+            blitGoldItemAspect(guiGraphics, (int) (x0 + 2F), (int) (y0 + 2F),
+                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
+            AnimRenderOps.fill(guiGraphics, x0, toY, toX, toY + 2, color);
+        } else {
+            AnimRenderOps.fillGradient(guiGraphics, x0, y0, toX, toY, 0xFF696969, 0xFFA9A9A9);
+            AnimRenderOps.fillGradient(guiGraphics, x0, (int) (y0 + frameHeight * 2 / 3), toX, toY,
+                    ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
+            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
+            AnimRenderOps.fill(guiGraphics, x0, toY, toX, toY + 2, color);
+        }
+    }
+
     public static void renderItemProgress(LivingEntity entity, GuiGraphicsExtractor guiGraphics, ItemStack itemStack, float pX, float pY, float width, float height, int grade) {
         int color = ColorTools.colorItems(grade);
         float frameWidth = width * 18 / 100F;
         float frameHeight = height * 25 / 100F;
         float scale = frameWidth * 60F / 100F / 16F;
-        int toX = (int)(pX + frameWidth);
-        int toY = (int)(pY + frameHeight);
-        float itemX = pX + frameWidth / 2F;
-        float itemY = pY + frameHeight / 2F;
-        if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF533c00, 0xFFb69008);
-            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
-        } else {
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) pY, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            AnimRenderOps.fillGradient(guiGraphics, (int) pX, (int) (pY + frameHeight * 2 / 3), toX, toY,
-                    ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            AnimRenderOps.fill(guiGraphics, (int) pX, toY, toX, toY + 2, color);
-        }
+        renderProgressFrame(entity, guiGraphics, itemStack, (int) pX, (int) pY,
+                frameWidth, frameHeight,
+                pX + frameWidth / 2F, pY + frameHeight / 2F, scale, grade, color);
     }
 
     /**
@@ -154,25 +170,11 @@ public final class IconListTools {
         float frameWidth = width * 18 / 100F * focusScale;
         float frameHeight = height * 25 / 100F * focusScale;
         float scale = frameWidth * 92F / 100F / 16F;
-        int toX = (int) (pX + frameWidth);
-        int toY = (int) (pY + frameHeight);
         int bx0 = (int) pX;
         int by0 = (int) pY;
-        float itemX = pX + frameWidth / 2F;
-        float itemY = pY + frameHeight / 2F;
-
-        if (grade == 5) {
-            AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF533c00, 0xFFb69008);
-            blitGoldItemAspect(guiGraphics, (int) (pX + 2F), (int) (pY + 2F),
-                    (int) (frameWidth - 4F), (int) (frameHeight - 4F), 255);
-            AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
-        } else {
-            AnimRenderOps.fillGradient(guiGraphics, bx0, by0, toX, toY, 0xFF696969, 0xFFA9A9A9);
-            AnimRenderOps.fillGradient(guiGraphics, bx0, (int) (pY + frameHeight * 2 / 3), toX, toY,
-                    ColorTools.argbColor(0, 128, 128, 128), ColorTools.deepColor(color));
-            AnimRenderOps.renderItem2D(entity, guiGraphics, itemStack, itemX, itemY, scale);
-            AnimRenderOps.fill(guiGraphics, bx0, toY, toX, toY + 2, color);
-        }
+        renderProgressFrame(entity, guiGraphics, itemStack, bx0, by0,
+                frameWidth, frameHeight,
+                pX + frameWidth / 2F, pY + frameHeight / 2F, scale, grade, color);
 
         // Focus tint: periwinkle/blue gradient lit up inside the focused card
         // (mirrors the CS:GO inspect highlight), strengthening with focus.
@@ -180,6 +182,6 @@ public final class IconListTools {
         int tintA = (int) (70F * (0.4F + 0.6F * focus));
         int tintTop = ColorTools.argbColor(tintA, 176, 140, 255);
         int tintBottom = ColorTools.argbColor(tintA - 12, 48, 80, 255);
-        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, toX - 4, toY - 4, tintTop, tintBottom);
+        AnimRenderOps.fillGradient(guiGraphics, bx0 + 4, by0 + 4, (int) (pX + frameWidth) - 4, (int) (pY + frameHeight) - 4, tintTop, tintBottom);
     }
 }

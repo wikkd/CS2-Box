@@ -74,9 +74,10 @@ public final class TerminalOfferItems {
     }
 
     /**
-     * Whole Armory Point price of the offered item: the per-item price (or
-     * the shared grade default) plus the wear surcharge when the item has no
-     * durability bar (matches the server's authoritative buy price).
+     * Whole Armory Point price of the offered item: the server-sampled table
+     * price (a range was drawn once per offer) plus the wear surcharge when
+     * the item has no durability bar (matches the server's authoritative buy
+     * price).
      */
     public static int priceFor(NegotiationModel.Offer offer) {
         return priceFor(itemFor(offer), gradeFor(offer), offer.wearVal(),

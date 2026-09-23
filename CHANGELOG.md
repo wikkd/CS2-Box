@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+> 2.0.2 后续收口批次：**跨平台一致性补齐**（批量开箱结果分片容量与单包物品数护栏在三个平台口径不一），
+> 连同拆解台事件取消面统一、终端机开场淡入、档位卡片绘制去重与死代码清理。不涉及版本号与配置文件格式。
+
+### 修复（跨平台一致性）
+
+- **批量开箱结果分片容量漏同步两个平台**：`MAX_PENDING_BULK`（客户端待处理分片上限）提升为 256 的修复只落到 `v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2`，`v1_21_1` 与 `forge_1_20_1` 仍为 64。上限 64 时，整批 6400 箱（200 个 32 条分片）会从队首裁掉最旧约 4.4k 条结果，合并弹窗静默丢数据；两平台本次补齐为 256。六平台现已一致。
+- **单包物品数护栏在三个 Forge 平台仍为 1024**：`forge_26_1_2` / `forge_26_2` / `forge_1_20_1` 的 `MAX_BULK_RESULTS = 1024` 未随 `v26_1_2` / `v26_2`（已收紧为 `BULK_PER_PACKET = 32`）同步——构造校验与解码护栏比 NeoForge 侧松 32 倍。现六平台统一为 `BULK_PER_PACKET`、删除死常量；同时把 `requireSameSize` / `requireMaxSize` 的诊断名统一为 `"bulk items"`——此前五个平台在同一文件里一个调用报 `"items"`、另一个报 `"bulk items"`，日志无法区分批量包与 `PacketSyncBoxItems`（后者仍为 `"items"`，保持不变）。
+- **`MAX_PENDING_BULK` 注释前提有误**：原注释称「bulkOpenCount caps at 6400」，但 `bulkOpenCount` 默认值即 `0 = 无上限` 且定义为 `NO_UPPER_BOUND`；6400 实为 `/csbox give` 的 count 参数上限。六平台注释改为准确表述（结论不变：64 对最大合法批次偏小）。
+
+### 变更
+
+- **拆解台事件取消面统一（六平台）**：`ArmoryRecycleEvent` 的 `setCanceled` / `isCanceled` 在 `v26_1_2` 改由 `ICancellableEvent` 默认方法提供（删除手写 `canceled` 字段与两个方法）；Forge 四平台的 `MutableEvent` 无对应接口，保留手写状态，六平台对外方法签名保持一致。
+- **终端机开场淡入（`v26_1_2`）**：`TerminalScreen` 新增 10 tick 黑色遮罩淡出（`Easing.smoothstep` + `ColorTools.withAlpha`），与 `v26_2` 的行为对齐。
+- **档位卡片绘制去重（`v26_2`）**：`IconListTools` 抽出 `renderProgressFrame`，`renderItemProgress` 与 `renderItemProgressFocus` 不再各写一份相同的档位卡片绘制（逐参数等价，视觉不变）。
+- **`TerminalOfferItems.priceFor` 注释纠偏（`v26_2`）**：由「按物品价 / 档位默认价」改为「服务端每次报价采样一次的价格表区间价」，与实现一致。
+
+### 清理
+
+- `v26_1_2` 的 `CsgoBox` 删除 7 个失效 import（`ItemTerminal` / `DataComponents` / `BuiltInRegistries` / `ItemStack` / `IOException` / `DirectoryStream` / `Files`，为物品动态注册时期残留）。
+- `v26_1_2` 删除无任何引用的 `ButtonPalette.DISABLED` 样式常量（其余五平台仍保留，是否一并删除待维护者决定）。
+
 ## [2.0.2] - 2026-09-17
 
 > 全项目体检修复批次：批量开箱约束、拆解台大额产出两大功能性缺陷修复，**移除终端机补货设定**（`restock_minutes`，六平台同步），

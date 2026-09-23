@@ -16,8 +16,13 @@ import java.util.function.Supplier;
 
 public class PacketBoxBulkResult {
 
-    private static final int MAX_BULK_RESULTS = 1024;
-    private static final int MAX_PENDING_BULK = 64;
+    // Must hold the largest legal batch without trimming: /csbox give grants
+    // at most 6400 boxes per call (200 chunks at 32 entries each), and
+    // bulkOpenCount is unlimited by default, so no smaller server-side bound
+    // can be assumed. The old 64-packet cap silently dropped the oldest ~4.4k
+    // results of a full batch off the consolidated popup.
+    private static final int MAX_PENDING_BULK = 256;
+    /** Number of entries the server puts into one bulk payload. */
     public static final int BULK_PER_PACKET = 32;
 
     private final long requestId;
@@ -28,14 +33,14 @@ public class PacketBoxBulkResult {
         this.requestId = requestId;
         this.items = items == null ? List.of() : List.copyOf(PacketValidation.copyStacks(items));
         this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, 5, 1));
-        PacketValidation.requireSameSize("items", this.items, "grades", this.grades);
-        PacketValidation.requireMaxSize("items", this.items, MAX_BULK_RESULTS);
+        PacketValidation.requireSameSize("bulk items", this.items, "grades", this.grades);
+        PacketValidation.requireMaxSize("bulk items", this.items, BULK_PER_PACKET);
     }
 
     public PacketBoxBulkResult(FriendlyByteBuf buf) {
         this.requestId = buf.readLong();
         int size = buf.readVarInt();
-        if (size < 0 || size > MAX_BULK_RESULTS) {
+        if (size < 0 || size > BULK_PER_PACKET) {
             throw new DecoderException("Invalid bulk result size: " + size);
         }
         List<ItemStack> itms = new ArrayList<>(size);

@@ -3,6 +3,8 @@ package com.reclizer.csgobox.v26_1_2.gui;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
+import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.gui.terminal.TerminalActionBar;
 import com.reclizer.csgobox.v26_1_2.gui.terminal.TerminalBottomRow;
@@ -75,6 +77,10 @@ public class TerminalScreen extends Screen {
     /** True once the server's locked session state has been applied. */
     private boolean stateReceived;
     private boolean closeSynced;
+    /** v2.0.2: black intro overlay fading out over the first ticks after
+     *  opening (mirrors v26_2's intro fade; screen-local tick counter). */
+    private static final int INTRO_FADE_TICKS = 10;
+    private int introTicks;
     /** Set when this screen is replaced by the "检视" sub-screen — re-show
      *  ({@link #init()}) re-arms the server OPEN_UID binding and singleton. */
     private boolean rearmOnShow;
@@ -169,6 +175,9 @@ public class TerminalScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+        if (this.introTicks < INTRO_FADE_TICKS) {
+            this.introTicks++;
+        }
         long worldNow = worldNowMs();
         // The server never answered (held item changed mid-open, death, or an
         // unexpected server error): fail visibly instead of hanging forever.
@@ -303,6 +312,17 @@ public class TerminalScreen extends Screen {
 
         // ---- right-click "检视" context menu (top-most) ----
         inspectMenu.render(gg, mouseX, mouseY);
+        renderIntroFade(gg);
+    }
+
+    /** Black overlay fading out over the first ticks after opening. */
+    private void renderIntroFade(GuiGraphicsExtractor gg) {
+        if (this.introTicks >= INTRO_FADE_TICKS) {
+            return;
+        }
+        float p = Easing.smoothstep(0F, 1F, Math.min(1F, this.introTicks / (float) INTRO_FADE_TICKS));
+        int alpha = Math.round(255F * (1F - p));
+        AnimRenderOps.fill(gg, 0, 0, this.width, this.height, ColorTools.withAlpha(0xFF000000, alpha));
     }
 
     /** FormattedCharSequence wrapper for plain strings. */

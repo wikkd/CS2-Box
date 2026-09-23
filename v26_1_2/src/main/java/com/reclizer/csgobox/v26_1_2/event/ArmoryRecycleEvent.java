@@ -31,7 +31,6 @@ public class ArmoryRecycleEvent extends Event implements ICancellableEvent {
     private final ItemStack inputItem;
     private final int grade;
     private int yield;
-    private boolean canceled;
 
     public ArmoryRecycleEvent(ArmoryRecyclerBlockEntity blockEntity, ItemStack inputItem, int grade, int yield) {
         this.blockEntity = blockEntity;
@@ -70,13 +69,7 @@ public class ArmoryRecycleEvent extends Event implements ICancellableEvent {
         this.yield = Math.max(0, yield);
     }
 
-    /** Marks this recycle as refused; the input stays in the machine and nothing is produced. */
-    public void setCanceled(boolean canceled) {
-        this.canceled = canceled;
-    }
-
-    /** Whether a listener refused this recycle. */
-    public boolean isCanceled() {
-        return canceled;
-    }
+    // setCanceled(boolean) / isCanceled() come from ICancellableEvent's
+    // default methods (v2.0.2 API unification: all six platforms expose the
+    // same cancel surface without per-platform manual state).
 }

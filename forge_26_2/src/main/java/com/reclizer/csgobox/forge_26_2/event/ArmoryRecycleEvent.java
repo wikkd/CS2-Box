@@ -34,6 +34,7 @@ public class ArmoryRecycleEvent extends MutableEvent {
     private final ItemStack inputItem;
     private final int grade;
     private int yield;
+    /** Whether a listener refused this recycle (v2.0.2 doc note: the manual state is this platform idiom; every platform exposes the same setCanceled/isCanceled surface). */
     private boolean canceled;
 
     public ArmoryRecycleEvent(ArmoryRecyclerBlockEntity blockEntity, ItemStack inputItem, int grade, int yield) {
