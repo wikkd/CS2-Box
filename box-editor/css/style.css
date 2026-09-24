@@ -2940,3 +2940,207 @@ html[data-theme="dark"] {
     }
   }
 }
+
+/* =====================================================================
+ * Responsive layer — device adaptation.
+ *
+ * The old breakpoints (1180 / 1080 / 720 / 640) each patched a symptom. A
+ * sweep across 21 viewports found the two structural causes behind most of
+ * them, and both are fixed here rather than papered over per width:
+ *
+ *   1. THE TOPBAR WRAPPED, so its height was never predictable — 72px at
+ *      1440, 118px at 1181, 166px on a 360px phone. The two sticky rails were
+ *      pinned at a hard-coded `top: 68px`, so they slid under it: 4px eaten at
+ *      every width above 1365, and 50px in the 1181–1365 band. The brand title
+ *      ("CS2-Box Box Config Editor", ~280px at 22px) was the real culprit: on a
+ *      320px viewport it alone was wider than the screen. So the topbar is now
+ *      pinned to ONE row — the brand ellipsises, the controls become the
+ *      horizontal scroller — which makes the height a constant, and the rails
+ *      are offset from that same token.
+ *
+ *   2. THE RIGHT COLUMN WAS RIGID at minmax(360px, 460px), so it always took
+ *      460: at 1181 the form was crushed to 435px (63% empty space around it
+ *      was not the problem — the form was). It is now viewport-proportional, so
+ *      the form keeps breathing room down to the 1180 one-column switch.
+ *
+ * Plus the things a per-width approach cannot express: coarse-pointer hit
+ * targets, fluid page gutters, short (landscape-phone) viewports, and safe-area
+ * insets. No markup change, no JS.
+ * ===================================================================== */
+
+:root {
+  --gutter: clamp(12px, 1.6vw, 28px);   /* page side padding */
+  /* One topbar row, measured (see the metric note below). Both rails stick
+     below it, so this is load-bearing: if it is ever wrong the rails slide
+     under the topbar again. Re-measure after any change to topbar padding,
+     brand font size or control height.
+       fine pointer   -> bar renders 72px headless, 74px with a 6px styled
+                         scrollbar on the strip (Windows Chrome reserves space
+                         for ::-webkit-scrollbar, headless does not)
+       coarse pointer -> 75px, so 82px leaves the same headroom
+     The rails then sit at +6px, i.e. 80 / 88, clear of both. */
+  --topbar-h: 74px;
+  --rail-top: calc(var(--topbar-h) + 6px);
+}
+@media (pointer: coarse) {
+  :root { --topbar-h: 82px; }           /* taller hit targets grow the bar */
+}
+
+/* ---------- 1. the topbar is exactly one row wherever the rails stick ---------- */
+.topbar {
+  flex-wrap: nowrap;
+}
+.brand {
+  flex: 0 1 auto;
+  min-width: 140px;                     /* below this the mark stops reading */
+}
+.brand-text { min-width: 0; }
+/* Both lines must be single-line, or the bar's height is width-dependent again:
+   measured at 1280 the subtitle wrapped to two lines and drove the bar to 91px,
+   while at 1440 it fitted on one and the bar was 72px — exactly the class of
+   drift that made the rails slide under it. Truncate instead of wrapping. */
+.brand-text h1,
+.brand-text p,
+#app-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.topbar-controls {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;                    /* one row; the strip scrolls instead */
+  overflow-x: auto;
+  overflow-y: hidden;                   /* required once the other axis scrolls */
+  padding-block: 4px;                   /* room for the 3px focus halo */
+  scrollbar-width: thin;
+}
+.topbar-controls::-webkit-scrollbar { height: 6px; }
+.topbar-controls > * { flex: 0 0 auto; }/* never squash a control into illegibility */
+
+/* Below 1181 the rails are static, so the bar no longer has to be a constant
+   height — and there the strip would hide far more than we can accept: the
+   first two controls alone (language + version selects) are 291px, so on a
+   360px phone a scrolling strip would show only those two and push every
+   button — Undo, New, Import, Examples, Share — off-screen. Reordering them
+   with `order` would fix the visual order but break DOM/focus order (WCAG
+   2.4.3), so instead the bar wraps again and stops being sticky: every control
+   stays visible and the header scrolls away instead of taxing the viewport
+   (it was 166px of a 640px screen, permanently). */
+@media (max-width: 1180px) {
+  .topbar { position: relative; }       /* relative, not static: keeps ::before/::after contained */
+  .topbar::before { display: none; }    /* the scroll cast is pointless on a non-sticky bar */
+  .topbar-controls {
+    flex-wrap: wrap;
+    overflow: visible;
+    padding-block: 0;
+  }
+}
+
+/* ---------- 2. the rails stick below the bar, not under it ---------- */
+/* High specificity is deliberate: the base layer sets `top: 68px` and the dark
+   layer re-states positioning, so this has to win outright. */
+.filebar,
+.right,
+html[data-theme="dark"] .filebar,
+html[data-theme="dark"] .right {
+  top: var(--rail-top);
+}
+
+/* ---------- 3. the preview column follows the viewport ---------- */
+.layout {
+  grid-template-columns: auto minmax(0, 1fr) clamp(320px, 32vw, 460px);
+  padding: var(--gutter) var(--gutter) 10px;
+}
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* ---------- 4. fluid gutters: tighter on small, roomier on large ---------- */
+.card {
+  padding: clamp(12px, 1.1vw, 20px) clamp(12px, 1.3vw, 22px);
+}
+.foot {
+  padding: 10px var(--gutter) max(22px, env(safe-area-inset-bottom));
+}
+.toast {
+  bottom: max(14px, env(safe-area-inset-bottom));
+}
+/* 4K / ultrawide: a 1760px cap left a lot of unused room on a 2560px display */
+@media (min-width: 2200px) {
+  .layout { max-width: 2040px; }
+}
+
+/* ---------- 5. tablets and small laptops: stop the bar eating the screen ---------- */
+@media (max-width: 1080px) {
+  .brand { min-width: 120px; gap: 9px; }
+  .topbar-controls { gap: 8px; }
+}
+@media (max-width: 720px) {
+  .brand { min-width: 96px; gap: 8px; }
+  .brand-text h1, #app-title { font-size: 17px; }
+  .topbar-controls { gap: 6px; }
+}
+@media (max-width: 480px) {
+  .brand { min-width: 76px; }
+  .brand-text h1, #app-title { font-size: 15px; }
+}
+
+/* ---------- 6. coarse pointers: real hit targets ---------- */
+/* The sweep measured every button at 27px tall — under half the 44px a thumb
+   is expected to hit. Only the pointer type is targeted, so mouse users keep
+   the dense layout. */
+@media (pointer: coarse) {
+  .btn { min-height: 42px; padding: 9px 14px; }
+  .btn.small { min-height: 36px; }
+  .tab { min-height: 40px; }
+  .topbar-controls .btn { min-height: 40px; padding: 8px 12px; }
+  input[type="text"], input[type="number"], input:not([type]), select, textarea {
+    min-height: 42px;
+  }
+  input[type="checkbox"] { width: 19px; height: 19px; }
+  .col-head { min-height: 46px; }
+  .file-item { min-height: 42px; }
+  .grade-card summary { min-height: 46px; }
+  /* a fingertip cannot hover, so do not reserve a hover-only affordance */
+  .file-item, .grade-card summary, .col-head { cursor: pointer; }
+}
+
+/* ---------- 7. short viewports (landscape phones, split windows) ---------- */
+/* These were sized in vh with no upper bound, so on a 390px-tall landscape
+   phone a dialog could still ask for 88vh of usable space and push its own
+   action buttons off-screen. */
+@media (max-height: 560px) {
+  .dlg { max-height: 94vh; padding: 14px; }
+  .example-list { max-height: 38vh; }
+  #import-textarea { max-height: 26vh; }
+  .tutorial-body { max-height: 38vh; }
+  .file-list { max-height: 32vh; }
+}
+
+/* ---------- 8. very narrow: nothing may push the document sideways ---------- */
+@media (max-width: 380px) {
+  .row.inline .mini { flex: 1 1 100%; }   /* stack mini fields rather than squeeze */
+  .random-slot input { width: 64px; }
+  .price-table { min-width: 480px; }
+}
+
+/* ---------- 9. small phones: a shorter (wrapped) bar, without hiding anything ---------- */
+/* The bar is already non-sticky here, so the goal is only to cut the scroll
+   distance to the form. The two selects are the widest items (they alone were
+   291px at desktop metrics) and they are the ones whose text fits in less room,
+   so they are capped rather than shrunk proportionally. Hit targets stay at
+   42px — the coarse-pointer block below deliberately is not relaxed here. */
+@media (max-width: 560px) {
+  .topbar { padding: 7px 12px; gap: 6px 8px; }
+  .brand { min-width: 0; gap: 7px; }
+  .logo { font-size: 20px; }
+  .brand-text h1, #app-title { font-size: 15px; }
+  #lang-select { max-width: 104px; }
+  #version-select { max-width: 118px; }
+  .topbar-controls { gap: 5px; }
+  .topbar-controls .btn { padding-inline: 9px; }
+  .ctl { font-size: 11px; gap: 4px; }
+  .advanced-toggle { padding-inline: 8px; }
+}
