@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS2-Box 网页配置编辑器 — 全站审计报告</title>
+<style>
+  :root{
+    --bg:#f7f5f0; --panel:#fffdf8; --ink:#2b2620; --ink-2:#5c564c; --ink-3:#7d7668;
+    --line:#e2dccd; --line-2:#cfc7b4;
+    --hi:#c0392b; --hi-bg:#fdf0ee; --hi-line:#f0c9c3;
+    --mid:#b06a00; --mid-bg:#fdf6e8; --mid-line:#f2ddb6;
+    --low:#2f6fdb; --low-bg:#eef3fd; --low-line:#ccdcf8;
+    --ok:#1f7a4d; --ok-bg:#edf7f1; --ok-line:#c7e3d3;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.72 var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 28px 90px}
+
+  header.top{border-bottom:2px solid var(--line-2);padding-bottom:22px;margin-bottom:30px}
+  header.top .kicker{font:600 11.5px/1 var(--mono);letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-3)}
+  header.top h1{margin:12px 0 8px;font-size:29px;line-height:1.28;letter-spacing:-.2px}
+  header.top .sub{color:var(--ink-2);font-size:14px}
+  header.top .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font:500 12px/1 var(--mono);background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;padding:6px 11px;color:var(--ink-2)}
+
+  h2{font-size:20px;margin:44px 0 6px;letter-spacing:-.1px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+  h2 .n{font:600 12px/1 var(--mono);color:var(--ink-3);margin-right:9px;vertical-align:2px}
+  h3{font-size:15.5px;margin:26px 0 10px}
+  p{margin:10px 0}
+  .lede{font-size:15px;color:var(--ink-2)}
+  code{font:500 12.5px/1.5 var(--mono);background:#f1ede3;border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;white-space:nowrap}
+  pre{margin:10px 0;background:#fbf9f3;border:1px solid var(--line);border-left:3px solid var(--line-2);
+    border-radius:6px;padding:11px 13px;overflow-x:auto}
+  pre code{background:none;border:none;padding:0;font-size:12.5px;white-space:pre}
+
+  .verdict{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 8px}
+  .vbox{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px}
+  .vbox .num{font:700 27px/1 var(--mono);letter-spacing:-1px}
+  .vbox .lab{font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.45}
+  .vbox.hi{border-color:var(--hi-line);background:var(--hi-bg)} .vbox.hi .num{color:var(--hi)}
+  .vbox.mid{border-color:var(--mid-line);background:var(--mid-bg)} .vbox.mid .num{color:var(--mid)}
+  .vbox.low{border-color:var(--low-line);background:var(--low-bg)} .vbox.low .num{color:var(--low)}
+  .vbox.ok{border-color:var(--ok-line);background:var(--ok-bg)} .vbox.ok .num{color:var(--ok)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:18px 20px;margin:16px 0;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .card.hi::before{background:var(--hi)} .card.mid::before{background:var(--mid)}
+  .card.low::before{background:var(--low)} .card.own::before{background:#7a4fd0}
+  .card > *:first-child{margin-top:0} .card > *:last-child{margin-bottom:0}
+  .chead{display:flex;align-items:flex-start;gap:11px;flex-wrap:wrap;margin-bottom:6px}
+  .badge{font:700 11px/1 var(--mono);letter-spacing:.7px;padding:5px 9px;border-radius:5px;flex:0 0 auto;margin-top:3px}
+  .badge.hi{background:var(--hi);color:#fff} .badge.mid{background:var(--mid);color:#fff}
+  .badge.low{background:var(--low);color:#fff} .badge.own{background:#7a4fd0;color:#fff}
+  .badge.pre{background:#efe9dc;color:var(--ink-2)}
+  .ctitle{font-size:16px;font-weight:650;line-height:1.42;flex:1 1 340px}
+
+  .row{display:grid;grid-template-columns:88px 1fr;gap:6px 14px;margin:11px 0 0;font-size:14px}
+  .row dt{color:var(--ink-3);font:600 11.5px/1.5 var(--mono);letter-spacing:.5px;text-transform:uppercase;padding-top:2px}
+  .row dd{margin:0}
+  .row dd b{font-weight:650}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--panel)}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:600 11.5px/1.4 var(--mono);letter-spacing:.6px;text-transform:uppercase;color:var(--ink-3);
+    background:#faf7f0;border-bottom:1px solid var(--line-2);white-space:nowrap}
+  td.num{font:500 12.5px/1.5 var(--mono);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .fail{color:var(--hi);font-weight:650}
+  .pass{color:var(--ok)}
+  .warn{color:var(--mid)}
+
+  figure{margin:20px 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+  figure svg{display:block;width:100%;height:auto;max-width:100%}
+  figcaption{font-size:12.5px;color:var(--ink-3);margin-top:12px;line-height:1.6}
+
+  .note{background:#fbf9f3;border:1px solid var(--line);border-left:3px solid var(--ink-3);
+    border-radius:6px;padding:12px 15px;margin:16px 0;font-size:14px;color:var(--ink-2)}
+  .note strong{color:var(--ink)}
+  ul{margin:9px 0;padding-left:21px} li{margin:5px 0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  .cols > *{min-width:0}
+  pre,table,figure,svg{max-width:100%}
+  @media (max-width:760px){
+    .verdict{grid-template-columns:1fr 1fr} .cols{grid-template-columns:1fr}
+    .row{grid-template-columns:1fr} .wrap{padding:26px 16px 60px}
+    header.top h1{font-size:23px}
+    pre{font-size:11.5px}
+    /* let long identifiers and wide tables wrap instead of pushing the page sideways */
+    code{white-space:normal;overflow-wrap:anywhere}
+    th,td{white-space:normal!important}
+    table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  }
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">Audit Report · CS2-Box</div>
+  <h1>网页配置编辑器全站审计</h1>
+  <div class="sub">
+    对象：<b>box-editor</b>（<code>https://wikkd.github.io/CS2-Box/</code>，即 <code>index.html</code> 与 <code>prices.html</code>）<br>
+    基准提交：<code>0f091faa</code> · 审计日期 2026-09-24
+  </div>
+  <div class="meta">
+    <span class="chip">本地 dist 实测</span>
+    <span class="chip">线上生产环境复测</span>
+    <span class="chip">11 个视口 × 2 页面</span>
+    <span class="chip">像素级对比度取样</span>
+    <span class="chip">双主题</span>
+  </div>
+</header>
+
+<p class="lede">
+  共确认 <b>16 项</b>问题：3 项高、6 项中、7 项低。其中 <b>1 项与我在本次会话的响应式改动有关</b>
+  ——但经权威对测，那次改动是<b>净改善</b>（20 组宽度×语言组合中 15 组顶栏变矮），只有 3 组变差，详见 §4。
+  其余 15 项均为既有代码问题。另有 <b>5 类初步结论经复核被判定为探针误报并已剔除</b>（见 §6）。
+  所有结论均在本地构建产物与线上站点两处独立复现。
+</p>
+
+<div class="verdict">
+  <div class="vbox hi"><div class="num">3</div><div class="lab">高<br>影响可用性 / 无障碍实质阻断</div></div>
+  <div class="vbox mid"><div class="num">6</div><div class="lab">中<br>违反无障碍规范或存在运维风险</div></div>
+  <div class="vbox low"><div class="num">7</div><div class="lab">低<br>体验与元数据打磨项</div></div>
+  <div class="vbox ok"><div class="num">15/20</div><div class="lab">我那次改动中<br>顶栏变矮的组合数（3 组变差）</div></div>
+</div>
+
+<h2><span class="n">01</span>最严重的一条：奶油主题的副文本几乎读不清</h2>
+
+<p>
+  这是本次审计唯一一个会直接影响每一位访客的问题，也是唯一一个<b>仅靠阅读源码无法发现</b>的问题——
+  静态分析给出的数字是 3.3:1，而真实渲染只有 <b>1.98–3.59:1</b>。
+</p>
+
+<h3>实测数据</h3>
+
+<figure>
+  <svg viewBox="0 0 640 340" role="img" aria-label="奶油主题各级副文本的实测对比度，虚线为 WCAG AA 4.5:1 门槛">
+    <defs>
+      <linearGradient id="gFail" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#e57366"/><stop offset="100%" stop-color="#c0392b"/>
+      </linearGradient>
+      <linearGradient id="gPass" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#57a985"/><stop offset="100%" stop-color="#1f7a4d"/>
+      </linearGradient>
+    </defs>
+
+    <!-- axis -->
+    <line x1="150" y1="16" x2="150" y2="300" stroke="#e2dccd"/>
+    <!-- AA threshold 4.5 of 14 max -->
+    <line x1="349" y1="12" x2="349" y2="304" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text x="353" y="10" font-family="ui-monospace,Menlo,monospace" font-size="10.5" fill="#c0392b">AA 4.5:1</text>
+    <!-- ticks -->
+    <g font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#7d7668">
+      <line x1="150" y1="300" x2="620" y2="300" stroke="#cfc7b4"/>
+      <text x="150" y="316" text-anchor="middle">0</text>
+      <text x="283" y="316" text-anchor="middle">2</text>
+      <text x="417" y="316" text-anchor="middle">4</text>
+      <text x="550" y="316" text-anchor="middle">6</text>
+      <text x="150" y="332">对比度（相对亮度比，数值越高越清晰）</text>
+    </g>
+
+    <!-- bars: scale 67px per unit, x0=150, max shown 7 -->
+    <g font-family="-apple-system,'Noto Sans SC',sans-serif" font-size="11.5" fill="#2b2620">
+      <!-- row helper: y -->
+      <text x="142" y="34" text-anchor="end">版本提示</text>
+      <rect x="150" y="22" width="133" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="291" y="35" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">1.98:1</text>
+
+      <text x="142" y="61" text-anchor="end">路径提示</text>
+      <rect x="150" y="49" width="139" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="297" y="62" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">2.08:1</text>
+
+      <text x="142" y="88" text-anchor="end">页脚说明</text>
+      <rect x="150" y="76" width="152" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="310" y="89" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">2.27:1</text>
+
+      <text x="142" y="115" text-anchor="end">顶栏副标题</text>
+      <rect x="150" y="103" width="167" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="325" y="116" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">2.49:1</text>
+
+      <text x="142" y="142" text-anchor="end">帮助文字</text>
+      <rect x="150" y="130" width="217" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="375" y="143" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">3.24:1</text>
+
+      <text x="142" y="169" text-anchor="end">行内小标签</text>
+      <rect x="150" y="157" width="241" height="17" rx="3" fill="url(#gFail)"/>
+      <text x="399" y="170" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#c0392b" font-weight="700">3.59:1</text>
+
+      <line x1="150" y1="184" x2="620" y2="184" stroke="#f0ece2"/>
+
+      <text x="142" y="203" text-anchor="end">等级徽章</text>
+      <rect x="150" y="191" width="304" height="17" rx="3" fill="url(#gPass)" opacity=".55"/>
+      <text x="462" y="204" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#b06a00">4.54:1</text>
+
+      <text x="142" y="230" text-anchor="end">JSON 预览</text>
+      <rect x="150" y="218" width="525" height="17" rx="3" fill="url(#gPass)"/>
+      <text x="620" y="231" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#fff" font-weight="700">7.83:1</text>
+
+      <text x="142" y="257" text-anchor="end">标签页</text>
+      <rect x="150" y="245" width="620" height="17" rx="3" fill="url(#gPass)"/>
+      <text x="620" y="258" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#fff" font-weight="700">9.66:1</text>
+
+      <text x="142" y="284" text-anchor="end">表单标签</text>
+      <rect x="150" y="272" width="620" height="17" rx="3" fill="url(#gPass)"/>
+      <text x="620" y="285" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#fff" font-weight="700">10.98:1</text>
+    </g>
+  </svg>
+  <figcaption>
+    奶油（浅色）主题下各级文本的<b>真实渲染对比度</b>——背景取自实际截图像素的中位数，而非计算样式。
+    红色为低于 WCAG AA 4.5:1 的角色；深色主题下除「路径提示」4.18:1 外全部合格。
+  </figcaption>
+</figure>
+
+<div class="card hi">
+  <div class="chead">
+    <span class="badge hi">HIGH</span>
+    <span class="ctitle">H1 · 副文本坐在橙色背景图上，对比度低至 1.98:1</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+
+  <dl class="row">
+    <dt>现象</dt>
+    <dd>所有用 <code>--muted</code> 着色的说明性文字（副标题、页脚、版本提示、帮助文字、路径提示、行内小标签）
+        ——在浅色主题下几乎糊在背景里。</dd>
+
+    <dt>实测</dt>
+    <dd>
+      <table>
+        <thead><tr><th>文本角色</th><th>字号</th><th>文字色</th><th>实测背景（像素中位数）</th><th>对比度</th><th>AA 4.5:1</th></tr></thead>
+        <tbody>
+          <tr><td>版本提示</td><td class="num">12px</td><td class="num">#8b8374</td><td class="num">rgb(229,182,67)</td><td class="num fail">1.98:1</td><td class="fail">失败</td></tr>
+          <tr><td>路径提示</td><td class="num">12px</td><td class="num">#248f8e</td><td class="num">rgb(236,181,50)</td><td class="num fail">2.08:1</td><td class="fail">失败</td></tr>
+          <tr><td>页脚说明</td><td class="num">12px</td><td class="num">#8b8374</td><td class="num">rgb(253,191,60)</td><td class="num fail">2.27:1</td><td class="fail">失败</td></tr>
+          <tr><td>顶栏副标题</td><td class="num">12px</td><td class="num">#8b8374</td><td class="num">rgb(253,204,85)</td><td class="num fail">2.49:1</td><td class="fail">失败</td></tr>
+          <tr><td>帮助文字</td><td class="num">11.5px</td><td class="num">#8b8374</td><td class="num">rgb(255,237,195)</td><td class="num fail">3.24:1</td><td class="fail">失败</td></tr>
+          <tr><td>行内小标签</td><td class="num">12px</td><td class="num">#8b8374</td><td class="num">rgb(253,250,240)</td><td class="num fail">3.59:1</td><td class="fail">失败</td></tr>
+          <tr><td colspan="5">— 同页对照（合格的深色文本，说明问题不在「玻璃」本身 —）</td><td></td></tr>
+          <tr><td>表单标签</td><td class="num">14px</td><td class="num">#38332b</td><td class="num">rgb(255,239,197)</td><td class="num pass">10.98:1</td><td class="pass">通过</td></tr>
+          <tr><td>标签页 / 顶栏按钮</td><td class="num">12–14px</td><td class="num">#38332b</td><td class="num">rgb(252,223,160)</td><td class="num pass">9.66:1</td><td class="pass">通过</td></tr>
+        </tbody>
+      </table>
+    </dd>
+
+    <dt>根因</dt>
+    <dd>
+      两层因素叠加，缺一不可：
+      <ol>
+        <li><b>页面背景是一张橙色照片，只罩了很薄的奶油色</b>。
+          <code>css/style.css:1109–1117</code>（最终生效的 <code>body</code> 规则）：
+<pre><code>body {
+  background:
+    linear-gradient(rgba(250, 246, 236, .16), rgba(250, 246, 236, .26)),  /* 仅 16%–26% 罩层 */
+    url('../img/bg.jpg') center / cover no-repeat fixed,                  /* 橙色原图直接露出 */
+    radial-gradient(...);
+}</code></pre>
+          <code>bg.jpg</code> 实测为强橙色（放大后约 <code>rgb(213,150,60)</code> 系），
+          而罩层仅 16%–26%，所以背景的**真实亮度远高于**调色板里的奶油色 <code>#f4f0e6</code>。
+        </li>
+        <li><b><code>--muted</code> 这个颜色本身太浅</b>。定义于 <code>css/style.css:889</code>：
+          <code>--muted: #8b8374</code>，对纯奶油 <code>#f4f0e6</code> 只有 <b>3.30:1</b>——
+          即使背景理想也已不达标；叠上橙色背景后进一步跌到 1.98:1。
+          该变量在全站被引用 <b>61 处</b>。
+        </li>
+      </ol>
+    </dd>
+
+    <dt>归属</dt>
+    <dd>
+      既有问题，与本次会话的改动无关。<code>--muted: #8b8374</code> 由
+      <code>ec0e0f71 feat(box-editor): cream glassmorphism theme</code> 引入；
+      薄罩层由 <code>57308cda style(box-editor): liquid glass — much more transparent, stronger frosted blur</code> 引入。
+      对照实验：禁用全部动画/过渡/模糊后复测，数值完全一致（<code>--muted: #8b8374</code>、<code>opacity: 1</code>），
+      证明与动效层无关。
+    </dd>
+
+    <dt>建议</dt>
+    <dd>
+      需要<b>两层一起改</b>，只改一处不够：
+      <ul>
+        <li><b>提罩层</b>：把 <code>body</code> 的奶油罩从 16%–26% 提到约 55%–70%（或对 <code>bg.jpg</code> 自身降饱和/提亮），
+            让背景稳定落在浅色区间。这是设计取向的取舍——毛玻璃质感会变弱。</li>
+        <li><b>压暗 <code>--muted</code></b>：对纯奶油达标的最小改动是 <code>#746d61</code>（4.50:1），
+            留余量可取 <code>#6f695c</code>（4.79:1）。若要直接扛住当前橙色背景，则需深到 <code>#5c564c</code> 一类，
+            但那会让「次级文字」看起来过重——所以更合理的是先做上一步。</li>
+        <li><b>另可选</b>：给这些文字所在容器补一层不透明底（如 <code>.foot</code>、<code>.version-note</code>），
+            使其不再直接压在照片上。改动面最小，视觉副作用也最小。</li>
+      </ul>
+    </dd>
+  </dl>
+</div>
+
+<h2><span class="n">02</span>无障碍：两处对键盘 / 读屏用户的实质阻断</h2>
+
+<div class="card hi">
+  <div class="chead">
+    <span class="badge hi">HIGH</span>
+    <span class="ctitle">H2 · 切换预览视图时 <code>aria-selected</code> 永不更新</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>现象</dt>
+    <dd>点击 Probabilities / Simulator 后画面正确切换，但读屏仍播报「JSON，已选中」。</dd>
+    <dt>实测</dt>
+    <dd>
+<pre><code>aria-selected before : view-json=true  view-prob=false  view-sim=false
+aria-selected after  : view-json=true  view-prob=false  view-sim=false   ← 未变
+.active       after  : view-json=-      view-prob=active  view-sim=-     ← 视觉已切换</code></pre>
+      线上生产环境结果一致。
+    </dd>
+    <dt>根因</dt>
+    <dd><code>js/app.js:2335 setPreviewView()</code> 只切换 CSS 类，未写回 ARIA 状态：
+<pre><code>if (jsonTab) jsonTab.classList.toggle('active', previewView === 'json');
+if (probTab) probTab.classList.toggle('active', previewView === 'prob');
+if (simTab)  simTab.classList.toggle('active', previewView === 'sim');</code></pre>
+      而 <code>aria-selected</code> 是写在 <code>index.html:77–79</code> 的静态属性，此后无人维护。
+    </dd>
+    <dt>建议</dt>
+    <dd>在同一个函数里同步 <code>setAttribute('aria-selected', ...)</code>；同时给三个面板补
+        <code>role="tabpanel"</code> 与 <code>aria-controls</code>（见 M3）。改动约 6 行，无视觉影响。</dd>
+  </dl>
+</div>
+
+<div class="card hi">
+  <div class="chead">
+    <span class="badge hi">HIGH</span>
+    <span class="ctitle">H3 · 文件列表的切换目标不可聚焦，键盘用户无法切换箱子文件</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>现象</dt>
+    <dd>左侧文件列表里，点击一行会切换当前编辑的文件。但这一行<b>不是可聚焦元素</b>，
+        键盘用户 Tab 只能停在行内的「重命名 / 删除」按钮上——<b>没有任何键盘路径能切换到另一个文件</b>。</dd>
+    <dt>实测</dt>
+    <dd><code>{"tag":"DIV","tabindex":null,"role":null,"focusable":false,"innerButtons":3}</code>
+        （线上一致）。全站 <code>tabindex</code> 使用次数为 <b>0</b>。</dd>
+    <dt>根因</dt>
+    <dd><code>js/app.js:624</code> 生成的是 <code>&lt;div&gt;</code>，而切换逻辑挂在容器的点击委托上：
+<pre><code>return '&lt;div class="file-item' + (active ? ' active' : '') + '" data-file-id="...">' + ...
+
+// app.js:668
+const item = e.target.closest('.file-item');
+if (item) switchFile(item.dataset.fileId);</code></pre>
+      <code>switchFile</code> 全站只有这一处调用点（<code>app.js:669</code>），
+      且 <code>app.js</code> 中仅存在两个 <code>keydown</code> 监听（<code>:887</code> 与 <code>:1558</code>），均与文件列表无关。
+    </dd>
+    <dt>建议</dt>
+    <dd>把外层改为 <code>&lt;button type="button"&gt;</code>（或用 <code>href</code> 无关的
+        <code>role="option"</code> + <code>tabindex="0"</code> + Enter/Space 处理），
+        行内三个操作按钮去除嵌套冲突即可。这是三处 HIGH 里修起来最简单、收益最直接的一处。</dd>
+  </dl>
+</div>
+
+<h2><span class="n">03</span>中等问题</h2>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M1 · <code>:focus-visible</code> 规则漏掉表单控件，下拉框几乎没有焦点提示</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>根因</dt>
+    <dd><code>css/style.css:1293–1297</code> 的焦点样式<b>只枚举了 5 个选择器</b>，没有 <code>select</code> / <code>input</code> / <code>textarea</code>：
+<pre><code>.btn:focus-visible,
+.tab:focus-visible,
+summary:focus-visible,
+.example-item:focus-within,
+.col-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }</code></pre>
+    </dd>
+    <dt>实测</dt>
+    <dd>按 Tab 依次遍历，前两个停靠点是顶栏的两个下拉框，与后续按钮的表现明显不同：
+<pre><code>1. SELECT#lang-select     :focus-visible=true  outline=3px none  shadow=rgba(47,111,219,0.14) 0 0 0 3px   ← 仅 14% 透明度，近乎不可见
+2. SELECT#version-select  :focus-visible=true  outline=3px none  shadow=rgba(47,111,219,0.14) 0 0 0 3px   ← 同上
+3. BUTTON#btn-undo        :focus-visible=true  outline=2px solid  shadow=none                          ← 正常
+4. BUTTON#btn-theme       :focus-visible=true  outline=2px solid  shadow=none                          ← 正常</code></pre>
+    </dd>
+    <dt>建议</dt>
+    <dd>把 <code>select, input, textarea</code> 加入上表选择器列表（或改用 <code>:where(input, select, textarea, button, summary):focus-visible</code> 统一覆盖）。</dd>
+  </dl>
+</div>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M2 · 全站没有任何 <code>aria-live</code> 区域</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>实测</dt>
+    <dd><code>aria-live</code> / <code>role="status"</code> / <code>role="alert"</code> 计数 = <b>0</b>（线上一致）。
+        该工具的核心反馈——操作成功/失败的 Toast、校验错误列表、概率表刷新——对读屏用户全部静默。</dd>
+    <dt>建议</dt>
+    <dd>给 Toast 容器加 <code>role="status" aria-live="polite"</code>，错误类用 <code>role="alert"</code>；
+        给校验结果区加 <code>aria-live="polite"</code>。</dd>
+  </dl>
+</div>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M3 · tablist 与面板之间没有建立 ARIA 关联</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>实测</dt>
+    <dd><code>{"live":0,"panels":["-","-","-"],"controls":[null,null,null]}</code>。
+        <code>index.html:76–79</code> 已正确地写了 <code>role="tablist"</code> / <code>role="tab"</code>，
+        但三个 <code>role="tab"</code> 都没有 <code>aria-controls</code>，
+        三个面板（<code>#json-preview</code> / <code>#prob-panel</code> / <code>#sim-panel</code>）也都没有
+        <code>role="tabpanel"</code>——等于声明了标签页结构却未接上面板。</dd>
+    <dt>建议</dt>
+    <dd>补齐 <code>id</code> ↔ <code>aria-controls</code> 对应与 <code>role="tabpanel"</code>。
+        （完整 APG 还要求 roving tabindex + 方向键，该项列为 LOW，见 L7。）</dd>
+  </dl>
+</div>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M4 · 没有 <code>beforeunload</code> 保护，大段编辑可能无声丢失</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>实测</dt>
+    <dd><code>addEventListener</code> 类型清单仅 <code>load, hashchange, storage</code>，无 <code>beforeunload</code>。
+        状态虽会自动落 <code>localStorage</code>（这点做得不错，实测能从损坏的状态块中恢复），
+        但用户在误关标签页 / 误刷新前得不到任何确认。</dd>
+    <dt>建议</dt>
+    <dd>当状态与上次保存快照不一致时挂上 <code>beforeunload</code>（浏览器要求返回 <code>event.preventDefault()</code>）。</dd>
+  </dl>
+</div>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M5 · 暗色主题漏了一处奶油色背景，反而比浅色主题更糟</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>根因</dt>
+    <dd>奶油层给 <code>.item-adv</code> 设了浅色底（<code>style.css:1019</code> 的 <code>.28</code>、<code>:1169</code> 的 <code>.2</code>），
+        但暗色主题的覆盖规则 <b>只重设了 border，没有重置 background</b>：
+<pre><code>html[data-theme="dark"] .item-adv {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}                     /* ← 缺 background，于是 rgba(255,253,248,.2) 残留 */
+html[data-theme="dark"] .item-adv .adv-badge { color: var(--accent); }</code></pre>
+    </dd>
+    <dt>实测</dt>
+    <dd>线上暗色主题下 <code>details.item-adv</code> 的背景仍为 <code>rgba(255, 253, 248, 0.2)</code>——
+        深色界面里出现一块发白的面板；其中的 <code>.adv-badge</code>（<code>rgb(61,139,255)</code>）压在这块淡底上只有
+        <code class="fail">2.77:1</code>，而同一元素在浅色主题下是 <code>4.54:1</code>。<b>深色主题比浅色主题更差</b>，属明确的主题奇偶性缺陷。</dd>
+    <dt>建议</dt>
+    <dd>在暗色覆盖里补 <code>background: rgba(255,255,255,.04)</code> 一类深色底即可。</dd>
+  </dl>
+</div>
+
+<div class="card mid">
+  <div class="chead">
+    <span class="badge mid">MEDIUM</span>
+    <span class="ctitle">M6 · 内部开发文档 <code>README.md</code> 随站点公开发布</span>
+    <span class="badge pre">既有问题</span>
+  </div>
+  <dl class="row">
+    <dt>实测</dt>
+    <dd><code>HEAD https://wikkd.github.io/CS2-Box/README.md → 200，8,050 B</code>（本地 dist 一致，16,999 B 源文件）。
+        同一响应里还确认 <code>sw.js</code> 也对外可访问（这一项是正常的，Service Worker 本就必须公开）。</dd>
+    <dt>根因</dt>
+    <dd><code>box-editor/build.mjs:13–28</code> 的 <code>FILES</code> 数组把 <code>'README.md'</code> 列为拷贝项，
+        于是它进入 <code>dist/</code> 并被 GitHub Pages 发布。该 README 是面向开发者的 17 KB 说明（含内部结构与构建说明）。
+        <code>package.json</code> / <code>build.mjs</code> / <code>server.mjs</code> / <code>tests/</code> / <code>start.bat</code> 均已正确排除（404）。</dd>
+    <dt>建议</dt>
+    <dd>从 <code>FILES</code> 中移除 <code>'README.md'</code>。风险评级为「中」是因为它不涉及密钥，
+        但把内部文档默认公开属于信息暴露面管理问题。</dd>
+  </dl>
+</div>
+
+<h2><span class="n">04</span>我引入的改动：净改善，但有 3 组组合变差</h2>
+
+<div class="card own">
+  <div class="chead">
+    <span class="badge own">REGRESSION</span>
+    <span class="ctitle">L1 · 响应式改动整体压低了顶栏，但 320/360 中文与 414 英文反而高了 32px</span>
+    <span class="badge own">本次会话引入</span>
+  </div>
+
+  <div class="note">
+    <strong>这一条我先给出了错误结论，特此更正。</strong>
+    基于「上一轮记录的 166px 基线」与「320px 实测 198px」的对比，我最初判定为「顶栏由 166px 长到 198px」。
+    随后把 <code>0f091faa~1</code>（改动前）与 <code>0f091faa</code>（改动后）的样式表并排托管、
+    在 10 个宽度 × 中英双语下逐一对测，结论完全不同：<b>20 组里有 15 组顶栏变矮</b>，只有 3 组变高。
+    上一轮记录里的 187px / 234px 是<b>英文</b>读数，我误当成中文读数去比，才得出「净变高」的结论。
+  </div>
+
+  <dl class="row">
+    <dt>权威对比</dt>
+    <dd>
+      <table>
+        <thead><tr><th>宽度</th><th>语言</th><th>改动前</th><th>改动后</th><th>差值</th><th>横向溢出</th></tr></thead>
+        <tbody>
+          <tr><td class="num">320</td><td>zh</td><td class="num">166px / 5 行</td><td class="num fail">198px / 8 行</td><td class="num fail">+32px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">320</td><td>en</td><td class="num">241px / 8 行</td><td class="num pass">235px / 8 行</td><td class="num pass">−6px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">360</td><td>zh</td><td class="num">166px / 5 行</td><td class="num fail">198px / 8 行</td><td class="num fail">+32px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">360</td><td>en</td><td class="num">206px / 8 行</td><td class="num pass">198px / 8 行</td><td class="num pass">−8px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">390</td><td>zh</td><td class="num">165px / 5 行</td><td class="num pass">158px / 6 行</td><td class="num pass">−7px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">390</td><td>en</td><td class="num">201px / 6 行</td><td class="num pass">198px / 8 行</td><td class="num pass">−3px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">414</td><td>zh</td><td class="num">165px / 5 行</td><td class="num pass">123px / 6 行</td><td class="num pass">−42px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">414</td><td>en</td><td class="num">166px / 5 行</td><td class="num fail">198px / 8 行</td><td class="num fail">+32px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">600</td><td>zh / en</td><td class="num">130 / 130px</td><td class="num pass">89 / 125px</td><td class="num pass">−41 / −5px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">768</td><td>zh / en</td><td class="num">153 / 153px</td><td class="num pass">96 / 131px</td><td class="num pass">−57 / −22px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">1024</td><td>zh / en</td><td class="num">110 / 150px</td><td class="num pass">96 / 96px</td><td class="num pass">−14 / −54px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">1180</td><td>zh / en</td><td class="num">118 / 118px</td><td class="num pass">101 / 106px</td><td class="num pass">−17 / −12px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">1280</td><td>zh / en</td><td class="num">118 / 118px</td><td class="num pass">72 / 72px</td><td class="num pass">−46 / −46px</td><td class="num pass">0</td></tr>
+          <tr><td class="num">1440</td><td>zh / en</td><td class="num">72 / 118px</td><td class="num">72 / 72px</td><td class="num pass">0 / −46px</td><td class="num pass">0</td></tr>
+        </tbody>
+      </table>
+      <p class="lede" style="margin-top:12px">
+        <b>净结论：改善 15 组，退化 3 组，持平 2 组。</b>
+        最大改善是 768px 中文下的 −57px，以及修掉了 1181–1280 区间原先 50px 的粘性遮挡。
+        退化的 3 组全部是 +32px（恰好两行控件），集中在 320 / 360 中文与 414 英文。
+      </p>
+    </dd>
+
+    <dt>副作用</dt>
+    <dd>
+      上一轮改动的设计目标是「换取高度确定性」，代价是顶栏高度开始<b>明显依赖语言</b>——因为中英文标签宽度不同，
+      换行行数随之变化。这一点改动前后都存在，但出现的位置被移动了：
+      <ul>
+        <li><b>改动前</b>语言差异最大处：320px（zh 166 vs en 241，差 <b>75px</b>）、1024px（110 vs 150，差 40px）</li>
+        <li><b>改动后</b>语言差异最大处：414px（zh 123 vs en 198，差 <b>75px</b>）、320px（198 vs 235，差 37px）</li>
+      </ul>
+      最好的情况下最差组合仍达 <b>235px（320×640 视口的 37%）</b>，这种「同一份界面在不同语言下高度差 75px」
+      本身就是一个应当收敛的问题，而不是我这次能顺手解决的。
+    </dd>
+
+    <dt>为什么当初选择换行</dt>
+    <dd>上一轮实测：11 个控件自然宽约 924px，而前两个（语言 + 版本下拉）就占 <b>291px</b>——
+        360px 上若用「单行 + 横向滚动」，只会露出这两个下拉，把撤销/新建/导入/示例/分享全推出屏幕。
+        用 <code>order</code> 把按钮提前可以修正视觉顺序，但会<b>破坏 DOM 与焦点顺序（WCAG 2.4.3）</b>，因此否决。</dd>
+
+    <dt>建议</dt>
+    <dd>三种方向，取舍不同，需要你定：
+      <ul>
+        <li><b>收起为图标 / 溢出菜单</b>（推荐）：小屏下把语言 / 版本 / 主题收进一个「⋯」菜单，主操作保留图标按钮。
+            顶栏可回到 2 行以内，并顺带消掉语言差异——需要新增少量 CSS 与一个弹出菜单。</li>
+        <li><b>高度封顶</b>：给 <code>.topbar-controls</code> 设 <code>max-height</code> 并让多余控件横向滚动，
+            即「换行 + 滚动」折中，保证顶栏高度有上界。</li>
+        <li><b>恢复单行滚动</b>：需同时把语言 / 版本下拉收窄到合计 ≲180px（实测 291px 是爆宽主因），
+            否则仍会把主要动作挤出屏幕。</li>
+      </ul>
+    </dd>
+  </dl>
+</div>
+
+<h2><span class="n">05</span>低优先项</h2>
+
+<table>
+  <thead><tr><th>#</th><th>问题</th><th>实测证据</th><th>归属</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="num">L2</td>
+      <td><b>暗色主题「路径提示」4.18:1</b>，略低于 AA 4.5:1（其余暗色文本均合格）</td>
+      <td class="num">rgb(74,163,162) on rgb(54,53,32)</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L3</td>
+      <td><b><code>theme-color</code> 硬编码奶油色</b>，切换暗色主题后不更新，移动端地址栏仍为浅色</td>
+      <td class="num">index.html:11 / prices.html:11 写死 #f4f0e6；JS 无任何 theme-color 处理</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L4</td>
+      <td><b>分享元数据不全</b>：无 <code>og:image</code>、无 <code>apple-touch-icon</code>，
+          manifest 只声明了 SVG 图标（<code>sizes:"any"</code>，无 PNG）</td>
+      <td class="num">og:image 缺失；manifest icons 仅 img/icon.svg</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L5</td>
+      <td><b>无 CSP</b>。GitHub Pages 无法下发响应头，但可用 <code>meta http-equiv</code> 做纵深防御</td>
+      <td class="num">meta CSP 计数 0；已确认无内联 <code>on*</code> 属性（0 处），加 CSP 成本很低</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L6</td>
+      <td><b>表单字段普遍无 <code>&lt;label for&gt;</code></b>，34 个字段仅靠 placeholder；
+          另有 5 个控件无无障碍名（全部处于隐藏态，其中 3 个是对话框内的文本域）</td>
+      <td class="num">34 fields placeholder-only；5 controls，可见性均为 false（0×0）</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L7</td>
+      <td><b>222 个 Tab 停靠点</b>；另 <code>role="tab"</code> 未使用 roving tabindex，
+          未实现方向键导航（完整 APG 模式的一部分）</td>
+      <td class="num">首个 Tab 落点前可达控件数 = 222</td><td>既有</td>
+    </tr>
+    <tr>
+      <td class="num">L8</td>
+      <td><b>价格页无筛选框</b>。价格表可以很长，定位单个条目只能滚动</td>
+      <td class="num">prices.html 无 #search / input[type=search]；36 个字段</td><td>既有</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2><span class="n">06</span>复核中被剔除的误报（探针自身的缺陷）</h2>
+
+<p>
+  下列 4 类结论在第一轮自动扫描中曾被标记为问题，逐条复核后<b>判定为我的探针缺陷</b>，不计入问题清单。
+  列出是为了让你知道哪些曾被怀疑、以及为什么最终否定。
+</p>
+
+<table>
+  <thead><tr><th>曾报出的结论</th><th>复核结果</th><th>探针缺陷</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>.price-table</code> / <code>.entity-empty</code> 是死代码（0 个匹配）</td>
+      <td class="pass"><b>误报</b>。价格页 <code>.price-table</code> = 1；清空实体后 <code>.entity-empty</code> = 1。
+          两者都是条件 / 路由相关渲染。</td>
+      <td>探针只在 <code>index.html</code> 加载态查询一次</td>
+    </tr>
+    <tr>
+      <td><code>.w24</code> 是死代码</td>
+      <td class="pass"><b>误报</b>。由 <code>app.js:2057</code> 在条目行的 NBT 输入框上条件渲染。</td>
+      <td>同上，未覆盖全部渲染分支</td>
+    </tr>
+    <tr>
+      <td>「顶栏背景不透明（alpha=0），内容会透出」× 11 个视口</td>
+      <td class="pass"><b>误报</b>。顶栏是刻意设计的毛玻璃：<code>linear-gradient(rgba(255,252,244,.42), rgba(248,243,232,.34))</code>
+          + <code>backdrop-filter: blur(18px) saturate(1.8)</code>。内容透出是设计意图，不是缺陷。</td>
+      <td>只读了 <code>backgroundColor</code>，未读 <code>background-image</code> 与 <code>backdrop-filter</code></td>
+    </tr>
+    <tr>
+      <td>「50+ 个控件无无障碍名」</td>
+      <td class="pass"><b>误报</b>。修正后仅 5 个（见 L6），且全部为隐藏元素。顶栏各按钮均有可访问名。</td>
+      <td>取可访问名的函数漏了 <code>textContent</code> 分支</td>
+    </tr>
+    <tr>
+      <td>「暗色主题 6 个文本角色对比度不足」</td>
+      <td class="pass"><b>误报</b>。该轮把主题切反了（<code>colorScheme=dark</code> 下应用默认就是暗色，
+          再点切换反而回到浅色），量的其实是浅色主题。修正后暗色主题仅「路径提示」不达标。</td>
+      <td>未先读取当前主题就执行切换</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2><span class="n">07</span>结论与建议顺序</h2>
+
+<p>
+  总体判断：这个编辑器的工程质量是扎实的——零依赖离线可用、双主题、i18n 无缺项（<code>data.js</code> 的
+  <code>zh</code>/<code>en</code> 配对完整）、<b>39 个输入框注入 HTML 载荷后全部正确转义（无 HTML 注入）</b>、
+  能从损坏的 <code>localStorage</code> 状态块中恢复、无重复 <code>id</code>、无未捕获异常、无控制台错误、
+  各视口横向溢出恒为 0。问题集中在<b>无障碍的收尾</b>与<b>一处配色决策</b>上，而不是架构层面。
+</p>
+
+<h3>建议的修复顺序</h3>
+<table>
+  <thead><tr><th>顺序</th><th>内容</th><th>改动量</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td>H3 文件列表可聚焦</td><td class="num">小</td>
+        <td>唯一的「功能被完全阻断」类问题，改动局部（<code>app.js:624</code> 标签名 + 一个 keydown），收益最大</td></tr>
+    <tr><td class="num">2</td><td>H2 <code>aria-selected</code> 同步 + M3 补 tabpanel 关联</td><td class="num">小</td>
+        <td>同一个函数、同一组 DOM 属性，一次改完；零视觉风险</td></tr>
+    <tr><td class="num">3</td><td>M1 补 <code>select/input/textarea</code> 焦点样式</td><td class="num">极小</td>
+        <td>一处选择器列表</td></tr>
+    <tr><td class="num">4</td><td>M5 补暗色主题 <code>.item-adv</code> 背景</td><td class="num">极小</td>
+        <td>一行，修掉比浅色主题更差的反常现象</td></tr>
+    <tr><td class="num">5</td><td>M6 从 <code>build.mjs</code> 移除 <code>README.md</code></td><td class="num">极小</td>
+        <td>一行，减少信息暴露面</td></tr>
+    <tr><td class="num">6</td><td>M2 加 <code>aria-live</code> / M4 加 <code>beforeunload</code></td><td class="num">小</td>
+        <td>提升关键反馈的可达性</td></tr>
+    <tr><td class="num">7</td><td><b>H1 配色</b>（罩层 + <code>--muted</code>）</td><td class="num">中</td>
+        <td>影响面最大，但属设计取向取舍，建议单独一轮专注处理并提供前后对比</td></tr>
+    <tr><td class="num">8</td><td>L1 移动端顶栏（我引入的 3 组退化）</td><td class="num">中</td>
+        <td>需先定方向（图标收起 / 高度封顶 / 恢复滚动）；顺带可收敛「高度随语言变化」这个老问题</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>关于是否直接动手改：</strong>第 1–6 项都是纯无障碍/构建修正，无视觉副作用，可以立即执行并提交。
+  第 7 项（配色）与第 8 项（顶栏方案）涉及视觉决策，建议你选定方向后我再改——
+  尤其 H1 需要你在「保留毛玻璃质感」与「文字可读性」之间做取舍。
+</div>
+
+<h2><span class="n">08</span>附录：测量方法</h2>
+
+<div class="cols">
+  <div>
+    <h3>覆盖范围</h3>
+    <ul>
+      <li>页面：<code>index.html</code>、<code>prices.html</code></li>
+      <li>环境：本地 <code>dist/</code>（<code>npm run build</code> 产物，15 文件 / 422,363 B）
+          与线上 <code>https://wikkd.github.io/CS2-Box/</code>（全新浏览器 profile，无 SW 缓存）</li>
+      <li>视口：320×640 至 2560×1440 共 11 组，横竖屏混合</li>
+      <li>主题：奶油（默认）与暗色，两套独立测量</li>
+      <li>浏览器：Chromium（Playwright 1.63.0，项目 devDependency）</li>
+    </ul>
+
+    <h3>对比度的像素法</h3>
+    <p>
+      第一版用「逐级合成祖先背景色 alpha」计算，结果系统性<b>偏乐观</b>——因为它看不见
+      <code>background-image</code>。改为：
+    </p>
+    <ol>
+      <li><code>scrollIntoViewIfNeeded()</code> 确保元素在视口内；</li>
+      <li>取元素包围盒，<code>page.screenshot({clip})</code> 截取真实渲染像素；</li>
+      <li>自写 PNG 解码（<code>zlib.inflateSync</code> + 反过滤），计算每像素相对亮度；</li>
+      <li>取<b>亮度中位数</b>作为有效背景色（文字像素是少数，中位数落在背景上）；</li>
+      <li>与计算样式的 <code>color</code> 求 WCAG 对比度。</li>
+    </ol>
+    <p>
+      该方法把 H1 从「3.30:1 不达标」修正为「1.98–3.59:1 严重不达标」，并且解释了原因——
+      背景是橙色照片而非奶油色。
+    </p>
+  </div>
+  <div>
+    <h3>对照实验</h3>
+    <p>
+      为排除「本次会话新增的动效层影响测量」，对同一组元素做了禁用全部
+      <code>animation</code> / <code>transition</code> / <code>backdrop-filter</code> 的对照复测：
+    </p>
+<pre><code>control (all animation/transition/blur disabled):
+  muted:   #8b8374
+  versionNote:  rgb(139, 131, 116)
+  foot:         rgb(139, 131, 116)
+  brandP:       rgb(139, 131, 116)
+  pathHint:     rgb(36, 143, 142)
+  opacityOfVersionNote: 1
+  transformOfVersionNote: none</code></pre>
+    <p>与未禁用时完全一致，确认 H1 与动效层无关。</p>
+
+    <h3>前后对测（A/B）</h3>
+    <p>
+      为判断「顶栏高度变化」到底是我引入的回归还是改善，做了严格的同环境对测：
+    </p>
+    <ol>
+      <li>把 <code>dist/</code> 复制两份；</li>
+      <li>用 <code>git show 0f091faa~1:box-editor/css/style.css</code> 取出改动前的样式表，覆盖其中一份；
+          打印两者行数（<b>2942</b> vs <b>3146</b>）确认确实不同；</li>
+      <li>两份都以 <code>file://</code> 打开，在 10 个宽度 × 中英双语下各量一次顶栏高度与横向溢出。</li>
+    </ol>
+    <div class="note" style="margin-top:12px">
+      <strong>踩到一个 Windows 陷阱，导致第一次 A/B 结果全为「0px 差异」：</strong>
+      Node 的 <code>execSync</code> 在 Windows 上经由 <code>cmd.exe</code> 执行，而在 cmd 里
+      <code>^</code> 是转义字符——我写的 <code>0f091faa^</code> 被吃成 <code>0f091faa</code>，
+      于是「旧版」取回的其实是新版自身，两份产物完全一样，看起来就像「改动毫无影响」。
+      改用 <code>0f091faa~1</code> 后即得到真实差异。任何在 Windows 上通过 <code>execSync</code>
+      调用 git 的地方都要避开 <code>^</code>。
+    </div>
+
+    <h3>其他验证手段</h3>
+    <ul>
+      <li>焦点环：清空焦点后逐次 <code>Tab</code>，记录每个停靠点的
+          <code>matches(':focus-visible')</code>、<code>outline-*</code>、<code>box-shadow</code></li>
+      <li>键盘可达性：对可疑元素调用 <code>el.focus()</code> 后比对 <code>document.activeElement</code></li>
+      <li>HTML 注入：向 39 个可见文本输入逐个注入
+          <code>&lt;img src=x onerror="window.__pwned=1"&gt;</code>，触发 <code>input</code>/<code>change</code>，
+          再检查全局标记与游离 <code>&lt;img&gt;</code></li>
+      <li>健壮性：注入损坏的 <code>localStorage</code> 状态块、未知 <code>#fragment</code>、<code>localStorage</code> 配额耗尽</li>
+      <li>粘性遮挡：先 <code>scrollTo</code> 使栏位真正吸附，再用两个 <code>requestAnimationFrame</code> 等布局稳定后测量</li>
+    </ul>
+
+    <h3>未发现问题（通过项）</h3>
+    <ul>
+      <li>两个页面均无未捕获异常、无控制台错误、无 4xx/5xx 请求</li>
+      <li>无重复 <code>id</code>、无内联 <code>on*</code> 事件属性</li>
+      <li>HTML 注入载荷全部被正确转义（39 个字段）</li>
+      <li>损坏的 <code>localStorage</code> 可自动恢复</li>
+      <li><code>documentElement.lang</code> 随语言切换正确更新（<code>i18n.js:711</code>）</li>
+      <li><code>data.js</code> 的 <code>zh</code>/<code>en</code> 配对完整，无缺失翻译</li>
+      <li>页面恰有 1 个 <code>&lt;h1&gt;</code>，标题层级无跳级</li>
+      <li>11 个视口横向溢出均为 0；粘性栏与顶栏间距恒为 8.1px，无遮挡</li>
+      <li>焦点环在 <code>.btn</code> / <code>.tab</code> / <code>summary</code> 上正常渲染（<code>2px solid</code>）</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  审计报告 · CS2-Box box-editor · 基准提交 <code>0f091faa</code> · 2026-09-24<br>
+  所有结论均在本地构建产物与线上生产环境两处独立复现；所有数值均由脚本实测，非人工估算。
+</footer>
+
+</div>
+</body>
+</html>
