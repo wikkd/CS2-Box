@@ -2681,3 +2681,262 @@ html[data-theme="dark"] .btn:not(:disabled):hover {
     transform: none !important;
   }
 }
+
+/* =====================================================================
+ * Motion layer II — choreography.
+ *
+ * Layer I gave every control one timing scale and one light model. This layer
+ * gives the *page* a sense of sequence: things arrive in a deliberate order,
+ * state changes animate the thing that actually changed, and the surfaces that
+ * have been on screen for a while keep a low-amplitude sign of life.
+ *
+ * Still purely additive — no markup, no JS, no palette change. Every new
+ * animation is either triggered by a class/attribute app.js already toggles
+ * (`.active`, `[hidden]`, `.collapsed`, `[open]`, `.json-sync`, `.show`) or by
+ * DOM insertion that already happens. Nothing here needs a new hook.
+ *
+ * Budget rule: only `opacity` / `transform` for entrances (compositor-only, no
+ * layout), and continuous ambient motion is capped at two small elements that
+ * are otherwise dead pixels (the entity empty-state, the rarity badge).
+ * ===================================================================== */
+
+:root {
+  --dur-4: 460ms;                              /* first-paint surfaces */
+  --stagger: 38ms;                             /* one step of a cascade */
+  --topbar-cast: rgba(90, 80, 60, .22);        /* shadow cast under the bar */
+}
+html[data-theme="dark"] {
+  --topbar-cast: rgba(0, 0, 0, .5);
+}
+
+/* ---------- 1. first paint: the page assembles itself ---------- */
+/* Order is left → form → right, then top-to-bottom inside the form, so the eye
+   is led through the layout once instead of meeting four panels at once.
+   renderAll() only runs on structural events (load, undo/redo, file switch,
+   language, import) — never on keystrokes — so this never replays mid-typing. */
+@keyframes bar-drop-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes rail-left-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes rail-right-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.topbar  { animation: bar-drop-in  var(--dur-3) var(--ease-out) backwards; }
+.filebar { animation: rail-left-in var(--dur-4) var(--ease-out) var(--stagger) backwards; }
+.right   { animation: rail-right-in var(--dur-4) var(--ease-out) calc(var(--stagger) * 2) backwards; }
+
+#form-root > * { animation: rise-in var(--dur-4) var(--ease-out) backwards; }
+#form-root > *:nth-child(1) { animation-delay: calc(var(--stagger) * 3); }
+#form-root > *:nth-child(2) { animation-delay: calc(var(--stagger) * 4); }
+#form-root > *:nth-child(3) { animation-delay: calc(var(--stagger) * 5); }
+#form-root > *:nth-child(4) { animation-delay: calc(var(--stagger) * 6); }
+#form-root > *:nth-child(5) { animation-delay: calc(var(--stagger) * 7); }
+#form-root > *:nth-child(n+6) { animation-delay: calc(var(--stagger) * 8); }
+
+#file-list .file-item { animation: rise-in var(--dur-3) var(--ease-out) backwards; }
+#file-list .file-item:nth-child(1) { animation-delay: calc(var(--stagger) * 3); }
+#file-list .file-item:nth-child(2) { animation-delay: calc(var(--stagger) * 4); }
+#file-list .file-item:nth-child(3) { animation-delay: calc(var(--stagger) * 5); }
+#file-list .file-item:nth-child(n+4) { animation-delay: calc(var(--stagger) * 6); }
+
+/* Drop-entity rows: the list is regenerated on every add/remove, so each edit
+   reads as "the row arrived" instead of an unexplained snap. */
+#entity-rows .entity-row { animation: rise-in var(--dur-2) var(--ease-out) backwards; }
+#entity-rows .entity-row:nth-child(1) { animation-delay: 0ms; }
+#entity-rows .entity-row:nth-child(2) { animation-delay: var(--stagger); }
+#entity-rows .entity-row:nth-child(n+3) { animation-delay: calc(var(--stagger) * 2); }
+
+/* ---------- 2. tabs: the indicator travels ---------- */
+/* .tab had background/text transitions but nothing that read as "this one is
+   selected". `position: relative` is safe here — no tab holds positioned
+   children of its own. */
+.tab { position: relative; }
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 9px; right: 9px; bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
+}
+.tab.active::after { transform: scaleX(1); opacity: 1; }
+
+/* ---------- 3. preview views: the new panel settles down ---------- */
+/* #prob-panel / #sim-panel are display-toggled through the `hidden` attribute,
+   and a display change cannot be transitioned — @starting-style is the modern
+   hook for exactly that, giving the incoming panel a from-state. Browsers
+   without it simply show the panel instantly. */
+#prob-panel,
+#sim-panel {
+  transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out);
+}
+@starting-style {
+  #prob-panel:not([hidden]),
+  #sim-panel:not([hidden]) {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---------- 4. collapsing a card now animates both directions ---------- */
+/* `.card.collapsed .col-body { display: none }` is the existing mechanism; the
+   caret gets a spring rotation, and @starting-style animates the body back in
+   when the card is displayed again. (Collapse itself still snaps — there is no
+   exit hook without JS, and matching the open animation is not worth a
+   markup change.) */
+.col-caret {
+  transition: transform var(--dur-2) var(--ease-spring), color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+.col-body {
+  transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+}
+@starting-style {
+  .card:not(.collapsed) .col-body {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* ---------- 5. grade cards open as drawers, not as jumps ---------- */
+/* <details> only gained an animatable content box recently; where it is not
+   supported the whole rule is dropped and the native instant toggle remains,
+   so this cannot regress the panel. */
+.grade-card { interpolate-size: allow-keywords; }
+.grade-card::details-content {
+  block-size: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    block-size var(--dur-3) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out),
+    content-visibility var(--dur-3) allow-discrete;
+}
+.grade-card[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+/* ---------- 6. ambient life, capped at two elements ---------- */
+/* The empty drop-entity state is dead pixels that are asking for input: a slow
+   sheen crossing a dashed box says "write something here" without a spinner. */
+.entity-empty { position: relative; overflow: hidden; }
+.entity-empty::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 34%,
+    color-mix(in srgb, currentColor 26%, transparent) 50%, transparent 66%);
+  transform: translateX(-100%);
+  animation: empty-sheen 3.8s var(--ease-out) infinite;
+}
+@keyframes empty-sheen {
+  0%, 55% { transform: translateX(-100%); }
+  100%    { transform: translateX(100%); }
+}
+
+/* Rarity badges breathe. Driven through background-position rather than a
+   pseudo-element overlay, so the label never gets washed out by its own
+   highlight, and currentColor keeps all five grades × both themes in one rule.
+   Higher grades sweep faster — the shimmer itself carries the rarity. */
+.grade-badge {
+  background-image: linear-gradient(100deg, transparent 32%,
+    color-mix(in srgb, currentColor 46%, transparent) 50%, transparent 68%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: badge-sheen 4.6s var(--ease-out) infinite;
+}
+@keyframes badge-sheen {
+  0%, 58% { background-position: 190% 0; }
+  100%    { background-position: -90% 0; }
+}
+.grade-badge.g4 { animation-duration: 3.4s; }
+.grade-badge.g5 { animation-duration: 2.4s; }
+
+/* ---------- 7. toast: it springs in and shows its own remaining time ---------- */
+/* The bar runs for exactly the 3200ms app.js keeps the toast on screen, so it
+   reads as a countdown rather than decoration. Note the base rule centres the
+   toast with translateX(-50%) — every transform here has to carry it. */
+.toast { overflow: hidden; }
+@keyframes toast-pop {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1); }
+}
+.toast.show { animation: toast-pop var(--dur-2) var(--ease-spring) both; }
+@keyframes toast-timer {
+  from { width: 100%; }
+  to   { width: 0; }
+}
+.toast.show::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  animation: toast-timer 3.2s linear both;
+}
+.toast.error.show::after { background: var(--err); }
+
+/* ---------- 8. dialogs: the body cascades in behind the frame ---------- */
+@keyframes dlg-row-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
+.dlg[open] > * { animation: dlg-row-in var(--dur-2) var(--ease-out) backwards; }
+.dlg[open] > *:nth-child(1) { animation-delay: 30ms; }
+.dlg[open] > *:nth-child(2) { animation-delay: 70ms; }
+.dlg[open] > *:nth-child(3) { animation-delay: 110ms; }
+.dlg[open] > *:nth-child(n+4) { animation-delay: 150ms; }
+
+/* ---------- 9. JSON preview: a re-sync is visible, not silent ---------- */
+/* app.js removes `.json-sync`, forces a reflow, then re-adds it — so this
+   restarts on every actual content change (and only then). */
+@keyframes preview-sync-pulse {
+  from { opacity: .55; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+.json-preview.json-sync { animation: preview-sync-pulse var(--dur-3) var(--ease-out); }
+
+/* ---------- 10. scrolling: the bar casts a shadow once you have moved ---------- */
+/* Scroll-driven and only ever animating opacity, so it stays off the main
+   thread. Deliberately excluded from `reduce` — a scroll-linked animation
+   ignores animation-duration, so the global reduce guard could not neutralise
+   it; the media query below has to do that job instead. */
+.topbar::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  height: 16px;
+  background: linear-gradient(180deg, var(--topbar-cast), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    @keyframes topbar-cast-in {
+      to { opacity: 1; }
+    }
+    .topbar::before {
+      animation: topbar-cast-in linear both;
+      animation-timeline: scroll();
+      animation-range: 0 200px;
+    }
+  }
+}
