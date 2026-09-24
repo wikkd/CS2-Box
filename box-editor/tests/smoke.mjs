@@ -168,6 +168,38 @@ try {
   check('entity input offers vanilla mob dropdown',
     entityListAttr === 'csbox-entity-list' && entityOptionCount >= 70, 'options=' + entityOptionCount);
 
+  // Entity row add / remove. Regression guard: both handlers used to call
+  // rebuildMeta() instead of rebuildDrop(), so the entity row was mutated in
+  // state but never re-rendered — the buttons looked dead, and an export then
+  // carried rows the user could not see. The list must also be drainable to
+  // zero (model.js omits `entity` entirely when no row is filled in).
+  const entityRowCount = () => page.locator('#entity-rows .entity-row').count();
+  const entityBase = await entityRowCount();
+  check('entity list renders its rows', entityBase >= 1, 'rows=' + entityBase);
+  await page.click('[data-action="add-entity"]');
+  await page.waitForTimeout(220);
+  await page.click('[data-action="add-entity"]');
+  await page.waitForTimeout(220);
+  check('add-entity renders the new rows', (await entityRowCount()) === entityBase + 2,
+    'rows=' + await entityRowCount());
+  await page.locator('#entity-rows [data-action="del-entity"]').nth(1).click();
+  await page.waitForTimeout(220);
+  check('del-entity removes exactly the clicked row', (await entityRowCount()) === entityBase + 1,
+    'rows=' + await entityRowCount());
+  let drainGuard = 0;
+  while ((await entityRowCount()) > 0 && drainGuard++ < 10) {
+    await page.locator('#entity-rows [data-action="del-entity"]').first().click();
+    await page.waitForTimeout(220);
+  }
+  check('the last entity row is removable', (await entityRowCount()) === 0,
+    'rows=' + await entityRowCount());
+  check('empty entity list shows a hint instead of blank space',
+    (await page.locator('#entity-rows .entity-empty').count()) === 1);
+  await page.click('[data-action="add-entity"]');
+  await page.waitForTimeout(220);
+  check('add-entity still works from the empty state', (await entityRowCount()) === 1,
+    'rows=' + await entityRowCount());
+
   // TACZ import tutorial dialog
   await page.click('[data-action="tacz-tutorial"]');
   const tutorialOpen = await page.locator('#tutorial-dialog').evaluate((el) => el.open);

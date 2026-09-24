@@ -1424,15 +1424,23 @@
         case 'add-entity': {
           pushHistory();
           state.meta.entity.push({ id: '', rate: '' });
-          rebuildMeta();
+          // The entity rows live in #card-drop, not #card-meta: rebuilding the
+          // wrong card leaves state and DOM out of sync (the row is added to
+          // state but never rendered, and a preview export then carries rows
+          // the user cannot see).
+          rebuildDrop();
+          schedulePreview();
           break;
         }
         case 'del-entity': {
           pushHistory();
           const idx = Number(btn.dataset.index);
-          state.meta.entity.splice(idx, 1);
-          if (!state.meta.entity.length) state.meta.entity.push({ id: '', rate: '' });
-          rebuildMeta();
+          // Emptying the list is a legal state: model.js omits `entity`
+          // entirely when no row is filled in. No auto re-seed, otherwise the
+          // last row looks undeletable.
+          if (idx >= 0 && idx < state.meta.entity.length) state.meta.entity.splice(idx, 1);
+          rebuildDrop();
+          schedulePreview();
           break;
         }
         case 'add-price-key': {
@@ -1808,6 +1816,10 @@
   function rebuildEntityRows() {
     const host = $('#entity-rows');
     if (!host) return;
+    if (!state.meta.entity.length) {
+      host.innerHTML = '<p class="entity-empty">' + esc(t('drop.entityEmpty')) + '</p>';
+      return;
+    }
     host.innerHTML = state.meta.entity.map((row, i) =>
       '<div class="entity-row">' +
       '<input data-help="drop.entityIdHelp" data-f="meta.entity.' + i + '.id" list="csbox-entity-list" value="' + esc(row.id) + '" placeholder="minecraft:zombie" class="grow">' +

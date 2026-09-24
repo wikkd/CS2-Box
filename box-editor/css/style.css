@@ -210,6 +210,16 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 .random-slot input { width: 90px; }
 
 .entity-row { display: flex; gap: 8px; margin: 6px 0; }
+/* Empty state for the entity list — signals "nothing here, add a row" without
+   a stuck blank space. Only theme tokens, so cream / dark both adapt. */
+.entity-empty {
+  margin: 6px 0 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* ---------- grade cards ---------- */
 .grade-card {
