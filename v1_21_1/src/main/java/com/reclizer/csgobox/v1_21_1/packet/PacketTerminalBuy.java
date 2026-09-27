@@ -13,7 +13,7 @@ import com.reclizer.csgobox.v1_21_1.event.TerminalBuyEvent;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
-import com.reclizer.csgobox.v1_21_1.terminal.TerminalRoundData;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
 import com.reclizer.csgobox.v1_21_1.terminal.TerminalSession;
 import com.reclizer.csgobox.v1_21_1.terminal.TerminalSessionManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;

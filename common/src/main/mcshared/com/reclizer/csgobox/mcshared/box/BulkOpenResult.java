@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v1_21_1.box;
+package com.reclizer.csgobox.mcshared.box;
 
 import net.minecraft.world.item.ItemStack;
 

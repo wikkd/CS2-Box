@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v26_2.packet;
 
 import com.reclizer.csgobox.box.NetworkLimits;
+import com.reclizer.csgobox.mcshared.packet.PacketValidation;
 import com.reclizer.csgobox.v26_2.CsgoBox;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;

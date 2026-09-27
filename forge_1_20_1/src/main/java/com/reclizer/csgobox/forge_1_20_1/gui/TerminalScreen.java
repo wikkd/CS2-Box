@@ -9,7 +9,7 @@ import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalOfferRegion;
-import com.reclizer.csgobox.forge_1_20_1.gui.terminal.TerminalOfferItems;
+import com.reclizer.csgobox.mcshared.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.packet.Networking;
 import com.reclizer.csgobox.forge_1_20_1.packet.PacketTerminalBuy;

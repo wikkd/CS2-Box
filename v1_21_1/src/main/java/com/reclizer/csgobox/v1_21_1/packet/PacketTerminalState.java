@@ -3,7 +3,7 @@ package com.reclizer.csgobox.v1_21_1.packet;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.gui.TerminalScreen;
-import com.reclizer.csgobox.v1_21_1.terminal.TerminalRoundData;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
 import com.reclizer.csgobox.v1_21_1.terminal.TerminalSession;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

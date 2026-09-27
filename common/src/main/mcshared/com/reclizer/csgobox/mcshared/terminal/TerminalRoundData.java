@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v26_2.terminal;
+package com.reclizer.csgobox.mcshared.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import net.minecraft.world.item.ItemStack;
@@ -8,7 +8,7 @@ import net.minecraft.world.item.ItemStack;
  * (skin/style/serial/pattern) plus the ACTUAL item granted if the player
  * buys, its box grade and its terminal purchase price in Armory Points.
  * {@code price} is the already-sampled table price (a table range is drawn
- * once in {@link TerminalSession}); unpriced items are never offered (id
+ * once in {@code TerminalSession}); unpriced items are never offered (id
  * entries must be priced or the box refuses to load).
  */
 public record TerminalRoundData(

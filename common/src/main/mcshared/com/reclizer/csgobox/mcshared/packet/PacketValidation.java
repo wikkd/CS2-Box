@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v26_1_2.packet;
+package com.reclizer.csgobox.mcshared.packet;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
@@ -7,24 +7,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 
-final class PacketValidation {
+public final class PacketValidation {
     private PacketValidation() {
     }
 
-    static void requireSameSize(String leftName, List<?> left, String rightName, List<?> right) {
+    public static void requireSameSize(String leftName, List<?> left, String rightName, List<?> right) {
         if (left.size() != right.size()) {
             throw new IllegalArgumentException(leftName + " size " + left.size()
                     + " does not match " + rightName + " size " + right.size());
         }
     }
 
-    static void requireMaxSize(String name, List<?> list, int maxSize) {
+    public static void requireMaxSize(String name, List<?> list, int maxSize) {
         if (list.size() > maxSize) {
             throw new IllegalArgumentException(name + " size " + list.size() + " exceeds max " + maxSize);
         }
     }
 
-    static List<ItemStack> copyStacks(List<ItemStack> stacks) {
+    public static List<ItemStack> copyStacks(List<ItemStack> stacks) {
         if (stacks == null || stacks.isEmpty()) {
             return List.of();
         }
@@ -35,7 +35,7 @@ final class PacketValidation {
         return List.copyOf(copies);
     }
 
-    static List<Integer> copyClampedInts(List<Integer> values, int min, int max, int defaultValue) {
+    public static List<Integer> copyClampedInts(List<Integer> values, int min, int max, int defaultValue) {
         if (values == null || values.isEmpty()) {
             return List.of();
         }
@@ -46,7 +46,7 @@ final class PacketValidation {
         return List.copyOf(copies);
     }
 
-    static List<Integer> copyNonNegativeInts(List<Integer> values) {
+    public static List<Integer> copyNonNegativeInts(List<Integer> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
         }
@@ -57,7 +57,7 @@ final class PacketValidation {
         return List.copyOf(copies);
     }
 
-    static <T> void trimQueue(Queue<T> queue, int maxSize) {
+    public static <T> void trimQueue(Queue<T> queue, int maxSize) {
         while (queue.size() >= maxSize) {
             queue.poll();
         }

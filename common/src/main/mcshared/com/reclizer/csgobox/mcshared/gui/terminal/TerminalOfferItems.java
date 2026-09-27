@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v26_1_2.gui.terminal;
+package com.reclizer.csgobox.mcshared.gui.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.WearPenalty;
@@ -13,7 +13,6 @@ import java.util.Map;
  * and the region-10 slot item; the client never randomizes). Populated from
  * {@code PacketTerminalState} when the screen opens.
  *
- * era: decoupled
  */
 public final class TerminalOfferItems {
 

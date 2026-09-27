@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.wthit;
 
 import com.reclizer.csgobox.v1_21_1.block.ArmoryRecyclerBlock;
+import com.reclizer.csgobox.mcshared.wthit.RecyclerBlockProvider;
 import mcp.mobius.waila.api.IRegistrar;
 import mcp.mobius.waila.api.IWailaPlugin;
 import mcp.mobius.waila.api.TooltipPosition;

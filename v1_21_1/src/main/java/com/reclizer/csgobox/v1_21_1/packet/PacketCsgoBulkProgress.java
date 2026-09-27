@@ -5,7 +5,7 @@ import com.reclizer.csgobox.logic.BoxConstraintTracker;
 import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.v1_21_1.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v1_21_1.box.BulkBoxContext;
-import com.reclizer.csgobox.v1_21_1.box.BulkOpenResult;
+import com.reclizer.csgobox.mcshared.box.BulkOpenResult;
 import com.reclizer.csgobox.box.BoxStripGenerator;
 import com.reclizer.csgobox.box.BoxOdds;
 import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;

@@ -2,7 +2,7 @@ package com.reclizer.csgobox.forge_1_20_1.packet;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
-import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalRoundData;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
 import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSession;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;

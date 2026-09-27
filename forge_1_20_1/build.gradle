@@ -64,6 +64,7 @@ sourceSets.main.resources {
 
 sourceSets.main.java {
     srcDir project(':common').file('src/main/java')
+    srcDir project(':common').file('src/main/mcshared')
 }
 
 tasks.named('processResources', ProcessResources).configure {

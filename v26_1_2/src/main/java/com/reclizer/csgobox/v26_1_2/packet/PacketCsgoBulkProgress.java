@@ -8,7 +8,7 @@ import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.v26_1_2.box.BulkBoxContext;
-import com.reclizer.csgobox.v26_1_2.box.BulkOpenResult;
+import com.reclizer.csgobox.mcshared.box.BulkOpenResult;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxItemResolver;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;

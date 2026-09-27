@@ -13,6 +13,7 @@
 
 ### 变更
 
+- **新增 `common/src/main/mcshared/` 跨时代共享源码根，六平台去重 5 个文件**：`BulkOpenResult` / `PacketValidation` / `TerminalOfferItems` / `TerminalRoundData` 与 wthit `RecyclerBlockProvider` 的六平台副本本就逐字节一致（仅包名不同），下沉为共享源码由各平台 `srcDir` 直编，后续改动不再需要六路手工同步（`PacketValidation` 随共享包化由包私有改为 public，行为不变；`TerminalRoundData` javadoc 的 `{@link TerminalSession}` 改 `{@code}`）。`CsboxClothConfigScreen` 与 wthit `CsgoBoxWthitPlugin` 因引用平台类型（`CsgoBox.CONFIG` / 方块类）暂不下沉，需注入式重构。`scripts/drift-baseline.json` 随之 deliberate refresh——此前基线已落后 HEAD 存量 22 处历史漂移（干净 HEAD worktree 复核确认与本次无关），刷新后门禁 174 个镜像文件 0 回归。
 - **拆解台事件取消面统一（六平台）**：`ArmoryRecycleEvent` 的 `setCanceled` / `isCanceled` 在 `v26_1_2` 改由 `ICancellableEvent` 默认方法提供（删除手写 `canceled` 字段与两个方法）；Forge 四平台的 `MutableEvent` 无对应接口，保留手写状态，六平台对外方法签名保持一致。
 - **终端机开场淡入（`v26_1_2`）**：`TerminalScreen` 新增 10 tick 黑色遮罩淡出（`Easing.smoothstep` + `ColorTools.withAlpha`），与 `v26_2` 的行为对齐。
 - **档位卡片绘制去重（`v26_2`）**：`IconListTools` 抽出 `renderProgressFrame`，`renderItemProgress` 与 `renderItemProgressFocus` 不再各写一份相同的档位卡片绘制（逐参数等价，视觉不变）。

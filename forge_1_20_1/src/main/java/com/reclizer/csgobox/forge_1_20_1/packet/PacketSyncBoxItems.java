@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_1_20_1.packet;
 
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
+import com.reclizer.csgobox.mcshared.packet.PacketValidation;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;

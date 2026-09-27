@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_1_2.gui.terminal;
 
 import com.reclizer.csgobox.box.PriceTableRegistry;
+import com.reclizer.csgobox.mcshared.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.box.QuoteCaps;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalAnims;

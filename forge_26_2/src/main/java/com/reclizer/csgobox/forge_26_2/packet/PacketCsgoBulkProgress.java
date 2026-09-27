@@ -5,7 +5,7 @@ import com.reclizer.csgobox.logic.BoxConstraintTracker;
 import com.reclizer.csgobox.logic.GradeMapCache;
 import com.reclizer.csgobox.forge_26_2.advancement.OpenedBoxTrigger;
 import com.reclizer.csgobox.forge_26_2.box.BulkBoxContext;
-import com.reclizer.csgobox.forge_26_2.box.BulkOpenResult;
+import com.reclizer.csgobox.mcshared.box.BulkOpenResult;
 import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_26_2.box.BoxItemResolver;
 import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;

@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_2.gui.terminal;
 
 import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.mcshared.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.forge_26_2.utils.AnimRenderOps;

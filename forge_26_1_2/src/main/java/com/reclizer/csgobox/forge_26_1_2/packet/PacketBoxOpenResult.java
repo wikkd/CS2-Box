@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_26_1_2.packet;
 
 import com.reclizer.csgobox.logic.AnimationStrip;
+import com.reclizer.csgobox.mcshared.packet.PacketValidation;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;

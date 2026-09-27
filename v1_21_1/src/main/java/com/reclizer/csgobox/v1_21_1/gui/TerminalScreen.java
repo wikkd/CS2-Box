@@ -9,7 +9,7 @@ import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalOfferRegion;
-import com.reclizer.csgobox.v1_21_1.gui.terminal.TerminalOfferItems;
+import com.reclizer.csgobox.mcshared.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalBuy;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalBuyResult;
 import com.reclizer.csgobox.v1_21_1.packet.PacketTerminalClose;

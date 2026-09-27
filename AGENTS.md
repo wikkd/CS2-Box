@@ -36,6 +36,7 @@
 
 - **`common/` 不得 import 任何 `net.minecraft.*` / `net.neoforged.*`**（编译环境无 MC classpath，违反即编译失败）。共享资源（纹理/音效/lang/配方/成就）也放在 `common/src/main/resources/`。该约束由 `:common:checkCommonArchitecture` Gradle task 自动化执行（挂载在 `compileJava` 依赖上，任何编译/测试都会触发，含 forge_26_1_2 把 common 源码编进自身 classpath 的场景）。
 - 平台模块通过 `srcDir project(':common').file('src/main/resources')` 共享资源。
+- **`common/src/main/mcshared/`（2026-09-27 新增）— 跨时代共享的 MC 绑定源码根**：六平台经 `srcDir project(':common').file('src/main/mcshared')` 直编，存放六平台**逐字节一致**（包名归一化后哈希相同）、只依赖 1.20.1~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）的类。当前 5 个：`mcshared/box/BulkOpenResult`、`mcshared/packet/PacketValidation`（原包私有，已改 public）、`mcshared/gui/terminal/TerminalOfferItems`、`mcshared/terminal/TerminalRoundData`、`mcshared/wthit/RecyclerBlockProvider`。该目录**合法 import MC**，`checkCommonArchitecture` 只扫 `src/main/java`/`src/test/java`、不覆盖它；`check-platform-drift.py` 两个家族中这些文件已随之消失。**下沉新文件前必须先验证六平台副本归一化哈希一致**；已知暂不可下沉：`config/CsboxClothConfigScreen`（引用平台 `CsgoBox.CONFIG`，ConfigSpec 类型跨 loader 不同，需注入式重构）与 `wthit/CsgoBoxWthitPlugin`（引用平台方块类）。
 - 依赖方向：`平台 → common`，`common` 不依赖任何平台。
 - **`premium_supply_box` / `ItemPremiumBox` 永久移除（2026-08-19）**：该「军火商高级箱」物品已从代码、资源、配置与全部文档中彻底删除，**禁止以任何形式再次引入**（含历史条目复活）。`forge_26_1_2` / `forge_26_2` 的 `PlatformSmokeTest` 含反向守卫（`premiumBoxItemIsPermanentlyRemoved`）断言该字段永不回归，新增字段/资源/交易时勿再使用该命名。
 
@@ -125,7 +126,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `docs/SHADER-COMPAT.md` / `docs/DESIGN-jade-wthit-integration.md` / `docs/DESIGN-rarity-mapping.md` / `docs/DESIGN-terminal-protocol.md` — 批次 B 与立项待办的设计/兼容文档（Jade/WTHIT 待联网接线，RFC 与终端机协议待评审）
 - `utils/IconListTools.java` — 2D 物品网格（26.x/1.21.8+ 有 per-item bounding box 居中；渲染原语已委托 AnimRenderOps）
 - `utils/GuiItemMove.java` — 3D 拖拽预览（`renderRotAngleX/Y` 纯数学保留，渲染委托 `AnimRenderOps.renderItem3D`）
-- `utils/ButtonPalette.java`（v26_1_2 / v26_2）— 按钮调色板常量（CLOSE 等），Forge 侧未移植
+- `utils/ButtonPalette.java`（v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 / forge_1_20_1）— 按钮调色板常量（CLOSE 等），仅 v1_21_1 未采用
 - `utils/HudVisibility.java`（v26_2 / forge_26_2）— 26.2 无 `Options.hideGui`，用 `Minecraft.gui.hud.toggle()/isHidden()` 包装
 - `common/utils/` — `ColorTools` / `OverlayColor`（三档 token：surface/panel/divider）/ `GuiRegion`（容器化布局）/ `EntityChineseMap`
 - `advancement/OpenedBoxTrigger.java` — `csgobox:opened_box` trigger + `Stats.CUSTOM` 累加
@@ -144,12 +145,12 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`
 
-### 平台 Java 文件差异矩阵（2026-09-17 刷新：v2.0.2 体检批次后，文件数同步当前树）
+### 平台 Java 文件差异矩阵（2026-09-27 刷新：ButtonPalette 行修正 + mcshared 下沉去重后文件数重数，同步当前树）
 
 | 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
 |------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|
 | TACZ compat (2 文件) | ✅ | — | — | — | — | ✅ |
-| `ButtonPalette` | — | ✅ | ✅ | — | — | ✅ |
+| `ButtonPalette` | — | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `HudVisibility` | — | — | ✅ | — | ✅ | — |
 | JEI (4 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | REI (3 文件) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
@@ -160,12 +161,12 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
 | Create 集成 | 4 文件 | ❌ | ❌ | — | — | 4 文件 |
-| **文件数** | **108** | **98** | **99** | **86** | **87** | **109** |
+| **文件数** | **103** | **93** | **94** | **81** | **82** | **104** |
 
 - **刷新纪律**：文件数格子易过期（上一次「刷新」只改了标题没改数字），改矩阵必须实际 `find <module>/src/main/java -name '*.java' | wc -l` 重数后再填。
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）与 `forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
-- ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 侧未移植（非功能阻塞）
+- ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 三平台已同步移植（forge_1_20_1 亦接入），仅 `v1_21_1` 未采用（非功能阻塞）
 - JEI：NeoForge 3 平台已同步；`forge_1_20_1` 已接入（JEI 15.x，`mods.toml` 可选依赖 `[15.20,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
 - REI：`v1_21_1`（16.x）/`v26_1_2`（26.1.x）/`v26_2`（26.2.x）NeoForge 已同步——`@REIPluginClient` + 动态显示生成器（`/csbox reload` / 文件热重载后无需手动刷新），`forge_1_20_1` 已接入（REI 12.x，`mods.toml` 可选依赖 `[12.0,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（与 JEI 同策略，暂不接入）
 - Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）。**Forge 三平台已补齐全量定义同步**（`PacketSyncBoxDefinitions`，`sync_box_definitions`：玩家加入 / `/csbox reload` / 文件热重载时服务端广播整份 `BoxRegistry`，客户端 `clear + register` 覆盖，`forge_1_20_1` 同时刷新 JEI），与 NeoForge 三平台架构对齐——专用服务器下客户端定义内容（权重/价格/物品清单/JEI 概率）始终以服务端为准

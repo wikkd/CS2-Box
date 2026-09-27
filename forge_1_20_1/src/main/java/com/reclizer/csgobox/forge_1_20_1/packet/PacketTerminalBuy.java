@@ -12,7 +12,7 @@ import com.reclizer.csgobox.forge_1_20_1.box.BoxRegistry;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.item.ItemTerminal;
 import com.reclizer.csgobox.forge_1_20_1.item.ModItems;
-import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalRoundData;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
 import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSession;
 import com.reclizer.csgobox.forge_1_20_1.terminal.TerminalSessionManager;
 import net.minecraft.nbt.CompoundTag;

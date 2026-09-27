@@ -11,7 +11,7 @@ import com.reclizer.csgobox.v26_2.gui.terminal.TerminalBottomRow;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalChatRegion;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalConfirmDialog;
 import com.reclizer.csgobox.v26_2.gui.terminal.TerminalOfferRegion;
-import com.reclizer.csgobox.v26_2.gui.terminal.TerminalOfferItems;
+import com.reclizer.csgobox.mcshared.gui.terminal.TerminalOfferItems;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuy;
 import com.reclizer.csgobox.v26_2.packet.PacketTerminalBuyResult;

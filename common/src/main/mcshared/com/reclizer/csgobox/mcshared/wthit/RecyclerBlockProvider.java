@@ -1,4 +1,4 @@
-package com.reclizer.csgobox.v1_21_1.wthit;
+package com.reclizer.csgobox.mcshared.wthit;
 
 import mcp.mobius.waila.api.IBlockAccessor;
 import mcp.mobius.waila.api.IBlockComponentProvider;

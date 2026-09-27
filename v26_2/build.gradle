@@ -57,6 +57,7 @@ sourceSets.main.resources {
 
 sourceSets.main.java {
     srcDir project(':common').file('src/main/java')
+    srcDir project(':common').file('src/main/mcshared')
 }
 
 // Multiple srcDirs in sourceSets.main.resources can collide on files like

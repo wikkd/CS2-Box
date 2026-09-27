@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.forge_1_20_1.terminal;
 
 import java.security.SecureRandom;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
 import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.PriceRange;
 import com.reclizer.csgobox.logic.OddsCalculator;
