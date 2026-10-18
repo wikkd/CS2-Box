@@ -43,15 +43,6 @@ public final class ButtonPalette {
             0xFFFFFFFF
     );
 
-    public static final Style DISABLED = new Style(
-            0xFF2A2A33,
-            0xFF2A2A33,
-            0xFF4A4A55,
-            0xFF4A4A55,
-            0xFF8A8A96,
-            0xFF8A8A96
-    );
-
     public static int drawButton(
             GuiGraphics guiGraphics,
             Style style,
