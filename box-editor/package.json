@@ -14,7 +14,8 @@
     "test:model": "node --test tests/model.test.mjs",
     "test:i18n": "node --test tests/i18n.test.mjs",
     "test:esc": "node --test tests/esc.test.mjs",
-    "test": "npm run test:model && npm run test:i18n && npm run test:esc"
+    "test:schema": "node --test tests/schema-drift.test.mjs",
+    "test": "npm run test:model && npm run test:i18n && npm run test:esc && npm run test:schema"
   },
   "engines": {
     "node": ">=18.0.0"

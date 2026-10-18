@@ -215,6 +215,19 @@ try {
   const tipText = (await page.locator('.field-tooltip').textContent()).trim();
   check('hover tooltip shows', tipVisible && tipText.length > 0, tipText.slice(0, 40));
 
+  // Baked official compat-pack templates surface in the examples dialog
+  await page.click('#btn-example');
+  await page.waitForSelector('#example-list .example-group');
+  const compatBtns = await page.locator('#example-list [data-action="load-compat"]').count();
+  check('examples dialog lists the official compat-pack templates',
+    compatBtns === 3 &&
+    ((await page.locator('#example-list .example-group').textContent()) || '').trim().length > 0,
+    'packs=' + compatBtns);
+  await page.click('#example-close');
+  check('read-from-game button wired up',
+    (await page.locator('#btn-read-game').count()) === 1 &&
+    (await page.locator('[data-action="read-game"]').count()) === 1);
+
   await page.selectOption('#version-select', '26.2');
   await page.waitForTimeout(250);
   const variant0 = await page.locator('[data-f$=".variant"]').count();

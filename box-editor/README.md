@@ -8,7 +8,7 @@
   生成 `js/data.js`，保证编辑器校验规则与游戏文档一致）
 - 跟随游戏版本（1.21.1 / 26.1.2 / 26.2 / Forge 26.1.2 / Forge 26.2 / Forge 1.20.1），
   按版本控制 TACZ 变体键与 Data Components / legacy NBT 的可用性
-- 界面中英双语（右上角切换，自动记忆）
+- 界面中英双语（右上角切换，自动记忆；首次访问未选择过时跟随浏览器语言自动选择）
 - 页面背景为随仓库分发的封面图（`img/bg.jpg`，固定铺满）；界面为**奶白色
   毛玻璃**风格（半透明奶白组件 + 背景模糊，透出封面图，保持可读性；
   `file://` 下同样生效）
@@ -34,7 +34,7 @@
 ```bash
 cd box-editor
 
-npm run sync    # 【可选】从 docs/box-schema + docs/examples 重新生成 js/data.js（需 Python 3.9+）
+npm run sync    # 【可选】从 docs/box-schema + docs/examples + compat-packs 重新生成 js/data.js（需 Python 3.9+）
 npm run build   # 零依赖复制静态资源到 box-editor/dist/
 npm start       # 本地部署：http://127.0.0.1:4173/
 ```
@@ -91,7 +91,8 @@ npm start       # 本地部署：http://127.0.0.1:4173/
 ### 悬浮帮助
 
 - 把鼠标移到任意输入框 / 下拉框上，会浮出对应的填写教程（中英文跟随界面语言；
-  键盘 Tab 聚焦同样显示），不用翻文档即可知道每个字段的含义与格式。
+  键盘 Tab 聚焦同样显示），不用翻文档即可知道每个字段的含义与格式；
+  **触屏设备**没有悬停，改为**长按（约半秒）字段弹出提示**，移动手指或点按别处关闭。
 
 ### TACZ 枪械/弹药导入教程（内置）
 
@@ -156,6 +157,10 @@ npm start       # 本地部署：http://127.0.0.1:4173/
 ### 导入 / 迁移 / 导出
 
 - **导入**：选择本地 `.json` 文件，或粘贴 JSON 文本（自动识别箱子 vs 价格表）
+- **从游戏读取**：一键反向来——选择游戏的 `config/csbox` 文件夹，把里面全部
+  箱子 JSON（含终端机）与 `_prices.json` 导入工作区草稿（复用 `#pack=` 导入的
+  去重/冲突询问/损坏文件修复流程；只读访问，文件夹不会被改动；与「应用到游戏」
+  一样仅 Chrome / Edge 等内核浏览器可用）
 - **旧格式导入**（顶部按钮，v2.0.1 前的配置专用入口）：粘贴旧版箱子/终端机
   JSON **无需填写文件名**，也可「选择文件」导入（自动携带文件名）。与普通导入的
   区别是**旧格式识别**：物品行内联 `price` 自动迁移进价格表；**无 `type` 字段且
@@ -169,7 +174,10 @@ npm start       # 本地部署：http://127.0.0.1:4173/
   ——同一物品多处价格按**平均值（四舍五入）**迁移，表中已有价格优先，非法价格
   忽略，并自动从箱子 JSON 中剥离 `price` 字段（与游戏内 `LegacyPriceMigration`
   规则一致）
-- **内置示例**：武器供应商终端、附魔书终端、生存补给终端、TACZ 军火枪械箱
+- **内置示例**：武器供应商终端、附魔书终端、生存补给终端、TACZ 军火枪械箱，
+  另有**官方联动包模板**（同仓库 `compat-packs/`：Apotheosis / Iron's Spells /
+  TACZ 整包，含 `requires`、加权、附魔与 `id#变体` 价格示例），在示例弹窗里
+  一键整包导入
 - **下载**：单独下载当前文件，或一键下载 `xxx.json` + `_prices.json`
 
 ### 版本切换说明
@@ -203,7 +211,8 @@ JSON 结构在六个平台间当前完全一致；版本切换主要影响：
    发布，在仓库设置里把 Pages **Custom domain / path** 配成 `/box-editor`）
 
 > 说明：浏览器在 `file://` 下无法 fetch 外部 JSON Schema 文件，因此本工具把
-> `docs/box-schema/*.schema.json` 与内置示例**内嵌**进 `js/data.js`（生成式），
+> `docs/box-schema/*.schema.json`、内置示例与 `compat-packs/` 联动包模板
+> **内嵌**进 `js/data.js`（生成式），
 > 离线也能完整校验；原始 schema 副本保留在 `box-editor/data/schemas/shared/`
 > 供排查与未来版本化。
 
@@ -215,7 +224,8 @@ JSON 结构在六个平台间当前完全一致；版本切换主要影响：
 
 ## 数据同步
 
-修改了 `docs/box-schema/` 或想更新内置示例后，重新生成内嵌数据：
+修改了 `docs/box-schema/`、内置示例或 `compat-packs/`（联动包模板）后，重新
+生成内嵌数据：
 
 ```bash
 # Windows（仓库推荐 Python 3.12 环境）
@@ -227,7 +237,7 @@ python scripts/sync-box-editor-data.py
 
 脚本会重写：
 
-- `box-editor/js/data.js`（schema + 版本元数据 + 示例）
+- `box-editor/js/data.js`（schema + 版本元数据 + 示例 + compat-packs 联动包模板）
 - `box-editor/data/schemas/shared/*.schema.json`（原始副本）
 
 ## 目录结构
@@ -246,7 +256,7 @@ box-editor/
 ├── css/style.css         # 奶白毛玻璃 + 深色主题层（html[data-theme="dark"] 切换）
 ├── js/
 │   ├── i18n.js           # 中/英字典
-│   ├── data.js           # 【生成】schema + 版本 + 示例 + 物品/实体补全表
+│   ├── data.js           # 【生成】schema + 版本 + 示例 + 联动包 + 物品/实体补全表
 │   ├── model.js          # 数据模型 / 序列化 / 概率 / 模拟器 / 旧版 price 迁移
 │   ├── validator.js      # 轻量校验（跟随运行时规则）
 │   └── app.js            # UI 渲染 / 文件栏 / 事件 / 预览 / 导入导出

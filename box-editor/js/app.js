@@ -330,6 +330,41 @@
       const host = e.target.closest('[data-help]');
       if (host) tooltipHide();
     });
+
+    // Touch: hover does not exist, so a ~450ms press-and-hold shows the tip
+    // (like long-press in native apps). Moving the finger >10px cancels
+    // (scroll intent); tapping anywhere while a tip is up dismisses it.
+    let touchHost = null;
+    let touchX = 0;
+    let touchY = 0;
+    document.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      const host = e.target.closest('[data-help]');
+      if (host) {
+        touchHost = host;
+        touchX = e.clientX;
+        touchY = e.clientY;
+        clearTimeout(tooltipTimer);
+        tooltipTimer = setTimeout(() => tooltipShowNow(host), 450);
+      } else {
+        tooltipHide();
+      }
+    }, true);
+    document.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || !touchHost) return;
+      if (Math.hypot(e.clientX - touchX, e.clientY - touchY) > 10) {
+        clearTimeout(tooltipTimer);
+        touchHost = null;
+      }
+    }, true);
+    document.addEventListener('pointerup', () => {
+      touchHost = null; // keep a shown tooltip up; next tap elsewhere hides it
+    }, true);
+    document.addEventListener('pointercancel', () => {
+      clearTimeout(tooltipTimer);
+      touchHost = null;
+      tooltipHide(); // scrolling on touch always cancels the pointer first
+    }, true);
   }
 
   function tooltipSchedule(host) {
@@ -837,6 +872,7 @@
       'btn-share': 'app.share',
       'btn-share-ws': 'app.shareWs',
       'btn-apply-game': 'app.applyGame',
+      'btn-read-game': 'app.readGame',
       'advanced-label': 'app.advanced',
       'tutorial-close': 'tutorial.close',
       'paste-title': 'prices.pasteTitle',
@@ -869,6 +905,7 @@
       'filebar-toggle': 'files.title',
       'btn-theme': 'app.theme',
       'btn-apply-game': 'app.applyGameTitle',
+      'btn-read-game': 'app.readGameTitle',
       'btn-share-ws': 'app.shareWsTitle',
     };
     for (const id of Object.keys(titleMap)) {
@@ -886,10 +923,13 @@
     if (importPh) importPh.placeholder = t('import.placeholder');
     const extraKeyInput = document.getElementById('extra-key-input');
     if (extraKeyInput) extraKeyInput.placeholder = t('prices.addKeyPh');
-    // Chromium-only direct write-back: hide the button where unsupported.
-    const applyBtn = document.getElementById('btn-apply-game');
-    if (applyBtn && typeof window.showDirectoryPicker !== 'function') {
-      applyBtn.hidden = true;
+    // Chromium-only File System Access features: hide the buttons where
+    // unsupported (_apply_ needs readwrite, _read_ only read — same API).
+    for (const id of ['btn-apply-game', 'btn-read-game']) {
+      const el = document.getElementById(id);
+      if (el && typeof window.showDirectoryPicker !== 'function') {
+        el.hidden = true;
+      }
     }
   }
 
@@ -1106,7 +1146,7 @@
 
   function renderExampleDialog() {
     const list = $('#example-list');
-    list.innerHTML = DATA.examples.map((ex, i) => {
+    let html = DATA.examples.map((ex, i) => {
       return '<li class="example-item">' +
         '<div class="example-desc">' +
         '<strong>' + esc(ex.desc[I18N.lang]) + '</strong>' +
@@ -1115,6 +1155,20 @@
         '<button class="btn small" data-action="load-example" data-index="' + i + '">' + esc(t('example.load')) + '</button>' +
         '</li>';
     }).join('');
+    const packs = DATA.compatPacks || [];
+    if (packs.length) {
+      html += '<li class="example-group">' + esc(t('example.compatTitle')) + '</li>';
+      html += packs.map((p, i) => {
+        return '<li class="example-item">' +
+          '<div class="example-desc">' +
+          '<strong>' + esc(p.name[I18N.lang]) + '</strong>' +
+          '<code>' + esc(Object.keys(p.files).join(' · ')) + '</code>' +
+          '</div>' +
+          '<button class="btn small" data-action="load-compat" data-index="' + i + '">' + esc(t('example.compatLoad')) + '</button>' +
+          '</li>';
+      }).join('');
+    }
+    list.innerHTML = html; // esc-exempt: every interpolated value above is esc()d
   }
 
   /* ------------------------------ paste / share ------------------------------ */
@@ -1828,6 +1882,59 @@
     return true;
   }
 
+  /** "Read from game": the reverse of Apply to Game — picks the player's
+   *  config/csbox folder, reads every *.json (plus `_prices.json`) and feeds
+   *  the whole set into importPack(), reusing its dedupe / overwrite / broken
+   *  fix flow. Read-only access is enough; the folder is never written. */
+  async function readFromGame() {
+    if (typeof window.showDirectoryPicker !== 'function') {
+      toast(t('app.applyUnsupported'), true);
+      return;
+    }
+    let dir;
+    try {
+      dir = await window.showDirectoryPicker({ id: 'csbox-apply', mode: 'read' });
+    } catch (e) {
+      return; // picker cancelled
+    }
+    const filesObj = {};
+    const brokenObj = {};
+    let found = 0;
+    try {
+      for await (const entry of dir.values()) {
+        if (entry.kind !== 'file' || !/\.json$/i.test(entry.name)) continue;
+        if (entry.name.startsWith('_')) continue; // helper files: _prices.json, _tutorial_*.md …
+        let text = '';
+        try {
+          text = await (await entry.getFile()).text();
+        } catch (err) {
+          continue; // unreadable file — skip, the game folder stays untouched
+        }
+        found++;
+        try {
+          filesObj[entry.name] = JSON.parse(text);
+        } catch (err) {
+          brokenObj[entry.name] = text;
+        }
+      }
+    } catch (e) {
+      toast(t('app.readFailed'), true);
+      return;
+    }
+    let prices = null;
+    try {
+      const fh = await dir.getFileHandle('_prices.json');
+      prices = JSON.parse(await (await fh.getFile()).text());
+    } catch (e) {
+      // optional — a config/csbox folder without a price table is legal
+    }
+    if (!found && !prices) {
+      toast(t('toast.packNone'), true);
+      return;
+    }
+    await importPack({ v: 1, files: filesObj, broken: brokenObj, prices, mc: null });
+  }
+
   /** "Apply to game": writes every draft (bar JSON per draft + the merged
    *  `_prices.json`) straight into the player's config/csbox folder via the
    *  File System Access API. Chromium-only; the button is hidden elsewhere.
@@ -2093,6 +2200,15 @@
           document.getElementById('example-dialog').close();
           break;
         }
+        case 'load-compat': {
+          const pack = (DATA.compatPacks || [])[Number(btn.dataset.index)];
+          if (pack) {
+            pushHistory();
+            void importPack({ v: 1, files: pack.files, prices: pack.prices || null });
+            document.getElementById('example-dialog').close();
+          }
+          break;
+        }
         case 'collapse-all': {
           document.querySelectorAll('.grade-card').forEach((d) => { d.open = false; });
           break;
@@ -2140,6 +2256,10 @@
         }
         case 'apply-game': {
           void applyToGame();
+          break;
+        }
+        case 'read-game': {
+          void readFromGame();
           break;
         }
         case 'enable-advanced': {
