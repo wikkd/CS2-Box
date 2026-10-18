@@ -132,11 +132,15 @@
     // previous active draft into `state` first so importPack()'s saveState()
     // flush cannot clobber it with the initial empty state.
     let packed = false;
+    let worked = false;
     if (/[#&]pack=/.test(location.hash)) {
       loadState();
       packed = await loadHashPack();
+    } else if (/[#&]workspace=/.test(location.hash)) {
+      loadState();
+      worked = await loadHashWorkspace();
     }
-    if (!packed && !loadHashState() && !loadState()) loadExample(0, false);
+    if (!packed && !worked && !loadHashState() && !loadState()) loadExample(0, false);
     // Fresh browser (no drafts): adopt what is on screen (the default example
     // or a shared link) as the first file entry so the sidebar lists it.
     if (!filesStore || !filesStore.files.length) {
@@ -144,7 +148,7 @@
       renderFileBar();
     }
     window.addEventListener('hashchange', () => {
-      if (/[#&](state|pack)=/.test(location.hash)) location.reload();
+      if (/[#&](state|pack|workspace)=/.test(location.hash)) location.reload();
     });
     window.addEventListener('storage', (e) => {
       if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV && e.key !== LS_FILES) return;
@@ -165,6 +169,17 @@
     return String(s === undefined || s === null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /** Compact relative time for source badges / tooltips ("3m ago"). */
+  function relTime(ts, now) {
+    const d = Math.max(0, (now || Date.now()) - Number(ts));
+    if (d < 60000) return t('time.justNow');
+    const min = Math.floor(d / 60000);
+    if (min < 60) return t('time.minAgo', { n: min });
+    const h = Math.floor(min / 60);
+    if (h < 24) return t('time.hourAgo', { n: h });
+    return t('time.dayAgo', { n: Math.floor(h / 24) });
   }
 
   /** OS-level "reduce motion" setting: motion helpers skip their timed parts
@@ -451,7 +466,18 @@
         items: Array.isArray(obj.items) ? obj.items.filter((s) => typeof s === 'string') : [],
         entities: Array.isArray(obj.entities) ? obj.entities.filter((s) => typeof s === 'string') : [],
       };
+      syncGameRegistry();
     } catch (e) { /* corrupt: keep the empty default */ }
+  }
+
+  /** Mirrors the registry lists into NS.gameRegistry for the validator's
+   *  unknown-id cross-checks (pack import and plain reload both land here). */
+  function syncGameRegistry() {
+    const lists = gameLists || { items: [], entities: [] };
+    NS.gameRegistry = {
+      items: new Set(lists.items || []),
+      entities: new Set(lists.entities || []),
+    };
   }
 
   function activeFileEntry() {
@@ -665,11 +691,27 @@
       list.innerHTML = '<div class="file-empty">' + esc(t('files.empty')) + '</div>';
       return;
     }
+    const verName = (k) => {
+      const v = DATA.versions.find((x) => x.key === k);
+      if (!v) return k || '';
+      return (v.label && (v.label[I18N.lang] || v.label.zh)) || v.key;
+    };
     list.innerHTML = filesStore.files.map((f) => {
       const name = (f.payload && f.payload.state && f.payload.state.fileName) || 'my_box';
       const active = f.id === filesStore.activeId;
-      return '<div class="file-item' + (active ? ' active' : '') + '" data-file-id="' + esc(f.id) + '" title="' + esc(name) + '">' +
-        '<span class="file-name">' + esc(name) + '</span>' +
+      const slot = f.payload && f.payload.slot;
+      let tag = '';
+      let tip = '';
+      if (slot && slot.name && (slot.mc || slot.ts)) {
+        // Pack provenance badge: shows the game version the link carried and
+        // (when built) how long ago the pack was imported.
+        const src = slot.mc ? esc(verName(slot.mc)) : '';
+        const ago = slot.ts ? relTime(slot.ts, Date.now()) : '';
+        tag = '<span class="file-tag">' + (src || 'pack') + '</span>';
+        tip = t('files.slotTitle', { name: slot.name }) + (ago ? ' · ' + ago : '');
+      }
+      return '<div class="file-item' + (active ? ' active' : '') + '" data-file-id="' + esc(f.id) + '" title="' + esc(tip || name) + '">' +
+        '<span class="file-name">' + esc(name) + '</span>' + tag +
         '<span class="file-actions">' +
         '<button class="file-btn" data-file-action="rename" title="' + esc(t('files.rename')) + '">✎</button>' +
         '<button class="file-btn" data-file-action="dup" title="' + esc(t('files.dup')) + '">⧉</button>' +
@@ -793,6 +835,8 @@
       'btn-undo': 'app.undo',
       'btn-redo': 'app.redo',
       'btn-share': 'app.share',
+      'btn-share-ws': 'app.shareWs',
+      'btn-apply-game': 'app.applyGame',
       'advanced-label': 'app.advanced',
       'tutorial-close': 'tutorial.close',
       'paste-title': 'prices.pasteTitle',
@@ -813,6 +857,7 @@
       'filebar-title': 'files.title',
       'file-dialog-title': 'files.title',
       'file-dialog-cancel': 'files.cancel',
+      'swap-dialog-title': 'swap.title',
     };
     for (const id of Object.keys(map)) {
       const el = document.getElementById(id);
@@ -823,6 +868,8 @@
       'file-add': 'files.add',
       'filebar-toggle': 'files.title',
       'btn-theme': 'app.theme',
+      'btn-apply-game': 'app.applyGameTitle',
+      'btn-share-ws': 'app.shareWsTitle',
     };
     for (const id of Object.keys(titleMap)) {
       const el = document.getElementById(id);
@@ -839,6 +886,11 @@
     if (importPh) importPh.placeholder = t('import.placeholder');
     const extraKeyInput = document.getElementById('extra-key-input');
     if (extraKeyInput) extraKeyInput.placeholder = t('prices.addKeyPh');
+    // Chromium-only direct write-back: hide the button where unsupported.
+    const applyBtn = document.getElementById('btn-apply-game');
+    if (applyBtn && typeof window.showDirectoryPicker !== 'function') {
+      applyBtn.hidden = true;
+    }
   }
 
   /* ------------------------------ header / dialogs ------------------------------ */
@@ -943,7 +995,7 @@
         const payload = buildPayload();
         // Pack provenance (same shape as importPack): makes re-opening the
         // link treat this name as handled (openPackBrokenFlow skips it).
-        try { payload.slot = { name, sig: fnv1a(JSON.stringify(JSON.parse(text))) }; } catch (e) { /* slotless fallback */ }
+        try { payload.slot = { name, sig: fnv1a(JSON.stringify(JSON.parse(text))), ts: Date.now() }; } catch (e) { /* slotless fallback */ }
         if (!filesStore) filesStore = { files: [], activeId: null };
         const entry = { id: uid(), payload, savedAt: Date.now() };
         filesStore.files.unshift(entry);
@@ -1001,6 +1053,21 @@
 
     const exd = $('#example-dialog');
     $('#example-close').addEventListener('click', () => exd.close());
+
+    const sdg = $('#swap-dialog');
+    if (sdg) {
+      $('#swap-skip').addEventListener('click', () => setSwapDecision('skip'));
+      $('#swap-keep').addEventListener('click', () => setSwapDecision('keep'));
+      $('#swap-overwrite').addEventListener('click', () => setSwapDecision('overwrite'));
+      // Escape / outside click = skip (default decision preset per file).
+      sdg.addEventListener('close', () => {
+        if (swapCurrent) {
+          swapDecisions[swapCurrent.name] = swapDecision || 'skip';
+          swapCurrent = null;
+        }
+        drivePackSwap();
+      });
+    }
 
     const td = $('#tutorial-dialog');
     if (td) $('#tutorial-close').addEventListener('click', () => td.close());
@@ -1449,7 +1516,12 @@
     });
   }
 
-  function importPack(pack) {
+  /** #pack import with a game-file difference resolver: when the link
+   *  re-imports a box whose source file was already imported but whose
+   *  content changed since, the player picks overwrite / keep-both / skip
+   *  per file (queued dialog). Otherwise behaves as before — idempotent on
+   *  identical packs. */
+  async function importPack(pack) {
     if (!pack || typeof pack !== 'object' || pack.v !== 1) {
       toast(t('toast.packFailed'), true);
       return false;
@@ -1460,53 +1532,82 @@
     const mcKey = (typeof pack.mc === 'string' && DATA.versions.some((v) => v.key === pack.mc)) ? pack.mc : null;
     const items = typeof pack.items === 'string' ? pack.items.split('\n').filter(Boolean) : [];
     const entities = typeof pack.entities === 'string' ? pack.entities.split('\n').filter(Boolean) : [];
-    const newEntries = [];
-    let skipped = 0;
+    const mcDate = Date.now();
+    const candidates = [];
+    let dups = 0;
     for (const name of Object.keys(filesObj)) {
       if (!/\.json$/i.test(name)) continue;
       const doc = filesObj[name];
       if (!doc || typeof doc !== 'object' || Array.isArray(doc)) continue;
       if (detectType(doc) !== 'box') continue;
       const sig = fnv1a(JSON.stringify(doc));
-      if (packSlotSeen(name, sig)) { skipped++; continue; }
-      const base = name.replace(/\.json$/i, '');
-      const res = NS.boxToState(doc, base);
+      if (packSlotSeen(name, sig)) { dups++; continue; }
+      candidates.push({ name, doc, sig });
+    }
+    const changed = candidates.filter((c) => packSlotNamed(c.name) && !packSlotSeen(c.name, c.sig));
+    const decisions = changed.length ? await resolvePackSwaps(changed) : {};
+    const newEntries = [];
+    const overwriteOps = [];
+    let overwrote = 0;
+    let kept = 0;
+    let skipped = dups;
+    for (const c of candidates) {
+      const dec = changed.includes(c) ? (decisions[c.name] || 'skip') : 'keepnew';
+      if (dec === 'skip') { skipped++; continue; }
+      const base = c.name.replace(/\.json$/i, '');
+      const res = NS.boxToState(c.doc, base);
       const st = res.state;
       NS.mergeMigrations(st, res.migrations);
       if (pricesObj) NS.mergePrices(st, pricesObj);
-      newEntries.push({
-        id: uid(),
-        savedAt: Date.now(),
-        payload: {
-          versionKey: mcKey || (DATA.versions.some((v) => v.key === st.versionKey) ? st.versionKey : '1.21.1'),
-          compact: true,
-          currentTab: 'box',
-          taczEnabled: null,
-          // Pack provenance: enables idempotent re-imports of the same link.
-          slot: { name, sig },
-          state: {
-            fileName: st.fileName,
-            meta: st.meta,
-            grades: st.grades,
-            priceRows: st.priceRows,
-          },
+      const payload = {
+        versionKey: mcKey || (DATA.versions.some((v) => v.key === st.versionKey) ? st.versionKey : '1.21.1'),
+        compact: true,
+        currentTab: 'box',
+        taczEnabled: null,
+        // Pack provenance: enables idempotent re-imports of the same link;
+        // mc/ts power the workspace source badge.
+        slot: { name: c.name, sig: c.sig, mc: mcKey || undefined, ts: mcDate },
+        state: {
+          fileName: st.fileName,
+          meta: st.meta,
+          grades: st.grades,
+          priceRows: st.priceRows,
         },
-      });
+      };
+      if (dec === 'overwrite') {
+        const target = ((filesStore && filesStore.files) || []).find(
+          (e) => e.payload && e.payload.slot && e.payload.slot.name === c.name
+        );
+        if (target) {
+          // Replacements apply in the commit phase, AFTER the current editor
+          // state is flushed — otherwise saveState() would clobber the
+          // overwrite when the target is the active draft.
+          overwriteOps.push({ target, payload });
+          overwrote++;
+          continue;
+        }
+        // Target vanished (should not happen): fall through to keep-both.
+      }
+      newEntries.push({ id: uid(), savedAt: mcDate, payload });
+      if (dec === 'overwrite') kept++;
     }
     const parts = [];
     let ok = false;
-    if (newEntries.length) {
+    if (newEntries.length || overwrote) {
       // Flush the currently open draft first (boot() adopted it into `state`),
       // then group the imported drafts at the top of the workspace.
       if (filesStore && filesStore.files.length) saveState();
       else filesStore = { files: [], activeId: null };
-      filesStore.files.unshift(...newEntries);
-      filesStore.activeId = newEntries[0].id;
+      for (const op of overwriteOps) op.target.payload = op.payload;
+      if (newEntries.length) {
+        filesStore.files.unshift(...newEntries);
+        filesStore.activeId = newEntries[0].id;
+      }
       saveFilesStore();
       resetHistory();
       loadState();
       renderFileBar();
-      parts.push(t('toast.packImported', { n: newEntries.length }));
+      if (newEntries.length) parts.push(t('toast.packImported', { n: newEntries.length }));
       if (pricesObj) parts.push(t('toast.packPrices', { n: Object.keys(pricesObj).length }));
       ok = true;
     } else if (pricesObj && activeFileEntry()) {
@@ -1521,6 +1622,8 @@
         ok = true;
       }
     }
+    if (overwrote) parts.push(t('toast.packOverwrote', { n: overwrote }));
+    if (kept) parts.push(t('toast.packKept', { n: kept }));
     if (applyGameLists(items, entities, parts)) ok = true;
     if (ok) {
       toast(parts.join(t('common.sep')));
@@ -1528,14 +1631,64 @@
       return true;
     }
     if (openPackBrokenFlow(brokenObj)) return true;
-    // Re-opened link whose every valid box was already imported: tell the
-    // player no duplicates were created instead of the misleading empty pack.
+    // Re-opened link whose every valid box was already imported (or skipped
+    // by the player in the difference dialog): say so instead of the
+    // misleading empty-pack toast.
     if (skipped) {
       toast(t('toast.packDup'), true);
       return true;
     }
     toast(t('toast.packNone'), true);
     return false;
+  }
+
+  /* ---------------- pack difference dialog (overwrite/keep/skip) ---------------- */
+
+  const packSwapQueue = [];
+  const swapDecisions = {};
+  let swapCurrent = null;
+  let swapDecision = null;
+  let askSwapDone = null;
+
+  /** Asks the player what to do with each changed pack file. Resolves to a
+   *  map { name -> 'overwrite' | 'keep' | 'skip' } (default 'skip' when the
+   *  dialog is unavailable, e.g. headless testspressing Escape). */
+  function resolvePackSwaps(changed) {
+    changed.forEach((c) => packSwapQueue.push(c));
+    return new Promise((resolve) => {
+      askSwapDone = resolve;
+      drivePackSwap();
+    });
+  }
+
+  function drivePackSwap() {
+    if (!packSwapQueue.length) {
+      swapCurrent = null;
+      const done = askSwapDone;
+      askSwapDone = null;
+      if (done) done(swapDecisions);
+      return;
+    }
+    swapCurrent = packSwapQueue.shift();
+    swapDecision = 'skip';
+    const hint = document.getElementById('swap-dialog-hint');
+    if (hint) hint.textContent = t('swap.hint', { name: swapCurrent.name });
+    const dlg = document.getElementById('swap-dialog');
+    if (dlg) dlg.showModal();
+    else {
+      // No dialog markup (defensive): auto-skip the remainder.
+      swapDecisions[swapCurrent.name] = 'skip';
+      swapCurrent = null;
+      drivePackSwap();
+    }
+  }
+
+  /** Records the decision for the currently shown file. The dialog close
+   *  event (button or Escape) is the single advance point. */
+  function setSwapDecision(decision) {
+    swapDecision = decision;
+    const dlg = document.getElementById('swap-dialog');
+    if (dlg) dlg.close();
   }
 
   /** Stores the game registry lists carried by a pack and appends a toast
@@ -1545,12 +1698,184 @@
   function applyGameLists(items, entities, parts) {
     if (!items.length && !entities.length) return false;
     gameLists = { items, entities };
+    // Mirror for the validator: unknown-id cross-checks read NS.gameRegistry.
+    syncGameRegistry();
     saveGameLists();
     buildItemDatalist();
     buildEntityDatalist();
     if (items.length) parts.push(t('toast.packItems', { n: items.length }));
     if (entities.length) parts.push(t('toast.packEntities', { n: entities.length }));
     return true;
+  }
+
+  /* ---------------- workspace share & game write-back ---------------- */
+
+  /** zlib deflate + base64url — the encode antipode of inflateZlib. */
+  function bytesToBase64Url(bytes) {
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function deflateB64Url(str) {
+    if (typeof CompressionStream === 'undefined') {
+      const err = new Error('CompressionStream unsupported');
+      err.wsUnsupported = true;
+      throw err;
+    }
+    const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('deflate'));
+    const buf = await new Response(stream).arrayBuffer();
+    return bytesToBase64Url(new Uint8Array(buf));
+  }
+
+  /** Encodes the WHOLE workspace into a #workspace= link (zlib + base64url).
+   *  Same fragment-cleanup discipline as packs: read once, strip the hash,
+   *  fingerprint-dedup on re-open. */
+  async function shareWorkspace() {
+    if (!filesStore || !filesStore.files.length) {
+      toast(t('toast.workspaceEmpty'), true);
+      return;
+    }
+    const manifest = {
+      v: 1,
+      w: 1,
+      drafts: filesStore.files.map((e) => ({ savedAt: e.savedAt, payload: e.payload })),
+    };
+    let enc;
+    try {
+      enc = await deflateB64Url(JSON.stringify(manifest));
+    } catch (e) {
+      toast(e && e.wsUnsupported ? t('toast.wsUnsupported') : t('toast.workspaceBad'), true);
+      return;
+    }
+    if (enc.length > 200000) {
+      toast(t('toast.workspaceTooLong', { n: enc.length }), true);
+      return;
+    }
+    const url = location.href.split('#')[0] + '#workspace=' + enc;
+    copyText(url, t('toast.workspaceCopied'));
+  }
+
+  /** Shared-workspace ingestion: validates fragments loosely, normalizes
+   *  payloads, dedupes on slot (name + sig) so re-opening a workspace link
+   *  never duplicates drafts, groups valid drafts at the top and opens the
+   *  newest. Returns true when the workspace changed. */
+  async function loadHashWorkspace() {
+    const m = /[#&]workspace=([A-Za-z0-9_-]+)/.exec(location.hash);
+    if (!m) return false;
+    try {
+      window.history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) { /* file:// throws SecurityError — keep the hash in dev */ }
+    let pack = null;
+    try {
+      pack = JSON.parse(await inflateZlib(base64UrlToBytes(m[1])));
+    } catch (e) {
+      toast(e && e.wsUnsupported ? t('toast.wsUnsupported') : t('toast.workspaceBad'), true);
+      return false;
+    }
+    if (!pack || typeof pack !== 'object' || pack.v !== 1 || pack.w !== 1 || !Array.isArray(pack.drafts)) {
+      toast(t('toast.workspaceBad'), true);
+      return false;
+    }
+    const newEntries = [];
+    let dups = 0;
+    for (const d of pack.drafts) {
+      const p = d && d.payload;
+      if (!p || !p.state || typeof p.state !== 'object') continue;
+      const s = p.state;
+      // Dedupe on re-import: pack-origin drafts keep their original slot
+      // (name/sig refer to the pack document); manual drafts get a
+      // synthesized slot from the manifest payload so opening the same
+      // workspace link twice never duplicates drafts.
+      const slot = (p.slot && p.slot.name && p.slot.sig)
+        ? { name: p.slot.name, sig: p.slot.sig, mc: p.slot.mc, ts: p.slot.ts }
+        : { name: String(s.fileName || 'my_box') + '.json', sig: fnv1a(JSON.stringify(p)) };
+      if (packSlotSeen(slot.name, slot.sig)) {
+        dups++;
+        continue;
+      }
+      const payload = {
+        versionKey: DATA.versions.some((v) => v.key === p.versionKey) ? p.versionKey : '1.21.1',
+        compact: p.compact !== false,
+        currentTab: p.currentTab === 'prices' ? 'prices' : 'box',
+        taczEnabled: p.taczEnabled == null ? null : !!p.taczEnabled,
+        slot,
+        state: {
+          fileName: String(s.fileName || 'my_box'),
+          meta: s.meta && typeof s.meta === 'object' ? s.meta : NS.emptyMeta(),
+          grades: Array.isArray(s.grades) ? s.grades.map((arr) => (Array.isArray(arr) ? arr : [])) : [],
+          priceRows: s.priceRows && typeof s.priceRows === 'object' ? s.priceRows : {},
+        },
+      };
+      newEntries.push({ id: uid(), savedAt: Number(d.savedAt) || Date.now(), payload });
+    }
+    if (!newEntries.length) {
+      toast(t(dups ? 'toast.workspaceDup' : 'toast.workspaceBad'), true);
+      return false;
+    }
+    if (filesStore && filesStore.files.length) saveState();
+    else filesStore = { files: [], activeId: null };
+    filesStore.files.unshift(...newEntries);
+    filesStore.activeId = newEntries[0].id;
+    saveFilesStore();
+    resetHistory();
+    loadState();
+    renderFileBar();
+    toast(t('toast.workspaceImported', { n: newEntries.length }));
+    return true;
+  }
+
+  /** "Apply to game": writes every draft (bar JSON per draft + the merged
+   *  `_prices.json`) straight into the player's config/csbox folder via the
+   *  File System Access API. Chromium-only; the button is hidden elsewhere.
+   *  The player picks the folder once per session — no server, no upload. */
+  async function applyToGame() {
+    if (typeof window.showDirectoryPicker !== 'function') {
+      toast(t('app.applyUnsupported'), true);
+      return;
+    }
+    const entries = (filesStore && filesStore.files) || [];
+    if (!entries.length) {
+      toast(t('app.applyEmpty'), true);
+      return;
+    }
+    let dir;
+    try {
+      dir = await window.showDirectoryPicker({ id: 'csbox-apply', mode: 'readwrite' });
+    } catch (e) {
+      return; // picker cancelled
+    }
+    const plan = NS.applyManifest(entries);
+    if (!plan.files.length) {
+      toast(t('app.applyEmpty'), true);
+      return;
+    }
+    let written = 0;
+    try {
+      for (const f of plan.files) {
+        const fh = await dir.getFileHandle(f.name, { create: true });
+        const w = await fh.createWritable();
+        await w.write(f.text);
+        await w.close();
+        written++;
+      }
+      if (plan.prices) {
+        const fh = await dir.getFileHandle('_prices.json', { create: true });
+        const w = await fh.createWritable();
+        await w.write(JSON.stringify(plan.prices, null, 2) + '\n');
+        await w.close();
+      }
+    } catch (e) {
+      toast(t('app.applyFailed'), true);
+      return;
+    }
+    let msg = t('app.applyDone', { n: written });
+    if (plan.prices) msg += t('common.sep') + t('app.applyPrices');
+    if (plan.conflicts) msg += t('common.sep') + t('app.applyConflicts', { n: plan.conflicts });
+    toast(msg + t('common.sep') + t('app.applyReload'));
   }
 
   /** Queues broken (#pack= manifest) files and opens the first one
@@ -1807,6 +2132,14 @@
         }
         case 'share': {
           shareLink();
+          break;
+        }
+        case 'share-workspace': {
+          void shareWorkspace();
+          break;
+        }
+        case 'apply-game': {
+          void applyToGame();
           break;
         }
         case 'enable-advanced': {
@@ -2414,11 +2747,35 @@
         '<td>' + (removable ? '<button class="btn small danger" data-action="del-price-key" data-key="' + esc(r.key) + '" aria-label="' + esc(t('prices.remove')) + '">' + esc(t('prices.remove')) + '</button>' : '') + '</td>' +
         '</tr>';
     }).join('');
+    // EV / value panel: per-grade chance and expected value per open, priced
+    // at the midpoint (ranges) — mirrors the recycle column's 90% rule.
+    const en = NS.boxEconomy(state);
+    const gradeLabel = (gi) => ((DATA.gradeNames[gi] || {})[I18N.lang] || (DATA.gradeNames[gi] || {}).zh || ('grade' + (gi + 1)));
+    const pct = (x) => (x * 100).toFixed(1) + '%';
+    const econRows = en.grades.map((gr) =>
+      '<tr><td>' + esc(gradeLabel(gr.gi)) + '</td>' +
+      '<td>' + esc(pct(gr.prob)) + '</td>' +
+      '<td class="tiny muted">' + esc(t('econ.colItems', { n: gr.items })) + '</td>' +
+      '<td class="econ-ev' + (gr.ev > 0 ? '' : ' muted') + '">' + esc(gr.ev.toFixed(1)) + '</td></tr>'
+    ).join('');
+    const econWarns = en.warnings.map((w) => '<li>' + esc(t(w.key, w.vars)) + '</li>').join('');
+    const econPanel =
+      '<details class="econ-panel"><summary>' + esc(t('econ.title')) +
+      '<span class="tiny muted">' + esc(t('econ.summary', { n: en.priced, u: en.unpriced })) + '</span></summary>' +
+      (en.openable
+        ? '<table class="price-table econ-table"><thead><tr><th>' + esc(t('econ.colGrade')) + '</th><th>' + esc(t('econ.colChance')) + '</th><th></th><th>' + esc(t('econ.colEV')) + '</th></tr></thead><tbody>' + econRows + '</tbody></table>' +
+          '<p class="help">' + esc(t('econ.total')) + ' <b>' + esc(en.totalEv.toFixed(1)) + '</b>' +
+          t('common.sep') + esc(t('econ.recycle')) + ' <b>' + esc(en.recycleEv.toFixed(1)) + '</b></p>'
+        : '') +
+      (econWarns ? '<ul class="econ-warns">' + econWarns + '</ul>' : '') +
+      '<p class="help tiny">' + esc(t('econ.note')) + '</p>' +
+      '</details>';
     el.innerHTML =
       '<div class="card-head"><h2>' + esc(t('prices.title')) + '</h2>' +
       '<button class="btn small" data-action="import-crate-prices">' + esc(t('prices.importCrates')) + '</button>' +
       '<button class="btn small" data-action="paste-prices">' + esc(t('prices.paste')) + '</button></div>' +
       '<p class="help">' + esc(t('prices.help')) + '</p>' +
+      econPanel +
       '<table class="price-table"><thead><tr>' +
       '<th>' + esc(t('prices.key')) + '</th>' +
       '<th>' + esc(t('prices.price')) + '</th>' +

@@ -620,3 +620,232 @@ test('simulateOpens: rng injectable -> fully deterministic output', () => {
   assert.deepEqual(a.items.map((i) => i.hits), b.items.map((i) => i.hits));
   assert.deepEqual(a.last, b.last);
 });
+
+/* ---------------- economy (boxEconomy) ---------------- */
+
+test('boxEconomy: no grade weights -> warnNoWeight, un-openable', () => {
+  const st = simState();
+  st.meta.random = ['', '', '', '', ''];
+  const en = NS.boxEconomy(st);
+  assert.equal(en.openable, false);
+  assert.deepEqual(en.warnings, [{ key: 'econ.warnNoWeight' }]);
+  assert.equal(en.totalEv, 0);
+});
+
+test('boxEconomy: weights set but every grade empty -> warnEmpty', () => {
+  const st = NS.emptyState();
+  st.meta.random = [10, 0, 0, 0, 0];
+  const en = NS.boxEconomy(st);
+  assert.equal(en.openable, true);
+  assert.deepEqual(en.warnings, [{ key: 'econ.warnEmpty' }]);
+});
+
+test('boxEconomy: EV = grade-share x item-share x price x count (range midpoint)', () => {
+  const st = NS.emptyState();
+  st.meta.random = [60, 40, 0, 0, 0];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: 'minecraft:stone', weight: 1 })];
+  st.grades[1] = [Object.assign(NS.emptyItem(), {
+    value: 'minecraft:dirt', weight: 1, countMode: 'range', countMin: 2, countMax: 4,
+  })];
+  st.priceRows = { 'minecraft:stone': { price: '100' }, 'minecraft:dirt': { price: '10-20' } };
+  const en = NS.boxEconomy(st);
+  assert.deepEqual(en.warnings, []);
+  assert.equal(en.grades[0].prob, 0.6);
+  assert.equal(en.grades[0].ev, 100);
+  assert.equal(en.grades[1].prob, 0.4);
+  assert.equal(en.grades[1].ev, 15 * 3); // mid price 15 x mid count 3
+  assert.equal(en.totalEv, 0.6 * 100 + 0.4 * 45);
+  // recycle = per-item ceil(price x 0.9): ceil(90) x1 and ceil(13.5)=14 x3
+  assert.equal(en.grades[0].recycle, 90);
+  assert.equal(en.grades[1].recycle, 42);
+  assert.ok(Math.abs(en.recycleEv - (0.6 * 90 + 0.4 * 42)) < 1e-9, 'recycleEv=' + en.recycleEv);
+  assert.equal(en.priced, 2);
+  assert.equal(en.unpriced, 0);
+});
+
+test('boxEconomy: empty grades with weight are conditioned out of the shares', () => {
+  const st = NS.emptyState();
+  st.meta.random = [10, 30, 40, 0, 0];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: 'minecraft:stone' })];
+  st.grades[1] = [Object.assign(NS.emptyItem(), { value: 'minecraft:dirt' })];
+  // grade3 has weight 40 but no items -> mass redistributes 1:3 over g1/g2
+  st.priceRows = { 'minecraft:stone': { price: '10' }, 'minecraft:dirt': { price: '10' } };
+  const en = NS.boxEconomy(st);
+  assert.equal(en.grades.length, 2);
+  assert.ok(Math.abs(en.grades[0].prob - 0.25) < 1e-9);
+  assert.ok(Math.abs(en.grades[1].prob - 0.75) < 1e-9);
+  assert.ok(Math.abs(en.totalEv - 10) < 1e-9);
+  // both items price 10 -> recycle ceil(9)=9 everywhere
+  assert.ok(Math.abs(en.recycleEv - 9) < 1e-9, 'recycleEv=' + en.recycleEv);
+});
+
+test('boxEconomy: unpriced items count as 0 and produce warnings', () => {
+  const st = NS.emptyState();
+  st.meta.random = [100, 0, 0, 0, 0];
+  st.grades[0] = [
+    Object.assign(NS.emptyItem(), { value: 'minecraft:stone' }),
+    Object.assign(NS.emptyItem(), { value: 'minecraft:dirt' }),
+  ];
+  st.priceRows = { 'minecraft:stone': { price: '100' } };
+  const en = NS.boxEconomy(st);
+  assert.equal(en.priced, 1);
+  assert.equal(en.unpriced, 1);
+  assert.equal(en.grades[0].ev, 50); // 1/2 x 100, dirt counts 0
+  assert.deepEqual(en.warnings, [{ key: 'econ.warnSomeUnpriced', vars: { n: 1 } }]);
+});
+
+test('boxEconomy: an all-unpriced box warns once at the box level', () => {
+  const st = NS.emptyState();
+  st.meta.random = [100, 0, 0, 0, 0];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: 'minecraft:stone' })];
+  const en = NS.boxEconomy(st);
+  assert.equal(en.priced, 0);
+  assert.deepEqual(en.warnings, [{ key: 'econ.warnAllUnpriced' }]);
+});
+
+test('boxEconomy: a fully unpriced grade is flagged with its 1-based number', () => {
+  const st = NS.emptyState();
+  st.meta.random = [50, 50, 0, 0, 0];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: 'minecraft:stone' })];
+  st.grades[1] = [Object.assign(NS.emptyItem(), { value: 'minecraft:dirt' })];
+  st.priceRows = { 'minecraft:stone': { price: '100' } };
+  const en = NS.boxEconomy(st);
+  assert.deepEqual(en.warnings, [
+    { key: 'econ.warnSomeUnpriced', vars: { n: 1 } },
+    { key: 'econ.warnGradeUnpriced', vars: { grade: '2' } },
+  ]);
+});
+
+test('boxEconomy: weight-0 items are disabled and excluded', () => {
+  const st = NS.emptyState();
+  st.meta.random = [100, 0, 0, 0, 0];
+  st.grades[0] = [
+    Object.assign(NS.emptyItem(), { value: 'minecraft:stone', weight: 1 }),
+    Object.assign(NS.emptyItem(), { value: 'minecraft:dirt', weight: 0 }),
+  ];
+  st.priceRows = { 'minecraft:stone': { price: '100' } };
+  const en = NS.boxEconomy(st);
+  assert.equal(en.grades[0].items, 1);
+  assert.equal(en.grades[0].ev, 100);
+  assert.deepEqual(en.warnings, []);
+});
+
+/* ---------------- apply (applyManifest) ---------------- */
+
+function manifestState(fileName, itemId, price) {
+  const st = NS.emptyState();
+  st.fileName = fileName;
+  st.meta.name = fileName;
+  st.meta.random = [100, 0, 0, 0, 0];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: itemId })];
+  st.priceRows = {};
+  st.priceRows[itemId] = { price };
+  return st;
+}
+
+test('applyManifest: one pretty JSON file per draft + merged prices', () => {
+  const plan = NS.applyManifest([
+    { payload: { versionKey: '1.21.1', state: manifestState('alpha', 'minecraft:stone', '100') } },
+    { payload: { versionKey: '1.21.1', state: manifestState('beta', 'minecraft:dirt', '5-9') } },
+  ]);
+  assert.deepEqual(plan.files.map((f) => f.name), ['alpha.json', 'beta.json']);
+  assert.equal(plan.conflicts, 0);
+  const alpha = JSON.parse(plan.files[0].text);
+  assert.equal(alpha.name, 'alpha');
+  assert.ok(plan.files[0].text.endsWith('\n'), 'trailing newline');
+  assert.deepEqual(plan.prices, { 'minecraft:stone': 100, 'minecraft:dirt': [5, 9] });
+});
+
+test('applyManifest: file names sanitize forbidden chars and leading underscores', () => {
+  const plan = NS.applyManifest([
+    { payload: { versionKey: '1.21.1', state: manifestState('_prices', 'minecraft:stone', '1') } },
+    { payload: { versionKey: '1.21.1', state: manifestState('a/b:c*d?', 'minecraft:dirt', '1') } },
+  ]);
+  assert.deepEqual(plan.files.map((f) => f.name), ['prices.json', 'a_b_c_d_.json']);
+});
+
+test('applyManifest: colliding sanitized names get numbered, not overwritten', () => {
+  const plan = NS.applyManifest([
+    { payload: { versionKey: '1.21.1', state: manifestState('dup', 'minecraft:stone', '1') } },
+    { payload: { versionKey: '1.21.1', state: manifestState('dup', 'minecraft:dirt', '1') } },
+    { payload: { versionKey: '1.21.1', state: manifestState('dup', 'minecraft:sand', '1') } },
+  ]);
+  assert.deepEqual(plan.files.map((f) => f.name), ['dup.json', 'dup_2.json', 'dup_3.json']);
+  assert.equal(plan.conflicts, 2);
+});
+
+test('applyManifest: later drafts win on shared price keys (last-wins merge)', () => {
+  const plan = NS.applyManifest([
+    { payload: { versionKey: '1.21.1', state: manifestState('one', 'minecraft:stone', '10') } },
+    { payload: { versionKey: '1.21.1', state: manifestState('two', 'minecraft:stone', '20') } },
+  ]);
+  assert.deepEqual(plan.prices, { 'minecraft:stone': 20 });
+});
+
+test('applyManifest: empty workspace yields no files and null prices', () => {
+  const plan = NS.applyManifest([]);
+  assert.deepEqual(plan.files, []);
+  assert.equal(plan.prices, null);
+  assert.equal(plan.conflicts, 0);
+});
+
+test('applyManifest: skips entries without a payload state', () => {
+  const plan = NS.applyManifest([
+    { payload: null },
+    { payload: { versionKey: '1.21.1', state: manifestState('ok', 'minecraft:stone', '1') } },
+    null,
+  ]);
+  assert.deepEqual(plan.files.map((f) => f.name), ['ok.json']);
+  assert.equal(plan.prices['minecraft:stone'], 1);
+});
+
+/* ---------------- validator registry cross-checks ---------------- */
+
+function registryState(itemId, entityId) {
+  const st = NS.emptyState();
+  st.meta.name = 'x';
+  st.meta.random = [100, 0, 0, 0, 0];
+  if (entityId) st.meta.entity = [{ id: entityId, rate: '' }];
+  st.grades[0] = [Object.assign(NS.emptyItem(), { value: itemId, source: 'id' })];
+  st.priceRows = {};
+  return st;
+}
+
+test('validator: no registry -> no unknown-id warnings', () => {
+  delete NS.gameRegistry;
+  const st = registryState('zzmod:test', 'zzmod:goblin');
+  st.priceRows = { 'zzmod:test': { price: '1' } };
+  const issues = NS.validate(st, '1.21.1');
+  assert.equal(issues.filter((i) => i.key.startsWith('v.unknown')).length, 0);
+});
+
+test('validator: unknown item / entity / price key warn against the synced registry', () => {
+  NS.gameRegistry = { items: new Set(['minecraft:stone']), entities: new Set(['minecraft:zombie']) };
+  const st = registryState('zzmod:test', 'zzmod:goblin');
+  st.priceRows = { 'zzmod:test': { price: '1' } };
+  const issues = NS.validate(st, '1.21.1');
+  const keys = issues.map((i) => i.key);
+  assert.ok(keys.includes('v.unknownItem'), keys.join(','));
+  assert.ok(keys.includes('v.unknownEntity'), keys.join(','));
+  assert.ok(keys.includes('v.unknownPriceKey'), keys.join(','));
+  delete NS.gameRegistry;
+});
+
+test('validator: known ids stay silent', () => {
+  NS.gameRegistry = { items: new Set(['minecraft:stone']), entities: new Set(['minecraft:zombie']) };
+  const st = registryState('minecraft:stone', 'minecraft:zombie');
+  st.priceRows = { 'minecraft:stone': { price: '1' } };
+  const issues = NS.validate(st, '1.21.1');
+  assert.equal(issues.filter((i) => i.key.startsWith('v.unknown')).length, 0);
+  delete NS.gameRegistry;
+});
+
+test('validator: variant price key checks the base id only', () => {
+  NS.gameRegistry = { items: new Set(['tacz:ak47']), entities: new Set() };
+  const st = registryState('tacz:ak47', null);
+  st.taczEnabled = true;
+  st.priceRows = { 'tacz:ak47#GunId': { price: '1' } };
+  const issues = NS.validate(st, '1.21.1');
+  assert.equal(issues.filter((i) => i.key.startsWith('v.unknown')).length, 0);
+  delete NS.gameRegistry;
+});

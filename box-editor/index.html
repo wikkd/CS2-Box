@@ -43,6 +43,8 @@
     <button id="btn-import-legacy" class="btn">Legacy Import</button>
     <button id="btn-example" class="btn accent">Examples</button>
     <button id="btn-share" class="btn small" data-action="share">Share</button>
+    <button id="btn-share-ws" class="btn small" data-action="share-workspace">Share Workspace</button>
+    <button id="btn-apply-game" class="btn small" data-action="apply-game">Apply to Game</button>
     <label class="chk advanced-toggle" title=""><input type="checkbox" id="advanced-toggle"><span id="advanced-label"></span></label>
   </div>
 </header>
@@ -124,6 +126,16 @@
   <div id="tutorial-body" class="tutorial-body"></div>
   <div class="dlg-actions">
     <button class="btn" id="tutorial-close">Close</button>
+  </div>
+</dialog>
+
+<dialog id="swap-dialog" class="dlg">
+  <h2 id="swap-dialog-title">Game file differs</h2>
+  <p class="help" id="swap-dialog-hint"></p>
+  <div class="dlg-actions">
+    <button class="btn" id="swap-skip">Skip</button>
+    <button class="btn" id="swap-keep">Keep Both</button>
+    <button class="btn accent" id="swap-overwrite">Overwrite Local</button>
   </div>
 </dialog>
 

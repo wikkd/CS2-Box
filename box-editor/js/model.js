@@ -824,6 +824,160 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   }
 
 
+  /* ------------------------------ economy & apply ------------------------------ */
+
+  /** Normalizes a workspace payload into an editor state ({fileName, meta,
+   *  grades, priceRows, versionKey, taczEnabled}) — same allocation path
+   *  applyPayload uses, minus rendering. */
+  function payloadState(p) {
+    const s = p && p.state ? p.state : {};
+    const st = Object.assign(NS.emptyState(), {
+      fileName: s.fileName || 'my_box',
+      meta: Object.assign(NS.emptyMeta(), s.meta),
+      grades: (s.grades || []).map((arr) => (Array.isArray(arr) ? arr : [])),
+      priceRows: s.priceRows && typeof s.priceRows === 'object' ? s.priceRows : {},
+    });
+    while (st.grades.length < 5) st.grades.push([]);
+    st.versionKey = p.versionKey || '1.21.1';
+    st.taczEnabled = p.taczEnabled == null ? null : !!p.taczEnabled;
+    return st;
+  }
+
+  /** Midpoint price of one `ns:id`/`ns:id#variant` key in the draft's price
+   *  rows. Returns null when the key is unknown or unpriced; range prices
+   *  sample at the midpoint (same convention as the EV column). */
+  function priceMid(state, key) {
+    const row = state.priceRows && state.priceRows[key];
+    if (!row) return null;
+    const p = parsePriceInput(row.price);
+    if (!p) return null;
+    return (p.min + p.max) / 2;
+  }
+
+  /** Per-item expected count (single = 1, fixed = N, range = [min,max] mid). */
+  function countMid(it) {
+    if (it.countMode === 'range') {
+      const lo = Math.max(1, Math.floor(Number(it.countMin) || 1));
+      const hi = Math.max(lo, Math.floor(Number(it.countMax) || lo));
+      return (lo + hi) / 2;
+    }
+    if (it.countMode === 'fixed') {
+      return Math.max(1, Math.floor(Number(it.count) || 1));
+    }
+    return 1;
+  }
+
+  /** Pure value/sanity model behind the prices-page "odds & value check":
+   *  per-grade chance (raw random-weight share) and expected value per open
+   *  (grade and item rolls, range prices at midpoint). Empty grades are
+   *  conditioned out exactly like simulateOpens so EV answers "what is one
+   *  open worth". `unpriced` items (no priceKey / no price) contribute 0 and
+   *  are counted; the warnings list carries i18n keys for the UI. */
+  function boxEconomy(state) {
+    const { openable, grades } = computeProbabilities(state);
+    const out = { openable, grades: [], totalEv: 0, recycleEv: 0, unpriced: 0, priced: 0, warnings: [] };
+    if (!openable) {
+      // All grade weights (meta.random) are empty/zero: in-game the box
+      // refuses to open at all — distinct from "weights set, grades empty".
+      out.warnings.push({ key: 'econ.warnNoWeight' });
+      return out;
+    }
+    const active = grades.filter((g) => !g.empty && g.gradeProb > 0);
+    if (!active.length) {
+      out.warnings.push({ key: 'econ.warnEmpty' });
+      return out;
+    }
+    const mass = active.reduce((a, g) => a + g.gradeProb, 0);
+    for (const g of active) {
+      let ev = 0;
+      let rer = 0; // recycle per open within this grade (per-item ceil, in-game rule)
+      let unpriced = 0;
+      let itemsActive = 0;
+      for (const it of g.items) {
+        if (it.disabled) continue;
+        itemsActive++;
+        if (!it.priceKey) { unpriced++; continue; }
+        const mid = priceMid(state, it.priceKey);
+        if (mid == null) { unpriced++; continue; }
+        out.priced++;
+        ev += it.itemProb * mid * countMid(it);
+        rer += it.itemProb * Math.ceil(mid * 0.9) * countMid(it);
+      }
+      out.unpriced += unpriced;
+      out.grades.push({
+        gi: g.gi,
+        prob: g.gradeProb / mass,
+        items: itemsActive,
+        ev,
+        recycle: rer,
+        unpriced,
+      });
+      out.totalEv += (g.gradeProb / mass) * ev;
+      out.recycleEv += (g.gradeProb / mass) * rer;
+    }
+    if (out.unpriced > 0 && out.priced === 0) {
+      out.warnings.push({ key: 'econ.warnAllUnpriced' });
+    } else if (out.unpriced > 0) {
+      out.warnings.push({ key: 'econ.warnSomeUnpriced', vars: { n: out.unpriced } });
+      // Per-grade detail only makes sense when the box has some pricing at all
+      // (an all-unpriced box is already covered by the single box-level warn).
+      for (const gr of out.grades) {
+        if (gr.items > 0 && gr.unpriced === gr.items) {
+          out.warnings.push({
+            key: 'econ.warnGradeUnpriced',
+            vars: { grade: String(gr.gi + 1) },
+          });
+        }
+      }
+    }
+    return out;
+  }
+
+  /** Prepares the File System Access write-back ("apply to game"): one box
+   *  JSON per draft plus the shared `_prices.json` merged over every draft
+   *  (last draft wins per key, matching how /csbox reload reads the folder).
+   *  Pure function — app.js handles the picker and the actual writes. File
+   *  names come from each draft's fileName (sanitized, leading underscores
+   *  stripped so `_prices.json` / ignored helpers stay untouched). */
+  function applyManifest(payloads) {
+    const files = [];
+    const states = [];
+    const usedNames = new Set();
+    let conflicts = 0;
+    for (const e of payloads || []) {
+      const p = e && e.payload;
+      if (!p || !p.state) continue;
+      const st = payloadState(p);
+      states.push(st);
+      let base = String(st.fileName || 'box').trim().replace(/^_+/, '');
+      if (!base) base = 'box';
+      base = base.replace(/[\\/:*?"<>|]/g, '_');
+      if (usedNames.has(base)) {
+        conflicts++;
+        let k = 2;
+        while (usedNames.has(base + '_' + k)) k++;
+        base = base + '_' + k;
+      }
+      usedNames.add(base);
+      files.push({
+        name: base + '.json',
+        text: JSON.stringify(buildBox(st, false), null, 2) + '\n',
+      });
+    }
+    if (!states.length) {
+      return { files, prices: null, conflicts: 0 };
+    }
+    const prices = {};
+    for (const st of states) {
+      Object.assign(prices, buildPrices(st));
+    }
+    return {
+      files,
+      prices: Object.keys(prices).length ? prices : null,
+      conflicts,
+    };
+  }
+
   NS.emptyMeta = emptyMeta;
   NS.emptyItem = emptyItem;
   NS.emptyState = emptyState;
@@ -846,4 +1000,6 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.mergeCratePriceEntries = mergeCratePriceEntries;
   NS.computeProbabilities = computeProbabilities;
   NS.simulateOpens = simulateOpens;
+  NS.boxEconomy = boxEconomy;
+  NS.applyManifest = applyManifest;
 })(window.CSBoxEdit);

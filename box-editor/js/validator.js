@@ -33,6 +33,16 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return /^-?\d+$/.test(String(v)) && (min === undefined || Number(v) >= min) && Number(v) <= hi;
   }
 
+  /** Cross-checks against the game registry lists the /csbox editor pack
+   *  carried (NS.gameRegistry, optional). Warn-only: the game is the final
+   *  authority (missing mods → different id space), so unknown ids stay
+   *  visible but never block export. false = no list / id known. */
+  function unknownInRegistry(list, id) {
+    const reg = NS.gameRegistry;
+    if (!reg || !reg[list] || !reg[list].size) return false;
+    return !reg[list].has(id);
+  }
+
   function validate(state, versionKey) {
     const issues = [];
     const version = DATA.versions.find((v) => v.key === versionKey) || DATA.versions[0];
@@ -111,6 +121,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       if (eid && !ID_RE.test(eid)) {
         add(issues, 'warn', 'meta.entity', 'v.badEntityId');
         break;
+      } else if (eid && unknownInRegistry('entities', eid)) {
+        add(issues, 'warn', 'meta.entity', 'v.unknownEntity', { id: eid });
       }
       if (ra !== '' && !numOk(ra, 0, 1)) {
         add(issues, 'error', 'meta.entity', 'v.badEntity');
@@ -144,6 +156,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
           add(issues, 'error', path, 'v.itemSourceRequired', { n: ii + 1 });
         } else if (it.source === 'id') {
           if (!ID_RE.test(value)) add(issues, 'warn', path + '.id', 'v.badItemId');
+          else if (unknownInRegistry('items', value)) add(issues, 'warn', path + '.id', 'v.unknownItem', { id: value });
         } else if (it.source === 'tag') {
           if (!value.startsWith('#')) add(issues, 'error', path + '.tag', 'v.tagNeedsHash');
         } else if (it.source === 'loot_table') {
@@ -207,6 +220,11 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     for (const r of rows) {
       const path = 'prices.' + r.key;
       if (!KEY_RE.test(r.key)) add(issues, 'error', path, 'v.badPriceKey');
+      else {
+        // Registry cross-check ignores the #variant suffix (NBT pricing keys).
+        const base = r.key.split('#')[0];
+        if (unknownInRegistry('items', base)) add(issues, 'warn', path, 'v.unknownPriceKey', { id: base });
+      }
       const price = r.row.price;
       // Pool auto-keys (id entries) MUST be priced: the game refuses to load
       // a box containing an unpriced id item (no grade-default fallback).

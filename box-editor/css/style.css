@@ -317,6 +317,27 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 }
 .price-table td { padding: 5px 8px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .price-table tr:hover td { background: rgba(255, 255, 255, .02); }
+
+/* EV / value check panel (prices tab). */
+.econ-panel {
+  margin: 8px 0 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, .02);
+}
+.econ-panel summary {
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  user-select: none;
+}
+.econ-panel summary .tiny { margin-left: 8px; font-weight: 400; }
+.econ-panel .econ-table { margin: 8px 0 2px; }
+.econ-panel .econ-ev { font-family: var(--mono); font-weight: 600; }
+.econ-warns {
+  margin: 6px 0 2px; padding-left: 18px;
+  color: var(--warn, #b7860b);
+  font-size: 12px;
+}
 .key-cell code { display: block; }
 .tiny { display: block; font-size: 10.5px; margin-top: 1px; }
 .price-input { width: 110px; }
@@ -1596,6 +1617,17 @@ summary:focus-visible,
 .file-btn:hover { color: var(--text); background: rgba(60, 52, 38, .12); }
 .file-btn.accent { color: #2f6fdb; font-weight: 700; font-size: 14px; padding: 2px 6px; }
 .file-empty { color: var(--muted); font-size: 12px; padding: 10px; text-align: center; }
+
+/* Pack provenance badge (game version the #pack link carried). */
+.file-tag {
+  flex: none;
+  font-size: 10px; line-height: 1;
+  padding: 2px 4px; border-radius: 4px;
+  color: var(--muted);
+  background: rgba(60, 52, 38, .08);
+}
+html[data-theme="dark"] .file-tag { background: rgba(255, 255, 255, .08); }
+.file-item.active .file-tag { color: var(--accent); font-weight: 700; }
 
 @media (max-width: 1180px) {
   .filebar { position: static; width: 100%; }

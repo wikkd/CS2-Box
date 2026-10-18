@@ -639,6 +639,11 @@ try {
     const packSecond = await page.locator('.file-item').nth(1).locator('.file-name').textContent();
     check('pack import lists the second imported draft', (packSecond || '').trim() === 'pack_beta',
       'name=' + packSecond);
+    const badgeTxt = ((await page.locator('.file-item .file-tag').first().textContent()) || '').trim();
+    check('imported draft shows the pack version badge', badgeTxt === '26.2', 'badge=' + badgeTxt);
+    const fileTip = await page.locator('.file-item').first().getAttribute('title');
+    check('draft tooltip names the source file', (fileTip || '').includes('pack_alpha.json'),
+      'tip=' + fileTip);
     check('pack link clears its fragment after import', await page.evaluate(() => location.hash === ''),
       'hash="' + (await page.evaluate(() => location.hash.slice(0, 12))) + '"');
     await page.reload({ waitUntil: 'load' });
@@ -654,6 +659,16 @@ try {
     await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
     const packPrice = await page.locator('tr[data-price-key="minecraft:diamond"] input').first().inputValue();
     check('pack link merges _prices.json into the price table', packPrice === '1234', 'price=' + packPrice);
+    check('prices page shows the odds & value panel',
+      (await page.locator('details.econ-panel').count()) === 1);
+    await page.locator('details.econ-panel summary').click();
+    const econRows = await page.locator('details.econ-panel .econ-table tbody tr').count();
+    check('econ panel lists one row per non-empty grade', econRows === 1, 'rows=' + econRows);
+    const econEv = ((await page.locator('details.econ-panel .econ-ev').first().textContent()) || '').trim();
+    check('econ panel computes the grade EV (diamond @1234)', econEv === '1234.0', 'ev=' + econEv);
+    const econTotal = ((await page.locator('details.econ-panel p.help').first().textContent()) || '');
+    check('econ panel shows total and recycle EV',
+      /1234\.0/.test(econTotal) && /1111\.0/.test(econTotal), econTotal.trim().slice(0, 60));
     await page.evaluate(() => localStorage.clear());
 
     /* broken JSON file: opens pre-filled in the import dialog, fix -> new draft */
@@ -709,6 +724,124 @@ try {
     await page.waitForTimeout(450);
     const cogAfter = await page.locator('#csbox-item-list option[value="zzmod:cogwheel"]').count();
     check('synced items survive a plain reload', cogAfter === 1, 'opt=' + cogAfter);
+    // unknown-id cross-check: after the reload the synced registry must still
+    // feed the validator (gameLists -> NS.gameRegistry mirror).
+    const regSize = await page.evaluate(() =>
+      (window.CSBoxEdit.gameRegistry && window.CSBoxEdit.gameRegistry.items)
+        ? window.CSBoxEdit.gameRegistry.items.size : 0);
+    check('game registry mirror survives a plain reload', regSize === 3, 'n=' + regSize);
+    await page.click('[data-action="paste-items"][data-grade="0"]');
+    await page.fill('#paste-textarea', 'zzmod:missing_thing');
+    await page.click('#paste-do');
+    await page.waitForTimeout(600);
+    const issueTxt = ((await page.locator('#issues-root').textContent()) || '');
+    check('unknown item id raises a registry warning', /zzmod:missing_thing/.test(issueTxt),
+      'issues=' + issueTxt.replace(/\s+/g, ' ').slice(0, 70));
+    await page.evaluate(() => localStorage.clear());
+  }
+
+  /* ================= pack difference dialog (overwrite/keep/skip) ================= */
+  {
+    const { deflateSync } = await import('node:zlib');
+    const diffBox = (itemId) => ({
+      name: 'Pack Alpha', type: 'csbox', key: 'minecraft:iron_ingot',
+      random: [625, 125, 25, 5, 2],
+      grade1: [{ id: itemId, weight: 1 }], grade2: [], grade3: [], grade4: [], grade5: [],
+    });
+    const diffUrl = (itemId) => BASE + '#pack=' + deflateSync(Buffer.from(JSON.stringify({
+      v: 1, mc: '26.2', files: { 'pack_alpha.json': diffBox(itemId) },
+    }), 'utf8')).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(diffUrl('minecraft:diamond'), { waitUntil: 'load' });
+    await page.waitForTimeout(450);
+    check('difference-dialog baseline import', (await page.locator('.file-item').count()) === 1,
+      'items=' + (await page.locator('.file-item').count()));
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.goto(diffUrl('minecraft:diamond'), { waitUntil: 'load' });
+    await page.waitForTimeout(450);
+    check('identical re-import shows no difference dialog',
+      (await page.locator('#swap-dialog[open]').count()) === 0);
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.goto(diffUrl('minecraft:emerald'), { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    check('changed pack file opens the difference dialog',
+      (await page.locator('#swap-dialog[open]').count()) === 1);
+    await page.click('#swap-overwrite');
+    await page.waitForTimeout(450);
+    check('overwrite keeps a single draft', (await page.locator('.file-item').count()) === 1,
+      'items=' + (await page.locator('.file-item').count()));
+    const ovItem = await page.locator('#grade-items-0 [data-f$=".value"]').first().inputValue();
+    check('overwrite replaces the draft content', ovItem === 'minecraft:emerald', 'item=' + ovItem);
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.goto(diffUrl('minecraft:sand'), { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    check('difference dialog opens again for the next change',
+      (await page.locator('#swap-dialog[open]').count()) === 1);
+    await page.click('#swap-keep');
+    await page.waitForTimeout(450);
+    check('keep-both creates a second draft', (await page.locator('.file-item').count()) === 2,
+      'items=' + (await page.locator('.file-item').count()));
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.goto(diffUrl('minecraft:stone'), { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    check('difference dialog opens for the third change',
+      (await page.locator('#swap-dialog[open]').count()) === 1);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(450);
+    check('Escape skips the file (draft count stable)',
+      (await page.locator('.file-item').count()) === 2,
+      'items=' + (await page.locator('.file-item').count()));
+    await page.evaluate(() => localStorage.clear());
+  }
+
+  /* ================= workspace share (#workspace=) ================= */
+  {
+    // Capture the share link instead of hitting the real clipboard.
+    await page.addInitScript(() => {
+      window.__copied = null;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText = (t) => { window.__copied = String(t); return Promise.resolve(); };
+      }
+    });
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(BASE, { waitUntil: 'load' });
+    await page.waitForTimeout(300);
+    await page.click('#file-add');
+    await page.waitForTimeout(300);
+    check('workspace share setup has two drafts', (await page.locator('.file-item').count()) === 2,
+      'items=' + (await page.locator('.file-item').count()));
+    await page.click('#btn-share-ws');
+    await page.waitForTimeout(450);
+    const wsLink = await page.evaluate(() => window.__copied || '');
+    check('workspace share copies a #workspace= link',
+      wsLink.includes('#workspace=') && wsLink.length > 60, 'len=' + wsLink.length);
+    if (wsLink.includes('#workspace=')) {
+      await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+      await page.evaluate(() => localStorage.clear());
+      await page.goto(wsLink, { waitUntil: 'load' });
+      await page.waitForTimeout(550);
+      check('workspace link imports its drafts', (await page.locator('.file-item').count()) === 2,
+        'items=' + (await page.locator('.file-item').count()));
+      check('workspace link clears its fragment',
+        (await page.evaluate(() => location.hash)) === '');
+      await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+      await page.goto(wsLink, { waitUntil: 'load' });
+      await page.waitForTimeout(550);
+      check('re-opening the workspace link does not duplicate drafts',
+        (await page.locator('.file-item').count()) === 2,
+        'items=' + (await page.locator('.file-item').count()));
+    }
+    const applyState = await page.evaluate(() => {
+      const btn = document.getElementById('btn-apply-game');
+      return {
+        api: typeof window.showDirectoryPicker === 'function',
+        vis: !!btn && !btn.hidden,
+      };
+    });
+    check('apply-to-game button matches File System Access availability',
+      applyState.api === applyState.vis, JSON.stringify(applyState));
     await page.evaluate(() => localStorage.clear());
   }
 
