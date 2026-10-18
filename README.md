@@ -25,7 +25,7 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 - **一套代码，六端同步**：同时覆盖 NeoForge 与 Forge 共 6 个平台
 - **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
 
-当前版本 **`2.0.2`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
+当前版本 **`2.0.3`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
 
 ## 快速开始
 
@@ -128,7 +128,7 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 全部平台共享同一 `mod_version`：
 
-- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.2.jar`）
+- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.3.jar`）
 - Forge：`csgobox-forge-<mc>-<mod_version>.jar`
 - **唯一例外**：Forge 1.20.1 发布物为 `csgobox-forge-1.20.1-<mod_version>-srg.jar`（SRG 重映射版，1.20.1 生产必需）
 
@@ -278,6 +278,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 | 文档 | 内容 |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | 面向玩家的模组介绍与玩法说明 |
+| [docs/PLAYER-CHANGELOG-2.0.3.md](./docs/PLAYER-CHANGELOG-2.0.3.md) | 玩家向 2.0.3 更新说明 |
 | [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | 玩家向 2.0.2 更新说明 |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | 完整安装与首次运行步骤 |
 | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) | TOML / JSON 配置参考（v2.0.1 全字段 + [JSON Schema](./docs/box-schema/box.schema.json)） |
