@@ -14,7 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 
 import java.util.Optional;
@@ -38,14 +38,27 @@ import java.util.Optional;
  * achievements) with the deployer's fake player, keyed per deployer so two
  * machines never share cooldowns or pity streaks. Key consumption is disabled
  * in the executor — Create owns the held item.
+ *
+ * <p>Deliberately NOT annotated {@code @EventBusSubscriber}: the class imports
+ * Create types, and FML's automatic subscriber registration does a bare
+ * {@code Class.forName} on every annotated class — on a server without Create
+ * that throws {@link NoClassDefFoundError} and fails mod construction
+ * (same family as issue #2: a class-level reference the dist/mod guard cannot
+ * see). Instead, registration happens from the entry point only when Create
+ * is actually loaded.
  */
-@EventBusSubscriber(modid = CsgoBox.MODID)
 public final class DeployerBoxOpenRecipeSearch {
 
     /** Above Create's own recipe sources (item_application 100 / deploying 50). */
     private static final int PRIORITY = 10_000;
 
     private DeployerBoxOpenRecipeSearch() {
+    }
+
+    /** Registers this listener on the game event bus. Call only when
+     *  {@code ModList.isLoaded("create")} — the class imports Create types. */
+    public static void register() {
+        NeoForge.EVENT_BUS.register(DeployerBoxOpenRecipeSearch.class);
     }
 
     @SubscribeEvent

@@ -4,7 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v1_21_1.box.BoxJsonLoader;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
-import com.reclizer.csgobox.v1_21_1.config.CsboxClothConfigScreen;
+import com.reclizer.csgobox.v1_21_1.config.ClothConfigHook;
 import com.reclizer.csgobox.v1_21_1.config.CsboxConfig;
 import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ItemTerminal;
@@ -51,7 +51,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
@@ -145,16 +145,13 @@ public class CsgoBox {
         }
         ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
-        // Cloth Config GUI (optional client mod). Registered only on the client
-        // with Cloth present; the reference is intentionally inside the
-        // Dist.CLIENT branch so dedicated servers never resolve the
-        // client-only screen classes.
-        if (FMLEnvironment.dist == Dist.CLIENT
-                && net.neoforged.fml.ModList.get().isLoaded("cloth_config")) {
-            ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
-                    net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    (modContainer, screen) -> CsboxClothConfigScreen.create(screen));
-        }
+        // Cloth Config GUI (optional client mod). The registration lives in
+        // ClothConfigHook: even a dist-guarded lambda compiles into THIS class
+        // as a synthetic method whose signature mentions Screen, and the game
+        // event bus below reflects over every declared method — on a dedicated
+        // server that resolves the client-only Screen class and crashes
+        // (issue #2). The hook class is only loaded on clients.
+        ClothConfigHook.registerIfClientWithCloth();
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
@@ -224,6 +221,12 @@ public class CsgoBox {
             // TOP throws NoClassDefFoundError (see 2.0.1 crash reports).
             if (isModLoaded("theoneprobe")) {
                 com.reclizer.csgobox.v1_21_1.top.CsgoBoxTopPlugin.registerIfLoaded();
+            }
+            // Create deployer integration. The listener class imports Create
+            // types, so it must never be registered (or class-loaded) without
+            // Create present — the guard decides before the class loads.
+            if (isModLoaded("create")) {
+                com.reclizer.csgobox.v1_21_1.create.DeployerBoxOpenRecipeSearch.register();
             }
         });
         LOGGER.info("CS2 Box initialized successfully");

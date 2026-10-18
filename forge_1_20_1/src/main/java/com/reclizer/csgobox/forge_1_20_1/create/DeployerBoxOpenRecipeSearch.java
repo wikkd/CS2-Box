@@ -12,8 +12,8 @@ import com.simibubi.create.content.kinetics.deployer.DeployerRecipeSearchEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.items.wrapper.RecipeWrapper;
 
 import java.util.Optional;
@@ -35,14 +35,27 @@ import java.util.Optional;
  * cooldown, permission gate, pity, events, achievements) with the deployer's
  * fake player, keyed per deployer. Key consumption is disabled in the
  * executor — Create owns the held item.</p>
+ *
+ * <p>Deliberately NOT annotated {@code @Mod.EventBusSubscriber}: the class
+ * imports Create types, and Forge's automatic subscriber registration does a
+ * bare {@code Class.forName} on every annotated class — on a server without
+ * Create that throws {@link NoClassDefFoundError} and fails mod construction
+ * (same family as issue #2: a class-level reference the dist/mod guard cannot
+ * see). Instead, registration happens from the entry point only when Create
+ * is actually loaded.</p>
  */
-@Mod.EventBusSubscriber(modid = CsgoBox.MODID)
 public final class DeployerBoxOpenRecipeSearch {
 
     /** Above Create's own recipe sources (item_application 100 / deploying 50). */
     private static final int PRIORITY = 10_000;
 
     private DeployerBoxOpenRecipeSearch() {
+    }
+
+    /** Registers this listener on the game event bus. Call only when
+     *  {@code ModList.isLoaded("create")} — the class imports Create types. */
+    public static void register() {
+        MinecraftForge.EVENT_BUS.register(DeployerBoxOpenRecipeSearch.class);
     }
 
     @SubscribeEvent

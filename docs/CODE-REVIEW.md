@@ -119,6 +119,15 @@ Forge 三平台（`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`）自 **2.0.0 �
 - 审查点：Forge 模块是否被误当「非正式平台」而降低审查标准？**不在 CI 矩阵**不等于可以不编译——改动涉及 Forge 时必须 `clean compileJava` 并跑对应门禁脚本。同时注意 Forge 三模块**不参与** NeoForge 三平台的镜像纪律（`v26_1_2` → `v26_2`）与 `AnimRenderOps` 漂移门禁，不要用这两项要求它们。
 - 参考：`AGENTS.md`「forge_26_1_2 同步」节、`docs/TESTING-FORGE-2612.md` / `TESTING-FORGE-262.md` / `TESTING-FORGE-1201.md`。
 
+### 4.10 专用服务器 dist 安全（入口类客户端类型隔离）🔴
+平台入口类 `CsgoBox`（`EVENT_BUS.register(this)` 或生命周期反射的扫描对象）**编译产物常量池不得引用任何 `net.minecraft.client` 类型**——专用服务器上 NeoForge 的 `RuntimeDistCleaner` 会直接抛 `Attempted to load class ... for invalid dist DEDICATED_SERVER`（2.0.1 线上事故：Cloth Config 注册 lambda 虽包在 `Dist.CLIENT` 守卫内，但 javac 把它编进主类合成方法，事件总线反射解析方法签名时加载了 `Screen`，issue #2）。
+
+- 门禁：六平台 `checkDistSafety` Gradle 任务（挂 `check`，随 `compileJava` 产物扫描），命中即失败并提示 `config/ClothConfigHook` 持有类模式。
+- 审查点：
+  - 客户端类型引用（Screen、IConfigScreenFactory、ConfigScreenFactory 等）是否都收敛在「专用服务器永不加载」的类里：`Dist.CLIENT` 嵌套类（`ClientModEvents`）或 `config/ClothConfigHook` 这类持有类？
+  - **dist 守卫只防执行、防不住签名扫描**——新增注册逻辑不要把客户端 lambda 写进入口主类，哪怕外面套了 `if (dist == CLIENT)`。
+  - NeoForge 三平台 `EVENT_BUS.register(this)` 会反射扫主类全部方法；Forge 三平台勿在主类新引入该调用（会开始扫描含 Cloth 潜伏引用的类）。
+
 ---
 
 ## 5. 通用代码质量审查清单

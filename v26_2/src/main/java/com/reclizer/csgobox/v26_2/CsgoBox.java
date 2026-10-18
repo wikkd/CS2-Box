@@ -5,7 +5,7 @@ import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.v26_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.v26_2.box.BoxRegistry;
-import com.reclizer.csgobox.v26_2.config.CsboxClothConfigScreen;
+import com.reclizer.csgobox.v26_2.config.ClothConfigHook;
 import com.reclizer.csgobox.v26_2.config.CsboxConfig;
 import com.reclizer.csgobox.v26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.v26_2.item.ModItems;
@@ -45,7 +45,6 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
@@ -141,16 +140,13 @@ public class CsgoBox {
         }
         ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
-        // Cloth Config GUI (optional client mod). Registered only on the client
-        // with Cloth present; the reference is intentionally inside the
-        // Dist.CLIENT branch so dedicated servers never resolve the
-        // client-only screen classes.
-        if (FMLEnvironment.getDist() == Dist.CLIENT
-                && net.neoforged.fml.ModList.get().isLoaded("cloth_config")) {
-            ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
-                    net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    (modContainer, screen) -> CsboxClothConfigScreen.create(screen));
-        }
+        // Cloth Config GUI (optional client mod). The registration lives in
+        // ClothConfigHook: even a dist-guarded lambda compiles into THIS class
+        // as a synthetic method whose signature mentions Screen, and the game
+        // event bus below reflects over every declared method — on a dedicated
+        // server that resolves the client-only Screen class and crashes
+        // (issue #2). The hook class is only loaded on clients.
+        ClothConfigHook.registerIfClientWithCloth();
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);

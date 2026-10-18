@@ -327,3 +327,48 @@ tasks.register('minifyJar', JavaExec) {
         args '@' + config.absolutePath
     }
 }
+
+// Issue #2 regression guard: the mod entry class (CsgoBox, the object passed
+// to the game event bus / reflected over by lifecycle hooks) must not carry
+// any client-only type reference in its compiled constant pool. javac hides
+// such references inside lambda synthetic methods (a dist-guarded Cloth
+// Config lambda once crashed dedicated servers exactly this way: the event
+// bus resolved net/minecraft/client/gui/screens/Screen from the entry class
+// on DEDICATED_SERVER). Source-level imports never reach bytecode, so only
+// the compiled class is authoritative.
+tasks.register('checkDistSafety') {
+    group = 'verification'
+    description = 'Issue #2 guard: entry class must not reference client-only types (dedicated-server dist crash).'
+    dependsOn tasks.named('compileJava')
+    // NeoGradle emits build/classes/java/main; ForgeGradle/slime emits
+    // build/sourceSets/main — probe both so the task works on all six
+    // platforms.
+    def candidates = [layout.buildDirectory.file("classes/java/main/com/reclizer/csgobox/${project.name}/CsgoBox.class").get().asFile,
+                      layout.buildDirectory.file("sourceSets/main/com/reclizer/csgobox/${project.name}/CsgoBox.class").get().asFile]
+    inputs.files(candidates)
+    doLast {
+        def f = candidates.find { it.isFile() }
+        if (f == null) {
+            throw new GradleException("checkDistSafety: entry class not found (tried ${candidates*.path.join(', ')}) — was compileJava run?")
+        }
+        def bytes = f.bytes
+        def needle = 'net/minecraft/client'.getBytes('UTF-8')
+        int count = 0
+        for (int i = 0; i <= bytes.length - needle.length; i++) {
+            boolean hit = true
+            for (int j = 0; j < needle.length; j++) {
+                if (bytes[i + j] != needle[j]) { hit = false; break }
+            }
+            if (hit) { count++ }
+        }
+        if (count > 0) {
+            throw new GradleException(
+                "checkDistSafety FAILED: ${f.name} constant pool references net/minecraft/client (${count} occurrence(s)). " +
+                'A client-only type leaked into the mod entry class — likely a lambda compiled into a synthetic method. ' +
+                'Move the registration into a client-only holder class (see config/ClothConfigHook for the pattern). ' +
+                'Crashes dedicated servers: "Attempted to load class ... for invalid dist DEDICATED_SERVER" (issue #2).')
+        }
+        logger.lifecycle "checkDistSafety: ${f.name} clean (no client-only type references)"
+    }
+}
+tasks.named('check').configure { dependsOn(tasks.named('checkDistSafety')) }

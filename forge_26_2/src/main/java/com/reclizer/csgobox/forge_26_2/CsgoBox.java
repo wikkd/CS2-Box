@@ -5,7 +5,7 @@ import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.forge_26_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
-import com.reclizer.csgobox.forge_26_2.config.CsboxClothConfigScreen;
+import com.reclizer.csgobox.forge_26_2.config.ClothConfigHook;
 import com.reclizer.csgobox.forge_26_2.config.CsboxConfig;
 import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_26_2.item.ItemTerminal;
@@ -38,7 +38,6 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
@@ -133,17 +132,12 @@ public class CsgoBox {
         }
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
-        // Cloth Config GUI (optional client mod). Registered only on the client
-        // with Cloth present; the reference is intentionally inside the
-        // Dist.CLIENT branch so dedicated servers never resolve the
-        // client-only screen classes.
-        if (FMLEnvironment.dist == Dist.CLIENT
-                && net.minecraftforge.fml.ModList.isLoaded("cloth_config")) {
-            ModLoadingContext.get().registerExtensionPoint(
-                    net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
-                    () -> new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory(
-                            (minecraft, screen) -> CsboxClothConfigScreen.create(screen)));
-        }
+        // Cloth Config GUI (optional client mod). The registration lives in
+        // ClothConfigHook: even a dist-guarded lambda compiles into THIS class
+        // as a synthetic method whose signature mentions Screen. Isolated there,
+        // it cannot be picked up by any future event-bus reflection over this
+        // class (issue #2 pattern). The hook class is only loaded on clients.
+        ClothConfigHook.registerIfClientWithCloth();
 
         FMLCommonSetupEvent.getBus(modEventBus).addListener(this::commonSetup);
         Networking.registerMessages();
