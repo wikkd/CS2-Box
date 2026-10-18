@@ -16,6 +16,7 @@
   const LS_FILES = 'cs2box-editor-files-v1';
   const LS_FILEBAR = 'cs2box-editor-filebar-v1';
   const LS_THEME = 'cs2box-editor-theme';
+  const LS_GAME_LISTS = 'cs2box-editor-game-lists-v1';
 
   /* Theme: 'light' | 'dark' stored explicitly once the user toggles; absent
    * follows prefers-color-scheme. Applied at script eval (html exists already)
@@ -101,11 +102,18 @@
    * derived from payload.state.fileName (the box id itself). */
   let filesStore = null; // { files: [{id, payload, savedAt}], activeId } | null
 
+  /* Game registry lists carried by #pack= links (/csbox editor): item and
+   * entity ids feed the autocomplete, so box items can be picked in the
+   * browser without copying ids/NBT in-game. Persisted to localStorage. */
+  let gameLists = { items: [], entities: [] };
+
   applyTheme(); // immediate: avoid a cream flash before DOMContentLoaded
 
   const $ = (sel) => document.querySelector(sel);
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', () => { void boot(); });
+
+  async function boot() {
     bindStatics();
     initTheme();
     loadPrefs();
@@ -119,7 +127,16 @@
     setupSimPanel();
     initServiceWorker();
     filesStore = loadFilesStore();
-    if (!loadHashState() && !loadState()) loadExample(0, false);
+    loadGameLists();
+    // #pack= (mod /csbox editor link) is decoded asynchronously; adopt the
+    // previous active draft into `state` first so importPack()'s saveState()
+    // flush cannot clobber it with the initial empty state.
+    let packed = false;
+    if (/[#&]pack=/.test(location.hash)) {
+      loadState();
+      packed = await loadHashPack();
+    }
+    if (!packed && !loadHashState() && !loadState()) loadExample(0, false);
     // Fresh browser (no drafts): adopt what is on screen (the default example
     // or a shared link) as the first file entry so the sidebar lists it.
     if (!filesStore || !filesStore.files.length) {
@@ -127,7 +144,7 @@
       renderFileBar();
     }
     window.addEventListener('hashchange', () => {
-      if (/[#&]state=/.test(location.hash)) location.reload();
+      if (/[#&](state|pack)=/.test(location.hash)) location.reload();
     });
     window.addEventListener('storage', (e) => {
       if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV && e.key !== LS_FILES) return;
@@ -140,7 +157,7 @@
       if (!loadState()) renderAll();
     });
     schedulePreview(0);
-  });
+  }
 
   /* ------------------------------ helpers ------------------------------ */
 
@@ -411,6 +428,32 @@
     }
   }
 
+  function saveGameLists() {
+    try {
+      localStorage.setItem(LS_GAME_LISTS, JSON.stringify({
+        v: 1,
+        ts: Date.now(),
+        items: gameLists.items,
+        entities: gameLists.entities,
+      }));
+    } catch (e) {
+      storageWarnOnce(); // over quota: the lists still work this session
+    }
+  }
+
+  function loadGameLists() {
+    try {
+      const raw = localStorage.getItem(LS_GAME_LISTS);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (!obj || obj.v !== 1) return;
+      gameLists = {
+        items: Array.isArray(obj.items) ? obj.items.filter((s) => typeof s === 'string') : [],
+        entities: Array.isArray(obj.entities) ? obj.entities.filter((s) => typeof s === 'string') : [],
+      };
+    } catch (e) { /* corrupt: keep the empty default */ }
+  }
+
   function activeFileEntry() {
     if (!filesStore) return null;
     return filesStore.files.find((f) => f.id === filesStore.activeId) || null;
@@ -674,6 +717,26 @@
   let fileDialogMode = null; // 'rename' | 'delete'
   let fileDialogId = null;
 
+  /* Pack fix flow (broken JSON from a #pack= link): each unparseable file is
+   * opened pre-filled in the import dialog in turn; while packImportName is
+   * set, a successful 'box' import lands in a NEW workspace draft instead of
+   * overwriting the active one. Reset by opening the dialog manually. */
+  let packImportName = null;
+  const packBrokenQueue = [];
+
+  function openImportPrefilled(fileName, text) {
+    packImportName = fileName;
+    document.getElementById('import-textarea').value = text;
+    document.getElementById('import-dialog').showModal();
+  }
+
+  function advancePackBroken() {
+    document.getElementById('import-textarea').value = '';
+    const next = packBrokenQueue.shift();
+    if (next) openImportPrefilled(next.name, next.text);
+    else packImportName = null;
+  }
+
   function openFileDialog(mode, id) {
     const dlg = $('#file-dialog');
     if (!dlg || !filesStore) return;
@@ -811,6 +874,7 @@
     });
 
     $('#btn-import').addEventListener('click', () => {
+      packImportName = null; // plain import overwrites the active draft, as before
       document.getElementById('import-dialog').showModal();
     });
 
@@ -862,14 +926,33 @@
 
   function setupDialogs() {
     const imp = $('#import-dialog');
-    $('#import-cancel').addEventListener('click', () => imp.close());
     $('#import-do').addEventListener('click', () => {
       const text = document.getElementById('import-textarea').value;
-      if (text.trim()) {
-        applyImportText(text, null);
-        document.getElementById('import-textarea').value = '';
+      if (!text.trim()) { imp.close(); return; }
+      const name = packImportName;
+      const imported = applyImportText(text, name);
+      if (!imported) return;
+      if (name && imported === 'box') {
+        // Put the fixed file in its own draft instead of clobbering the
+        // active one. applyImportText only mutated the global state; the
+        // active entry's payload is still the pre-import draft.
+        const payload = buildPayload();
+        if (!filesStore) filesStore = { files: [], activeId: null };
+        const entry = { id: uid(), payload, savedAt: Date.now() };
+        filesStore.files.unshift(entry);
+        filesStore.activeId = entry.id;
+        saveFilesStore();
+        resetHistory();
+        loadState();
+        renderFileBar();
       }
+      document.getElementById('import-textarea').value = '';
       imp.close();
+    });
+    $('#import-cancel').addEventListener('click', () => imp.close());
+    imp.addEventListener('close', () => {
+      if (packBrokenQueue.length) advancePackBroken();
+      else packImportName = null;
     });
 
     const fdg = $('#file-dialog');
@@ -1272,6 +1355,158 @@
     }
   }
 
+  /* ------------------------------ game pack (#pack= fragment) ---------------- */
+
+  function base64UrlToBytes(s) {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '===='.slice(b64.length % 4) : '';
+    const bin = atob(b64 + pad);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  async function inflateZlib(bytes) {
+    if (typeof DecompressionStream === 'undefined') {
+      const err = new Error('DecompressionStream unsupported');
+      err.packUnsupported = true;
+      throw err;
+    }
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+    return await new Response(stream).text();
+  }
+
+  /** Reads a #pack= fragment produced by the mod's /csbox editor command
+   *  (common EditorPack: zlib-deflate + base64url JSON manifest
+   *  {"v":1,"mc":<version key>,"files":{name:box,...},
+   *  "broken":{name:<raw text>,...}?,"prices":{...}|null,
+   *  "items":"id\nid\n..."?,"entities":"id\n..."?}).
+   *  Every box file becomes a workspace draft; _prices.json merges into each
+   *  draft's price table; unparseable files open pre-filled in the import
+   *  dialog for the player to fix in place; the registry lists feed the
+   *  item/entity autocomplete (stored locally, no re-entry needed).
+   *  Returns true when a pack was applied. Async because DecompressionStream
+   *  is a stream API. */
+  async function loadHashPack() {
+    const m = /[#&]pack=([A-Za-z0-9_-]+)/.exec(location.hash);
+    if (!m) return false;
+    let pack = null;
+    try {
+      pack = JSON.parse(await inflateZlib(base64UrlToBytes(m[1])));
+    } catch (e) {
+      toast(e && e.packUnsupported ? t('toast.packUnsupported') : t('toast.packFailed'), true);
+      return false;
+    }
+    return importPack(pack);
+  }
+
+  function importPack(pack) {
+    if (!pack || typeof pack !== 'object' || pack.v !== 1) {
+      toast(t('toast.packFailed'), true);
+      return false;
+    }
+    const filesObj = (pack.files && typeof pack.files === 'object' && !Array.isArray(pack.files)) ? pack.files : {};
+    const brokenObj = (pack.broken && typeof pack.broken === 'object' && !Array.isArray(pack.broken)) ? pack.broken : {};
+    const pricesObj = (pack.prices && typeof pack.prices === 'object' && !Array.isArray(pack.prices)) ? pack.prices : null;
+    const mcKey = (typeof pack.mc === 'string' && DATA.versions.some((v) => v.key === pack.mc)) ? pack.mc : null;
+    const items = typeof pack.items === 'string' ? pack.items.split('\n').filter(Boolean) : [];
+    const entities = typeof pack.entities === 'string' ? pack.entities.split('\n').filter(Boolean) : [];
+    const newEntries = [];
+    for (const name of Object.keys(filesObj)) {
+      if (!/\.json$/i.test(name)) continue;
+      const doc = filesObj[name];
+      if (!doc || typeof doc !== 'object' || Array.isArray(doc)) continue;
+      if (detectType(doc) !== 'box') continue;
+      const base = name.replace(/\.json$/i, '');
+      const res = NS.boxToState(doc, base);
+      const st = res.state;
+      NS.mergeMigrations(st, res.migrations);
+      if (pricesObj) NS.mergePrices(st, pricesObj);
+      newEntries.push({
+        id: uid(),
+        savedAt: Date.now(),
+        payload: {
+          versionKey: mcKey || (DATA.versions.some((v) => v.key === st.versionKey) ? st.versionKey : '1.21.1'),
+          compact: true,
+          currentTab: 'box',
+          taczEnabled: null,
+          state: {
+            fileName: st.fileName,
+            meta: st.meta,
+            grades: st.grades,
+            priceRows: st.priceRows,
+          },
+        },
+      });
+    }
+    const parts = [];
+    let ok = false;
+    if (newEntries.length) {
+      // Flush the currently open draft first (boot() adopted it into `state`),
+      // then group the imported drafts at the top of the workspace.
+      if (filesStore && filesStore.files.length) saveState();
+      else filesStore = { files: [], activeId: null };
+      filesStore.files.unshift(...newEntries);
+      filesStore.activeId = newEntries[0].id;
+      saveFilesStore();
+      resetHistory();
+      loadState();
+      renderFileBar();
+      parts.push(t('toast.packImported', { n: newEntries.length }));
+      if (pricesObj) parts.push(t('toast.packPrices', { n: Object.keys(pricesObj).length }));
+      ok = true;
+    } else if (pricesObj && activeFileEntry()) {
+      // Prices-only pack: merge into the active draft.
+      pushHistory();
+      const n = NS.mergePrices(state, pricesObj);
+      rebuildPrices();
+      schedulePreview();
+      saveState();
+      if (n) {
+        parts.push(t('toast.packPrices', { n }));
+        ok = true;
+      }
+    }
+    if (applyGameLists(items, entities, parts)) ok = true;
+    if (ok) {
+      toast(parts.join(t('common.sep')));
+      openPackBrokenFlow(brokenObj);
+      return true;
+    }
+    if (openPackBrokenFlow(brokenObj)) return true;
+    toast(t('toast.packNone'), true);
+    return false;
+  }
+
+  /** Stores the game registry lists carried by a pack and appends a toast
+   *  part per non-empty list. They power the item/entity autocomplete so box
+   *  items can be picked in the browser without copying ids/NBT in-game.
+   *  Returns true when a list was stored. */
+  function applyGameLists(items, entities, parts) {
+    if (!items.length && !entities.length) return false;
+    gameLists = { items, entities };
+    saveGameLists();
+    buildItemDatalist();
+    buildEntityDatalist();
+    if (items.length) parts.push(t('toast.packItems', { n: items.length }));
+    if (entities.length) parts.push(t('toast.packEntities', { n: entities.length }));
+    return true;
+  }
+
+  /** Queues broken (#pack= manifest) files and opens the first one
+   *  pre-filled in the import dialog so the player fixes each in place;
+   *  the dialog's close event advances the queue. Returns true when any
+   *  broken file was present. */
+  function openPackBrokenFlow(brokenObj) {
+    const names = Object.keys(brokenObj).filter((n) =>
+      /\.json$/i.test(n) && typeof brokenObj[n] === 'string');
+    if (!names.length) return false;
+    for (const n of names) packBrokenQueue.push({ name: n, text: brokenObj[n] });
+    toast(t('toast.packBroken', { n: names.length }), true);
+    advancePackBroken();
+    return true;
+  }
+
   /* ------------------------------ event delegation ------------------------------ */
 
   function setupDelegation() {
@@ -1647,20 +1882,40 @@
   function buildEntityDatalist() {
     const list = document.getElementById('csbox-entity-list');
     if (!list) return;
-    list.innerHTML = (DATA.entitySuggestions || []).map((e) =>
-      '<option value="minecraft:' + esc(e.id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">').join('');
+    const seen = new Set();
+    let html = (DATA.entitySuggestions || []).map((e) => {
+      const id = 'minecraft:' + e.id;
+      seen.add(id);
+      return '<option value="' + esc(id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">';
+    }).join('');
+    // Game registry ids synced via a #pack= link: plain values, after the
+    // curated suggestions, deduped.
+    html += gameLists.entities.filter((id) => !seen.has(id)).map((id) => {
+      seen.add(id);
+      return '<option value="' + esc(id) + '">';
+    }).join('');
+    list.innerHTML = html; /* esc-exempt: every dynamic part of `html` is esc()'d above */
   }
 
   /** Item-id autocomplete for pool value inputs and the price-table extra-key
-   *  input. TACZ entries are gated by the effective TACZ visibility. */
+   *  input. TACZ entries are gated by the effective TACZ visibility; game
+   *  registry ids synced via a #pack= link (all loaded mods) come last. */
   function buildItemDatalist() {
     const list = document.getElementById('csbox-item-list');
     if (!list) return;
     const tacz = taczVisible();
-    list.innerHTML = (DATA.itemSuggestions || []).filter((e) => !e.tacz || tacz).map((e) => {
+    const seen = new Set();
+    let html = (DATA.itemSuggestions || []).filter((e) => !e.tacz || tacz).map((e) => {
       const ns = e.tacz ? 'tacz:' : 'minecraft:';
-      return '<option value="' + ns + esc(e.id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">';
+      const id = ns + e.id;
+      seen.add(id);
+      return '<option value="' + esc(id) + '" label="' + esc(e[I18N.lang] || e.en || e.id) + '">';
     }).join('');
+    html += gameLists.items.filter((id) => !seen.has(id)).map((id) => {
+      seen.add(id);
+      return '<option value="' + esc(id) + '">';
+    }).join('');
+    list.innerHTML = html; /* esc-exempt: every dynamic part of `html` is esc()'d above */
   }
 
   function renderAll() {
@@ -2708,13 +2963,17 @@
 
   /* ------------------------------ import / export ------------------------------ */
 
+  /** Returns the detected import type ('box' | 'prices') so the import
+   *  dialog can keep itself open (and keep the text!) when parsing fails —
+   *  e.g. a broken config file from a #pack= link is fixed in place.
+   *  Returns null when nothing was imported. */
   function applyImportText(text, fileName) {
     let obj;
     try {
       obj = JSON.parse(text);
     } catch (e) {
       toast(t('toast.invalidJson', { err: e.message }), true);
-      return;
+      return null;
     }
     const type = detectType(obj);
     if (type === 'box') {
@@ -2731,6 +2990,7 @@
       if (mig.migrated) toast(t('toast.migrated', { n: mig.migrated }));
       else if (mig.bad) toast(t('toast.ignoredBadPrice', { n: mig.bad }), true);
       else toast(t('toast.importBox', { file: fileName || base }));
+      return 'box';
     } else if (type === 'prices') {
       pushHistory();
       const n = NS.mergePrices(state, obj);
@@ -2738,9 +2998,10 @@
       schedulePreview();
       pushHistory(); // snapshot imported prices so undo steps back through them
       toast(t('toast.importPrices', { n }));
-    } else {
-      toast(t('toast.unknownType'), true);
+      return 'prices';
     }
+    toast(t('toast.unknownType'), true);
+    return null;
   }
 
   /** "Legacy import" entry: pre-v2.0.1 box JSON (items may carry inline

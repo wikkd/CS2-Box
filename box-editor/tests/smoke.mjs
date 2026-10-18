@@ -610,6 +610,96 @@ try {
   check('share link restores prices',
     (await page.locator('tr[data-price-key="minecraft:emerald"]').count()) === 1);
 
+  /* ================= game pack link (#pack=, /csbox editor) ================= */
+  {
+    const { deflateSync } = await import('node:zlib');
+    const mkBox = (nm) => ({
+      name: nm, type: 'csbox', key: 'minecraft:iron_ingot',
+      random: [625, 125, 25, 5, 2],
+      grade1: [{ id: 'minecraft:diamond', weight: 1 }], grade2: [], grade3: [], grade4: [], grade5: [],
+    });
+    const manifest = JSON.stringify({
+      v: 1, mc: '26.2',
+      files: { 'pack_alpha.json': mkBox('Pack Alpha'), 'pack_beta.json': mkBox('Pack Beta') },
+      prices: { 'minecraft:diamond': 1234 },
+    });
+    const enc = deflateSync(Buffer.from(manifest, 'utf8')).toString('base64')
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const packUrl = BASE + '#pack=' + enc;
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' }); // cross-document hop
+    // Clear AFTER the hop: a fresh storage on prices.html would seed the
+    // example draft, which the pack import then keeps as a third entry.
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(packUrl, { waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    const packDrafts = await page.locator('.file-item').count();
+    check('pack link imports both box files as drafts', packDrafts === 2, 'items=' + packDrafts);
+    const packActive = await page.locator('[data-f="meta.fileName"]').inputValue();
+    check('pack import activates the first imported draft', packActive === 'pack_alpha', 'fn=' + packActive);
+    const packSecond = await page.locator('.file-item').nth(1).locator('.file-name').textContent();
+    check('pack import lists the second imported draft', (packSecond || '').trim() === 'pack_beta',
+      'name=' + packSecond);
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
+    const packPrice = await page.locator('tr[data-price-key="minecraft:diamond"] input').first().inputValue();
+    check('pack link merges _prices.json into the price table', packPrice === '1234', 'price=' + packPrice);
+    await page.evaluate(() => localStorage.clear());
+
+    /* broken JSON file: opens pre-filled in the import dialog, fix -> new draft */
+    const brokenPack = JSON.stringify({
+      v: 1, mc: '26.2',
+      files: { 'pack_alpha.json': mkBox('Pack Alpha') },
+      broken: { 'broken_b.json': '{"name":"Half typed","grade1": [' },
+    });
+    const encBroken = deflateSync(Buffer.from(brokenPack, 'utf8')).toString('base64')
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' }); // cross-document hop
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(BASE + '#pack=' + encBroken, { waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    const dlgOpen = await page.locator('#import-dialog[open]').count();
+    check('broken pack file opens the import dialog', dlgOpen === 1);
+    const prefilled = await page.locator('#import-textarea').inputValue();
+    check('broken pack file pre-fills the raw text',
+      prefilled.startsWith('{"name":"Half typed"'), 'ta=' + prefilled.slice(0, 24));
+    await page.fill('#import-textarea', JSON.stringify(mkBox('Pack Fixed')));
+    await page.click('#import-do');
+    await page.waitForTimeout(350);
+    const dlgClosed = await page.locator('#import-dialog[open]').count();
+    check('import dialog closes after the fixed import', dlgClosed === 0);
+    const fixedDrafts = await page.locator('.file-item').count();
+    check('fixed broken file lands as a second draft', fixedDrafts === 2, 'items=' + fixedDrafts);
+    const fixedActive = await page.locator('[data-f="meta.fileName"]').inputValue();
+    check('fixed draft keeps the source file name', fixedActive === 'broken_b', 'fn=' + fixedActive);
+    await page.evaluate(() => localStorage.clear());
+
+    /* game registry lists: items/entities feed the autocomplete + persist */
+    const listsPack = JSON.stringify({
+      v: 1, mc: '26.2',
+      files: { 'pack_l.json': mkBox('Pack Lists') },
+      items: 'zzmod:cogwheel\nzztacz:ak47\nminecraft:diamond',
+      entities: 'zzmod:goblin\nminecraft:zombie',
+    });
+    const encLists = deflateSync(Buffer.from(listsPack, 'utf8')).toString('base64')
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await page.goto(BASE + 'prices.html', { waitUntil: 'load' }); // cross-document hop
+    await page.evaluate(() => localStorage.clear());
+    await page.goto(BASE + '#pack=' + encLists, { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    const cogOpt = await page.locator('#csbox-item-list option[value="zzmod:cogwheel"]').count();
+    check('pack registry items land in the item autocomplete', cogOpt === 1, 'opt=' + cogOpt);
+    const gobOpt = await page.locator('#csbox-entity-list option[value="zzmod:goblin"]').count();
+    check('pack registry entities land in the entity autocomplete', gobOpt === 1, 'opt=' + gobOpt);
+    const storedItems = await page.evaluate(() =>
+      (JSON.parse(localStorage.getItem('cs2box-editor-game-lists-v1') || '{}').items || []).length);
+    check('registry lists persist to localStorage', storedItems === 3, 'n=' + storedItems);
+    // Survives a plain reload (no pack link): the autocomplete stays complete.
+    await page.goto(BASE, { waitUntil: 'load' });
+    await page.waitForTimeout(450);
+    const cogAfter = await page.locator('#csbox-item-list option[value="zzmod:cogwheel"]').count();
+    check('synced items survive a plain reload', cogAfter === 1, 'opt=' + cogAfter);
+    await page.evaluate(() => localStorage.clear());
+  }
+
   /* ================= file workspace (multi-draft) ================= */
   await page.goto(BASE, { waitUntil: 'load' });
   await page.evaluate(() => localStorage.clear());

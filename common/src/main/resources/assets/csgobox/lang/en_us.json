@@ -307,6 +307,7 @@
   "commands.csgobox.info.item_entry_weighted": "  %1$s. %2$s (weight %3$s)",
   "commands.csgobox.editor.hover": "Click to open the CS2-Box web editor in your browser",
   "commands.csgobox.editor.message": "[CS2-Box] Web box editor (generates config/csbox/*.json): ",
+  "commands.csgobox.editor.embedded": "The link embeds your current config/csbox box configs, price table and the game item/entity lists (powering the web autocomplete; omitted if the link would grow too long). They auto-import when the page opens.",
   "commands.csgobox.editor.hint": "Put the generated JSON into config/csbox/, then run /csbox reload to apply it.",
   "gui.csgobox.config.title": "CS2 Box Config",
   "gui.csgobox.config.category.general": "General",
