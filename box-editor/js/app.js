@@ -483,6 +483,10 @@
         filesStore.files.unshift(entry);
         filesStore.activeId = entry.id;
       } else {
+        // Preserve pack provenance (payload.slot) across edits: buildPayload()
+        // writes a fresh legacy-shaped payload and would otherwise forget the
+        // dedup marker that makes #pack link re-imports idempotent.
+        if (entry.payload && entry.payload.slot) payload.slot = entry.payload.slot;
         entry.payload = payload;
       }
       entry.savedAt = Date.now();
@@ -937,6 +941,9 @@
         // active one. applyImportText only mutated the global state; the
         // active entry's payload is still the pre-import draft.
         const payload = buildPayload();
+        // Pack provenance (same shape as importPack): makes re-opening the
+        // link treat this name as handled (openPackBrokenFlow skips it).
+        try { payload.slot = { name, sig: fnv1a(JSON.stringify(JSON.parse(text))) }; } catch (e) { /* slotless fallback */ }
         if (!filesStore) filesStore = { files: [], activeId: null };
         const entry = { id: uid(), payload, savedAt: Date.now() };
         filesStore.files.unshift(entry);
@@ -1390,6 +1397,16 @@
   async function loadHashPack() {
     const m = /[#&]pack=([A-Za-z0-9_-]+)/.exec(location.hash);
     if (!m) return false;
+    // Drop the fragment immediately (the code is already captured):
+    // importPack creates a workspace draft per file on every page load, so a
+    // lingering #pack would duplicate every draft on any later reload or
+    // re-open of the same link — up to a draft-per-refresh growth loop.
+    // window.history (NOT the shadowing undo-manager `history` const);
+    // replacing pathname+search does not fire hashchange, so the
+    // #state/#pack reload guard below never trips.
+    try {
+      window.history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) { /* file:// throws SecurityError — keep the hash in dev */ }
     let pack = null;
     try {
       pack = JSON.parse(await inflateZlib(base64UrlToBytes(m[1])));
@@ -1398,6 +1415,38 @@
       return false;
     }
     return importPack(pack);
+  }
+
+  /** Small stable string hash (FNV-1a, 32-bit, base36) — cheap duplicate
+   *  detection for re-opened #pack links. */
+  function fnv1a(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(36);
+  }
+
+  /** True when the workspace already holds a draft imported from the same
+   *  pack file. Valid boxes match on name + content signature (a genuinely
+   *  changed box still imports as a fresh draft); broken-file handling only
+   *  needs to know whether that source name was handled at all (fixed drafts
+   *  carry the fixed content's signature, which never matches the raw text). */
+  function packSlotSeen(name, sig) {
+    const files = (filesStore && filesStore.files) || [];
+    return files.some((e) => {
+      const s = e.payload && e.payload.slot;
+      return !!s && s.name === name && !!s.sig && s.sig === sig;
+    });
+  }
+
+  function packSlotNamed(name) {
+    const files = (filesStore && filesStore.files) || [];
+    return files.some((e) => {
+      const s = e.payload && e.payload.slot;
+      return !!s && s.name === name;
+    });
   }
 
   function importPack(pack) {
@@ -1412,11 +1461,14 @@
     const items = typeof pack.items === 'string' ? pack.items.split('\n').filter(Boolean) : [];
     const entities = typeof pack.entities === 'string' ? pack.entities.split('\n').filter(Boolean) : [];
     const newEntries = [];
+    let skipped = 0;
     for (const name of Object.keys(filesObj)) {
       if (!/\.json$/i.test(name)) continue;
       const doc = filesObj[name];
       if (!doc || typeof doc !== 'object' || Array.isArray(doc)) continue;
       if (detectType(doc) !== 'box') continue;
+      const sig = fnv1a(JSON.stringify(doc));
+      if (packSlotSeen(name, sig)) { skipped++; continue; }
       const base = name.replace(/\.json$/i, '');
       const res = NS.boxToState(doc, base);
       const st = res.state;
@@ -1430,6 +1482,8 @@
           compact: true,
           currentTab: 'box',
           taczEnabled: null,
+          // Pack provenance: enables idempotent re-imports of the same link.
+          slot: { name, sig },
           state: {
             fileName: st.fileName,
             meta: st.meta,
@@ -1474,6 +1528,12 @@
       return true;
     }
     if (openPackBrokenFlow(brokenObj)) return true;
+    // Re-opened link whose every valid box was already imported: tell the
+    // player no duplicates were created instead of the misleading empty pack.
+    if (skipped) {
+      toast(t('toast.packDup'), true);
+      return true;
+    }
     toast(t('toast.packNone'), true);
     return false;
   }
@@ -1496,13 +1556,15 @@
   /** Queues broken (#pack= manifest) files and opens the first one
    *  pre-filled in the import dialog so the player fixes each in place;
    *  the dialog's close event advances the queue. Returns true when any
-   *  broken file was present. */
+   *  broken file was present. Previously imported/fixed names are skipped so
+   *  re-opening the link does not re-open fix dialogs for handled files. */
   function openPackBrokenFlow(brokenObj) {
     const names = Object.keys(brokenObj).filter((n) =>
       /\.json$/i.test(n) && typeof brokenObj[n] === 'string');
-    if (!names.length) return false;
-    for (const n of names) packBrokenQueue.push({ name: n, text: brokenObj[n] });
-    toast(t('toast.packBroken', { n: names.length }), true);
+    const fresh = names.filter((n) => !packSlotNamed(n));
+    if (!fresh.length) return false;
+    for (const n of fresh) packBrokenQueue.push({ name: n, text: brokenObj[n] });
+    toast(t('toast.packBroken', { n: fresh.length }), true);
     advancePackBroken();
     return true;
   }

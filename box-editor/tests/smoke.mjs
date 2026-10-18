@@ -639,6 +639,18 @@ try {
     const packSecond = await page.locator('.file-item').nth(1).locator('.file-name').textContent();
     check('pack import lists the second imported draft', (packSecond || '').trim() === 'pack_beta',
       'name=' + packSecond);
+    check('pack link clears its fragment after import', await page.evaluate(() => location.hash === ''),
+      'hash="' + (await page.evaluate(() => location.hash.slice(0, 12))) + '"');
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    check('plain reload does not duplicate imported drafts',
+      (await page.locator('.file-item').count()) === 2,
+      'items=' + (await page.locator('.file-item').count()));
+    await page.goto(packUrl, { waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    check('re-opening the same pack link does not re-import',
+      (await page.locator('.file-item').count()) === 2,
+      'items=' + (await page.locator('.file-item').count()));
     await page.goto(BASE + 'prices.html', { waitUntil: 'load' });
     const packPrice = await page.locator('tr[data-price-key="minecraft:diamond"] input').first().inputValue();
     check('pack link merges _prices.json into the price table', packPrice === '1234', 'price=' + packPrice);
