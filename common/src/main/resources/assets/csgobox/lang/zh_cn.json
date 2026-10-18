@@ -308,6 +308,7 @@
   "commands.csgobox.editor.message": "[CS2-Box] 网页配置工具（生成 config/csbox/*.json）：",
   "commands.csgobox.editor.embedded": "链接已内嵌当前 config/csbox 的箱子配置、价格表与游戏物品/生物列表（供网页补全，超出链接长度上限时自动省略）；打开网页后自动导入。",
   "commands.csgobox.editor.hint": "把生成的 JSON 放入 config/csbox/ 后执行 /csbox reload 即可生效。",
+  "commands.csgobox.editor.stats": "当前 config/csbox：%s 个箱子，%s 条物品，%s 个未定价物品（终端机不售卖、拆解 0）。",
   "gui.csgobox.config.title": "CS2 Box 配置",
   "gui.csgobox.config.category.general": "通用",
   "gui.csgobox.config.category.advanced": "高级",

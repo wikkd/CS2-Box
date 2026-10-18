@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.reclizer.csgobox.box.EditorPack;
+import com.reclizer.csgobox.box.EditorPackStats;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -60,6 +61,11 @@ public final class EditorCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.editor.message").append(link), false);
         if (embedded) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.editor.embedded"), false);
+        }
+        EditorPackStats.Summary stats = EditorPackStats.summarize(FMLPaths.CONFIGDIR.get().resolve("csbox"));
+        if (!stats.empty()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.editor.stats",
+                    stats.boxes(), stats.items(), stats.unpriced()), false);
         }
         source.sendSuccess(() -> Component.translatable("commands.csgobox.editor.hint"), false);
         return Command.SINGLE_SUCCESS;
