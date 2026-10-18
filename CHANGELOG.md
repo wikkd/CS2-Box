@@ -3,11 +3,14 @@
 ## [Unreleased]
 
 > 2.0.2 后续收口批次：**跨平台一致性补齐**（批量开箱结果分片容量与单包物品数护栏在三个平台口径不一），
-> 连同拆解台事件取消面统一、终端机开场淡入、档位卡片绘制去重与死代码清理。不涉及版本号与配置文件格式。
+> 连同拆解台事件取消面统一、终端机开场淡入、档位卡片绘制去重与死代码清理；另有 box-editor 与 `/csbox editor`
+> 的编辑工作流增强（导入冲突对话框、工作区分享、EV 面板、应用到游戏、本地配置统计行）。不涉及版本号与配置文件格式。
 
 ### 新增
 
 - **`/csbox editor` 打开网页时自动导入当前 config/csbox 配置**：六平台命令现在把服务端（单机即本机）`config/csbox/*.json` 箱子配置与 `_prices.json` 经 `common/box/EditorPack`（Gson 清单 → zlib deflate → base64url）内嵌进链接 fragment（`#pack=`），网站端解压后把每个箱子文件导入为独立工作区草稿、价格表合并进各草稿的物品价格（无箱子文件时合并进当前草稿）；**实例注册表随链接同步**——六平台命令把物品与生物注册表 id（换行连接、排序去重，`items`/`entities` 字段）一并装入链接，网站将其保存在浏览器本地并合并进物品/生物自动补全（箱子物品与价格键输入共用），在浏览器编辑箱子物品时无需在游戏内逐个抄 id / 取 NBT（无任何配置的目录也可仅携带注册表成包）。**损坏的 JSON 单文件不再跳过**：原文随清单 `broken` 字段（≤10 万字符）逐字节携带，网站端在导入对话框中预填原文供玩家就地修正，修好后以原文件名存为新草稿（队列自动逐个推进；`applyImportText` 返回解析类型并在解析失败时保持对话框与文本不丢失），修好前的箱子仍由网站校验器给出逐项问题与点击定位。fragment 不会发往任何服务器，配置只在玩家游戏与浏览器之间流转；编码后超过 20 万字符即先丢弃注册表列表（两段回退，配置仍随包），仍超限、单文件超过 512KB 或任何读取失败即静默回退纯链接/跳过该文件。`common` 新增 `EditorPackTest`（往返/回退/超限/坏文件/注册表清单用例），box-editor Playwright 冒烟补 pack 导入链路、坏文件修正链路与注册表清单同步/持久化链路（`DecompressionStream` 解压 + 双草稿 + 价格合并 + 导入框修正 + 补全合并断言）；`scripts/drift-baseline.json` 中两族 `command/EditorCommand.java` 的镜像差异 0→1 定点刷新（差异恰为各平台版本键一行，系本功能唯一有意的配对差异）。
+- **网页配置工具增强：注册表未知 id 校验、导入冲突对话框、草稿徽标、工作区分享、EV 定价面板与「应用到游戏」**：`validator.js` 新增物品/生物/价格键对照游戏注册表镜像（由 `#pack=` 链接同步保存）的警告，未知 id 在问题列表点名（`v.unknownItem` / `v.unknownEntity` / `v.unknownPriceKey`，价格键 `id#变体` 剥 `#` 只查 base）；`#pack=` 导入遇到同名但内容不同的既有草稿时逐个弹出冲突对话框（覆盖 / 保留 / 跳过，队列串行推进，Escape 等同跳过；覆盖写入延迟到状态落盘之后应用，避免被 `saveState` 的 flush 反向覆盖）；文件栏草稿项新增 `.file-tag` 徽标（目标版本 + 相对时间，tooltip 带源文件名 `files.slotTitle`）；新增 `#workspace=` 整工作区分享链接（zlib + base64url 压缩全部草稿与价格表，导入端对无 slot 的手工草稿合成「文件名 + FNV-1a 指纹」保证幂等，fragment 读毕即 `window.history.replaceState` 摘除）；价格页新增 EV 面板（`model.js` `boxEconomy`：逐档物品概率 / 开箱期望值 / 拆解回收期望——拆解按逐物品 `ceil(中值 × 90%)` 计，未定价物品计数与警告分级：全箱未定价只报总警告、部分未定价逐档点名、有档位但物品为空报空档位）；新增「应用到游戏」按钮经 File System Access API 把工作区草稿与价格表写回游戏目录 `config/csbox/*.json` + `_prices.json`（`showDirectoryPicker` 不可用的浏览器自动隐藏入口）。测试：`model.test.mjs` 65 用例（含 `boxEconomy` / `applyManifest` / 注册表校验新增段）、Playwright 冒烟 152 项全过（新增冲突对话框四连、工作区分享往返幂等、EV 面板数值、注册表未知 id 警告与镜像重载存活断言）。
+- **`/csbox editor` 追加本地配置统计行（六平台）**：命令在输出链接前调用 `common/box/EditorPackStats.summarize(config/csbox)`，聊天栏多一行「箱子数 / 物品条目数 / 未定价 id 数」（lang 键 `commands.csgobox.editor.stats` 中英双语；`_` 前缀文件跳过、坏 JSON 容错跳过、`id#变体` 价格键按 base id 计入已定价、`#tag`/`loot_table` 不计入已定价；目录缺失或无可统计内容静默跳过）。`common` 新增 `EditorPackStatsTest`（6 用例：计数、变体键、下划线帮助文件忽略、坏文件跳过、目录缺失、价格表缺失）。
 
 ### 修复（跨平台一致性）
 
