@@ -1,0 +1,258 @@
+package com.reclizer.csgobox.forge_26_2.service;
+
+import com.reclizer.csgobox.terminal.NegotiationModel;
+import com.reclizer.csgobox.terminal.TerminalStockManager;
+import com.reclizer.csgobox.terminal.WearPenalty;
+import com.reclizer.csgobox.forge_26_2.advancement.TerminalDealTrigger;
+import com.reclizer.csgobox.forge_26_2.CsgoBox;
+import com.reclizer.csgobox.forge_26_2.event.TerminalBuyAttemptEvent;
+import com.reclizer.csgobox.forge_26_2.event.TerminalBuyEvent;
+import com.reclizer.csgobox.forge_26_2.box.BoxDefinition;
+import com.reclizer.csgobox.forge_26_2.box.BoxItemResolver;
+import com.reclizer.csgobox.forge_26_2.box.BoxRegistry;
+import com.reclizer.csgobox.forge_26_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_26_2.item.ItemTerminal;
+import com.reclizer.csgobox.forge_26_2.item.ModItems;
+import com.reclizer.csgobox.mcshared.terminal.TerminalRoundData;
+import com.reclizer.csgobox.forge_26_2.packet.Networking;
+import com.reclizer.csgobox.forge_26_2.packet.PacketTerminalBuy;
+import com.reclizer.csgobox.forge_26_2.packet.PacketTerminalBuyResult;
+import com.reclizer.csgobox.forge_26_2.terminal.TerminalSession;
+import com.reclizer.csgobox.forge_26_2.terminal.TerminalSessionManager;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.event.network.CustomPayloadEvent;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+/**
+ * Server-side orchestration for the terminal buy flow. The packet stays
+ * transport-only; price validation, stock/point consumption and the grant
+ * all run here against the player's locked {@code TerminalSession}.
+ */
+public final class TerminalBuyService {
+
+    private TerminalBuyService() {
+    }
+
+    public static void handleBuy(final PacketTerminalBuy message, final CustomPayloadEvent.Context context) {
+        context.enqueueWork(() -> {
+            if (!(context.getSender() instanceof ServerPlayer sp)) {
+                return;
+            }
+            Networking.INSTANCE.reply(executeBuy(sp, message), context);
+        });
+    }
+
+    private static PacketTerminalBuyResult executeBuy(ServerPlayer sp, PacketTerminalBuy message) {
+        PacketTerminalBuyResult invalid = new PacketTerminalBuyResult(
+                message.requestId(), PacketTerminalBuyResult.RESULT_INVALID, ItemStack.EMPTY, 1);
+        if (sp.isRemoved() || !sp.isAlive()) {
+            return invalid;
+        }
+        // The player must still be holding the terminal that generated the offer.
+        ItemStack held = sp.getMainHandItem();
+        if (!(held.getItem() instanceof ItemTerminal)) {
+            return invalid;
+        }
+        Identifier heldBox = ItemCsgoBox.getBoxId(held);
+        Identifier sentBox = ItemCsgoBox.getBoxId(message.terminalStack());
+        if (heldBox == null || !heldBox.equals(sentBox)) {
+            return invalid;
+        }
+        // The purchase must belong to the terminal whose screen is open — a
+        // hotbar switch mid-screen would otherwise buy from (and destroy) a
+        // different terminal the player is not looking at.
+        if (!TerminalSessionManager.isOpenBinding(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held))) {
+            return invalid;
+        }
+        // The offer must come from the locked session's current round.
+        TerminalSession session = TerminalSessionManager.getByUid(sp, ItemCsgoBox.getTerminalUid(held));
+        if (session == null || session.isFinished() || session.model().round() != message.offerRound()) {
+            return invalid;
+        }
+        // World clock (game ticks × 50): the countdown and the typing window
+        // are server-authoritative. An expired negotiation must not be
+        // buyable in the ≤1s window before the 1 Hz tick destroys it, and a
+        // crafted buy before the 1100ms typing window elapsed would skip the
+        // reveal animation — both are refused here.
+        long worldMs = sp.level().getGameTime() * 50L;
+        if (worldMs >= session.model().countdownDeadlineMs()
+                || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
+            return invalid;
+        }
+        ItemStack offerItem = message.offerItem();
+        if (offerItem == null || offerItem.isEmpty()) {
+            return invalid;
+        }
+        TerminalRoundData roundData = session.rounds().get(message.offerRound());
+        if (roundData == null || !ItemStack.isSameItemSameComponents(roundData.item(), offerItem)) {
+            return invalid;
+        }
+        int grade = roundData.grade();
+        if (grade < 1 || grade > 5) {
+            return invalid;
+        }
+        // Use the server-sampled table price (a range was drawn once per offer);
+        // unpriced items are never offered and unlisted ids fail to load.
+        int basePrice = roundData.price() >= 0 ? roundData.price() : 0;
+        int price = basePrice;
+        // Items without a durability bar can't take wear damage, so the
+        // offered wear becomes a percentage markup on the base price (20% at
+        // full wear, see WearPenalty). Durable items pay the base price.
+        if (!roundData.item().isDamageableItem()) {
+            price += WearPenalty.surcharge(basePrice, roundData.offer().wearVal());
+        }
+        boolean creative = sp.getAbilities().instabuild;
+
+        // v2.0.1 KubeJS: purchase veto hook — fires AFTER price validation and
+        // BEFORE stock/point consumption, so a canceled attempt costs nothing.
+        // The price is intentionally read-only (it was already shown to the
+        // client; mutating it here would desync display from charge).
+        TerminalBuyAttemptEvent attempt = new TerminalBuyAttemptEvent(
+                sp, heldBox, grade, price, roundData.offer().wearVal(),
+                roundData.item(), message.offerRound());
+        TerminalBuyAttemptEvent.BUS.fire(attempt);
+        if (attempt.isCanceled()) {
+            return invalid;
+        }
+
+        // v2.0.1 stock gate: a stock-limited terminal refuses when exhausted.
+        BoxDefinition def = BoxRegistry.get(heldBox);
+        int stock = def != null ? def.stock() : BoxDefinition.UNLIMITED;
+        if (!TerminalStockManager.available(heldBox.toString(), stock)) {
+            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+
+        if (!creative && countArmoryPoints(sp) < price) {
+            session.model().dealerReconsider(worldMs);
+            session.model().addSystem("csgobox.terminal.sys.poor", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+
+        // v2.0.2-fix(charging order): resolve the offer BEFORE consuming
+        // anything. The old order consumed stock + points first and only then
+        // resolved, so the "empty resolve must not charge the player" comment
+        // was a promise the code did not keep (it relied on the resolve path
+        // being unreachable). resolve is pure (level + rng only), so running
+        // it first costs nothing and makes the guarantee real.
+        ItemStack toGive = offerItem.copy();
+        // v2.0.1-fix: resolve loot_table / count-range / enchant specs
+        // server-side BEFORE the 1-count clamp, so the terminal never sells
+        // a placeholder (barrel for loot_table, min-count or unenchanted).
+        toGive = BoxItemResolver.resolve(toGive, sp.level(), ThreadLocalRandom.current());
+        if (toGive == null || toGive.isEmpty()) {
+            // Empty resolve (e.g. an empty loot draw) must not charge the
+            // player — refuse the trade instead of delivering nothing.
+            return invalid;
+        }
+
+        // Consume one unit of stock (after the resolve, before granting);
+        // consume() re-checks the remaining count itself.
+        if (!TerminalStockManager.consume(heldBox.toString(), stock)) {
+            session.model().addSystem("csgobox.terminal.sys.soldout", worldMs);
+            TerminalSessionManager.markDirty();
+            return new PacketTerminalBuyResult(message.requestId(),
+                    PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
+        }
+
+        if (!creative) {
+            consumeArmoryPoints(sp, price);
+        }
+        // The terminal sells ONE item per offer: isSameItemSameComponents
+        // never compares count, so a crafted stack must not grant 64 items
+        // for the price of one.
+        toGive.setCount(1);
+        // The wear comes from the server-sampled offer, never the client echo.
+        OpenService.applyWearDamage(toGive, roundData.offer().wearVal());
+        toGive.set(ItemCsgoBox.GRADE.get(), grade);
+        boolean added = sp.getInventory().add(toGive);
+        if (!added && !toGive.isEmpty()) {
+            sp.drop(toGive, false);
+        }
+        session.model().buyForced(worldMs);
+        sp.awardStat(CsgoBox.TERMINAL_BUYS_STAT, 1);
+        if (CsgoBox.CONFIG.enableAchievements()) {
+            TerminalDealTrigger.INSTANCE.trigger(sp);
+        }
+        // A purchase consumes the terminal machine: the item and its uid are
+        // destroyed, and the session lock is released immediately.
+        TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+        TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
+        held.setCount(0);
+        TerminalBuyEvent.BUS.fire(new TerminalBuyEvent(sp, grade, price, roundData.offer().wearVal(), toGive, message.offerRound()));
+        return new PacketTerminalBuyResult(message.requestId(),
+                PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
+    }
+
+    // ---- Armory Point inventory walking (same slot coverage as key consumption) ----
+
+    private static int countArmoryPoints(Player entity) {
+        int total = countFromList(entity.getInventory().getNonEquipmentItems());
+        total += countFromSlot(entity, EquipmentSlot.HEAD);
+        total += countFromSlot(entity, EquipmentSlot.CHEST);
+        total += countFromSlot(entity, EquipmentSlot.LEGS);
+        total += countFromSlot(entity, EquipmentSlot.FEET);
+        total += countFromSlot(entity, EquipmentSlot.OFFHAND);
+        return total;
+    }
+
+    private static void consumeArmoryPoints(Player entity, int amount) {
+        int remaining = consumeFromList(entity.getInventory().getNonEquipmentItems(), amount);
+        if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.HEAD, remaining);
+        if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.CHEST, remaining);
+        if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.LEGS, remaining);
+        if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.FEET, remaining);
+        if (remaining > 0) consumeFromSlot(entity, EquipmentSlot.OFFHAND, remaining);
+    }
+
+    private static int countFromList(java.util.List<ItemStack> stacks) {
+        int total = 0;
+        for (ItemStack stack : stacks) {
+            if (!stack.isEmpty() && stack.getItem() == ModItems.ITEM_ARMORY_POINT.get()) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static int countFromSlot(Player entity, EquipmentSlot slot) {
+        ItemStack stack = entity.getItemBySlot(slot);
+        return !stack.isEmpty() && stack.getItem() == ModItems.ITEM_ARMORY_POINT.get()
+                ? stack.getCount() : 0;
+    }
+
+    private static int consumeFromList(java.util.List<ItemStack> stacks, int amount) {
+        for (int i = 0; i < stacks.size() && amount > 0; i++) {
+            ItemStack stack = stacks.get(i);
+            if (stack.isEmpty() || stack.getItem() != ModItems.ITEM_ARMORY_POINT.get()) {
+                continue;
+            }
+            int take = Math.min(amount, stack.getCount());
+            stack.shrink(take);
+            amount -= take;
+        }
+        return amount;
+    }
+
+    private static int consumeFromSlot(Player entity, EquipmentSlot slot, int amount) {
+        if (amount <= 0) {
+            return 0;
+        }
+        ItemStack stack = entity.getItemBySlot(slot);
+        if (stack.isEmpty() || stack.getItem() != ModItems.ITEM_ARMORY_POINT.get()) {
+            return amount;
+        }
+        int take = Math.min(amount, stack.getCount());
+        stack.shrink(take);
+        return amount - take;
+    }
+}
