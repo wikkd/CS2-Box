@@ -44,8 +44,6 @@ public class PacketTerminalBuyResult {
     }
 
     public long getRequestId() { return requestId; }
-    public int getResult() { return result; }
-    public ItemStack getGivenItem() { return givenItem; }
     public int getGrade() { return grade; }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

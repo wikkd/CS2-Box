@@ -24,7 +24,7 @@ class OpenBlockGuardTest {
 
     @BeforeEach
     void reset() {
-        OpenBlockGuard.clearForTesting();
+        OpenBlockGuard.reset();
     }
 
     @Test

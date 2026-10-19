@@ -17,7 +17,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
@@ -204,10 +203,6 @@ public final class TerminalOfferRegion {
                 0.3F, 0.47F, TerminalPalette.META_TEXT);
     }
 
-    /** FormattedCharSequence wrapper for plain strings. */
-    private static FormattedCharSequence fcs(String s) {
-        return FormattedCharSequence.forward(s, Style.EMPTY);
-    }
 
     /** Five coded tier bands + edge border (HTML wear-bar border #14181c). */
     private void drawWearBar(GuiGraphics gg, int x, int y, int w, int h, int tierIdx) {

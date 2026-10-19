@@ -73,10 +73,6 @@ public final class EditorPack {
         return buildUrl(csboxDir, baseUrl, mcVersion, gameItems, gameEntities, MAX_ENCODED_CHARS);
     }
 
-    static String buildUrl(Path csboxDir, String baseUrl, String mcVersion, int maxEncodedChars) {
-        return buildUrl(csboxDir, baseUrl, mcVersion, null, null, maxEncodedChars);
-    }
-
     static String buildUrl(Path csboxDir, String baseUrl, String mcVersion,
                            Iterable<String> gameItems, Iterable<String> gameEntities,
                            int maxEncodedChars) {

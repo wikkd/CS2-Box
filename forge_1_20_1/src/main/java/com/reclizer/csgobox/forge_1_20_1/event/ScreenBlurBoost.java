@@ -34,6 +34,16 @@ public final class ScreenBlurBoost {
         }
     }
 
+    @SubscribeEvent
+    public static void onScreenClosing(ScreenEvent.Closing event) {
+        // setScreen(null) never fires Opening, so closing a mod screen back to
+        // the game must restore here — otherwise the boosted radius leaks into
+        // the rest of the session AND into options.txt on exit.
+        if (isModScreen(event.getScreen())) {
+            restore();
+        }
+    }
+
     private static void boost() {
         int radius = 8;
         if (radius <= 0) {
@@ -116,9 +126,11 @@ public final class ScreenBlurBoost {
             } catch (NoSuchFieldException ignored) {
             }
         }
-        // Fallback: scan all OptionInstance<int> fields
+        // Fallback: pick the exact blur option only. Never grab an unrelated
+        // OptionInstance just because the known names missed — boosting a
+        // random int option (fov, gamma, ...) would corrupt user settings.
         for (Field f : options.getClass().getFields()) {
-            if (f.getType().getSimpleName().equals("OptionInstance")) {
+            if (f.getName().contains("lur") && f.getType().getSimpleName().equals("OptionInstance")) {
                 return f;
             }
         }

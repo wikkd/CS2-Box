@@ -29,14 +29,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
 
 public class PacketCsgoProgress {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final long requestId;
 

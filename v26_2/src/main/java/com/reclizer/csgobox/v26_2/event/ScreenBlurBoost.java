@@ -46,6 +46,16 @@ public final class ScreenBlurBoost {
         }
     }
 
+    @SubscribeEvent
+    public static void onScreenClosing(ScreenEvent.Closing event) {
+        // setScreen(null) never fires Opening, so closing a mod screen back to
+        // the game must restore here — otherwise the boosted radius leaks into
+        // the rest of the session AND into options.txt on exit.
+        if (isModScreen(event.getScreen())) {
+            restore();
+        }
+    }
+
     private static void boost() {
         int radius = 8;
         if (radius <= 0) {

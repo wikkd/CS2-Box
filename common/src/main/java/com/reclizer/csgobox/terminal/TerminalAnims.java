@@ -33,33 +33,15 @@ public final class TerminalAnims {
     /** Typing dot stagger. */
     public static final long DOT_STAGGER_MS = 180L;
 
-    /** Control points of the CSS curve used by hold-fill and the arrow. */
-    public static final float CURVE_X1 = 0.25F;
-    public static final float CURVE_Y1 = 0.60F;
-    public static final float CURVE_X2 = 0.30F;
-    public static final float CURVE_Y2 = 1.00F;
-
     private TerminalAnims() {
-    }
-
-    public static float clamp01(float v) {
-        return Easing.clamp01(v);
     }
 
     public static float easeOutCubic(float t) {
         return Easing.easeOutCubic(t);
     }
 
-    /** easeOutBack — used by the flip-in slide overshoot. */
-    public static float easeOutBack(float t) {
-        return Easing.easeOutBack(t);
-    }
-
-    /**
-     * Cubic-bezier(.25,.6,.3,1) evaluation. Delegates to {@link Easing}.
-     * CURVE_X1..Y2 constants are retained for source compatibility; the
-     * canonical control points now live in Easing.cubicBezierCurve().
-     */
+    /** Cubic-bezier(.25,.6,.3,1) evaluation. Delegates to {@link Easing}, whose
+     * {@code cubicBezierCurve()} owns the canonical control points. */
     public static float cubicBezierCurve(float t) {
         return Easing.cubicBezierCurve(t);
     }

@@ -34,7 +34,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.Random;
 
@@ -42,7 +41,6 @@ import java.util.Random;
  *  only matches the later client animation result; never trusted by the server. */
 public record PacketCsgoProgress(long requestId) implements CustomPacketPayload {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public static final Type<PacketCsgoProgress> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(CsgoBox.MODID, "csgo_progress"));

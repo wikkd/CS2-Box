@@ -78,6 +78,10 @@ public class PacketCsgoBulkProgress {
             return;
         }
         ResourceLocation boxId = ItemCsgoBox.getBoxId(templateBox);
+        if (boxId == null) {
+            PacketCsgoProgress.sendRejectedToPlayer(message.requestId, (ServerPlayer) player);
+            return;
+        }
         BoxDefinition def = boxId == null ? null : BoxRegistry.get(boxId);
         if (def != null && def.isTerminal()) {
             PacketCsgoProgress.sendRejectedToPlayer(message.requestId, (ServerPlayer) player);

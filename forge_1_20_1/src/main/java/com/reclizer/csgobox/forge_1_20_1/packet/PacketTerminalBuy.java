@@ -69,7 +69,6 @@ public class PacketTerminalBuy {
 
     public long getRequestId() { return requestId; }
     public ItemStack getTerminalStack() { return terminalStack; }
-    public ItemStack getOfferItem() { return offerItem; }
     public float getWearVal() { return wearVal; }
     public int getOfferRound() { return offerRound; }
 

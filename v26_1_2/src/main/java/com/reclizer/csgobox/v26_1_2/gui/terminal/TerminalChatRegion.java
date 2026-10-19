@@ -36,18 +36,13 @@ public final class TerminalChatRegion {
     public static final Identifier TEX_CIRCLE = Identifier.parse("csgobox:textures/gui/terminal/terminal_circle.png");
 
     // HTML prototype px -> gui px (canvas 1356 -> gui 427, k = 427/1356).
-    private static final int BUBBLE_RADIUS = 1;
     private static final int AVATAR_SIZE = 11;
     private static final int GAP = 2;
     private static final int CARD_W = 82;
     private static final int CARD_THUMB_W = 30;
-    private static final int CARD_THUMB_H = 19;
-    private static final int CARD_RADIUS = 2;
     private static final int ROW_H = 6; // offer-info line-height 1.55 @12px (TERMINAL-LAYOUT-SPEC §3)
     /** Card height = 4 info rows + vertical padding (design offer-info 87px -> gui 28). */
     private static final int CARD_H = 4 * ROW_H + 4;
-    /** Bottom inset below the newest entry (HTML .scroll padding-bottom 18px). */
-    private static final int BOTTOM_PAD = 5;
     private static final int MAX_ENTRIES = 64;
     /** 13px font × line-height 1.55 (docs/TERMINAL-LAYOUT-SPEC.md §3). */
     private static final int LINE_H = 6;

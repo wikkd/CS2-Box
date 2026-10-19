@@ -41,7 +41,7 @@ final class TerminalPaletteTest {
     void paletteConstantsAreOpaque() {
         // A representative set of palette colors are fully opaque ARGB.
         for (int c : new int[]{
-                TerminalPalette.OUTSIDE, TerminalPalette.FRAME, TerminalPalette.TOPBAR,
+                TerminalPalette.OUTSIDE, TerminalPalette.FRAME,
                 TerminalPalette.TITLE, TerminalPalette.ACTION_BG, TerminalPalette.ACTION_TEXT,
                 TerminalPalette.INSPECT_BG, TerminalPalette.INSPECT_HOVER}) {
             assertEquals(0xFF, (c >>> 24) & 0xFF, "palette color must be opaque: " + Integer.toHexString(c));

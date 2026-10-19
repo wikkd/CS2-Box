@@ -86,6 +86,10 @@ public record PacketCsgoBulkProgress(long requestId) implements CustomPacketPayl
                 return;
             }
             Identifier boxId = ItemCsgoBox.getBoxId(templateBox);
+            if (boxId == null) {
+                PacketCsgoProgress.sendRejected(context, message.requestId());
+                return;
+            }
             BoxDefinition def = boxId == null ? null : BoxRegistry.get(boxId);
             if (def != null && def.isTerminal()) {
                 PacketCsgoProgress.sendRejected(context, message.requestId());

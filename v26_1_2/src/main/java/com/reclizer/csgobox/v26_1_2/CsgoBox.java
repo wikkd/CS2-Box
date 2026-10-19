@@ -107,9 +107,11 @@ public class CsgoBox {
     public static final ExecutorService BULK_COMPUTE_POOL = new ThreadPoolExecutor(
             2, 2, 0L, TimeUnit.MILLISECONDS,
             // Bounded work queue (v2.2.0-fix): an unbounded LinkedBlockingQueue
-            // let flood requests pile up without limit. Dropping with a log is
-            // safe — the per-player 10-tick open guard already rate-limits,
-            // and a dropped batch simply stays unopened.
+            // let flood requests pile up without limit. Overflow rethrows after
+            // logging so CompletableFuture.supplyAsync() surfaces
+            // RejectedExecutionException at the submit site, which sends the
+            // authoritative rejected packet instead of leaving the future
+            // pending forever (catch in PacketCsgoBulkProgress).
             new ArrayBlockingQueue<>(64),
             new ThreadFactory() {
                 private final AtomicInteger counter = new AtomicInteger();
@@ -121,7 +123,10 @@ public class CsgoBox {
                     return t;
                 }
             },
-            (r, e) -> LOGGER.warn("[csgo-bulk] bulk compute queue full (64); batch request dropped"));
+            (r, e) -> {
+                LOGGER.warn("[csgo-bulk] bulk compute queue full (64); batch rejected");
+                throw new java.util.concurrent.RejectedExecutionException("csgo-bulk queue full");
+            });
 
     /** Watches {@code config/csbox/} for JSON changes (debounced reload);
      *  created in {@link #commonSetup}, shut down in {@link #onServerStopping}. */
@@ -305,6 +310,10 @@ public class CsgoBox {
     public void onServerStopping(ServerStoppingEvent event) {
         com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager.saveNow();
         com.reclizer.csgobox.v26_1_2.terminal.TerminalSessionManager.unbindServer();
+        com.reclizer.csgobox.logic.BoxConstraintTracker.reset();
+        com.reclizer.csgobox.logic.PityTracker.reset();
+        com.reclizer.csgobox.terminal.TerminalStockManager.reset();
+        com.reclizer.csgobox.logic.OpenBlockGuard.reset();
         if (boxWatcher != null) {
             boxWatcher.stop();
             boxWatcher = null;

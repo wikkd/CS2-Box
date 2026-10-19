@@ -68,8 +68,8 @@ public final class OpenBlockGuard {
         BLOCKED_UNTIL_TICK.entrySet().removeIf(entry -> now >= entry.getValue());
     }
 
-    /** Test hook: clears all cooldown state. */
-    static void clearForTesting() {
+    /** Clears all cooldown state (server stop / restart lifecycle). */
+    public static void reset() {
         BLOCKED_UNTIL_TICK.clear();
     }
 }

@@ -44,6 +44,12 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
      *  stranding the input (a 4500-point item yields 4050, far above 64). */
     private int pendingPayout;
 
+    /** Cached ITEM_HANDLER capability handle (Forge lifecycle: invalidate on
+     *  block removal/unload via {@link #invalidateCaps}, never rebuilt once
+     *  invalidated — pipelines must not hold a stale BE reference). */
+    private final LazyOptional<IItemHandler> recyclerCap =
+            LazyOptional.of(() -> new RecyclerHandler(this));
+
     public ArmoryRecyclerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.ARMORY_RECYCLER_BE.get(), pos, state);
     }
@@ -283,9 +289,15 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     @Override
     public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
-            return LazyOptional.of(() -> new RecyclerHandler(this)).cast();
+            return recyclerCap.cast();
         }
         return super.getCapability(cap, side);
+    }
+
+    @Override
+    public void invalidateCaps() {
+        super.invalidateCaps();
+        recyclerCap.invalidate();
     }
 
     private static final class RecyclerHandler implements IItemHandler {

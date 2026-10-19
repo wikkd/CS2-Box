@@ -15,10 +15,6 @@ public final class TerminalPalette {
     public static final int OUTSIDE = 0xFF08090A;
     /** Panel frame. */
     public static final int FRAME = 0xFF4E481E;
-    /** Title bar. */
-    public static final int TOPBAR = 0xFF39444C;
-    /** Close icon idle. */
-    public static final int CLOSE = 0xFF46525A;
     public static final int CLOSE_HOVER = 0xFF5A6870;
     /** Panel title strip. */
     public static final int TITLE = 0xFF5C707E;
@@ -45,18 +41,10 @@ public final class TerminalPalette {
     public static final int OFFER_PRICE = 0xFFDFE5E9;
 
     // ---- body / dot grid ----
-    public static final int BODY_TOP = 0xFF2B353D;
-    public static final int BODY_BOTTOM = 0xFF222A30;
-    public static final int BOTTOM_BAR = 0xFF222A30;
-    /** Dot-grid point (alpha 22/255 white). */
-    public static final int DOT = 0x16FFFFFF;
 
     // ---- text ----
     public static final int TEXT = 0xFFC9D2D6;
-    public static final int TEXT_DIM = 0xFF8FA0AA;
-    public static final int ICON_DIM = 0xFF8FA0AA;
     public static final int BATTERY = 0xFF3ECF6E;
-    public static final int X = 0xFFE8ECEF;
     /** Dark text on the white final-offer card. */
     public static final int TEXT_WHITE_CARD = 0xFF17191C;
     public static final int TEXT_WHITE_CARD_DIM = 0xFF4A5157;
@@ -71,21 +59,16 @@ public final class TerminalPalette {
     /** Accept pill (HTML .pill.accept border/text = --accept #398a46). */
     public static final int PILL_GREEN_BORDER = 0xFF398A46;
     public static final int PILL_GREEN_TEXT = 0xFF398A46;
-    public static final int PILL_GREEN_FILL = 0x33FFFFFF;
     /** Reject pill (HTML .pill.reject border #7d858d, text #dfe5e9). */
     public static final int PILL_GRAY_BORDER = 0xFF7D858D;
     public static final int PILL_GRAY_TEXT = 0xFFDFE5E9;
-    public static final int PILL_GRAY_FILL = 0x1FFFFFFF;
     public static final int BAR_WHITE = 0xFFD9E2E8;
-    public static final int BAR_GRAY = 0xFF34404A;
     /** Light-grey track behind the wear slider arrow (HTML .r8-bar track). */
     public static final int BAR_TRACK = 0xFF93A0AA;
     public static final int BLACK_BOX = 0xFF000000;
     public static final int WHITE = 0xFFFFFFFF;
 
     // ---- offer region (8) ----
-    public static final int RARITY_LEFT = 0xFF35404A;
-    public static final int RARITY_TEXT = 0xFFC9D2D6;
     /** CS2-style 5-tier rarity colours (mil-spec blue .. contraband gold). */
     public static final int RARITY_MILITARY = 0xFF4B69FF;
     public static final int RARITY_RESTRICTED = 0xFF8847FF;
@@ -105,8 +88,6 @@ public final class TerminalPalette {
             default -> RARITY_GOLD;
         };
     }
-    public static final int META_DIM = 0xFF6C7A85;
-    public static final int META_BOLD = 0xFFE4E9EC;
     /** Inspect capsule — dark solid bg + light text (was pale grey + dark text,
      *  read as a disabled state by the vision audit). */
     public static final int INSPECT_BG = 0xFF33404A;
@@ -114,25 +95,17 @@ public final class TerminalPalette {
     public static final int INSPECT_TEXT = 0xFFE4E9EC;
     /** Wear tier tag + corner tab — dark solid bg (was translucent pale grey). */
     public static final int WEAR_BG = 0xFF2A3138;
-    public static final int WEAR_TAB_BG = 0xFFCFD6DB;
-    public static final int WEAR_TAB_TEXT = 0xFF20242A;
 
     // ---- chat (region 4/5) ----
     public static final int BUBBLE = 0xFF2B3138;
-    public static final int BUBBLE_BORDER = 0xFF39444C;
-    public static final int SYS_REFUSED = 0xFFC96A5F;
-    public static final int SYS_REFUSED_DIM = 0xFFB4B4B8;
     public static final int HOLD_ACCEPT = 0xFF398A46;
     public static final int HOLD_REJECT = 0xFFB03434;
 
     // ---- tooltip / dropdown ----
     public static final int TOOLTIP_BG = 0xFF1B1F23;
     public static final int TOOLTIP_BORDER = 0xFF39444C;
-    public static final int GLOW = 0x26FFFFFF;
     public static final int CAP_DIM = 0xFF8FA0AA;
     public static final int CAP_SELECTED = 0xFF3ECF6E;
-    /** Cap chevron (HTML .chev border-top #9aa4ad). */
-    public static final int CHEVRON = 0xFF9AA4AD;
     /** Cap dropdown menu. */
     public static final int MENU_BG = 0xFF0B0D0F;
     public static final int MENU_BORDER = 0xFF2C3238;
@@ -142,6 +115,5 @@ public final class TerminalPalette {
     public static final int OFFER_CARD_BORDER = 0xFF39444C;
     public static final int OFFER_WHITE_CARD = 0xFFFFFFFF;
     public static final int SYS_FAILED = 0xFFC96A5F;
-    public static final int WINDOW_DRAG = 0xFF3ECF6E;
     public static final int SYS_MUTED = 0xFF8F98A1;
 }

@@ -67,11 +67,6 @@ public final class TerminalOfferItems {
         return NegotiationModel.rarityKeyForGrade(gradeFor(offer));
     }
 
-    /** The round's server-sampled table price (-1 = unpriced, defensive). */
-    public static int priceForRoundRaw(int round) {
-        return ROUND_PRICE.getOrDefault(round, -1);
-    }
-
     /**
      * Whole Armory Point price of the offered item: the server-sampled table
      * price (a range was drawn once per offer) plus the wear surcharge when

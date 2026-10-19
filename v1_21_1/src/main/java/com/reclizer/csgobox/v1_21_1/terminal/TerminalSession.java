@@ -242,10 +242,6 @@ public final class TerminalSession {
                 : all.get(rnd.nextInt(all.size())).copy();
     }
 
-    private static List<ItemStack> poolFor(BoxDefinition def, int gradeLevel) {
-        GradeGroup grade = findGrade(def, gradeLevel);
-        return grade != null ? grade.items() : null;
-    }
 
     private static GradeGroup findGrade(BoxDefinition def, int gradeLevel) {
         for (GradeGroup grade : def.grades()) {

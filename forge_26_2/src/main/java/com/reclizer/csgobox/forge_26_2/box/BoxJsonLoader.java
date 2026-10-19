@@ -129,18 +129,6 @@ public final class BoxJsonLoader {
      * before definitions are loaded into {@link BoxRegistry}. Defaults to
      * {@code "csbox"} so a malformed file degrades to a regular box item.
      */
-    public static String readType(Path file) {
-        try (Reader reader = Files.newBufferedReader(file)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
-                return json.get("type").getAsString();
-            }
-        } catch (Exception e) {
-            CsgoBox.LOGGER.warn("Failed to read type from {}: {}", file, e.getMessage());
-        }
-        return "csbox";
-    }
-
     /** Parsed result of a box "name" value: display text + optional 0xRRGGBB color. */
     private record ParsedName(String text, OptionalInt color) {}
 
@@ -813,23 +801,6 @@ public final class BoxJsonLoader {
             CsgoBox.LOGGER.info("Saved box to JSON: {} -> {}", def.id(), file);
         } catch (IOException e) {
             CsgoBox.LOGGER.error("Failed to finalize box JSON: {}", file, e);
-        }
-    }
-
-    public static void deleteFile(Identifier boxId) {
-        Path file = BOXES_DIR.resolve(boxId.getPath() + ".json").normalize();
-        if (!file.startsWith(BOXES_DIR.normalize())) {
-            CsgoBox.LOGGER.warn("Rejected path traversal attempt: {}", boxId.getPath());
-            return;
-        }
-        try {
-            if (Files.exists(file)) {
-                Files.delete(file);
-                PARSED_CACHE.remove(file.getFileName().toString());
-                CsgoBox.LOGGER.info("Deleted box JSON: {}", file);
-            }
-        } catch (IOException e) {
-            CsgoBox.LOGGER.error("Failed to delete box JSON: {}", file, e);
         }
     }
 

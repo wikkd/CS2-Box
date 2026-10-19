@@ -110,9 +110,6 @@ public class PacketSyncBoxItems {
     public Optional<ResourceLocation> getBoxId() { return boxId; }
     public List<ItemStack> getItems() { return items; }
     public List<Integer> getGrades() { return grades; }
-    public List<Integer> getWeights() { return weights; }
-    public ItemStack getKeyItem() { return keyItem; }
-    public int getPityRemaining() { return pityRemaining; }
 
     private static final Queue<BoxData> sPendingResponses = new ArrayDeque<>();
 
