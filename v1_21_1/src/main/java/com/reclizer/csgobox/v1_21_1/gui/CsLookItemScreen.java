@@ -579,6 +579,12 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public void removed() {
+        // Same protection as onClose(): death/respawn replaces this screen via
+        // setScreen() -> Screen.removed(), which would otherwise leave
+        // hideGui=true and hide the HUD permanently.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
         if (this.taczViewportActive) {
             TaczInspectViewport.exit(this.openItem);
             this.taczViewportActive = false;

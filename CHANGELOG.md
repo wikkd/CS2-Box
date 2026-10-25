@@ -16,6 +16,7 @@
 
 ### 修复
 
+- **死亡/断线致 HUD 永久隐藏（`v1_21_1` / `fabric_1_21_1` 镜像漏同步）**：开箱动画屏与检视屏渲染期间置 `options.hideGui = true`，此前只靠 `onClose()` 恢复；但死亡/重生或任何外部 `setScreen` 替换屏幕只调 `Screen.removed()` 不调 `onClose()`，残留为 true 的 hideGui 会让血条/热键栏/准星在重生后永久消失。其余 5 个使用 hideGui 的平台早有 `removed()` 恢复（其注释原话即此 bug 模式），`v26_2` / `forge_26_2` 走 `HudVisibility` 不受影响——本次给两平台的 `CsboxProgressScreen` / `CsLookItemScreen` 补齐同款防护（`CsboxBulkResultScreen` 两平台本就有），八平台口径一致。
 - **`forge_1_18_2` 武库商小屋降级明确化（清理死资源）**：1.18.2 没有数据包驱动的结构放置（无 `structure_set` / `configured_structure_feature` 数据注册表，`template_pool` 与村庄 houses 池也不可数据包注入），首建时机械移植遗留的 8 个小屋资源文件（不匹配任何版本 codec 的结构 JSON、biome tag、6 个结构 NBT）从未生效且无代码消费者，已删除；玩家获取军火商不受影响——合成军火拆解台放置后村民照常转职（动态定价与全部交易照常）。限制说明与未来补全路径见 `docs/PORTING-forge-1182.md`。
 - **武库商小屋群系白名单清理与覆盖策略落档**：白名单删除冗余的 `minecraft:grove`（经 `#minecraft:is_forest` 覆盖，1.20.1 / 1.21.1 / 26.1.2 / 26.2 原版标签已逐一核对；26.x 新增的 pale_garden 同样经该标签自动纳入，行为不变）；`docs/BIOME-INTEGRATION.md` 修正「野外据点 = 沙漠小屋」的错误示例（沙漠小屋只经村庄通道出现），并补齐白名单覆盖策略（刻意排除沙漠 / 高山山峰 / 沼泽 / 红树林；cherry_grove 与 meadow 系从 `#minecraft:is_mountain` 单独捞入以避开山峰）。
 - **军火商铁收购价与 key0 锚点结构性挂钩（防印钞）**：矿物→点数收购价随价格表浮动，但 key0 售价是固定锚点（默认 9 点），此前「3 铁 = 9 点 = 1 key0」的无套利关系只在默认表价下偶然成立——把铁定价到 500 会让 1 铁兑 30 点（3 铁兑 10 把 key0），村民变成印钞机。现在铁的收购价额外钉在 `min(表价 × buy_rate × 波动, floor(key0_price / 3))`：任何价格表下「卖铁换点 → 买 key0」都不会超过直接用 3 铁合成（上限生效时恰好零利润；默认表价下数值不变，铁仍 3 点）。金 / 钻不受影响——key1 / key2 售价与收购价同表浮动，无固定锚点可套利。同时在配置文档补充村民收购（6% 兜底、收未盖章散矿）、拆解台（90%、收盖章物品）与直接合成三者的定位层级说明。
