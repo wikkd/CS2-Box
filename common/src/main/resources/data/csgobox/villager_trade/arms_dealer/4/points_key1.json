@@ -1,4 +1,12 @@
 {
+  "additional_wants": {
+    "count": {
+      "fallback": 1,
+      "quote_field": "key1_gold",
+      "type": "csgobox:arms_dealer_price"
+    },
+    "id": "minecraft:gold_ingot"
+  },
   "gives": {
     "id": "csgobox:csgo_key1"
   },
@@ -7,7 +15,7 @@
   "wants": {
     "count": {
       "fallback": 24,
-      "quote_field": "key1",
+      "quote_field": "key1_points",
       "type": "csgobox:arms_dealer_price"
     },
     "id": "csgobox:armory_point"

@@ -21,7 +21,9 @@ import java.util.Map;
  *
  * <p>The villager's prices are anchored to the central price table
  * ({@code config/csbox/_prices.json}) instead of hard-coded constants:
- * mineral buy prices are {@code table base × buyRate}, key1/key2 sell prices
+ * mineral buy prices are {@code table base × buyRate} (iron additionally
+ * capped at {@code key0Price / 3}, the 3-iron-craft-one-key0 parity, so
+ * selling iron for points can never beat crafting a key0), key1/key2 sell prices
  * are their crafting-cost anchors ({@code 3 × mineral base × sellMarkup}),
  * key0 keeps the mod's currency anchor (9 points = 1 key0), and the box /
  * terminal sell prices are derived from key0. Every price is re-sampled on
@@ -159,9 +161,13 @@ public record VillagerPricingConfig(
     public String toJson() {
         JsonObject root = new JsonObject();
         root.addProperty("_doc", "军火商动态定价配置 / Arms-dealer dynamic pricing. " +
-                "Prices are anchored to config/csbox/_prices.json: buy = table base × buy_rate, " +
-                "key1/key2 = crafting cost (3 × mineral base) × sell_markup, key0 = key0_price " +
-                "(9-point currency anchor), box = key0 × box_key_ratio, terminal = key0 × terminal_key_ratio. " +
+                "Prices are anchored to config/csbox/_prices.json: buy = table base × buy_rate " +
+                "(iron additionally capped at floor(key0_price / 3) — 3 iron craft one key0, " +
+                "so selling iron for points can never beat direct crafting), " +
+                "key1/key2 = crafting cost (3 × mineral base) × sell_markup, paid as ≤ 64 Armory " +
+                "Points plus gold-ingot / diamond change for the remainder (a single trade input " +
+                "holds one 64-point stack), key0 = key0_price (9-point currency anchor), " +
+                "box = key0 × box_key_ratio, terminal = key0 × terminal_key_ratio. " +
                 "Each refresh re-samples within ±fluctuation. fallbacks are used when the price " +
                 "table lacks a mineral entry.");
         root.addProperty("enabled", enabled);

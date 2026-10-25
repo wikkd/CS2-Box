@@ -54,8 +54,9 @@ final class VillagerPricingTest {
         assertTrue(q.emerald() >= 1 && q.emerald() <= 4, "emerald=" + q.emerald());
         // key0 = 9 × (1 − 0.05) = 8.55 → 9
         assertEquals(9, q.key0());
-        // key1 = 3 × 50 × 0.9 = 135
-        assertEquals(135, q.key1());
+        // key1 = 3 × 50 × 0.9 = 135 → points 64, gold ceil(71/50) = 2
+        assertEquals(64, q.key1Points());
+        assertEquals(2, q.key1Gold());
         // key2 = 3 × 200 (fallback diamond) × 0.9 = 540 → points 64,
         // diamonds ceil(476/200) = 3
         assertEquals(64, q.key2Points());
@@ -83,7 +84,8 @@ final class VillagerPricingTest {
         assertEquals(11, q.diamond());  // 200 × 0.06 × 0.9 = 10.8 → 11
         assertEquals(3, q.emerald());   // 500/9=55 × 0.06 × 0.9 = 2.97 → 3
         assertEquals(9, q.key0());
-        assertEquals(135, q.key1());    // 3 × 50 × 1.0 × 0.9
+        assertEquals(64, q.key1Points());  // 3 × 50 × 1.0 × 0.9 = 135 → capped at 64
+        assertEquals(2, q.key1Gold());     // ceil((135−64)/50) = 2
         // key2: 3 × 200 × 0.9 = 540 → 64 points + ceil(476/200)=3 diamonds
         assertEquals(64, q.key2Points());
         assertEquals(3, q.key2Diamonds());
@@ -111,7 +113,8 @@ final class VillagerPricingTest {
         assertEquals(12, q.diamond());  // 200 × 0.06 = 12 (matches the old static price)
         assertEquals(3, q.emerald());
         assertEquals(9, q.key0());
-        assertEquals(150, q.key1());    // 3 × 50
+        assertEquals(64, q.key1Points());  // 3 × 50 = 150 → capped at 64
+        assertEquals(2, q.key1Gold());     // ceil((150−64)/50) = 2
         assertEquals(64, q.key2Points());   // 3 × 200 = 600 → capped at 64
         assertEquals(3, q.key2Diamonds());  // ceil((600−64)/200) = 3
         assertEquals(8, q.box());       // 9 × 0.9 = 8.1 → 8 (matches the old static price)
@@ -145,6 +148,69 @@ final class VillagerPricingTest {
         assertNotNull(q);
         assertTrue(q.key2Points() <= VillagerPricing.POINT_STACK_LIMIT);
         assertTrue(q.key2Diamonds() >= 1, "expensive key2 must ask diamonds");
+    }
+
+    @Test
+    @DisplayName("key1 points never exceed the 64-point stack limit")
+    void key1StackLimit() {
+        PriceTable t = table("""
+                {"minecraft:gold_ingot": 1000, "minecraft:diamond": 200, "minecraft:iron_ingot": 50}
+                """);
+        VillagerPricing.Quote q = VillagerPricing.quote(t, VillagerPricingConfig.DEFAULT, MIN_FACTOR_RNG);
+        assertNotNull(q);
+        assertTrue(q.key1Points() <= VillagerPricing.POINT_STACK_LIMIT);
+        assertTrue(q.key1Gold() >= 1, "expensive key1 must ask gold");
+    }
+
+    @Test
+    @DisplayName("a directly priced emerald takes precedence over emerald_block")
+    void directEmeraldPriceWins() {
+        // emerald 80 × 0.06 = 4.8 → 5; the block route (500/9=55 × 0.06)
+        // would give 3 — the direct entry must win.
+        PriceTable t = table("""
+                {"minecraft:emerald": 80, "minecraft:emerald_block": 500}
+                """);
+        VillagerPricingConfig cfg = new VillagerPricingConfig(
+                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+        VillagerPricing.Quote q = VillagerPricing.quote(t, cfg, MIN_FACTOR_RNG);
+        assertNotNull(q);
+        assertEquals(5, q.emerald());
+    }
+
+    @Test
+    @DisplayName("iron buy is capped at the 3-iron-craft-one-key0 parity")
+    void ironBuyCappedAtKey0Parity() {
+        // 3 iron craft one key0 and key0 sells for 9 points, so 1 iron can
+        // never buy more than 3 points — even with iron priced at 500
+        // (raw 500 × 0.06 = 30), or the villager becomes a key0 printer.
+        PriceTable t = table("""
+                {"minecraft:iron_ingot": 500, "minecraft:gold_ingot": 50, "minecraft:diamond": 200}
+                """);
+        VillagerPricingConfig cfg = new VillagerPricingConfig(
+                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+        VillagerPricing.Quote q = VillagerPricing.quote(t, cfg, MIN_FACTOR_RNG);
+        assertNotNull(q);
+        assertEquals(3, q.iron());
+        // gold / diamond stay uncapped: key1 / key2 prices float with the
+        // same table entries, so no fixed anchor can be arbitraged
+        assertEquals(3, q.gold());
+        assertEquals(12, q.diamond());
+    }
+
+    @Test
+    @DisplayName("the iron cap follows key0_price and leaves cheap tables untouched")
+    void ironCapScalesWithKey0Price() {
+        PriceTable t = table("""
+                {"minecraft:iron_ingot": 100, "minecraft:gold_ingot": 50, "minecraft:diamond": 200}
+                """);
+        // raw 100 × 0.06 = 6 < cap 30/3 = 10 — below the cap the table wins
+        VillagerPricingConfig cfg30 = new VillagerPricingConfig(
+                true, 0.06, 1.0, 0.0, 30, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+        assertEquals(6, VillagerPricing.quote(t, cfg30, MIN_FACTOR_RNG).iron());
+        // same table with the default key0_price 9 (cap 3): raw 6 is capped
+        VillagerPricingConfig cfg9 = new VillagerPricingConfig(
+                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+        assertEquals(3, VillagerPricing.quote(t, cfg9, MIN_FACTOR_RNG).iron());
     }
 
     @Test

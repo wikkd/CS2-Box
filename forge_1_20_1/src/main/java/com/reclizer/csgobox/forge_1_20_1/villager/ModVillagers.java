@@ -39,9 +39,12 @@ import java.util.function.Predicate;
  * {@code config/csbox/_prices.json} economy (see
  * {@code config/csbox/_villager_prices.json} for knobs). When dynamic
  * pricing is disabled in the config, the trades fall back to the static
- * values shared with the 26.x datapack tables (iron 1→2, emerald 1→2,
- * gold 1→4, diamond 1→12; box 8, key0 9, key1 24, key2 45 + 1 diamond,
- * terminal 18), so all platforms stay numerically aligned.</p>
+ * values shared with the 26.x datapack tables (iron 1→3, emerald 1→3,
+ * gold 1→3, diamond 1→12; box 8, key0 9, key1 24 + 1 gold,
+ * key2 45 + 1 diamond, terminal 18), so all platforms stay numerically
+ * aligned. key1 and key2 sell as two-input offers (points + gold /
+ * points + diamonds) because their crafting-cost anchors exceed a single
+ * armory_point stack of 64.</p>
  */
 public final class ModVillagers {
 
@@ -114,16 +117,17 @@ public final class ModVillagers {
         Item key2 = ModItems.ITEM_CSGO_KEY2.get();
         Item terminal = ModItems.ITEM_TERMINAL.get();
 
-        // Level 1: minerals → points (iron / emerald)
+        // Level 1: minerals → points (iron / emerald); statics match the
+        // dynamic defaults (table 50/55 × buyRate 0.06 → 3)
         map.put(1, new VillagerTrades.ItemListing[]{
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
-                    int count = q != null ? q.iron() : 2;
+                    int count = q != null ? clampPoints(q.iron()) : 3;
                     return buy(new ItemStack(Items.IRON_INGOT), new ItemStack(point, count), 16, 2);
                 },
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
-                    int count = q != null ? q.emerald() : 2;
+                    int count = q != null ? clampPoints(q.emerald()) : 3;
                     return buy(new ItemStack(Items.EMERALD), new ItemStack(point, count), 12, 2);
                 }
         });
@@ -132,7 +136,7 @@ public final class ModVillagers {
         map.put(2, new VillagerTrades.ItemListing[]{
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
-                    int count = q != null ? q.gold() : 4;
+                    int count = q != null ? clampPoints(q.gold()) : 3;
                     return buy(new ItemStack(Items.GOLD_INGOT), new ItemStack(point, count), 16, 5);
                 },
                 (trader, rng) -> {
@@ -146,7 +150,7 @@ public final class ModVillagers {
         map.put(3, new VillagerTrades.ItemListing[]{
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
-                    int count = q != null ? q.diamond() : 12;
+                    int count = q != null ? clampPoints(q.diamond()) : 12;
                     return buy(new ItemStack(Items.DIAMOND), new ItemStack(point, count), 12, 10);
                 },
                 (trader, rng) -> {
@@ -156,12 +160,16 @@ public final class ModVillagers {
                 }
         });
 
-        // Level 4: points → csgo_key1; points → terminal
+        // Level 4: points + gold → csgo_key1 (key1's 3-gold crafting anchor
+        // exceeds one 64-point stack, so the remainder is paid in whole gold
+        // ingots — same convention as the key2 offer); points → terminal
         map.put(4, new VillagerTrades.ItemListing[]{
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
-                    int count = q != null ? q.key1() : 24;
-                    return sell(count, new ItemStack(key1), 8, 15);
+                    int points = q != null ? q.key1Points() : 24;
+                    int gold = q != null ? q.key1Gold() : 1;
+                    return sellTwo(points, Items.GOLD_INGOT, Math.max(1, gold),
+                            new ItemStack(key1), 8, 15);
                 },
                 (trader, rng) -> {
                     VillagerPricing.Quote q = quoteFor(rng);
@@ -177,7 +185,8 @@ public final class ModVillagers {
                     VillagerPricing.Quote q = quoteFor(rng);
                     int points = q != null ? q.key2Points() : 45;
                     int diamonds = q != null ? q.key2Diamonds() : 1;
-                    return sellKey2(points, diamonds, new ItemStack(key2), 3, 30);
+                    return sellTwo(points, Items.DIAMOND, Math.max(1, diamonds),
+                            new ItemStack(key2), 3, 30);
                 }
         });
 
@@ -196,16 +205,22 @@ public final class ModVillagers {
         return new MerchantOffer(pointsStack(points), result, maxUses, xp, 0.05f);
     }
 
-    /** Cost: {@code points} Armory Points + {@code diamonds} diamonds → result. */
-    private static MerchantOffer sellKey2(int points, int diamonds, ItemStack result,
-                                          int maxUses, int xp) {
+    /** Cost: {@code points} Armory Points + {@code extraCount} × {@code extraItem} → result. */
+    private static MerchantOffer sellTwo(int points, Item extraItem, int extraCount,
+                                         ItemStack result, int maxUses, int xp) {
         return new MerchantOffer(pointsStack(points),
-                diamonds > 0 ? new ItemStack(Items.DIAMOND, diamonds) : ItemStack.EMPTY,
+                extraCount > 0 ? new ItemStack(extraItem, extraCount) : ItemStack.EMPTY,
                 result, maxUses, xp, 0.05f);
     }
 
     private static ItemStack pointsStack(int points) {
-        return new ItemStack(ModItems.ITEM_ARMORY_POINT.get(), Math.max(1, points));
+        return new ItemStack(ModItems.ITEM_ARMORY_POINT.get(), clampPoints(points));
+    }
+
+    /** Clamps a dynamic point count to a payable single stack [1, 64]
+     *  (matches the 26.x number-provider side). */
+    private static int clampPoints(int v) {
+        return Math.max(1, Math.min(v, VillagerPricing.POINT_STACK_LIMIT));
     }
 
     public static void register(IEventBus eventBus) {

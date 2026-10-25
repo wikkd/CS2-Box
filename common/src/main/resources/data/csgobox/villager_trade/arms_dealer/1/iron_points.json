@@ -2,7 +2,7 @@
   "given_item_modifiers": [
     {
       "count": {
-        "fallback": 2,
+        "fallback": 3,
         "quote_field": "iron",
         "type": "csgobox:arms_dealer_price"
       },

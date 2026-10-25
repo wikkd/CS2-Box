@@ -47,9 +47,11 @@ import java.util.function.Supplier;
  *
  * <p>Economy anchor: 9 Armory Points = 1 {@code csgo_key0}
  * (see {@code data/csgobox/recipe/armory_point_exchange.json}).
- * Mineral-to-point trades pay LESS than crafting a key0 from the same minerals
- * to prevent arbitrage; key2 uses a two-input offer (points + diamonds)
- * because a single armory_point stack maxes at 64.</p>
+ * Mineral-to-point trades pay no more than crafting a key0 from the same
+ * minerals (3 iron = 9 points = 1 key0 at the defaults), so there is no
+ * arbitrage; key1 and key2 use two-input offers (points + gold /
+ * points + diamonds) because their crafting-cost anchors exceed a single
+ * armory_point stack of 64.</p>
  */
 public final class ModVillagers {
 
@@ -125,14 +127,15 @@ public final class ModVillagers {
 
             Int2ObjectMap<VillagerTrades.ItemListing[]> byLevel = new Int2ObjectOpenHashMap<>();
 
-            // Level 1: minerals → points (iron / emerald)
+            // Level 1: minerals → points (iron / emerald); statics match the
+            // dynamic defaults (table 50/55 × buyRate 0.06 → 3)
             byLevel.put(1, new VillagerTrades.ItemListing[]{
-                    dynamic(Items.IRON_INGOT, 1, point, q -> q.iron(), 2, 16, 2),
-                    dynamic(Items.EMERALD, 1, point, q -> q.emerald(), 2, 12, 2),
+                    dynamic(Items.IRON_INGOT, 1, point, q -> q.iron(), 3, 16, 2),
+                    dynamic(Items.EMERALD, 1, point, q -> q.emerald(), 3, 12, 2),
             });
             // Level 2: gold → points; points → csgo_box
             byLevel.put(2, new VillagerTrades.ItemListing[]{
-                    dynamic(Items.GOLD_INGOT, 1, point, q -> q.gold(), 4, 16, 5),
+                    dynamic(Items.GOLD_INGOT, 1, point, q -> q.gold(), 3, 16, 5),
                     dynamicSell(point, q -> q.box(), box, 8, 12, 5),
             });
             // Level 3: diamond → points; points → csgo_key0 (9-point anchor)
@@ -140,9 +143,21 @@ public final class ModVillagers {
                     dynamic(Items.DIAMOND, 1, point, q -> q.diamond(), 12, 12, 10),
                     dynamicSell(point, q -> q.key0(), key0, 9, 16, 10),
             });
-            // Level 4: points → csgo_key1; points → terminal
+            // Level 4: points + gold → csgo_key1; points → terminal
             byLevel.put(4, new VillagerTrades.ItemListing[]{
-                    dynamicSell(point, q -> q.key1(), key1, 24, 8, 15),
+                    // key1's 3-gold crafting anchor exceeds one 64-point
+                    // stack, so the remainder is paid in whole gold ingots
+                    // (same convention as the key2 offer below).
+                    (entity, random) -> {
+                        VillagerPricing.Quote q = quoteFor(random);
+                        int points = q != null ? q.key1Points() : 24;
+                        int gold = q != null ? q.key1Gold() : 1;
+                        return new MerchantOffer(
+                                new ItemCost(point, Math.max(1, points)),
+                                Optional.of(new ItemCost(Items.GOLD_INGOT, Math.max(1, gold))),
+                                new ItemStack(key1, 1),
+                                8, 15, 0.05F);
+                    },
                     dynamicSell(point, q -> q.terminal(), terminal, 18, 4, 15),
             });
             // Level 5: points + diamond → csgo_key2 (two-input offer)
@@ -166,14 +181,17 @@ public final class ModVillagers {
     /**
      * Mineral → points listing: {@code in} → N points, where N is the
      * dynamic quote value (or the static fallback when dynamic pricing is
-     * disabled).
+     * disabled). Count is clamped to the 64-point stack cap, matching the
+     * 26.x number-provider side.
      */
     private static VillagerTrades.ItemListing dynamic(Item in, int inCount, Item out,
                                                       java.util.function.ToIntFunction<VillagerPricing.Quote> price,
                                                       int fallback, int maxUses, int xp) {
         return (entity, random) -> {
             VillagerPricing.Quote q = quoteFor(random);
-            int count = q != null ? Math.max(1, price.applyAsInt(q)) : fallback;
+            int count = q != null
+                    ? Math.max(1, Math.min(price.applyAsInt(q), VillagerPricing.POINT_STACK_LIMIT))
+                    : fallback;
             return new MerchantOffer(new ItemCost(in, inCount), new ItemStack(out, count),
                     maxUses, xp, 0.05F);
         };
@@ -185,7 +203,9 @@ public final class ModVillagers {
                                                           Item out, int fallback, int maxUses, int xp) {
         return (entity, random) -> {
             VillagerPricing.Quote q = quoteFor(random);
-            int points = q != null ? Math.max(1, price.applyAsInt(q)) : fallback;
+            int points = q != null
+                    ? Math.max(1, Math.min(price.applyAsInt(q), VillagerPricing.POINT_STACK_LIMIT))
+                    : fallback;
             return new MerchantOffer(new ItemCost(point, points), new ItemStack(out, 1),
                     maxUses, xp, 0.05F);
         };

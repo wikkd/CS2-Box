@@ -19,14 +19,22 @@ import java.util.function.IntUnaryOperator;
  *   <li><b>Buy (minerals → points)</b>: {@code tableBase × buyRate × factor}.
  *       Table base is a sampled range when the table stores {@code [min,max]},
  *       otherwise the fixed price; falls back to the config's {@code fallbacks}
- *       when the table has no entry. With the default price table this keeps
- *       3 iron below one key0, so "mine → points → key0" cannot arbitrage.</li>
+ *       when the table has no entry. Iron is additionally capped at
+ *       {@code key0Price / 3}: 3 iron craft one key0 directly, so without the
+ *       cap an inflated iron table entry would make "sell iron → points →
+ *       key0" outperform crafting. At the cap the conversion runs at exactly
+ *       zero margin. Gold / diamond / emerald are uncapped — their key1 /
+ *       key2 sell prices float with the same table entries as the buy prices,
+ *       so there is no fixed anchor to arbitrage against.</li>
  *   <li><b>key0</b>: the config's {@code key0Price} (the mod's 9-point
  *       currency anchor), with a small separate fluctuation.</li>
  *   <li><b>key1 / key2</b>: crafting-cost anchors {@code 3 × mineral base ×
- *       sellMarkup}. key2 is split into points + diamonds because a single
- *       Armory Point stack caps at 64: points are clamped to 64 and the
- *       remaining value is paid in whole diamonds.</li>
+ *       sellMarkup}. Both are split into points (clamped to the 64-point
+ *       stack cap) plus whole gold ingots / diamonds for the remaining
+ *       value, because a single offer input holds one stack. Note the anchor
+ *       is the crafting cost at full table value — with the default table it
+ *       sits well above the static fallback prices, so toggling dynamic
+ *       pricing on/off visibly changes what keys cost.</li>
  *   <li><b>box / terminal</b>: derived from key0 ({@code key0 × boxKeyRatio}
  *       and {@code key0 × terminalKeyRatio}).</li>
  * </ul>
@@ -46,7 +54,8 @@ public final class VillagerPricing {
             int gold,       // 1 gold_ingot → N points
             int diamond,    // 1 diamond → N points
             int key0,       // N points → 1 csgo_key0
-            int key1,       // N points → 1 csgo_key1
+            int key1Points, // N points (≤ 64) → 1 csgo_key1
+            int key1Gold,   // + M gold ingots (0 when the points already cover it)
             int key2Points, // N points (≤ 64) → 1 csgo_key2
             int key2Diamonds, // + M diamonds (0 when the points already cover it)
             int box,        // N points → 1 csgo_box
@@ -77,14 +86,22 @@ public final class VillagerPricing {
         int diamondBase = base(t, cfg, "minecraft:diamond", nextBounded);
         int emeraldBase = emeraldBase(t, cfg, nextBounded);
 
-        int iron = point(ironBase * cfg.buyRate() * factor);
+        // 3 iron craft one key0 and key0 sells for key0Price points: cap the
+        // iron buy at that parity so the table can never make "iron → points
+        // → key0" beat direct crafting (floor 1 keeps the trade alive).
+        int iron = Math.min(point(ironBase * cfg.buyRate() * factor),
+                Math.max(1, cfg.key0Price() / 3));
         int emerald = point(emeraldBase * cfg.buyRate() * factor);
         int gold = point(goldBase * cfg.buyRate() * factor);
         int diamond = point(diamondBase * cfg.buyRate() * factor);
 
         int key0 = point(cfg.key0Price() * key0Factor);
 
-        int key1 = point(goldBase * 3.0 * cfg.sellMarkup() * factor);
+        double key1Value = goldBase * 3.0 * cfg.sellMarkup() * factor;
+        int key1Points = (int) Math.min(POINT_STACK_LIMIT, Math.max(1, Math.round(key1Value)));
+        int key1Gold = goldBase > 0
+                ? (int) Math.ceil(Math.max(0.0, key1Value - key1Points) / goldBase)
+                : 0;
 
         double key2Value = diamondBase * 3.0 * cfg.sellMarkup() * factor;
         int key2Points = (int) Math.min(POINT_STACK_LIMIT, Math.max(1, Math.round(key2Value)));
@@ -96,7 +113,7 @@ public final class VillagerPricing {
         int terminal = point(key0 * cfg.terminalKeyRatio() * factor);
 
         return new Quote(iron, emerald, gold, diamond,
-                key0, key1, key2Points, key2Diamonds, box, terminal);
+                key0, key1Points, key1Gold, key2Points, key2Diamonds, box, terminal);
     }
 
     /** Base price for a mineral: sampled table range, else fallback, else 0. */
@@ -110,12 +127,17 @@ public final class VillagerPricing {
     }
 
     /**
-     * Emerald base: a single emerald has no own table entry in the bundled
-     * tables (only {@code emerald_block} does), so the base is
-     * {@code emerald_block price / 9} with a config fallback when missing.
+     * Emerald base: a directly priced {@code minecraft:emerald} table entry
+     * wins; otherwise the base is {@code emerald_block price / 9} (the bundled
+     * tables only price the block), with a config fallback when neither
+     * exists.
      */
     private static int emeraldBase(PriceTable table, VillagerPricingConfig cfg,
                                    IntUnaryOperator nextBounded) {
+        PriceRange direct = table.lookupRange("minecraft:emerald");
+        if (direct != null) {
+            return direct.sample(nextBounded);
+        }
         PriceRange block = table.lookupRange("minecraft:emerald_block");
         if (block != null) {
             int base = block.sample(nextBounded);

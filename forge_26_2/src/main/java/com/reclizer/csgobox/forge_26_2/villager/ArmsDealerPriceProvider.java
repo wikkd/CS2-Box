@@ -36,7 +36,7 @@ public record ArmsDealerPriceProvider(QuoteField field, int fallback) implements
     /** Which field of {@link VillagerPricing.Quote} this provider reads. */
     public enum QuoteField {
         IRON, EMERALD, GOLD, DIAMOND,
-        KEY0, KEY1, KEY2_POINTS, KEY2_DIAMONDS,
+        KEY0, KEY1_POINTS, KEY1_GOLD, KEY2_POINTS, KEY2_DIAMONDS,
         BOX, TERMINAL;
 
         String id() {
@@ -86,16 +86,18 @@ public record ArmsDealerPriceProvider(QuoteField field, int fallback) implements
             case GOLD -> quote.gold();
             case DIAMOND -> quote.diamond();
             case KEY0 -> quote.key0();
-            case KEY1 -> quote.key1();
+            case KEY1_POINTS -> quote.key1Points();
+            case KEY1_GOLD -> quote.key1Gold();
             case KEY2_POINTS -> quote.key2Points();
             case KEY2_DIAMONDS -> quote.key2Diamonds();
             case BOX -> quote.box();
             case TERMINAL -> quote.terminal();
         };
-        // Point inputs/outputs never exceed the 64-stack cap; the key2 diamond
-        // add-on is clamped to ≥ 1 so the two-input offer never vanishes
-        // (matching the 1.21.1 platform's Math.max(1, diamonds)).
-        return field == QuoteField.KEY2_DIAMONDS
+        // Point inputs/outputs never exceed the 64-stack cap; the key1 gold and
+        // key2 diamond add-ons are clamped to ≥ 1 so the two-input offers never
+        // vanish (26.x drops a whole trade whose want count resolves < 1;
+        // matches the legacy platforms' Math.max(1, ...) convention).
+        return field == QuoteField.KEY1_GOLD || field == QuoteField.KEY2_DIAMONDS
                 ? Math.max(1, value)
                 : Math.min(value, VillagerPricing.POINT_STACK_LIMIT);
     }
