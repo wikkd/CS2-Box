@@ -390,7 +390,13 @@ public final class BoxJsonLoader {
 
         CachedFile cached = PARSED_CACHE.get(fileName);
         if (cached != null && cached.hash().equals(hash)
-                && cached.tableHash().equals(priceTable.hash())) {
+                && cached.tableHash().equals(priceTable.hash())
+                // Only error-free parses are cacheable: a parse that produced
+                // errors may be timing-dependent (e.g. '#tag' entries scanned
+                // before item tags are bound expand to nothing), and reusing
+                // it would freeze the error in place forever. Re-parse so the
+                // next scan (server start / reload) self-heals.
+                && cached.errors().isEmpty()) {
             // Unchanged (box content and price table): reuse the cached parse
             // and its diagnostics.
             LAST_LOAD_ERRORS.addAll(cached.errors());

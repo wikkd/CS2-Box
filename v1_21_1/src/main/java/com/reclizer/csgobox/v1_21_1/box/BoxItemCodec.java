@@ -429,8 +429,13 @@ public final class BoxItemCodec {
                         + componentsElem.getClass().getSimpleName());
             }
         } else if (obj.has("tag")) {
+            JsonElement tagElem = obj.get("tag");
+            if (tagElem.isJsonPrimitive() && tagElem.getAsString().startsWith("#")) {
+                // '#' reference: the item-source selector of a tag entry, not
+                // NBT — parseItemTag members must not re-parse it as a tag.
+                return;
+            }
             try {
-                JsonElement tagElem = obj.get("tag");
                 CompoundTag tag;
                 if (tagElem.isJsonObject()) {
                     // JSON-object form: no SNBT quoting, booleans become bytes,

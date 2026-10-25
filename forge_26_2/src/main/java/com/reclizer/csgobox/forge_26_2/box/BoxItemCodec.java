@@ -332,8 +332,14 @@ public final class BoxItemCodec {
         } else if (obj.has("tag")) {
             // Legacy NBT string (only when it is NOT a "#tag" item reference —
             // those are handled earlier in parseItem).
+            JsonElement tagElem = obj.get("tag");
+            if (tagElem.isJsonPrimitive() && tagElem.getAsString().startsWith("#")) {
+                // '#' reference: the item-source selector of a tag entry, not
+                // NBT — parseItemTag members must not re-parse it as a tag.
+                return;
+            }
             try {
-                String tagStr = obj.get("tag").getAsString();
+                String tagStr = tagElem.getAsString();
                 var tag = TagParser.parseCompoundFully(tagStr);
                 DataResult<DataComponentPatch> result =
                         DataComponentPatch.CODEC.parse(NbtOps.INSTANCE, tag);
