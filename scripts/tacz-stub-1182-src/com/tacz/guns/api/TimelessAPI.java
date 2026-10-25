@@ -10,9 +10,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * COMPILE-ONLY API STUB for the forge_1_18_2 module (built by
- * scripts/build-tacz-stub-1182.sh into local-repo as
- * com.tacz:tacz:1.1.8-api-1182). The real TACZ 1.18.2 production jar is
+ * COMPILE-ONLY API STUB for the forge_1_18_2 module (built by the
+ * Gradle taczStubJar task in forge_1_18_2/build.gradle and wired onto
+ * its compileJava classpath). The real TACZ 1.18.2 production jar is
  * SRG-mapped and cannot sit on a Mojang-mapped dev classpath, so the module
  * compiles against these signature stubs instead; at runtime the real mod
  * provides the classes (everything is behind ModList.isLoaded("tacz")).

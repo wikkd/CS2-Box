@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Check mod_version sync across gradle.properties / CHANGELOG.md / README.md
-# and that every platform mods.toml keeps the ${mod_version} template variable.
+# / README.en.md and that every platform mods.toml keeps the ${mod_version}
+# template variable.
 #
 # Usage: scripts/check-version.sh
 # Exit code 0 when everything is in sync, 1 when a mismatch is found.
@@ -43,8 +44,9 @@ echo
 
 # CHANGELOG.md must have a release header for the current version.
 check_pattern "CHANGELOG release entry" "CHANGELOG.md" "## \\[${mod_version//./\\.}\\]"
-# README.md must mention the current version.
+# README.md / README.en.md must mention the current version.
 check_pattern "README version mention" "README.md" "${mod_version//./\\.}"
+check_pattern "README.en version mention" "README.en.md" "${mod_version//./\\.}"
 
 # Every platform mod manifest must keep the ${mod_version} template variable
 # (it is injected by Gradle; manual version strings there go stale).

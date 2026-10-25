@@ -25,7 +25,7 @@ CS2-Box brings CS:GO's crate-opening loop into Minecraft: right-click while hold
 - **One codebase, eight platforms**: NeoForge, Forge and Fabric, all in sync
 - **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
 
-Current version: **`2.0.2`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
+Current version: **`2.0.3`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
 
 ## Quick Start
 
@@ -130,7 +130,7 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 were remov
 
 All platforms share one `mod_version`:
 
-- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.2.jar`)
+- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.3.jar`)
 - Forge: `csgobox-forge-<mc>-<mod_version>.jar`
 - **Sole exception**: Forge 1.20.1 ships as `csgobox-forge-1.20.1-<mod_version>-srg.jar` (SRG-remapped; required for 1.20.1 production)
 

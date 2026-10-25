@@ -7,7 +7,7 @@
 ### 新增（平台）
 
 - **`fabric_1_21_1`（Fabric 1.21.1，Loom 1.17.21 + Fabric Loader 0.16.14，Java 21）**：以 `v1_21_1` 为基准整模块移植（`scripts/port-fabric-1211.py` 机械转换 + 手工适配），覆盖开箱 / 批量开箱 / 终端机 / 拆解台 / 村民交易 / `/csbox` 全子命令；JEI / REI / EMI / Jade / WTHIT / Cloth Config / Mod Menu 均有 Fabric 构建并接入；TACZ 检视与 3D 枪械渲染经非官方移植 TaCZ: Refabricated 接入（`modCompileOnly` 由 Loom 重映射，运行时经 `FabricLoader.isModLoaded` 检测）。已知限制：dev 环境 Fabric Loader 钉 0.16.14 与 Refabricated 要求的 ≥0.17.2 冲突（生产环境不受影响）；1.21.1 Fabric 无 Create/TOP，对应功能不移植。详见 `docs/PORTING-fabric.md`。
-- **`forge_1_18_2`（Forge 1.18.2-40.3.0，Java 17，ForgeGradle 5 + SRG renamer）**：以 `forge_1_20_1` 为基准回移；1.18.2 无 GuiGraphics，全部 GUI 为 PoseStack 重写（`AnimRenderOps` 吸收渲染原语）；JEI 10.x / REI 8.x / Jade 5.x / Cloth 6.x 接入，EMI/WTHIT/TOP 无 1.18.2 构建不移植；TACZ 为数据级联动（物品校验 + `/csbox tacz` 列表，编译期对包内签名桩 jar）。详见 `docs/PORTING-forge-1182.md`。
+- **`forge_1_18_2`（Forge 1.18.2-40.3.0，Java 17，ForgeGradle 7.0.31 + SRG renamer）**：以 `forge_1_20_1` 为基准回移；1.18.2 无 GuiGraphics，全部 GUI 为 PoseStack 重写（`AnimRenderOps` 吸收渲染原语）；JEI 10.x / REI 8.x / Jade 5.x / Cloth 6.x 接入，EMI/WTHIT/TOP 无 1.18.2 构建不移植；TACZ 为数据级联动（物品校验 + `/csbox tacz` 列表，编译期对包内签名桩 jar）。详见 `docs/PORTING-forge-1182.md`。
 - 两个新平台接入 CI 矩阵（`build.yml` 8 平台全量编译 + 冒烟测试），并补齐 `v1_21_1` / `v26_2` 缺失的 `PlatformSmokeTest`（八平台齐备）。
 
 ### 新增（联动）
