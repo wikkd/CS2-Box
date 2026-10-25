@@ -1,0 +1,43 @@
+{
+  "name": "#AA3333 卓越前线军火箱",
+  "key": "csgobox:csgo_key3",
+  "drop": 0.02,
+  "random": [625, 125, 25, 6, 4],
+  "requires": ["superbwarfare"],
+  "grade5": [
+    { "id": "superbwarfare:secondary_cataclysm", "count": 1 },
+    { "id": "superbwarfare:super_star_shooter", "count": 1 },
+    { "id": "superbwarfare:awm", "count": 1 },
+    { "id": "superbwarfare:javelin", "count": 1 }
+  ],
+  "grade4": [
+    { "id": "superbwarfare:rpg", "count": 1 },
+    { "id": "superbwarfare:minigun", "count": 1 },
+    { "id": "superbwarfare:m_2_hb", "count": 1 },
+    { "id": "superbwarfare:igla_9k38", "count": 1 }
+  ],
+  "grade3": [
+    { "id": "superbwarfare:qbz_191", "count": 1 },
+    { "id": "superbwarfare:ak_12", "count": 1 },
+    { "id": "superbwarfare:m_4", "count": 1 },
+    { "id": "superbwarfare:hk_416", "count": 1 },
+    { "id": "superbwarfare:svd", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "superbwarfare:ak_47", "count": 1 },
+    { "id": "superbwarfare:m_870", "count": 1 },
+    { "id": "superbwarfare:mp_5", "count": 1 },
+    { "id": "superbwarfare:vector", "count": 1 },
+    { "id": "superbwarfare:rpk", "count": 1 },
+    { "id": "superbwarfare:rifle_ammo", "count": 64 }
+  ],
+  "grade1": [
+    { "id": "superbwarfare:glock_17", "count": 1 },
+    { "id": "superbwarfare:mp_443", "count": 1 },
+    { "id": "superbwarfare:m_1911", "count": 1 },
+    { "id": "superbwarfare:homemade_shotgun", "count": 1 },
+    { "id": "superbwarfare:handgun_ammo", "count": 32 },
+    { "id": "superbwarfare:shotgun_ammo", "count": 32 },
+    { "id": "minecraft:iron_ingot", "count": 6 }
+  ]
+}

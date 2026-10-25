@@ -18,7 +18,8 @@ cp compat-packs/<pack>/*.json config/csbox/
 |---|---|---|---|
 | `apotheosis-pack/` | Apotheosis（神化） | 无 | 高稀有度掉宝石与高品质武器 |
 | `irons-spells-pack/` | Iron's Spells 'n Spellbooks | 无 | 法术卷轴 / 升级球 / 法系材料 |
-| `tacz-pack/` | TACZ（永恒枪械工坊） | 仅 `v1_21_1` / `forge_1_20_1` | 枪械 / 弹药 |
+| `tacz-pack/` | TACZ（永恒枪械工坊） | 仅 `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` | 枪械 / 弹药 |
+| `superb-warfare-pack/` | Superb Warfare（卓越前线） | `v1_21_1` / `forge_1_20_1`（官方）、`fabric_1_21_1`（ReFabricated 移植） | 枪械（普通物品，无需 NBT）/ 弹药 |
 | `test-pack-fabric-1.21.1/` | 无（原版 1.21 内容） | 仅 `fabric_1_21_1` | `components` 数据组件 / 1.21 新物品与新附魔 / 标签展开 |
 | `test-pack-forge-1.18.2/` | 无（原版 ≤1.18 内容） | 为 `forge_1_18_2` 编写验证 | `tag` NBT 直写（药水/自定义名）/ 标签展开 |
 

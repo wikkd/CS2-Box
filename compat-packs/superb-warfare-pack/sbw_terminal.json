@@ -1,0 +1,62 @@
+{
+  "name": "#AA3333 卓越前线军火终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "random": [625, 125, 25, 6, 4],
+  "requires": ["superbwarfare"],
+  "grade5": [
+    { "id": "superbwarfare:secondary_cataclysm", "count": 1 },
+    { "id": "superbwarfare:super_star_shooter", "count": 1 },
+    { "id": "superbwarfare:awm", "count": 1 },
+    { "id": "superbwarfare:javelin", "count": 1 },
+    { "id": "superbwarfare:ntw_20", "count": 1 },
+    { "id": "superbwarfare:m_98b", "count": 1 }
+  ],
+  "grade4": [
+    { "id": "superbwarfare:rpg", "count": 1 },
+    { "id": "superbwarfare:minigun", "count": 1 },
+    { "id": "superbwarfare:m_2_hb", "count": 1 },
+    { "id": "superbwarfare:igla_9k38", "count": 1 },
+    { "id": "superbwarfare:svd", "count": 1 },
+    { "id": "superbwarfare:m_60", "count": 1 },
+    { "id": "superbwarfare:mk_14", "count": 1 },
+    { "id": "superbwarfare:devotion", "count": 1 }
+  ],
+  "grade3": [
+    { "id": "superbwarfare:qbz_191", "count": 1 },
+    { "id": "superbwarfare:qbz_95", "count": 1 },
+    { "id": "superbwarfare:ak_12", "count": 1 },
+    { "id": "superbwarfare:m_4", "count": 1 },
+    { "id": "superbwarfare:hk_416", "count": 1 },
+    { "id": "superbwarfare:sentinel", "count": 1 },
+    { "id": "superbwarfare:insidious", "count": 1 },
+    { "id": "superbwarfare:m_79", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "superbwarfare:ak_47", "count": 1 },
+    { "id": "superbwarfare:sks", "count": 1 },
+    { "id": "superbwarfare:m_870", "count": 1 },
+    { "id": "superbwarfare:mp_5", "count": 1 },
+    { "id": "superbwarfare:vector", "count": 1 },
+    { "id": "superbwarfare:rpk", "count": 1 },
+    { "id": "superbwarfare:bocek", "count": 1 },
+    { "id": "superbwarfare:taser", "count": 1 },
+    { "id": "superbwarfare:rifle_ammo", "count": 64 },
+    { "id": "superbwarfare:sniper_ammo", "count": 32 }
+  ],
+  "grade1": [
+    { "id": "superbwarfare:glock_17", "count": 1 },
+    { "id": "superbwarfare:mp_443", "count": 1 },
+    { "id": "superbwarfare:m_1911", "count": 1 },
+    { "id": "superbwarfare:homemade_shotgun", "count": 1 },
+    { "id": "superbwarfare:hunting_rifle", "count": 1 },
+    { "id": "superbwarfare:marlin", "count": 1 },
+    { "id": "superbwarfare:k_98", "count": 1 },
+    { "id": "superbwarfare:mosin_nagant", "count": 1 },
+    { "id": "superbwarfare:handgun_ammo", "count": 32 },
+    { "id": "superbwarfare:shotgun_ammo", "count": 32 },
+    { "id": "superbwarfare:heavy_ammo", "count": 16 },
+    { "id": "superbwarfare:ammo_box", "count": 1 },
+    { "id": "minecraft:gunpowder", "count": 8 }
+  ]
+}

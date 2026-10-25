@@ -23,6 +23,7 @@ import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -55,6 +56,11 @@ public final class AnimRenderOps {
      *  FabricLoader gate, or clients without the mod crash with
      *  NoClassDefFoundError (see the 2.0.1 TerminalScreen rendering crash). */
     private static final String TACZ_MOD_ID = "tacz";
+    /** Superb Warfare (卓越前线, Superb Warfare ReFabricated on this platform)
+     *  item namespace. Unlike TACZ no loader gate is needed: the 3D branch
+     *  only matches a registered item's namespace, and such an item cannot
+     *  exist unless the mod is loaded. No Superb Warfare class is referenced. */
+    private static final String SUPERB_WARFARE_MOD_ID = "superbwarfare";
     /** Set once the first supports3D() call has logged the render environment. */
     private static boolean logged3DEnvironment;
     private static final PoseStack REUSABLE_POSE_STACK = new PoseStack();
@@ -244,6 +250,14 @@ public final class AnimRenderOps {
             renderGunModel3D(gg, item, cx, cy, rotation, scale, gunModel, display.get());
             return;
         }
+        // Superb Warfare keeps its 3D gun model out of the GUI perspective
+        // (separate-transforms routes gui -> flat icon); every other context
+        // renders the real model — exactly what an item frame shows. See
+        // renderFixedContextModel3D.
+        if (isSuperbWarfareItem(item)) {
+            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale);
+            return;
+        }
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         // Auto-fit: a model that projects beyond the preview square (oversized
         // datapack models) is shrunk to stay inside it; normal items (span <=
@@ -404,6 +418,64 @@ public final class AnimRenderOps {
                 Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
         ITEM_MODEL_BOUNDS.put(model, bounds);
         return bounds;
+    }
+
+    /** True for any Superb Warfare (卓越前线) item. The namespace check alone
+     *  proves the optional mod is loaded, and no Superb Warfare class is
+     *  touched, so unlike the TACZ gate there is nothing to gate against. */
+    private static boolean isSuperbWarfareItem(ItemStack stack) {
+        return !stack.isEmpty() && SUPERB_WARFARE_MOD_ID.equals(
+                BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace());
+    }
+
+    /** Superb Warfare 3D preview: same pose convention as the vanilla branch,
+     *  but the render runs under {@code ItemDisplayContext.FIXED} — the
+     *  item-frame context. The mod's separate-transforms model routes the gui
+     *  perspective to a flat 2D icon and only the other perspectives carry
+     *  the 3D gun (a GeckoLib custom renderer behind the per-gun display
+     *  settings models), so FIXED is the cheapest context with a calibrated
+     *  one-block transform. Quad auto-fit and centring are skipped: the
+     *  fixed transform is already frame-fitted and the custom renderer has
+     *  no quads to measure. A renderer failure degrades to the 2D icon.
+     *  The ReFabricated port's model wiring is not separately verified: for
+     *  plain (non-separate-transforms) items FIXED renders like GUI, so the
+     *  worst case on that build is the unchanged flat-icon look. */
+    private static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                                  int cx, int cy, Quat rotation, float scale) {
+        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
+        PoseStack pose = gg.pose();
+        pose.pushPose();
+        pose.translate(cx, cy, 100.0F);
+        pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
+        pose.scale(1.0F, -1.0F, 1.0F);
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
+        Lighting.setupForEntityInInventory();
+        pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.mul(pose.last().pose());
+        RenderSystem.applyModelViewMatrix();
+        PoseStack renderStack = REUSABLE_POSE_STACK;
+        renderStack.setIdentity();
+        boolean rendered = true;
+        try {
+            Minecraft.getInstance().getItemRenderer().render(item, ItemDisplayContext.FIXED, false,
+                    renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
+            bufferSource.endBatch();
+        } catch (Throwable t) {
+            LOGGER.warn("Superb Warfare 3D preview render failed; falling back to the flat icon", t);
+            rendered = false;
+        } finally {
+            modelViewStack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
+            pose.popPose();
+        }
+        if (!rendered) {
+            renderItem2D(player, gg, item, cx, cy, scale);
+        }
     }
 
     /** TACZ gun 3D render: same pose convention as the vanilla branch, but

@@ -198,3 +198,19 @@ runServer 无法直接加载 TACZ 做联测**；生产环境玩家侧 loader 自
 另一运行时依赖 Forge Config API Port（`forgeconfigapiport`），仅真实加载
 TACZ 时需要。枪包方面：1.20.1 枪包需经 TACZ Pack Upgrader 升级为 1.21.1
 NeoForge 兼容格式后方可用于 Refabricated（上游 README 声明）。
+
+## 2026-10-25 Superb Warfare（卓越前线）3D 预览
+
+与 TACZ 的「借渲染器」路线不同，SBW 集成**零依赖**：`AnimRenderOps.renderItem3D`
+新增 `isSuperbWarfareItem` 分支（`BuiltInRegistries.ITEM` 命名空间判
+`superbwarfare`，物品存在即证明模组已载，无需 `FabricLoader` 门），对命中物品改用
+`ItemDisplayContext.FIXED`（展示框上下文）走 vanilla `ItemRenderer`——SBW 的
+separate-transforms 模型把 gui 透视指到 2D 图标、3D 模型只在其余透视渲染，
+FIXED 是其中标定最好的上下文（`displaysettings/*.item.json` 按一格展示框调参）。
+不 import 任何 SBW/GeckoLib 类，未装 SBW 或渲染异常时按序降级（命名空间不命中
+→ 原有 GUI 平面路径；渲染抛错 → 2D 图标）。三平台（v1_21_1 / forge_1_20_1 /
+fabric_1_21_1）同构，26.x 无 SBW 不加。示例箱
+`compat-packs/superb-warfare-pack/`。**本平台遗留**：ReFabricated（Fabric 移植）
+的模型接线机制未核验（Modrinth CDN 网络不可达拉不到 jar）——若其枪械不走
+separate-transforms，FIXED 渲染退化为与 GUI 相同的平面图标，无崩溃面；
+待拿到 jar 后实测确认。
