@@ -123,3 +123,20 @@ consumer 档 `items=18`（火药+面包+16 色 wool 全部展开）、grade4 的
 强治疗药水 / 迟缓药箭（`{Potion: ...}` NBT）、`Validation: 2 file(s) OK,
 0 file(s) failed`；ServerStarting 重扫后 `server started with 2 box
 definitions`，无 tag/NBT 错误。
+
+## 已知限制：武库商小屋不生成（2026-10-25 确认并清理）
+
+1.18.2 **没有数据包驱动的结构放置**：原版 jar 中不存在 `worldgen/structure_set` /
+`worldgen/configured_structure_feature` 数据注册表（后者只有 locate 用的 tags），
+结构的 spacing/separation/salt 是纯代码注册（`Registry.STRUCTURE_FEATURE`），
+`worldgen/template_pool` 也不可数据包注入（村庄池同理，村庄版小屋无数据包路径）。
+首建时机械移植遗留的死资源文件已删除（`worldgen/configured_structure_feature/arms_dealer_hut.json`、
+`tags/worldgen/biome/has_structure/arms_dealer_hut.json`、`structures/*.nbt` 共 8 个）——
+那个 JSON 是不匹配任何真实版本 codec 的杂交格式，且引用了不存在的 start_pool，从未生效。
+
+**玩家获取军火商的方式不受影响**：合成军火拆解台（共享配方 `data/csgobox/recipe/armory_recycler.json`）
+放置后，原版村民经 `minecraft:acquirable_job_site` 标签（含 `csgobox:armory_recycler`，1.18.2 生效）
+转职军火商，动态定价与全部交易照常。若未来要真正补上小屋生成：需代码注册 configured
+structure feature + `StructureFeature` 放置 + start_pool（1.18.2 的 template pool 同为代码
+注册，无数据包路径）；共享 NBT 不携带 DataVersion、方块按名称解析（需逐变体核对方块 id
+在 1.18.2 均存在），内嵌村民的职业字段是 1.14 起的字符串格式，天然兼容。

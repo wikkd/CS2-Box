@@ -11,13 +11,21 @@
 
 | 通道 | 由什么控制 | 示例 |
 |---|---|---|
-| 野外据点 | `#csgobox:has_structure/arms_dealer_hut` | 沙漠里孤零零一座小屋 |
+| 野外据点 | `#csgobox:has_structure/arms_dealer_hut` | 草原 / 森林里孤零零一座小屋 |
 | 村庄版 | `#minecraft:has_structure/village_<biome>` | 模组群系里的原版村庄附带小屋（weight 6） |
 
 村庄版的小屋之所以「免费」：CS2-Box 已经把 `csgobox:arms_dealer_hut_<biome>` 挂进了原版
 5 个村庄的 houses 池（`village/{plains,desert,savanna,snowy,taiga}/houses.json`，weight 6）。
 某群系能生成哪类村庄完全由 `#minecraft:has_structure/village_*` 决定，所以把模组群系加进
 对应 village tag，小屋就跟着村庄一起出现。
+
+**自带白名单的覆盖策略**（`#csgobox:has_structure/arms_dealer_hut`，追加前先了解它已覆盖什么）：
+六个 `is_*` 标签（forest / taiga / savanna / jungle / badlands / hill）+ 显式条目
+plains / sunflower_plains / meadow / cherry_grove / snowy_plains。刻意排除：**沙漠**（沙漠小屋
+只经沙漠村庄的村庄通道出现，野外 tag 不含任何沙漠群系）、**高山山峰**（jagged / frozen /
+stony peaks、snowy_slopes——meadow 与 cherry_grove 是从 `#minecraft:is_mountain` 里单独捞出的，
+不引整个标签就是为了避开山峰）、**沼泽 / 红树林**、河 / 滩 / 海。grove 经 `#minecraft:is_forest`
+覆盖（1.20.1~26.2 原版均含，已逐一核对）；26.x 新增的 pale_garden 同样经 `#is_forest` 自动纳入。
 
 ## 方法一：让野外据点进模组群系（最简）
 
