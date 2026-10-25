@@ -300,7 +300,10 @@ public class TerminalScreen extends Screen {
                 + Math.round(0.6F * (offerTitle.getString().length() - 1));
         RenderFontTool.drawSpacedText(gg, font, offerTitle.getString(),
                 rx0 + 4, ry0 + 2, 0.6F, 0.47F, TerminalPalette.TEXT);
-        offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY);
+        // previewVisible: the 3D offer preview would occlude anything drawn
+        // after it (PIP composites post-frame), so drop it under modal layers
+        offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY,
+                !confirmDialog.isOpen() && !inspectMenu.isOpen());
 
         // ---- bottom row (region 9+10+11) ----
         int bx0 = px(0.370), by0 = py(0.875), bx1 = px(0.998), by1 = py(0.988);

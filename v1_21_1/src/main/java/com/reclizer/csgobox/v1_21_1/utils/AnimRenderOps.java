@@ -66,16 +66,26 @@ public final class AnimRenderOps {
      *  or degenerate bounds): distinguishes "not computed" from "nothing to
      *  centre", so those models are not rescanned every frame. */
     private static final Object NO_CENTER = new Object();
+    /** Largest projected size of a preview square, as a fraction of its edge:
+     *  leaves margin for the drag-rotation tilt so an oversized model cannot
+     *  overflow the square (same 0.82 constant as the 26.x PIP path). */
+    private static final float PREVIEW_FILL = 0.82F;
     /** Cached model-space centre of each TACZ gun's default-pose bounding
      *  box (block units). Gun displays are singletons per gun id and are
      *  replaced on resource reload, so a WeakHashMap lets old models go. */
     private static final Map<BedrockGunModel, Vector3f> GUN_MODEL_CENTERS = new WeakHashMap<>();
+    /** Cached largest-axis span (block units) of each TACZ gun model, keyed
+     *  and lifecycle-managed like {@link #GUN_MODEL_CENTERS}. */
+    private static final Map<BedrockGunModel, Float> GUN_MODEL_SPANS = new WeakHashMap<>();
 
-    /** Cached centre (block units, in the drag-rotation space) of each baked
-     *  item model's geometry. Models are stable instances owned by the model
-     *  manager and are replaced on resource reload, so a WeakHashMap lets old
-     *  models go. */
-    private static final Map<BakedModel, Object> ITEM_MODEL_CENTERS = new WeakHashMap<>();
+    /** Cached centre + largest-axis span (block units, in the drag-rotation
+     *  space) of each baked item model's geometry. Models are stable
+     *  instances owned by the model manager and are replaced on resource
+     *  reload, so a WeakHashMap lets old models go. */
+    private record ModelBounds(Vector3f center, float span) {
+    }
+
+    private static final Map<BakedModel, Object> ITEM_MODEL_BOUNDS = new WeakHashMap<>();
 
     /** Screen.renderBlurredBackground is protected in this MC version and
      *  depends on the screen's own {@code minecraft} instance, so the facade
@@ -236,6 +246,10 @@ public final class AnimRenderOps {
             return;
         }
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
+        // Auto-fit: a model that projects beyond the preview square (oversized
+        // datapack models) is shrunk to stay inside it; normal items (span <=
+        // 1 block) keep the caller's scale unchanged.
+        float fitScale = fitScaleFor(itemModelSpan(model), scale);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
@@ -244,7 +258,7 @@ public final class AnimRenderOps {
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
-        pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
         // block-style models span 0..1 with the origin at a corner, so an
         // origin pivot would swing the box around a point outside its body.
@@ -279,18 +293,51 @@ public final class AnimRenderOps {
      *  ({@code ItemTransform.apply} + {@code -0.5} shift) — rotation turns the
      *  AABB into an OBB, so a raw midpoint is wrong. Computed once per model. */
     private static Vector3f itemModelCenter(BakedModel model) {
-        Object cached = ITEM_MODEL_CENTERS.get(model);
-        if (cached == NO_CENTER) {
-            return null;
+        return modelBounds(model).center();
+    }
+
+    /** Largest-axis span (block units, in the drag-rotation space) of the
+     *  model's rendered geometry, used by {@link #fitScaleFor} to auto-shrink
+     *  oversized models so they stay inside the preview square. */
+    private static float itemModelSpan(BakedModel model) {
+        return modelBounds(model).span();
+    }
+
+    /** Auto-fit scale for a model of {@code modelSpan} block units rendered
+     *  into a preview square of {@code 16 * scale} px (1 block = 16 px at
+     *  scale 1): models that project beyond the square are shrunk so their
+     *  largest axis fills only PREVIEW_FILL of it; everything else keeps the
+     *  caller's scale. Same shrink rule as the 26.x PIP path
+     *  ({@code targetPixelSize * 0.82 / modelSpan} in Icon3DRenderState). */
+    private static float fitScaleFor(float modelSpan, float scale) {
+        if (modelSpan <= 1.0F || modelSpan <= 0.0F) {
+            return scale;
         }
-        if (cached != null) {
-            return (Vector3f) cached;
+        return scale * PREVIEW_FILL / modelSpan;
+    }
+
+    /** Sentinel bounds for models without usable geometry (custom renderers
+     *  or degenerate quads): unit span keeps the caller's scale untouched. */
+    private static final ModelBounds NO_BOUNDS = new ModelBounds(new Vector3f(), 1.0F);
+
+    /** Bounding box centre + largest-axis span of the RENDERED geometry of a
+     *  baked item model, in drag-rotation space (block units). Pushes every
+     *  quad vertex through the exact {@code ItemRenderer.render} chain
+     *  ({@code ItemTransform.apply} + {@code -0.5} shift) — rotation turns the
+     *  AABB into an OBB, so a raw midpoint is wrong. Computed once per model. */
+    private static ModelBounds modelBounds(BakedModel model) {
+        Object cached = ITEM_MODEL_BOUNDS.get(model);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_CENTER) {
+            return NO_BOUNDS;
         }
         // Custom renderers (TACZ guns routed elsewhere, special items) have no
         // quads to measure; cache the sentinel so they are not rescanned.
         if (model.isCustomRenderer()) {
-            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
-            return null;
+            ITEM_MODEL_BOUNDS.put(model, NO_CENTER);
+            return NO_BOUNDS;
         }
         // Compose the renderer's model placement: ItemTransform.apply is
         // translate(translation) -> rotationXYZ -> scale, then render() adds
@@ -346,16 +393,18 @@ public final class AnimRenderOps {
             }
         }
         if (!any || !(minX < maxX && minY < maxY && minZ < maxZ)) {
-            ITEM_MODEL_CENTERS.put(model, NO_CENTER);
-            return null;
+            ITEM_MODEL_BOUNDS.put(model, NO_CENTER);
+            return NO_BOUNDS;
         }
-        // Midpoint of the rendered bounding box (block units).
-        Vector3f center = new Vector3f(
-                (minX + maxX) * 0.5F,
-                (minY + maxY) * 0.5F,
-                (minZ + maxZ) * 0.5F);
-        ITEM_MODEL_CENTERS.put(model, center);
-        return center;
+        // Midpoint + largest axis of the rendered bounding box (block units).
+        ModelBounds bounds = new ModelBounds(
+                new Vector3f(
+                        (minX + maxX) * 0.5F,
+                        (minY + maxY) * 0.5F,
+                        (minZ + maxZ) * 0.5F),
+                Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
+        ITEM_MODEL_BOUNDS.put(model, bounds);
+        return bounds;
     }
 
     /** TACZ gun 3D render: same pose convention as the vanilla branch, but
@@ -365,13 +414,17 @@ public final class AnimRenderOps {
     private static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
+        // Auto-fit: gun models routinely span 2-3 blocks; shrink so the
+        // largest axis stays inside the preview square (normal guns keep
+        // their tuned look via the same PREVIEW_FILL rule as vanilla items).
+        float fitScale = fitScaleFor(gunModelSpan(gunModel), scale);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
-        pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
         // the gun's root node sits far from its geometry, so a pivot at the
         // origin would swing the gun around a point outside the model.
@@ -405,9 +458,23 @@ public final class AnimRenderOps {
      *  units), computed once per model by walking the part tree with the base
      *  bone rotations ({@code cleanAnimationTransform} does not reset these). */
     public static Vector3f gunModelCenter(BedrockGunModel model) {
+        return gunBounds(model).center();
+    }
+
+    /** Largest-axis span (block units) of the gun's default-pose bounding
+     *  box, used by {@link #fitScaleFor} to auto-shrink oversized gun models
+     *  so they stay inside the preview square. */
+    private static float gunModelSpan(BedrockGunModel model) {
+        return gunBounds(model).span();
+    }
+
+    /** Centre + span of the gun's default-pose bounding box, computed once
+     *  per model by walking the part tree with the base bone rotations
+     *  ({@code cleanAnimationTransform} does not reset these). */
+    private static ModelBounds gunBounds(BedrockGunModel model) {
         Vector3f cached = GUN_MODEL_CENTERS.get(model);
-        if (cached != null) {
-            return cached;
+        if (cached instanceof Vector3f) {
+            return new ModelBounds(cached, GUN_MODEL_SPANS.getOrDefault(model, 1.0F));
         }
         float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
@@ -415,14 +482,17 @@ public final class AnimRenderOps {
         if (root != null) {
             collectPartBounds(root, new Matrix4f(), min, max);
         }
-        Vector3f center;
+        ModelBounds bounds;
         if (min[0] == Float.MAX_VALUE) {
-            center = new Vector3f();
+            bounds = NO_BOUNDS;
         } else {
-            center = new Vector3f((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
+            bounds = new ModelBounds(
+                    new Vector3f((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2),
+                    Math.max(max[0] - min[0], Math.max(max[1] - min[1], max[2] - min[2])));
         }
-        GUN_MODEL_CENTERS.put(model, center);
-        return center;
+        GUN_MODEL_CENTERS.put(model, bounds.center());
+        GUN_MODEL_SPANS.put(model, bounds.span());
+        return bounds;
     }
 
     private static void collectPartBounds(BedrockPart part, Matrix4f parent, float[] min, float[] max) {

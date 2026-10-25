@@ -58,7 +58,7 @@ public final class TerminalOfferRegion {
 
     public void render(GuiGraphics gg, int x0, int y0, int x1, int y1,
                        long nowMs, NegotiationModel model, Player player,
-                       int mx, int my) {
+                       int mx, int my, boolean previewVisible) {
         this.itemDrag.tick();
         // body gradient
         AnimRenderOps.fillGradient(gg, x0, y0, x1, y1, TerminalPalette.BODY_LIGHT_TOP,
@@ -91,26 +91,33 @@ public final class TerminalOfferRegion {
             // enlarged preview: ~88% of the watermark circle (audit: 0.95 read
             // as too big/overwhelming; with the forward lean the projected
             // span reads as a balanced showcase inside the halo)
-            float itemSize = Math.max(14F, wmSize * 0.88F);
-            // The spin composes as an X-axis rotation pre-multiplied onto the
-            // drag orientation (equivalent to the legacy rotY += spinDeg form).
-            float spinDeg = inspectOn ? TerminalAnims.spinDeg(nowMs) : nowMs / 1000F * 3F;
-            Quat spun = Quat.mul(Quat.fromAxisAngle(1, 0, 0, (float) Math.toRadians(spinDeg)),
-                    this.itemDrag.rotation());
-            ItemStack stack = offerItem(offer);
-            if (AnimRenderOps.supports3D()) {
-                // visual audit: the item's optical centre sat ~25px (3x) below
-                // the halo's — raise the render anchor to match the halo centre.
-                // renderItem3D takes the top-left of the preview square, so
-                // centre the square on the (itemCx, itemCy) anchor.
-                int itemHalf = Math.round(itemSize / 2F);
-                AnimRenderOps.renderItem3D(gg, stack, player, itemCx - itemHalf, itemCy - itemHalf,
-                        spun, itemSize / 16F);
-            } else {
-                // 1.21.1 renderItem2D anchors at the icon-box TOP-LEFT: back
-                // out half the scaled box so the icon centre lands on the halo.
-                AnimRenderOps.renderItem2D(player, gg, stack,
-                        itemCx - itemSize / 2F, itemCy - itemSize / 2F, itemSize / 16F);
+            // The 3D preview draws on top of everything drawn after it
+            // (immediate z>0 depth-writes / post-frame PIP composite), so a
+            // modal dialog or context menu layered later would be occluded —
+            // skip the preview while one is open. The dialog carries its own
+            // item icon, so no information is lost.
+            if (previewVisible) {
+                float itemSize = Math.max(14F, wmSize * 0.88F);
+                // The spin composes as an X-axis rotation pre-multiplied onto the
+                // drag orientation (equivalent to the legacy rotY += spinDeg form).
+                float spinDeg = inspectOn ? TerminalAnims.spinDeg(nowMs) : nowMs / 1000F * 3F;
+                Quat spun = Quat.mul(Quat.fromAxisAngle(1, 0, 0, (float) Math.toRadians(spinDeg)),
+                        this.itemDrag.rotation());
+                ItemStack stack = offerItem(offer);
+                if (AnimRenderOps.supports3D()) {
+                    // visual audit: the item's optical centre sat ~25px (3x) below
+                    // the halo's — raise the render anchor to match the halo centre.
+                    // renderItem3D takes the top-left of the preview square, so
+                    // centre the square on the (itemCx, itemCy) anchor.
+                    int itemHalf = Math.round(itemSize / 2F);
+                    AnimRenderOps.renderItem3D(gg, stack, player, itemCx - itemHalf, itemCy - itemHalf,
+                            spun, itemSize / 16F);
+                } else {
+                    // 1.21.1 renderItem2D anchors at the icon-box TOP-LEFT: back
+                    // out half the scaled box so the icon centre lands on the halo.
+                    AnimRenderOps.renderItem2D(player, gg, stack,
+                            itemCx - itemSize / 2F, itemCy - itemSize / 2F, itemSize / 16F);
+                }
             }
         }
 

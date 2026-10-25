@@ -11,9 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
@@ -43,6 +41,11 @@ public final class TerminalChatRegion {
     private static final int ROW_H = 6; // offer-info line-height 1.55 @12px (TERMINAL-LAYOUT-SPEC §3)
     /** Card height = 4 info rows + vertical padding (design offer-info 87px -> gui 28). */
     private static final int CARD_H = 4 * ROW_H + 4;
+    /** Offer-card text column: from the text origin (x+39) to 2px short of
+     *  the card's inner edge. Every info row clamps to this so long localized
+     *  names / status suffixes stop at an ellipsis instead of spilling over
+     *  the card border onto the dotted background. */
+    private static final int CARD_TEXT_W = CARD_W - 39 - 2;
     private static final int MAX_ENTRIES = 64;
     /** 13px font × line-height 1.55 (docs/TERMINAL-LAYOUT-SPEC.md §3). */
     private static final int LINE_H = 6;
@@ -231,21 +234,21 @@ public final class TerminalChatRegion {
             int alphaColor = (headColor & 0x00FFFFFF)
                     | (Math.round(255 * Math.min(1F, headAlpha)) << 24);
             RenderFontTool.drawStringClamped(gg, font, head, ix, iy + headDy,
-                    0, 0, 0.47F, availW - 39 - 3, alphaColor);
+                    0, 0, 0.43F, CARD_TEXT_W, alphaColor);
         }
-        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 0.47F, textColor);
-        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 0.47F, dimColor);
-        row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 0.47F,
+        row(gg, font, name, ix, iy + ROW_H, nowMs, oe.atMs(), 1, 0.47F, CARD_TEXT_W, textColor);
+        row(gg, font, wear, ix, iy + 2 * ROW_H, nowMs, oe.atMs(), 2, 0.47F, CARD_TEXT_W, dimColor);
+        row(gg, font, price, ix, iy + 3 * ROW_H, nowMs, oe.atMs(), 3, 0.47F, CARD_TEXT_W,
                 finalRound ? TerminalPalette.GREEN : TerminalPalette.OFFER_PRICE);
     }
 
     private void row(GuiGraphics gg, Font font, String text, int x, int y,
-                     long nowMs, long startMs, int row, float scale, int color) {
+                     long nowMs, long startMs, int row, float scale, int maxW, int color) {
         if (TerminalAnims.flipAlpha(nowMs, startMs, row) <= 0F) {
             return;
         }
         float dy = TerminalAnims.flipSlideY(nowMs, startMs, row);
-        RenderFontTool.drawString(gg, font, fcs(text), x, y + dy, 0, 0, scale, color);
+        RenderFontTool.drawStringClamped(gg, font, text, x, y + dy, 0, 0, scale, maxW, color);
     }
 
     private String offerPrice(NegotiationModel.Offer offer) {
@@ -272,11 +275,6 @@ public final class TerminalChatRegion {
         net.minecraft.world.entity.player.Player p = Minecraft.getInstance().player;
         return Component.translatable(se.textKey(),
                 p == null ? "?" : p.getName().getString()).getString();
-    }
-
-    /** FormattedCharSequence wrapper for plain strings. */
-    private static FormattedCharSequence fcs(String s) {
-        return FormattedCharSequence.forward(s, Style.EMPTY);
     }
 
     /** Rounded rectangle, fixed 2px corner radius (a scaled 16x16 membrane
