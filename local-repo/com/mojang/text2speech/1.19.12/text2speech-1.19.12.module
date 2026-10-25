@@ -1,0 +1,104 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.mojang",
+    "module": "text2speech",
+    "version": "1.19.12",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "text2speech-1.19.12.jar",
+          "url": "text2speech-1.19.12.jar",
+          "size": 14009,
+          "sha512": "e811d25e1562181bdc3aad7a17271aa243ca97d9a497cb30ad872d2d53ff4c9575807aa483cee6621a6fd065970d81038d21a77fb08e4909697cd0cc51dcaced",
+          "sha256": "63769a6f662ad8943adf6be14a45e375d76a567d7ba50c2a7f1f95082c93b816",
+          "sha1": "2e517a75c79d34d32de2b5d68422150836c2133e",
+          "md5": "5f497f916ed158028c311e884d7fe017"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jspecify",
+          "module": "jspecify",
+          "version": {
+            "requires": "1.0.0"
+          }
+        },
+        {
+          "group": "net.java.dev.jna",
+          "module": "jna",
+          "version": {
+            "requires": "5.17.0"
+          }
+        },
+        {
+          "group": "net.java.dev.jna",
+          "module": "jna-platform",
+          "version": {
+            "requires": "5.17.0"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "33.5.0-jre"
+          }
+        },
+        {
+          "group": "ca.weblite",
+          "module": "java-objc-bridge",
+          "version": {
+            "requires": "1.1"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.17"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "text2speech-1.19.12.jar",
+          "url": "text2speech-1.19.12.jar",
+          "size": 14009,
+          "sha512": "e811d25e1562181bdc3aad7a17271aa243ca97d9a497cb30ad872d2d53ff4c9575807aa483cee6621a6fd065970d81038d21a77fb08e4909697cd0cc51dcaced",
+          "sha256": "63769a6f662ad8943adf6be14a45e375d76a567d7ba50c2a7f1f95082c93b816",
+          "sha1": "2e517a75c79d34d32de2b5d68422150836c2133e",
+          "md5": "5f497f916ed158028c311e884d7fe017"
+        }
+      ]
+    }
+  ]
+}

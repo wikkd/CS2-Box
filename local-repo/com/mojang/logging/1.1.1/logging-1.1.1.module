@@ -1,0 +1,83 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.mojang",
+    "module": "logging",
+    "version": "1.1.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "logging-1.1.1.jar",
+          "url": "logging-1.1.1.jar",
+          "size": 15343,
+          "sha512": "1644422367d71a14a53353dcaf605ab88d7899c23c643826f42eec6828156a3467ea2fd3ec0d909ed5dd30be90a4dfe0dc9bbe8d6f43e5e22e70f114c45f1876",
+          "sha256": "c1756eaf0685da94142bacc84309bb7ccddf65e004638c3299ab645710b5938c",
+          "sha1": "832b8e6674a9b325a5175a3a6267dfaf34c85139",
+          "md5": "3e448abd81afec16d287d93b0628813f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-slf4j2-impl",
+          "version": {
+            "requires": "2.19.0"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.19.0"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-core",
+          "version": {
+            "requires": "2.19.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "logging-1.1.1.jar",
+          "url": "logging-1.1.1.jar",
+          "size": 15343,
+          "sha512": "1644422367d71a14a53353dcaf605ab88d7899c23c643826f42eec6828156a3467ea2fd3ec0d909ed5dd30be90a4dfe0dc9bbe8d6f43e5e22e70f114c45f1876",
+          "sha256": "c1756eaf0685da94142bacc84309bb7ccddf65e004638c3299ab645710b5938c",
+          "sha1": "832b8e6674a9b325a5175a3a6267dfaf34c85139",
+          "md5": "3e448abd81afec16d287d93b0628813f"
+        }
+      ]
+    }
+  ]
+}

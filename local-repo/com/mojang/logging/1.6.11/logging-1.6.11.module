@@ -1,0 +1,99 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.mojang",
+    "module": "logging",
+    "version": "1.6.11",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.7"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.17"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "logging-1.6.11.jar",
+          "url": "logging-1.6.11.jar",
+          "size": 20706,
+          "sha512": "487af6dfd6c45d6802574c17599b774bae5cdbb5e16acb0f6d58e918590bd75acd80766b25adf4b18b5262a175665dd946bf84d42daf65a8a2fcab28d8b25d77",
+          "sha256": "5d803eb7348a27468c6172daef2f0d77260dd63cde377ebfa73e36789ae8fcee",
+          "sha1": "0fd147240733010c158249d986323f9ef98977fe",
+          "md5": "6c024a64b7d3a5db5a96438d5d52ba6b"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-slf4j2-impl",
+          "version": {
+            "requires": "2.25.2"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.25.2"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-core",
+          "version": {
+            "requires": "2.25.2"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.17"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "logging-1.6.11.jar",
+          "url": "logging-1.6.11.jar",
+          "size": 20706,
+          "sha512": "487af6dfd6c45d6802574c17599b774bae5cdbb5e16acb0f6d58e918590bd75acd80766b25adf4b18b5262a175665dd946bf84d42daf65a8a2fcab28d8b25d77",
+          "sha256": "5d803eb7348a27468c6172daef2f0d77260dd63cde377ebfa73e36789ae8fcee",
+          "sha1": "0fd147240733010c158249d986323f9ef98977fe",
+          "md5": "6c024a64b7d3a5db5a96438d5d52ba6b"
+        }
+      ]
+    }
+  ]
+}

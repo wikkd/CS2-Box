@@ -1,0 +1,100 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.mojang",
+    "module": "jtracy",
+    "version": "1.0.37",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.8"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "jtracy-1.0.37.jar",
+          "url": "jtracy-1.0.37.jar",
+          "size": 12876,
+          "sha512": "827265e01c6889793217555a7beb28f9cd1ec7a9aca213c4939379144e5e3ad7423dce312fb94f71f2025a2909cfa28e0e74d395ad6f19d7d41bc8bdee72d26f",
+          "sha256": "8bb68d0b65e8eceb92de2bd1d9e1443a8c9a9dd1b5818a5e54870b0f8253672a",
+          "sha1": "a3fb649b2e2b2288d2978f0b0bc3d83f62809d1e",
+          "md5": "45a2ebe1c0b1a9bcc2751bf39e799c05"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "jtracy-1.0.37.jar",
+          "url": "jtracy-1.0.37.jar",
+          "size": 12876,
+          "sha512": "827265e01c6889793217555a7beb28f9cd1ec7a9aca213c4939379144e5e3ad7423dce312fb94f71f2025a2909cfa28e0e74d395ad6f19d7d41bc8bdee72d26f",
+          "sha256": "8bb68d0b65e8eceb92de2bd1d9e1443a8c9a9dd1b5818a5e54870b0f8253672a",
+          "sha1": "a3fb649b2e2b2288d2978f0b0bc3d83f62809d1e",
+          "md5": "45a2ebe1c0b1a9bcc2751bf39e799c05"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "jtracy-1.0.37-sources.jar",
+          "url": "jtracy-1.0.37-sources.jar",
+          "size": 8916,
+          "sha512": "1c1a77249cc05e768f99e9acd78c3deb4b398c188b5bc71cc3db6b1e7844e271a7a5fc34357b025abfb0c0330875890d52e0e168fb0bc747395cd60b310d5597",
+          "sha256": "667dde0e99ed6b1e6a0c74f2388aef8bf298ac6a0bdd952db7dc45916b72b406",
+          "sha1": "0bb5ded9cac574ef76b0c5339bbb848c9c9c3ea1",
+          "md5": "eb746d083a4e7a12d12b10ec0e7101f7"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "jtracy-1.0.37-javadoc.jar",
+          "url": "jtracy-1.0.37-javadoc.jar",
+          "size": 115778,
+          "sha512": "df2d6b30440f808de993fc8f31aae242efdd71907f39d331e1a2010972448d2a947819434fbaf3e3fe9a4af818bfc5dc07027509aeb8ef9a708d77a44962f5e1",
+          "sha256": "2e2a02411b0e2080dbc05157b516edda888210138e703d4fe3b8cd9e32fe1619",
+          "sha1": "4bc2b350d1611b0e14ba2f7f9cbd08acef1ecc54",
+          "md5": "af9b3ee44b5d334ab74329383640aab0"
+        }
+      ]
+    }
+  ]
+}

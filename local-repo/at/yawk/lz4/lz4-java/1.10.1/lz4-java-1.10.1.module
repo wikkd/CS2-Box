@@ -1,0 +1,141 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "at.yawk.lz4",
+    "module": "lz4-java",
+    "version": "1.10.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [],
+      "files": [
+        {
+          "name": "lz4-java-1.10.1.jar",
+          "url": "lz4-java-1.10.1.jar",
+          "size": 910232,
+          "sha512": "6930598c1c27a247de88a0db74aa14e90d7837832b61042edde7f954f55c8382b505aa35a21d3e69a3dc333b013866a98a7c3570c34aeea3ab1c1ef1c05d0048",
+          "sha256": "a58a84c4271e50df4c96ed916ccb7e48a869f8ed9cdcda1ad5d3d4c33b0214a3",
+          "sha1": "f541d7f910fe3d76f38f799c507c48cc81b12ecb",
+          "md5": "8ea4d77e6a652da0162a69b6aea6e4a9"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "at.yawk.lz4",
+          "name": "lz4-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "org.lz4",
+          "name": "lz4-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "org.lz4",
+          "name": "lz4-pure-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "net.jpountz.lz4",
+          "name": "lz4",
+          "version": "1.10.1"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [],
+      "files": [
+        {
+          "name": "lz4-java-1.10.1.jar",
+          "url": "lz4-java-1.10.1.jar",
+          "size": 910232,
+          "sha512": "6930598c1c27a247de88a0db74aa14e90d7837832b61042edde7f954f55c8382b505aa35a21d3e69a3dc333b013866a98a7c3570c34aeea3ab1c1ef1c05d0048",
+          "sha256": "a58a84c4271e50df4c96ed916ccb7e48a869f8ed9cdcda1ad5d3d4c33b0214a3",
+          "sha1": "f541d7f910fe3d76f38f799c507c48cc81b12ecb",
+          "md5": "8ea4d77e6a652da0162a69b6aea6e4a9"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "at.yawk.lz4",
+          "name": "lz4-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "org.lz4",
+          "name": "lz4-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "org.lz4",
+          "name": "lz4-pure-java",
+          "version": "1.10.1"
+        },
+        {
+          "group": "net.jpountz.lz4",
+          "name": "lz4",
+          "version": "1.10.1"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [],
+      "files": [
+        {
+          "name": "lz4-java-1.10.1-javadoc.jar",
+          "url": "lz4-java-1.10.1-javadoc.jar",
+          "size": 243860,
+          "sha512": "9ffa47ba7063bd2d3aaaa62ce02e65e4ba9f7c9cdd417eb39b86a9167051350b38e5d22328e681fca44eaed91f21e98cf15a2e6fe7cdf3df58a24fee0d8bafed",
+          "sha256": "45f43836fca9ff572ad88d1371d13b012634649ec6b77c9e520b96721797fdfa",
+          "sha1": "c13bf970d96bfbb3bcce6cff8bb91964cd6b7db9",
+          "md5": "b8318056dceb65f55502bf359776e6de"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [],
+      "files": [
+        {
+          "name": "lz4-java-1.10.1-sources.jar",
+          "url": "lz4-java-1.10.1-sources.jar",
+          "size": 101013,
+          "sha512": "8db2d6801212a7799a384cb5030ddb629b829f21087e3fd27e50c45694714a53f133fc0582326ff78da60d689408deefa8b3c934afd65ced8d60a16825dd9184",
+          "sha256": "d79505506c595dfb5c655933d33abcef4e034998ba49821bdbdba4353bc550ab",
+          "sha1": "4f7f994f3034599c521ef1d3d650b0c019499639",
+          "md5": "562961d98616844a277ea93b68bb0f2c"
+        }
+      ]
+    }
+  ]
+}

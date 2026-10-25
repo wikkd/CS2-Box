@@ -1,0 +1,104 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.mojang",
+    "module": "authlib",
+    "version": "9.0.75",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.5.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "authlib-9.0.75.jar",
+          "url": "authlib-9.0.75.jar",
+          "size": 145285,
+          "sha512": "19be63776e2fbaf6ad10e174758a739fc2019aeb4de556f8f3a2eca68774e885e3627767dcb5dce7cad075fa519282a2c6d8767380104abf50a16dd1235379fa",
+          "sha256": "1f77e70240548b9cd233da0e12938bbbe5597ac9e94f6c6b07577faf1461a951",
+          "sha1": "d61056a234d5e4b272e09d59b0713f80d6c0b6af",
+          "md5": "d5747f376a08b54960cf856413dc2cd4"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "com.google.code.findbugs",
+          "module": "jsr305",
+          "version": {
+            "requires": "3.0.2"
+          }
+        },
+        {
+          "group": "commons-io",
+          "module": "commons-io",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.10"
+          }
+        },
+        {
+          "group": "org.apache.commons",
+          "module": "commons-lang3",
+          "version": {
+            "requires": "3.12.0"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "31.0.1-jre"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "1.8.0-beta4"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "authlib-9.0.75.jar",
+          "url": "authlib-9.0.75.jar",
+          "size": 145285,
+          "sha512": "19be63776e2fbaf6ad10e174758a739fc2019aeb4de556f8f3a2eca68774e885e3627767dcb5dce7cad075fa519282a2c6d8767380104abf50a16dd1235379fa",
+          "sha256": "1f77e70240548b9cd233da0e12938bbbe5597ac9e94f6c6b07577faf1461a951",
+          "sha1": "d61056a234d5e4b272e09d59b0713f80d6c0b6af",
+          "md5": "d5747f376a08b54960cf856413dc2cd4"
+        }
+      ]
+    }
+  ]
+}

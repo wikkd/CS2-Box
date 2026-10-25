@@ -1,0 +1,148 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.bouncycastle",
+    "module": "bc-jdk18on-bom",
+    "version": "1.84",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "platform",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencyConstraints": [
+        {
+          "group": "org.bouncycastle",
+          "module": "bcprov-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcutil-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcpkix-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcpg-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bctls-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcmls-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcmail-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcjmail-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "platform",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencyConstraints": [
+        {
+          "group": "org.bouncycastle",
+          "module": "bcprov-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcutil-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcpkix-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcpg-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bctls-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcmls-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcmail-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        },
+        {
+          "group": "org.bouncycastle",
+          "module": "bcjmail-jdk18on",
+          "version": {
+            "requires": "1.84"
+          }
+        }
+      ]
+    }
+  ]
+}

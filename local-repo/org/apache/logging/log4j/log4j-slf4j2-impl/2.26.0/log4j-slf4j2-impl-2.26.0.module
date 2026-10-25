@@ -1,0 +1,127 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.apache.logging.log4j",
+    "module": "log4j-slf4j2-impl",
+    "version": "2.26.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.26.0"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.17"
+          }
+        },
+        {
+          "group": "org.jspecify",
+          "module": "jspecify",
+          "version": {
+            "requires": "1.0.0"
+          }
+        },
+        {
+          "group": "biz.aQute.bnd",
+          "module": "biz.aQute.bnd.annotation",
+          "version": {
+            "requires": "7.1.0"
+          }
+        },
+        {
+          "group": "com.google.errorprone",
+          "module": "error_prone_annotations",
+          "version": {
+            "requires": "2.38.0"
+          }
+        },
+        {
+          "group": "org.osgi",
+          "module": "org.osgi.annotation.bundle",
+          "version": {
+            "requires": "2.0.0"
+          }
+        },
+        {
+          "group": "org.osgi",
+          "module": "org.osgi.annotation.versioning",
+          "version": {
+            "requires": "1.1.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "log4j-slf4j2-impl-2.26.0.jar",
+          "url": "log4j-slf4j2-impl-2.26.0.jar",
+          "size": 30211,
+          "sha512": "1f1a21406f9f2774edbf786856110d7794f107c967ed27e87e5ca895d22b07b48583c848a61f65c9d88f77bd930a815f99eece60c1870c8fedf9f8552ae49ea9",
+          "sha256": "cfc1bddbd39e684b698ae968291d8a3b3a55ee0ec2ef3d3ea5c2336a9e151598",
+          "sha1": "668c0f0e813d83f00a7182533aa658ec7e7a0a0d",
+          "md5": "e4425b36920322ff8a788ca35dea9493"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.26.0"
+          }
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.17"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-core",
+          "version": {
+            "requires": "2.26.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "log4j-slf4j2-impl-2.26.0.jar",
+          "url": "log4j-slf4j2-impl-2.26.0.jar",
+          "size": 30211,
+          "sha512": "1f1a21406f9f2774edbf786856110d7794f107c967ed27e87e5ca895d22b07b48583c848a61f65c9d88f77bd930a815f99eece60c1870c8fedf9f8552ae49ea9",
+          "sha256": "cfc1bddbd39e684b698ae968291d8a3b3a55ee0ec2ef3d3ea5c2336a9e151598",
+          "sha1": "668c0f0e813d83f00a7182533aa658ec7e7a0a0d",
+          "md5": "e4425b36920322ff8a788ca35dea9493"
+        }
+      ]
+    }
+  ]
+}

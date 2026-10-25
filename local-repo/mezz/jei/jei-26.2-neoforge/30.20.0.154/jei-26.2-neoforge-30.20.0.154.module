@@ -1,0 +1,57 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "mezz.jei",
+    "module": "jei-26.2-neoforge",
+    "version": "30.20.0.154",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "modShadeRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "shadowed",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "jei-26.2-neoforge-30.20.0.154.jar",
+          "url": "jei-26.2-neoforge-30.20.0.154.jar",
+          "size": 1745803,
+          "sha512": "4a12a58680e15301cd8c19b8b881de15c37a715e7a71d29f9c0aeda5280c7a767b7efdba4c53962672e689f670821646949c7cbcf41170b9591559f9ac9c2090",
+          "sha256": "e1f05b3b0bbf3d980e52e1e02be802b7fa292195aaad1282ded0a08d5bd7153a",
+          "sha1": "345463121f5d530a1b1e3fad8385ebdf5141fc39",
+          "md5": "75f9d9b94081117b990ff6079ae778aa"
+        }
+      ]
+    },
+    {
+      "name": "modShadeSourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "jei-26.2-neoforge-30.20.0.154-sources.jar",
+          "url": "jei-26.2-neoforge-30.20.0.154-sources.jar",
+          "size": 758384,
+          "sha512": "e635e1cb3283ec097f4bf1f70d1c5d32881fcc47eb744744f2370c333a48f8845f1689b6e30210d59b50f4a7765eaa40945fa57d6c1ab3703a4f542c72b7509f",
+          "sha256": "164f7d1525a26697e270a79156ea510186d19486ef5ee384e4a99bee064a2a43",
+          "sha1": "e67f820ae4aa996944b230926df0ca2f210f8bb6",
+          "md5": "3ced2db3bacc5eaa3b7cbcac790f6547"
+        }
+      ]
+    }
+  ]
+}
