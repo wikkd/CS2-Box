@@ -1,0 +1,33 @@
+{
+  "format_version": 2,
+  "name": "#FFAB00 现代化军需终端",
+  "type": "terminal",
+  "drop": 0.0,
+  "random": [10, 20, 40, 80, 160],
+  "discount": 0.15,
+  "stock": 30,
+  "grade1": [
+    { "id": "minecraft:bread", "count": 16 },
+    { "id": "minecraft:arrow", "count": 32 },
+    { "id": "minecraft:wind_charge", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_ingot", "count": 8 },
+    { "id": "minecraft:golden_apple", "count": 2 }
+  ],
+  "grade3": [
+    { "id": "minecraft:breeze_rod", "count": 2 },
+    { "id": "minecraft:trial_key", "count": 2 },
+    { "loot_table": "minecraft:chests/simple_dungeon" }
+  ],
+  "grade4": [
+    { "id": "minecraft:diamond", "count": 4 },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [4, 5] } },
+    { "id": "minecraft:elytra" }
+  ],
+  "grade5": [
+    { "id": "minecraft:mace" },
+    { "id": "minecraft:heavy_core" },
+    { "id": "minecraft:totem_of_undying", "count": 2 }
+  ]
+}

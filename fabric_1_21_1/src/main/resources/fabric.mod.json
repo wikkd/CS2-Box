@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "csgobox",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "authors": ["${mod_authors}"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.reclizer.csgobox.fabric_1_21_1.CsgoBox"
+    ],
+    "client": [
+      "com.reclizer.csgobox.fabric_1_21_1.CsgoBoxClient"
+    ],
+    "modmenu": [
+      "com.reclizer.csgobox.fabric_1_21_1.config.CsgoBoxModMenuHook"
+    ],
+    "rei_client": [
+      "com.reclizer.csgobox.fabric_1_21_1.rei.CsgoBoxReiPlugin"
+    ]
+  },
+  "accessWidener": "csgobox-fabric.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "jei": "*",
+    "emi": "*",
+    "cloth-config": "*",
+    "jade": "*",
+    "wthit": "*",
+    "modmenu": "*"
+  }
+}

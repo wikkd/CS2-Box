@@ -6,6 +6,13 @@ pluginManagement {
             name = 'NeoForged'
             url = 'https://maven.neoforged.net/releases'
         }
+        // fabric-loom is only published here (not on the Plugin Portal);
+        // maven.fabricmc.net is reachable from this machine (unlike
+        // maven.neoforged.net, which the user-level mirror init script drops).
+        maven {
+            name = 'FabricLoom'
+            url = 'https://maven.fabricmc.net'
+        }
         maven {
             name = 'MinecraftForge'
             url = 'https://maven.minecraftforge.net/releases'
@@ -76,6 +83,8 @@ def versionModules = [
         'forge-26.1.2': 'forge_26_1_2',
         'forge-26.2': 'forge_26_2',
         'forge-1.20.1': 'forge_1_20_1',
+        'fabric-1.21.1': 'fabric_1_21_1',
+        'forge-1.18.2': 'forge_1_18_2',
 ]
 
 activeVersions.each { versionName ->

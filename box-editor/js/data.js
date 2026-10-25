@@ -414,6 +414,42 @@ window.CSBDATA = {
         "en": "Legacy NBT tag (no Data Components); TACZ variants supported.",
         "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键。"
       }
+    },
+    {
+      "key": "fabric-1.21.1",
+      "label": {
+        "en": "1.21.1 (Fabric)",
+        "zh": "1.21.1 (Fabric)"
+      },
+      "short": {
+        "en": "1.21.1 Fabric",
+        "zh": "1.21.1 Fabric"
+      },
+      "taczVariants": false,
+      "components": true,
+      "itemModel": false,
+      "note": {
+        "en": "Data Components; TACZ has no Fabric build — variant keys disabled.",
+        "zh": "Data Components；TACZ 无 Fabric 构建——变体键禁用。"
+      }
+    },
+    {
+      "key": "forge-1.18.2",
+      "label": {
+        "en": "Forge 1.18.2",
+        "zh": "Forge 1.18.2"
+      },
+      "short": {
+        "en": "1.18.2 Forge",
+        "zh": "1.18.2 Forge"
+      },
+      "taczVariants": true,
+      "components": false,
+      "itemModel": false,
+      "note": {
+        "en": "Legacy NBT tag (no Data Components); TACZ 1.1.4 variants supported.",
+        "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 1.1.4 变体键。"
+      }
     }
   ],
   "gradeNames": [

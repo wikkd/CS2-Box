@@ -1,4 +1,5 @@
 {
+  "name": "minecraft:village/snowy/houses",
   "elements": [
     {
       "element": {
@@ -9,7 +10,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_1"
     },
     {
       "element": {
@@ -20,7 +22,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_2"
     },
     {
       "element": {
@@ -31,7 +34,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_3"
     },
     {
       "element": {
@@ -42,7 +46,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_4"
     },
     {
       "element": {
@@ -53,7 +58,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_5"
     },
     {
       "element": {
@@ -64,7 +70,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_6"
     },
     {
       "element": {
@@ -75,7 +82,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_7"
     },
     {
       "element": {
@@ -86,7 +94,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_small_house_8"
     },
     {
       "element": {
@@ -97,7 +106,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_medium_house_1"
     },
     {
       "element": {
@@ -108,7 +118,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_medium_house_2"
     },
     {
       "element": {
@@ -119,7 +130,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_medium_house_3"
     },
     {
       "element": {
@@ -130,7 +142,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_butchers_shop_1"
     },
     {
       "element": {
@@ -141,7 +154,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_butchers_shop_2"
     },
     {
       "element": {
@@ -152,7 +166,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_tool_smith_1"
     },
     {
       "element": {
@@ -163,7 +178,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_fletcher_house_1"
     },
     {
       "element": {
@@ -174,7 +190,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/snowy/houses/snowy_shepherds_house_1"
     },
     {
       "element": {
@@ -185,7 +202,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/snowy/houses/snowy_armorer_house_1"
     },
     {
       "element": {
@@ -196,7 +214,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/snowy/houses/snowy_armorer_house_2"
     },
     {
       "element": {
@@ -207,7 +226,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_fisher_cottage"
     },
     {
       "element": {
@@ -218,7 +238,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_tannery_1"
     },
     {
       "element": {
@@ -229,7 +250,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_cartographer_house_1"
     },
     {
       "element": {
@@ -240,7 +262,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_library_1"
     },
     {
       "element": {
@@ -251,7 +274,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_masons_house_1"
     },
     {
       "element": {
@@ -262,7 +286,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_masons_house_2"
     },
     {
       "element": {
@@ -273,7 +298,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_weapon_smith_1"
     },
     {
       "element": {
@@ -284,7 +310,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_temple_1"
     },
     {
       "element": {
@@ -293,7 +320,8 @@
         "processors": "minecraft:farm_snowy",
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/snowy/houses/snowy_farm_1"
     },
     {
       "element": {
@@ -302,7 +330,8 @@
         "processors": "minecraft:farm_snowy",
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/snowy/houses/snowy_farm_2"
     },
     {
       "element": {
@@ -313,7 +342,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_animal_pen_1"
     },
     {
       "element": {
@@ -324,13 +354,15 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/snowy/houses/snowy_animal_pen_2"
     },
     {
       "element": {
         "element_type": "minecraft:empty_pool_element"
       },
-      "weight": 6
+      "weight": 6,
+      "name": "csgobox:pool_30"
     },
     {
       "weight": 6,
@@ -339,7 +371,8 @@
         "location": "csgobox:arms_dealer_hut_snowy",
         "processors": "minecraft:empty",
         "projection": "rigid"
-      }
+      },
+      "name": "csgobox:arms_dealer_hut_snowy"
     }
   ],
   "fallback": "minecraft:village/snowy/terminators"

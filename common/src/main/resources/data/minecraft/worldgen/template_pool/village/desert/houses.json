@@ -1,4 +1,5 @@
 {
+  "name": "minecraft:village/desert/houses",
   "elements": [
     {
       "element": {
@@ -9,7 +10,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_1"
     },
     {
       "element": {
@@ -20,7 +22,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_2"
     },
     {
       "element": {
@@ -31,7 +34,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_3"
     },
     {
       "element": {
@@ -42,7 +46,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_4"
     },
     {
       "element": {
@@ -53,7 +58,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_5"
     },
     {
       "element": {
@@ -64,7 +70,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/desert/houses/desert_small_house_6"
     },
     {
       "element": {
@@ -75,7 +82,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_7"
     },
     {
       "element": {
@@ -86,7 +94,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_small_house_8"
     },
     {
       "element": {
@@ -97,7 +106,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_medium_house_1"
     },
     {
       "element": {
@@ -108,7 +118,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_medium_house_2"
     },
     {
       "element": {
@@ -119,7 +130,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_butcher_shop_1"
     },
     {
       "element": {
@@ -130,7 +142,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_tool_smith_1"
     },
     {
       "element": {
@@ -141,7 +154,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_fletcher_house_1"
     },
     {
       "element": {
@@ -152,7 +166,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_shepherd_house_1"
     },
     {
       "element": {
@@ -163,7 +178,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/desert/houses/desert_armorer_1"
     },
     {
       "element": {
@@ -174,7 +190,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_fisher_1"
     },
     {
       "element": {
@@ -185,7 +202,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_tannery_1"
     },
     {
       "element": {
@@ -196,7 +214,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_cartographer_house_1"
     },
     {
       "element": {
@@ -207,7 +226,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_library_1"
     },
     {
       "element": {
@@ -218,7 +238,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_mason_1"
     },
     {
       "element": {
@@ -229,7 +250,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_weaponsmith_1"
     },
     {
       "element": {
@@ -240,7 +262,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_temple_1"
     },
     {
       "element": {
@@ -251,7 +274,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_temple_2"
     },
     {
       "element": {
@@ -260,7 +284,8 @@
         "processors": "minecraft:farm_desert",
         "projection": "rigid"
       },
-      "weight": 11
+      "weight": 11,
+      "name": "minecraft:village/desert/houses/desert_large_farm_1"
     },
     {
       "element": {
@@ -269,7 +294,8 @@
         "processors": "minecraft:farm_desert",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/desert/houses/desert_farm_1"
     },
     {
       "element": {
@@ -278,7 +304,8 @@
         "processors": "minecraft:farm_desert",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/desert/houses/desert_farm_2"
     },
     {
       "element": {
@@ -289,7 +316,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_animal_pen_1"
     },
     {
       "element": {
@@ -300,13 +328,15 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/desert/houses/desert_animal_pen_2"
     },
     {
       "element": {
         "element_type": "minecraft:empty_pool_element"
       },
-      "weight": 5
+      "weight": 5,
+      "name": "csgobox:pool_28"
     },
     {
       "weight": 6,
@@ -315,7 +345,8 @@
         "location": "csgobox:arms_dealer_hut_desert",
         "processors": "minecraft:empty",
         "projection": "rigid"
-      }
+      },
+      "name": "csgobox:arms_dealer_hut_desert"
     }
   ],
   "fallback": "minecraft:village/desert/terminators"

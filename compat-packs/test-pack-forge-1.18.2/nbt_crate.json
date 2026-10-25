@@ -1,0 +1,48 @@
+{
+  "format_version": 2,
+  "name": "#7C4DFF 旧版 NBT 补给箱",
+  "type": "csbox",
+  "key": "minecraft:air",
+  "drop": 0.04,
+  "entity": ["minecraft:creeper", 0.02, "minecraft:phantom", 0.03],
+  "icon": 2201,
+  "random": [45, 30, 15, 7, 3],
+  "pity": { "grade": "restricted", "every": 6 },
+  "max_per_player": 15,
+  "cooldown_seconds": 45,
+  "grade1": [
+    { "id": "minecraft:gunpowder", "count": [2, 6], "weight": 3 },
+    { "id": "minecraft:bread", "count": 8 },
+    { "tag": "#minecraft:wool", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_ingot", "count": [2, 4], "weight": 2 },
+    { "id": "minecraft:cooked_beef", "count": [4, 8] },
+    {
+      "id": "minecraft:tipped_arrow",
+      "count": 8,
+      "tag": "{Potion:\"minecraft:long_slowness\"}"
+    }
+  ],
+  "grade3": [
+    { "id": "minecraft:golden_apple", "weight": 2 },
+    { "id": "minecraft:potion", "tag": "{Potion:\"minecraft:strong_healing\"}" },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [3, 5] } },
+    { "id": "minecraft:diamond", "count": [1, 2] }
+  ],
+  "grade4": [
+    {
+      "id": "minecraft:diamond_sword",
+      "weight": 2,
+      "tag": "{Unbreakable:1b,display:{Name:'{\"text\":\"1.18 NBT 测试剑\",\"color\":\"gold\",\"italic\":false}'}}"
+    },
+    { "id": "minecraft:experience_bottle", "count": 16 },
+    { "id": "minecraft:elytra" }
+  ],
+  "grade5": [
+    { "id": "minecraft:netherite_sword" },
+    { "id": "minecraft:trident" },
+    { "id": "minecraft:totem_of_undying", "weight": 2 },
+    { "id": "minecraft:shulker_box" }
+  ]
+}

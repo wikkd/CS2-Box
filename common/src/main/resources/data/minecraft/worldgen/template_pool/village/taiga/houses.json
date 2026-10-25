@@ -1,4 +1,5 @@
 {
+  "name": "minecraft:village/taiga/houses",
   "elements": [
     {
       "element": {
@@ -7,7 +8,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/taiga/houses/taiga_small_house_1"
     },
     {
       "element": {
@@ -16,7 +18,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/taiga/houses/taiga_small_house_2"
     },
     {
       "element": {
@@ -25,7 +28,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/taiga/houses/taiga_small_house_3"
     },
     {
       "element": {
@@ -34,7 +38,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/taiga/houses/taiga_small_house_4"
     },
     {
       "element": {
@@ -43,7 +48,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/taiga/houses/taiga_small_house_5"
     },
     {
       "element": {
@@ -52,7 +58,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_medium_house_1"
     },
     {
       "element": {
@@ -61,7 +68,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_medium_house_2"
     },
     {
       "element": {
@@ -70,7 +78,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_medium_house_3"
     },
     {
       "element": {
@@ -79,7 +88,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_medium_house_4"
     },
     {
       "element": {
@@ -88,7 +98,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_butcher_shop_1"
     },
     {
       "element": {
@@ -97,7 +108,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_tool_smith_1"
     },
     {
       "element": {
@@ -106,7 +118,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_fletcher_house_1"
     },
     {
       "element": {
@@ -115,7 +128,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_shepherds_house_1"
     },
     {
       "element": {
@@ -124,7 +138,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/taiga/houses/taiga_armorer_house_1"
     },
     {
       "element": {
@@ -133,7 +148,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/taiga/houses/taiga_armorer_2"
     },
     {
       "element": {
@@ -142,7 +158,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/taiga/houses/taiga_fisher_cottage_1"
     },
     {
       "element": {
@@ -151,7 +168,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_tannery_1"
     },
     {
       "element": {
@@ -160,7 +178,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_cartographer_house_1"
     },
     {
       "element": {
@@ -169,7 +188,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_library_1"
     },
     {
       "element": {
@@ -178,7 +198,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_masons_house_1"
     },
     {
       "element": {
@@ -187,7 +208,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_weaponsmith_1"
     },
     {
       "element": {
@@ -196,7 +218,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_weaponsmith_2"
     },
     {
       "element": {
@@ -205,7 +228,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_temple_1"
     },
     {
       "element": {
@@ -214,7 +238,8 @@
         "processors": "minecraft:farm_taiga",
         "projection": "rigid"
       },
-      "weight": 6
+      "weight": 6,
+      "name": "minecraft:village/taiga/houses/taiga_large_farm_1"
     },
     {
       "element": {
@@ -223,7 +248,8 @@
         "processors": "minecraft:farm_taiga",
         "projection": "rigid"
       },
-      "weight": 6
+      "weight": 6,
+      "name": "minecraft:village/taiga/houses/taiga_large_farm_2"
     },
     {
       "element": {
@@ -232,7 +258,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/taiga/houses/taiga_small_farm_1"
     },
     {
       "element": {
@@ -241,13 +268,15 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/taiga/houses/taiga_animal_pen_1"
     },
     {
       "element": {
         "element_type": "minecraft:empty_pool_element"
       },
-      "weight": 6
+      "weight": 6,
+      "name": "csgobox:pool_27"
     },
     {
       "weight": 6,
@@ -256,7 +285,8 @@
         "location": "csgobox:arms_dealer_hut_taiga",
         "processors": "minecraft:empty",
         "projection": "rigid"
-      }
+      },
+      "name": "csgobox:arms_dealer_hut_taiga"
     }
   ],
   "fallback": "minecraft:village/taiga/terminators"

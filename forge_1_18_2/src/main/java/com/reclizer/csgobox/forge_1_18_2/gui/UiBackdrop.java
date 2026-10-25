@@ -1,0 +1,12 @@
+package com.reclizer.csgobox.forge_1_18_2.gui;
+
+import com.reclizer.csgobox.utils.OverlayColor;
+
+public final class UiBackdrop {
+    private UiBackdrop() {
+    }
+
+    public static int fill() {
+        return OverlayColor.getBackgroundTranslucent();
+    }
+}

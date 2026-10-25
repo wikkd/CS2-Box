@@ -1,0 +1,33 @@
+{
+  "format_version": 2,
+  "name": "#FF6D00 军械库旧终端",
+  "type": "terminal",
+  "drop": 0.0,
+  "random": [10, 20, 40, 80, 160],
+  "discount": 0.2,
+  "stock": 40,
+  "grade1": [
+    { "id": "minecraft:bread", "count": 16 },
+    { "id": "minecraft:gunpowder", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_ingot", "count": 8 },
+    { "id": "minecraft:gold_ingot", "count": 4 },
+    { "id": "minecraft:cooked_beef", "count": [8, 16] }
+  ],
+  "grade3": [
+    { "id": "minecraft:golden_apple", "count": 2 },
+    { "id": "minecraft:diamond", "count": 4 },
+    { "loot_table": "minecraft:chests/simple_dungeon" }
+  ],
+  "grade4": [
+    { "id": "minecraft:diamond_sword" },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [4, 5] } },
+    { "id": "minecraft:ender_pearl", "count": 4 }
+  ],
+  "grade5": [
+    { "id": "minecraft:elytra" },
+    { "id": "minecraft:trident" },
+    { "id": "minecraft:totem_of_undying", "count": 2 }
+  ]
+}

@@ -1,4 +1,5 @@
 {
+  "name": "minecraft:village/plains/houses",
   "elements": [
     {
       "element": {
@@ -7,7 +8,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_1"
     },
     {
       "element": {
@@ -16,7 +18,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_2"
     },
     {
       "element": {
@@ -25,7 +28,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_3"
     },
     {
       "element": {
@@ -34,7 +38,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_4"
     },
     {
       "element": {
@@ -43,7 +48,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_5"
     },
     {
       "element": {
@@ -52,7 +58,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_small_house_6"
     },
     {
       "element": {
@@ -61,7 +68,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_small_house_7"
     },
     {
       "element": {
@@ -70,7 +78,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/plains/houses/plains_small_house_8"
     },
     {
       "element": {
@@ -79,7 +88,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_medium_house_1"
     },
     {
       "element": {
@@ -88,7 +98,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_medium_house_2"
     },
     {
       "element": {
@@ -97,7 +108,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_big_house_1"
     },
     {
       "element": {
@@ -106,7 +118,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_butcher_shop_1"
     },
     {
       "element": {
@@ -115,7 +128,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_butcher_shop_2"
     },
     {
       "element": {
@@ -124,7 +138,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_tool_smith_1"
     },
     {
       "element": {
@@ -133,7 +148,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_fletcher_house_1"
     },
     {
       "element": {
@@ -144,7 +160,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_shepherds_house_1"
     },
     {
       "element": {
@@ -153,7 +170,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_armorer_house_1"
     },
     {
       "element": {
@@ -162,7 +180,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_fisher_cottage_1"
     },
     {
       "element": {
@@ -171,7 +190,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_tannery_1"
     },
     {
       "element": {
@@ -180,7 +200,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_cartographer_1"
     },
     {
       "element": {
@@ -189,7 +210,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 5
+      "weight": 5,
+      "name": "minecraft:village/plains/houses/plains_library_1"
     },
     {
       "element": {
@@ -198,7 +220,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_library_2"
     },
     {
       "element": {
@@ -207,7 +230,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_masons_house_1"
     },
     {
       "element": {
@@ -216,7 +240,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_weaponsmith_1"
     },
     {
       "element": {
@@ -225,7 +250,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_temple_3"
     },
     {
       "element": {
@@ -234,7 +260,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_temple_4"
     },
     {
       "element": {
@@ -243,7 +270,8 @@
         "processors": "minecraft:mossify_10_percent",
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_stable_1"
     },
     {
       "element": {
@@ -254,7 +282,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 2
+      "weight": 2,
+      "name": "minecraft:village/plains/houses/plains_stable_2"
     },
     {
       "element": {
@@ -263,7 +292,8 @@
         "processors": "minecraft:farm_plains",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/plains/houses/plains_large_farm_1"
     },
     {
       "element": {
@@ -272,7 +302,8 @@
         "processors": "minecraft:farm_plains",
         "projection": "rigid"
       },
-      "weight": 4
+      "weight": 4,
+      "name": "minecraft:village/plains/houses/plains_small_farm_1"
     },
     {
       "element": {
@@ -283,7 +314,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_animal_pen_1"
     },
     {
       "element": {
@@ -294,7 +326,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_animal_pen_2"
     },
     {
       "element": {
@@ -305,7 +338,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 5
+      "weight": 5,
+      "name": "minecraft:village/plains/houses/plains_animal_pen_3"
     },
     {
       "element": {
@@ -316,7 +350,8 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_accessory_1"
     },
     {
       "element": {
@@ -325,7 +360,8 @@
         "processors": "minecraft:mossify_70_percent",
         "projection": "rigid"
       },
-      "weight": 3
+      "weight": 3,
+      "name": "minecraft:village/plains/houses/plains_meeting_point_4"
     },
     {
       "element": {
@@ -336,13 +372,15 @@
         },
         "projection": "rigid"
       },
-      "weight": 1
+      "weight": 1,
+      "name": "minecraft:village/plains/houses/plains_meeting_point_5"
     },
     {
       "element": {
         "element_type": "minecraft:empty_pool_element"
       },
-      "weight": 10
+      "weight": 10,
+      "name": "csgobox:pool_36"
     },
     {
       "weight": 6,
@@ -351,7 +389,8 @@
         "location": "csgobox:arms_dealer_hut_plains",
         "processors": "minecraft:empty",
         "projection": "rigid"
-      }
+      },
+      "name": "csgobox:arms_dealer_hut_plains"
     }
   ],
   "fallback": "minecraft:village/plains/terminators"

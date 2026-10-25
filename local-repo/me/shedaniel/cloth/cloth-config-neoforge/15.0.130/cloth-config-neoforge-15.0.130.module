@@ -1,0 +1,80 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "me.shedaniel.cloth",
+    "module": "cloth-config-neoforge",
+    "version": "15.0.130",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.9"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "cloth-config-neoforge-15.0.130-neoforge.jar",
+          "url": "cloth-config-neoforge-15.0.130-neoforge.jar",
+          "size": 1151101,
+          "sha512": "3cee1b6f9ecb0dcad4abdd6b028a86d25cf103202c4fe6317d6037b64e2c5b241f0c2d3aeb32637ef1e95cdef44ac8dfb3f3843ce49ded808707af1e776f111a",
+          "sha256": "de73b3a64f5c998ac2f680953a0ece30754bcd1605921d07aa0e0080bd9f1927",
+          "sha1": "4ff6b51cfb5c6cac437b18067d991a0f5f8743a7",
+          "md5": "8f413df801d8896a5a044c100c65ad4f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "cloth-config-neoforge-15.0.130-neoforge.jar",
+          "url": "cloth-config-neoforge-15.0.130-neoforge.jar",
+          "size": 1151101,
+          "sha512": "3cee1b6f9ecb0dcad4abdd6b028a86d25cf103202c4fe6317d6037b64e2c5b241f0c2d3aeb32637ef1e95cdef44ac8dfb3f3843ce49ded808707af1e776f111a",
+          "sha256": "de73b3a64f5c998ac2f680953a0ece30754bcd1605921d07aa0e0080bd9f1927",
+          "sha1": "4ff6b51cfb5c6cac437b18067d991a0f5f8743a7",
+          "md5": "8f413df801d8896a5a044c100c65ad4f"
+        }
+      ]
+    },
+    {
+      "name": "shadowRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "shadowed",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "cloth-config-neoforge-15.0.130-shadow.jar",
+          "url": "cloth-config-neoforge-15.0.130-shadow.jar",
+          "size": 1116413,
+          "sha512": "b66ccaec268e7d6c60d3cbafeda27ae650f7d80263c028041bd0fc0ad3feeb235ed0d7ea4df53c07133855cdb2495900dec2fd49ff8c13920c24379d7a5b6c6d",
+          "sha256": "69710851a30823e64ff953cb122382078f173a2a05e892534c37f5421a4b8031",
+          "sha1": "5aa0994bb0a5a9ebba979274d387c9654d82fb54",
+          "md5": "6bf9406147a1643c143a51a8b09257c6"
+        }
+      ]
+    }
+  ]
+}

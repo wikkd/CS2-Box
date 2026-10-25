@@ -1,0 +1,118 @@
+package com.reclizer.csgobox.forge_1_18_2.event;
+
+import java.security.SecureRandom;
+import com.reclizer.csgobox.logic.OpenBlockGuard;
+import com.reclizer.csgobox.forge_1_18_2.CsgoBox;
+import com.reclizer.csgobox.forge_1_18_2.box.BoxDefinition;
+import com.reclizer.csgobox.forge_1_18_2.box.BoxRegistry;
+import com.reclizer.csgobox.forge_1_18_2.item.ItemCsgoBox;
+import com.reclizer.csgobox.forge_1_18_2.item.ModItems;
+import com.reclizer.csgobox.forge_1_18_2.packet.Networking;
+import com.reclizer.csgobox.forge_1_18_2.packet.PacketSyncBoxDefinitions;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.server.ServerLifecycleHooks;
+
+import java.util.Random;
+
+@Mod.EventBusSubscriber(modid = CsgoBox.MODID)
+public final class ModEvents {
+    private static final Random RANDOM = new Random(new java.security.SecureRandom().nextLong());
+
+    private ModEvents() {
+    }
+
+    @SubscribeEvent
+    public static void livingDeath(LivingDeathEvent event) {
+        LivingEntity mob = (LivingEntity) event.getEntity();
+        if (mob.level.isClientSide()) {
+            return;
+        }
+        ResourceLocation entityType = ForgeRegistries.ENTITIES.getKey(mob.getType());
+        float lootingMultiplier = lootingMultiplier(mob, event.getSource());
+
+        for (BoxDefinition def : BoxRegistry.getAll()) {
+            if (!def.dropEntities().contains(entityType)) {
+                continue;
+            }
+
+            float effectiveRate = def.getDropRateForEntity(entityType) * lootingMultiplier;
+            effectiveRate *= CsgoBox.CONFIG.globalDropRatePercent() / 100F;
+            effectiveRate = Math.min(effectiveRate, 1.0F);
+
+            // v2.0.1 KubeJS: per-drop veto/rate hook — before the RNG roll and
+            // before the item spawns. Cancel suppresses the drop, setDropRate
+            // overrides the effective chance (clamped, 0 = no roll).
+            BoxEntityDropEvent dropEvent = new BoxEntityDropEvent(entityType, mob, def, effectiveRate);
+            BoxEntityDropEvent.BUS.post(dropEvent);
+            if (dropEvent.isCanceled()) {
+                continue;
+            }
+            effectiveRate = dropEvent.getDropRate();
+            if (effectiveRate <= 0) {
+                continue;
+            }
+
+            if (RANDOM.nextFloat() < effectiveRate) {
+                // Box items are a fixed set now (a box is data, not an item id):
+                // resolve the shipped fixed item, else the generic item.
+                Item item = ModItems.itemForBox(def.id(), def.isTerminal());
+                ItemStack stack = new ItemStack(item);
+                ItemCsgoBox.setBoxId(def.id(), stack);
+                mob.spawnAtLocation(stack);
+            }
+        }
+    }
+
+    private static float lootingMultiplier(LivingEntity mob, DamageSource source) {
+        if (!(source.getEntity() instanceof Player player)) {
+            return 1.0F;
+        }
+
+        ItemStack weapon = player.getMainHandItem();
+        int lootingLevel = net.minecraft.world.item.enchantment.EnchantmentHelper
+                .getItemEnchantmentLevel(net.minecraft.world.item.enchantment.Enchantments.MOB_LOOTING, weapon);
+        return lootingLevel > 0 ? 1.0F + lootingLevel * 0.5F : 1.0F;
+    }
+
+    @SubscribeEvent
+    public static void playerLoggedIn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // Bring the joining client's box registry (and JEI category) in sync.
+            Networking.sendToPlayer(PacketSyncBoxDefinitions.ofAll(), sp);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                com.reclizer.csgobox.forge_1_18_2.advancement.ModLoadedTrigger.INSTANCE.trigger(sp);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void playerLoggedOut(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.reclizer.csgobox.forge_1_18_2.terminal.TerminalSessionManager.clearOpen(sp.getStringUUID());
+        }
+    }
+
+    @SubscribeEvent
+    public static void serverTick(TickEvent.ServerTickEvent event) {
+        net.minecraft.server.MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        if (server.getTickCount() % 100 == 0) {
+            OpenBlockGuard.tick(server.overworld().getGameTime());
+        }
+        if (server.getTickCount() % 20 == 0) {
+            com.reclizer.csgobox.forge_1_18_2.terminal.TerminalSessionManager.tickSessions(
+                    server, server.overworld().getGameTime() * 50L);
+        }
+    }
+}

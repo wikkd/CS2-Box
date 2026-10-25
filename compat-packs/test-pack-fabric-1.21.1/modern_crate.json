@@ -1,0 +1,51 @@
+{
+  "format_version": 2,
+  "name": "#00B0D0 现代组件补给箱",
+  "type": "csbox",
+  "key": "minecraft:air",
+  "drop": 0.05,
+  "entity": ["minecraft:breeze", 0.1, "minecraft:zombie", 0.02],
+  "icon": 2101,
+  "random": [45, 30, 15, 7, 3],
+  "pity": { "grade": "classified", "every": 10 },
+  "max_per_player": 20,
+  "cooldown_seconds": 30,
+  "grade1": [
+    { "id": "minecraft:wind_charge", "count": [2, 6], "weight": 3 },
+    { "id": "minecraft:arrow", "count": 16 },
+    { "id": "minecraft:bread", "count": 8, "weight": 2 },
+    { "tag": "#minecraft:wool", "count": 8 }
+  ],
+  "grade2": [
+    { "id": "minecraft:iron_ingot", "count": [4, 8], "weight": 2 },
+    { "id": "minecraft:golden_apple" },
+    { "id": "minecraft:enchanted_book", "enchant": { "level": [3, 5] } }
+  ],
+  "grade3": [
+    { "id": "minecraft:breeze_rod", "count": [1, 3] },
+    { "id": "minecraft:trial_key", "count": [1, 2] },
+    { "id": "minecraft:diamond", "count": [2, 4] },
+    { "id": "minecraft:experience_bottle", "count": 16 }
+  ],
+  "grade4": [
+    {
+      "id": "minecraft:diamond_sword",
+      "weight": 2,
+      "components": {
+        "minecraft:custom_name": "组件之刃",
+        "minecraft:lore": ["1.21 数据组件字段演示"],
+        "minecraft:rarity": "epic",
+        "minecraft:unbreakable": {},
+        "minecraft:enchantments": { "levels": { "minecraft:sharpness": 5 } }
+      }
+    },
+    { "id": "minecraft:elytra" },
+    { "id": "minecraft:enchanted_book", "enchant": { "id": "minecraft:mending", "level": 1 } }
+  ],
+  "grade5": [
+    { "id": "minecraft:mace", "enchant": { "id": "minecraft:density", "level": [1, 5] } },
+    { "id": "minecraft:heavy_core" },
+    { "id": "minecraft:netherite_ingot", "count": [2, 3] },
+    { "id": "minecraft:totem_of_undying", "weight": 2 }
+  ]
+}

@@ -1,4 +1,5 @@
 {
+  "name": "csgobox:arms_dealer_hut/start_pool",
   "fallback": "minecraft:empty",
   "elements": [
     {
@@ -8,7 +9,8 @@
         "location": "csgobox:arms_dealer_hut",
         "processors": "minecraft:empty",
         "projection": "rigid"
-      }
+      },
+      "name": "csgobox:arms_dealer_hut"
     }
   ]
 }

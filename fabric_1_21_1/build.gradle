@@ -1,0 +1,186 @@
+// Fabric 1.21.1 platform module.
+//
+// Port of the v1_21_1 (NeoForge 21.1.x) module to Fabric Loader + Fabric API,
+// driven by scripts/port-fabric-1211.py (package rename + loader API text
+// replacements) plus hand-adapted entry/registry/event files. Mappings are
+// Mojang official — the same deobfuscated names the NeoForge baseline is
+// written in, so the ~50 loader-neutral files port verbatim.
+//
+// Known degradations vs v1_21_1 (documented in docs/PORTING-fabric.md):
+//   * Create deployer auto-open — Create has no Fabric build for 1.21.1.
+//     The recycler stays automatable through vanilla hoppers / Transfer API
+//     (WorldlyContainer is implemented by the block entity itself).
+//   * The One Probe — no Fabric build; hover info is covered by Jade + WTHIT.
+//   * Config lives in config/csgobox.json (Gson) instead of csgobox.toml:
+//     Fabric has no ModConfigSpec; the Cloth Config screen writes the same
+//     getter/setter surface.
+
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'fabric-loom' version "${loom_version}"
+}
+
+group = mod_group_id
+version = mod_version
+
+base {
+    archivesName = "${mod_id}-fabric-${mc_version_1_21_1}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(java_toolchain_version as int)
+    }
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/csgobox-fabric.accesswidener")
+}
+
+repositories {
+    maven {
+        name = 'LocalPatchedLibraries'
+        url = rootProject.file('local-repo')
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+    }
+    mavenCentral()
+    // JEI (blamejared mirrors the mezz.jei artifacts; modmaven is the fallback
+    // already registered in dependencyResolutionManagement for other modules).
+    maven { url = 'https://maven.blamejared.com' }
+    maven { url = 'https://modmaven.dev' }
+    maven { url = 'https://maven.shedaniel.me' }
+    // EMI + Jade — Modrinth Maven.
+    maven {
+        name = 'ModrinthMaven'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    // WTHIT — bai.lol Maven.
+    maven {
+        name = 'BaiMaven'
+        url = 'https://maven4.bai.lol'
+        content {
+            includeGroup 'mcp.mobius.waila'
+        }
+    }
+    // Mod Menu — TerraformersMC Maven.
+    maven {
+        name = 'TerraformersMCMaven'
+        url = 'https://maven.terraformersmc.com/releases'
+        content {
+            includeGroup 'com.terraformersmc'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${mc_version_1_21_1}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+    implementation project(':common')
+
+    // TACZ (TaCZ: Refabricated, the Fabric port of Timeless & Classics Guns:
+    // Zero) — optional dependency for the CsLookItemScreen inspect viewport,
+    // 3D gun previews and the /csbox tacz registry browser. The jar (~58MB)
+    // is NOT committed: run scripts/download-tacz-fabric.sh to populate
+    // local-repo first. modCompileOnly so Loom remaps the production jar
+    // (intermediary) to Mojang official names for compilation. Guarded at
+    // runtime via FabricLoader.isModLoaded("tacz").
+    modCompileOnly 'com.tacz:tacz-refabricated:1.21.1-0.7.1-forge1.1.8-hotfix2'
+    // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer;
+    // extracted from the TACZ jarjar bundle so javac can resolve the class
+    // hierarchy (same mechanism as the v1_21_1 NeoForge module).
+    modCompileOnly 'com.github.mcmodderanchor:simplebedrockmodel-fabric:2.3.0.1+mc1.21.1'
+
+    // JEI (optional client mod; same annotation-based plugin discovery on
+    // Fabric — @JeiPlugin). compileOnly for the API, runtimeOnly for dev runs.
+    modCompileOnly "mezz.jei:jei-${mc_version_1_21_1}-fabric:${jei_version_fabric_1_21_1}"
+    modRuntimeOnly "mezz.jei:jei-${mc_version_1_21_1}-fabric:${jei_version_fabric_1_21_1}"
+
+    // REI (optional client mod; @REIPluginClient annotation discovery).
+    modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version_fabric_1_21_1}"
+    modRuntimeOnly "me.shedaniel:RoughlyEnoughItems-fabric:${rei_version_fabric_1_21_1}"
+
+    // Cloth Config (optional client config GUI; same screen, JSON backend).
+    modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version_fabric_1_21_1}"
+    modRuntimeOnly "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version_fabric_1_21_1}"
+
+    // EMI (optional client mod; @EmiEntrypoint annotation discovery).
+    modCompileOnly "maven.modrinth:emi:${emi_version_fabric_1_21_1}"
+    modRuntimeOnly "maven.modrinth:emi:${emi_version_fabric_1_21_1}"
+
+    // Jade (hover information overlay; @WailaPlugin annotation discovery).
+    modCompileOnly "maven.modrinth:jade:${jade_version_fabric_1_21_1}"
+
+    // WTHIT (hover information overlay; waila_plugins.json entry in resources).
+    modCompileOnly "mcp.mobius.waila:wthit-api:${wthit_version_fabric_1_21_1}"
+
+    // Mod Menu (optional client mod; hosts the Cloth Config entry button).
+    // compileOnly: the hook class is only referenced from the "modmenu"
+    // entrypoint, which Fabric never invokes without Mod Menu installed.
+    modCompileOnly "com.terraformersmc:modmenu:${modmenu_version_fabric_1_21_1}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = false
+    }
+}
+
+sourceSets.main.resources {
+    srcDir project(':common').file('src/main/resources')
+}
+
+sourceSets.main.java {
+    srcDir project(':common').file('src/main/java')
+    srcDir project(':common').file('src/main/mcshared')
+}
+
+processResources {
+    inputs.property 'mod_version', mod_version
+    inputs.property 'mod_name', mod_name
+    inputs.property 'mod_authors', mod_authors
+
+    filesMatching('fabric.mod.json') {
+        expand([
+                mod_version: mod_version,
+                mod_name   : mod_name,
+                mod_authors: mod_authors,
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName = "${mod_id}-fabric-${mc_version_1_21_1}-${version}.jar"
+    manifest {
+        attributes([
+                "Specification-Title": mod_id,
+                "Specification-Vendor": mod_authors,
+                "Specification-Version": "1",
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.jar.archiveVersion,
+                "Implementation-Vendor": mod_authors,
+        ])
+    }
+    // Same stale incremental-javac guard as the other platforms.
+    exclude { it.name ==~ /.+[ ][0-9]+(\..+)?/ || it.name ==~ /.+\+[0-9]+(\..+)?/ }
+}

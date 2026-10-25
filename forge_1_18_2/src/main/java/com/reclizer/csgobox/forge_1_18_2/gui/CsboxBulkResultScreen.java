@@ -1,0 +1,530 @@
+package com.reclizer.csgobox.forge_1_18_2.gui;
+
+import com.reclizer.csgobox.utils.ColorTools;
+import com.reclizer.csgobox.utils.OverlayColor;
+import com.reclizer.csgobox.forge_1_18_2.utils.AnimRenderOps;
+import com.reclizer.csgobox.forge_1_18_2.utils.IconListTools;
+import com.reclizer.csgobox.forge_1_18_2.utils.RenderFontTool;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Bottom-up 2D waterfall display for the rewards of a bulk box open. Items
+ * are pushed onto the feed on a fixed cadence (CS:GO style ticker feed),
+ * fade in, hold, then fade out. After all entries have been shown and the
+ * last one has aged past its lifetime, a "collect" button appears.
+ */
+public class CsboxBulkResultScreen extends Screen {
+    private static final int MAX_VISIBLE = 8;
+    private static final long LIFE_TICKS = 100;
+    private static final int TICKS_PER_ENTRY = 4;
+
+    private final Player player;
+    private final List<ItemStack> allItems;
+    private final List<Integer> allGrades;
+    private final Deque<Entry> visible = new ArrayDeque<>();
+    private int cursor = 0;
+    private long lastAddTick = 0;
+    private long lastTickTime = 0;
+    private boolean showAllItems = false;
+
+    /** Rows scrolled down in the show-all grid (0 = top). */
+    private int gridScroll = 0;
+
+    // Lazy caches for the show-all grid. allItems/allGrades are fixed after
+    // construction, so the O(n^2) consolidation is computed once and reused
+    // across frames instead of every render (forge build has no sort).
+    private Map<ItemStack, Integer> gridConsolidated;
+    private Map<ItemStack, Integer> gridGradeMap;
+    private boolean gridCacheBuilt = false;
+
+    private void buildGridCacheIfNeeded() {
+        if (gridCacheBuilt) {
+            return;
+        }
+        Map<ItemStack, Integer> consolidated = new LinkedHashMap<>();
+        Map<ItemStack, Integer> gradeMap = new LinkedHashMap<>();
+        for (int i = 0; i < allItems.size(); i++) {
+            ItemStack stack = allItems.get(i);
+            int grade = i < allGrades.size() ? allGrades.get(i) : 1;
+            boolean found = false;
+            for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
+                if (ItemStack.isSameItemSameTags(stack, entry.getKey())) {
+                    entry.setValue(entry.getValue() + stack.getCount());
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && !stack.isEmpty()) {
+                consolidated.put(stack.copy(), stack.getCount());
+                gradeMap.put(stack.copy(), grade);
+            }
+        }
+        this.gridConsolidated = consolidated;
+        this.gridGradeMap = gradeMap;
+        this.gridCacheBuilt = true;
+    }
+
+    public CsboxBulkResultScreen(Player player, List<ItemStack> items, List<Integer> grades) {
+        super(new TextComponent("csgo_bulk_result"));
+        this.player = player;
+        this.allItems = new ArrayList<>();
+        for (ItemStack s : items) {
+            this.allItems.add(s == null ? ItemStack.EMPTY : s.copy());
+        }
+        this.allGrades = new ArrayList<>();
+        for (Integer g : grades) {
+            this.allGrades.add(g == null ? 1 : g);
+        }
+    }
+
+    private static final class Entry {
+        final ItemStack stack;
+        final int grade;
+        final long appearTick;
+        final int index;
+        /** Pre-rendered label sequence; stable per entry (stack/index never
+         *  change), so it's built once at construction instead of per frame. */
+        final FormattedCharSequence labelSeq;
+
+        Entry(ItemStack stack, int grade, long appearTick, int index) {
+            this.stack = stack.copy();
+            this.grade = grade;
+            this.appearTick = appearTick;
+            this.index = index;
+            String label = this.stack.isEmpty()
+                    ? "(" + this.index + ")"
+                    : this.stack.getHoverName().getString() + "  ×" + this.stack.getCount() + "   #" + this.index;
+            this.labelSeq = new TextComponent(label).getVisualOrderText();
+        }
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        // Advancement/recipe toasts would stack over this screen; suppress
+        // them for the whole time it is open (they are transient notices).
+        if (this.minecraft != null) {
+            this.minecraft.getToasts().clear();
+        }
+        if (this.minecraft == null || this.minecraft.level == null) {
+            return;
+        }
+        long now = this.minecraft.level.getGameTime();
+        if (lastTickTime == 0) {
+            lastTickTime = now;
+            lastAddTick = now;
+        }
+        if (cursor < allItems.size() && now - lastAddTick >= TICKS_PER_ENTRY) {
+            ItemStack s = allItems.get(cursor);
+            int g = cursor < allGrades.size() ? allGrades.get(cursor) : 1;
+            visible.addFirst(new Entry(s, g, now, cursor + 1));
+            while (visible.size() > MAX_VISIBLE) {
+                visible.pollLast();
+            }
+            cursor++;
+            lastAddTick = now;
+        }
+        if (cursor >= allItems.size() && !visible.isEmpty()) {
+            Entry oldest = ((ArrayDeque<Entry>) visible).getLast();
+            if (now - oldest.appearTick > LIFE_TICKS) {
+                visible.pollLast();
+            }
+        }
+        lastTickTime = now;
+    }
+
+    @Override
+    public void render(PoseStack pose, int mouseX, int mouseY, float partialTicks) {
+        super.render(pose, mouseX, mouseY, partialTicks);
+        // Hide the HUD (hotbar/crosshair) behind the overlay while it is open;
+        // restored in onClose()/removed().
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = true;
+        }
+        if (this.minecraft != null && this.minecraft.level != null) {
+            int fill = UiBackdrop.fill();
+            AnimRenderOps.fillGradientOp(pose, 0, 0, this.width, this.height, fill, fill);
+        }
+        renderHeader(pose);
+        renderEntries(pose, partialTicks);
+        renderFooter(pose, mouseX, mouseY);
+    }
+
+    private void renderHeader(PoseStack pose) {
+        Style titleStyle = Style.EMPTY.withBold(true);
+        Component title = new TranslatableComponent("gui.csgobox.bulk.title").withStyle(titleStyle);
+        float titleScale = 1.4F;
+        float titleW = this.font.width(title) * titleScale;
+        RenderFontTool.drawString(pose, this.font, title.getVisualOrderText(),
+                (this.width - titleW) * 0.5F, this.height * 0.06F, 0, 0, titleScale, 0xFFFFFFFF);
+        int shown = cursor;
+        int total = allItems.size();
+        Component progress = new TextComponent(shown + " / " + total);
+        RenderFontTool.drawString(pose, this.font, progress.getVisualOrderText(),
+                (this.width - this.font.width(progress)) * 0.5F, this.height * 0.13F, 0, 0, 0.9F, 0xFFAAAAAA);
+    }
+
+    private void renderEntries(PoseStack pose, float partialTicks) {
+        if (this.minecraft == null || this.minecraft.level == null) {
+            return;
+        }
+        long now = this.minecraft.level.getGameTime();
+
+        int rowH = this.height / 22;
+        int baseY = this.height * 60 / 100;
+        int colW = Math.min(this.width * 35 / 100, 360);
+        int x = (this.width - colW) / 2;
+
+        int index = 0;
+        for (Entry e : visible) {
+            float age = (float) (now - e.appearTick + partialTicks) / LIFE_TICKS;
+            float alpha;
+            if (age < 0.10F) {
+                alpha = age / 0.10F;
+            } else if (age > 0.85F) {
+                alpha = Math.max(0F, (1F - age) / 0.15F);
+            } else {
+                alpha = 1F;
+            }
+            int y = baseY - index * rowH;
+            int intAlpha = (int) (alpha * 255F) & 0xFF;
+            int frameColor = (intAlpha << 24) | (ColorTools.colorItems(e.grade) & 0x00FFFFFF);
+            int labelColor = (intAlpha << 24) | 0x00EFEFEF;
+
+            int itemSize = Math.min(rowH - 4, 32);
+            int itemX = x;
+            int itemY = y - itemSize / 2;
+            fill(pose, x - 1, y - itemSize / 2 - 1, x + colW + 1, y + itemSize / 2 + 1, (intAlpha << 24) | 0x101010);
+            fill(pose, itemX, itemY, itemX + 2, itemY + itemSize, frameColor);
+            if (e.stack.isEmpty()) {
+                fill(pose, itemX + 2, itemY, itemX + itemSize + 2, itemY + itemSize, (intAlpha << 24) | OverlayColor.panel());
+            } else if (this.player != null) {
+                IconListTools.renderRewardCell(this.player, pose, e.stack, itemX + 2, itemY, itemSize, itemSize, e.grade);
+            }
+            // Reuse the per-entry pre-rendered label (stable) instead of
+            // rebuilding the string + Component + visual-order sequence per frame.
+            RenderFontTool.drawString(pose, this.font, e.labelSeq,
+                    itemX + itemSize + 12, y - this.font.lineHeight * 0.5F, 0, 0, 0.9F, labelColor);
+            index++;
+        }
+    }
+
+    private void renderFooter(PoseStack pose, int mouseX, int mouseY) {
+        if (showAllItems) {
+            renderAllItemsGrid(pose, mouseX, mouseY);
+            return;
+        }
+        if (cursor < allItems.size() || !visible.isEmpty()) {
+            if (cursor < allItems.size()) {
+                Component waiting = new TranslatableComponent("gui.csgobox.bulk.waterfall_empty");
+                RenderFontTool.drawString(pose, this.font, waiting.getVisualOrderText(),
+                        (this.width - this.font.width(waiting)) * 0.5F, this.height * 0.18F, 0, 0, 0.9F, 0xFFAAAAAA);
+            }
+            renderPlaybackButtons(pose, mouseX, mouseY);
+            return;
+        }
+        int btnW = Math.max(120, this.width * 14 / 100);
+        int btnH = this.height * 5 / 100;
+        int btnSpacing = 16;
+        int totalBtnWidth = btnW * 2 + btnSpacing;
+        int btnY = this.height * 80 / 100;
+
+        int showAllX = (this.width - totalBtnWidth) / 2;
+        boolean showAllHover = isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH);
+        int showAllFill = showAllHover ? 0xFF00AACC : 0xFF0088AA;
+        int showAllBorder = showAllHover ? 0xFF00DDFF : 0xFF00AACC;
+        fill(pose, showAllX, btnY, showAllX + btnW, btnY + btnH, showAllBorder);
+        fill(pose, showAllX + 1, btnY + 1, showAllX + btnW - 1, btnY + btnH - 1, showAllFill);
+        Style style = Style.EMPTY.withBold(true);
+        Component showAllText = new TranslatableComponent("gui.csgobox.bulk.show_all").withStyle(style);
+        FormattedCharSequence showAllSeq = showAllText.getVisualOrderText();
+        float showAllTextW = this.font.width(showAllSeq) * 0.95F;
+        float showAllTextX = showAllX + (btnW - showAllTextW) / 2.0F;
+        float showAllTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
+        RenderFontTool.drawString(pose, this.font, showAllSeq, showAllTextX, showAllTextY, 0, 0, 0.95F, 0xFFFFFFFF);
+
+        int collectX = showAllX + btnW + btnSpacing;
+        boolean collectHover = isInside(mouseX, mouseY, collectX, btnY, btnW, btnH);
+        int collectFill = collectHover ? 0xFF00CC00 : 0xFF008800;
+        int collectBorder = collectHover ? 0xFF00FF00 : 0xFF00AA00;
+        fill(pose, collectX, btnY, collectX + btnW, btnY + btnH, collectBorder);
+        fill(pose, collectX + 1, btnY + 1, collectX + btnW - 1, btnY + btnH - 1, collectFill);
+        Component collectText = new TranslatableComponent("gui.csgobox.bulk.collect").withStyle(style);
+        FormattedCharSequence collectSeq = collectText.getVisualOrderText();
+        float collectTextW = this.font.width(collectSeq) * 0.95F;
+        float collectTextX = collectX + (btnW - collectTextW) / 2.0F;
+        float collectTextY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
+        RenderFontTool.drawString(pose, this.font, collectSeq, collectTextX, collectTextY, 0, 0, 0.95F, 0xFFFFFFFF);
+    }
+
+    /** Action row below the waterfall while the feed plays: SKIP drains the
+     *  feed so the result buttons appear, CLOSE exits the screen right away.
+     *  Rewards are already granted server-side, so neither loses anything. */
+    private void renderPlaybackButtons(PoseStack pose, int mouseX, int mouseY) {
+        int w = Math.max(96, this.width * 9 / 100);
+        int h = this.height * 4 / 100;
+        int spacing = 16;
+        int y = this.height * 80 / 100;
+        int skipX = (this.width - (w * 2 + spacing)) / 2;
+        int closeX = skipX + w + spacing;
+        drawPlaybackButton(pose, mouseX, mouseY, skipX, y, w, h,
+                new TranslatableComponent("gui.csgobox.bulk.skip"));
+        drawPlaybackButton(pose, mouseX, mouseY, closeX, y, w, h,
+                new TranslatableComponent("gui.csgobox.bulk.close"));
+    }
+
+    private void drawPlaybackButton(PoseStack pose, int mouseX, int mouseY,
+                                    int x, int y, int w, int h, Component text) {
+        boolean hover = isInside(mouseX, mouseY, x, y, w, h);
+        int fill = hover ? OverlayColor.panelHover() : OverlayColor.panel();
+        int border = hover ? 0xFF00DDFF : 0xFF00AACC;
+        fill(pose, x, y, x + w, y + h, border);
+        fill(pose, x + 1, y + 1, x + w - 1, y + h - 1, fill);
+        Style style = Style.EMPTY.withBold(true);
+        FormattedCharSequence seq = text.copy().withStyle(style).getVisualOrderText();
+        float textW = this.font.width(seq) * 0.9F;
+        float textX = x + (w - textW) / 2.0F;
+        float textY = y + (h - this.font.lineHeight * 0.9F) / 2.0F + 1;
+        int textColor = hover ? 0xFFFFFFFF : 0xFF00CCEE;
+        RenderFontTool.drawString(pose, this.font, seq, textX, textY, 0, 0, 0.9F, textColor);
+    }
+
+    private void renderAllItemsGrid(PoseStack pose, int mouseX, int mouseY) {
+        // allItems/allGrades are fixed after construction, so consolidate once
+        // and reuse across frames.
+        buildGridCacheIfNeeded();
+        Map<ItemStack, Integer> consolidated = gridConsolidated;
+        Map<ItemStack, Integer> gradeMap = gridGradeMap;
+
+        // Comfortable layout: smaller cells with more breathing room.
+        int cols = Math.max(1, Math.min(8, this.width / 90));
+        int itemSize = Math.min(44, this.width / cols - 14);
+        int cellPitch = itemSize + 12;
+        int gridWidth = cols * cellPitch;
+        int startX = (this.width - gridWidth) / 2;
+        int startY = this.height * 18 / 100;
+
+        // Viewport ends well above the collect button so no cell can ever
+        // cover it (also enforced by scissor below).
+        int viewBottom = this.height * 80 / 100;
+        int visibleRows = Math.max(1, (viewBottom - startY) / cellPitch);
+
+        Component title = new TranslatableComponent("gui.csgobox.bulk.all_rewards_title");
+        RenderFontTool.drawString(pose, this.font, title.getVisualOrderText(),
+                (this.width - this.font.width(title)) * 0.5F, this.height * 0.06F, 0, 0, 1.2F, 0xFFFFFFFF);
+
+        int totalRows = (int) Math.ceil((double) consolidated.size() / cols);
+        int maxScroll = Math.max(0, totalRows - visibleRows);
+        this.gridScroll = Math.max(0, Math.min(this.gridScroll, maxScroll));
+
+        // Clip the whole grid to the viewport so scrolled-out cells and the
+        // scrollbar never draw over the collect button below.
+        AnimRenderOps.scissor(pose, 0, startY - 4, this.width, viewBottom - startY + 4);
+
+        int idx = 0;
+        for (Map.Entry<ItemStack, Integer> entry : consolidated.entrySet()) {
+            int col = idx % cols;
+            int row = idx / cols;
+            if (row < this.gridScroll || row >= this.gridScroll + visibleRows + 1) {
+                idx++;
+                continue;
+            }
+            int x = startX + col * cellPitch;
+            int y = startY + (row - this.gridScroll) * cellPitch;
+            ItemStack stack = entry.getKey();
+            int count = entry.getValue();
+            int grade = gradeMap.getOrDefault(stack, 1);
+
+            int bgColor = (0xCC << 24) | (ColorTools.colorItems(grade) & 0x00FFFFFF);
+            fillGradient(pose, x, y, x + itemSize + 4, y + itemSize + 4, bgColor, bgColor);
+            fill(pose, x, y, x + 3, y + itemSize + 4, ColorTools.colorItems(grade));
+
+            if (this.player != null) {
+                IconListTools.renderRewardCell(this.player, pose, stack, x + 2, y + 2, itemSize + 4, itemSize + 4, grade);
+            }
+
+            if (count > 1) {
+                Component countText = new TextComponent("x" + count);
+                int countW = this.font.width(countText);
+                RenderFontTool.drawString(pose, this.font, countText.getVisualOrderText(),
+                        x + itemSize + 4 - countW - 2, y + itemSize + 4 - this.font.lineHeight - 2, 0, 0, 0.8F, 0xFFFFFFFF);
+            }
+            idx++;
+        }
+        AnimRenderOps.scissorDisable(pose);
+
+        // Scrollbar indicator on the right edge when content overflows.
+        if (maxScroll > 0) {
+            int barX = this.width - 10;
+            int barW = 4;
+            int barTop = startY;
+            int barHeight = Math.max(12, (int) ((double) visibleRows / totalRows * (viewBottom - startY)));
+            int trackHeight = viewBottom - startY - barHeight;
+            int barY = barTop + (trackHeight > 0 ? Math.round(trackHeight * (float) this.gridScroll / maxScroll) : 0);
+            fill(pose, barX, barTop, barX + barW, viewBottom, 0x40FFFFFF);
+            fill(pose, barX, barY, barX + barW, barY + barHeight, 0xCC00DDFF);
+        }
+
+        if (maxScroll > 0) {
+            Component scrollHint = new TranslatableComponent("gui.csgobox.bulk.scroll_hint");
+            float hintW = this.font.width(scrollHint) * 0.7F;
+            RenderFontTool.drawString(pose, this.font, scrollHint.getVisualOrderText(),
+                    (this.width - hintW) / 2.0F, viewBottom + 6, 0, 0, 0.7F, 0xFFAAAAAA);
+        }
+
+        int btnW = Math.max(120, this.width * 14 / 100);
+        int btnH = this.height * 5 / 100;
+        int btnX = (this.width - btnW) / 2;
+        int btnY = this.height * 84 / 100;
+        boolean hover = isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
+        int fill = hover ? 0xFF00CC00 : 0xFF008800;
+        int border = hover ? 0xFF00FF00 : 0xFF00AA00;
+        fill(pose, btnX, btnY, btnX + btnW, btnY + btnH, border);
+        fill(pose, btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, fill);
+        Style style = Style.EMPTY.withBold(true);
+        Component text = new TranslatableComponent("gui.csgobox.bulk.collect").withStyle(style);
+        FormattedCharSequence seq = text.getVisualOrderText();
+        float textW = this.font.width(seq) * 0.95F;
+        float textX = btnX + (btnW - textW) / 2.0F;
+        float textY = btnY + (btnH - this.font.lineHeight * 0.95F) / 2.0F + 1;
+        RenderFontTool.drawString(pose, this.font, seq, textX, textY, 0, 0, 0.95F, 0xFFFFFFFF);
+    }
+
+    /** Scroll the show-all grid (rows) when the mouse wheel is used over it. */
+    private void scrollGrid(double scrollY) {
+        if (!this.showAllItems || scrollY == 0) {
+            return;
+        }
+        buildGridCacheIfNeeded();
+        int cols = Math.max(1, Math.min(8, this.width / 90));
+        int itemSize = Math.min(44, this.width / cols - 14);
+        int cellPitch = itemSize + 12;
+        int startY = this.height * 18 / 100;
+        int viewBottom = this.height * 80 / 100;
+        int visibleRows = Math.max(1, (viewBottom - startY) / cellPitch);
+        int totalRows = (int) Math.ceil((double) this.gridConsolidated.size() / cols);
+        int maxScroll = Math.max(0, totalRows - visibleRows);
+        int dir = scrollY > 0 ? -1 : 1; // wheel up = scroll up
+        this.gridScroll = Math.max(0, Math.min(maxScroll, this.gridScroll + dir));
+    }
+
+
+    private static boolean isInside(double mouseX, double mouseY, int x, int y, int w, int h) {
+        return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && (cursor < allItems.size() || !visible.isEmpty())) {
+            int w = Math.max(96, this.width * 9 / 100);
+            int h = this.height * 4 / 100;
+            int spacing = 16;
+            int y = this.height * 80 / 100;
+            int skipX = (this.width - (w * 2 + spacing)) / 2;
+            int closeX = skipX + w + spacing;
+            if (isInside(mouseX, mouseY, skipX, y, w, h)) {
+                this.cursor = allItems.size();
+                this.visible.clear();
+                return true;
+            }
+            if (isInside(mouseX, mouseY, closeX, y, w, h)) {
+                this.onClose();
+                return true;
+            }
+        }
+        if (button == 0 && cursor >= allItems.size() && visible.isEmpty()) {
+            int btnW = Math.max(120, this.width * 14 / 100);
+            int btnH = this.height * 5 / 100;
+
+            if (showAllItems) {
+                int btnY = this.height * 92 / 100;
+                int btnX = (this.width - btnW) / 2;
+                if (isInside(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
+                    this.onClose();
+                    return true;
+                }
+            } else {
+                // Show both buttons
+                int btnY = this.height * 80 / 100;
+                int btnSpacing = 16;
+                int totalBtnWidth = btnW * 2 + btnSpacing;
+                int showAllX = (this.width - totalBtnWidth) / 2;
+                int collectX = showAllX + btnW + btnSpacing;
+
+                if (isInside(mouseX, mouseY, showAllX, btnY, btnW, btnH)) {
+                    showAllItems = true;
+                    this.gridScroll = 0;
+                    return true;
+                }
+                if (isInside(mouseX, mouseY, collectX, btnY, btnW, btnH)) {
+                    this.onClose();
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (this.showAllItems) {
+            this.scrollGrid(delta);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
+            this.onClose();
+            return true;
+        }
+        // Arrow-key scrolling inside the show-all grid.
+        if (this.showAllItems && (keyCode == 264 || keyCode == 265)) {
+            this.scrollGrid(keyCode == 264 ? -1.0 : 1.0);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        // Same protection as onClose(): death/respawn replaces this screen via
+        // setScreen() -> Screen.removed(), which would otherwise leave
+        // hideGui=true and hide the HUD permanently.
+        if (this.minecraft != null) {
+            this.minecraft.options.hideGui = false;
+        }
+        super.removed();
+    }
+}
