@@ -125,19 +125,51 @@ repositories {
     }
 }
 
+// TACZ 1.18.2 compile-only API stub, built in-tree. The real production jar
+// (SRG-mapped) cannot sit on this Mojang-mapped dev classpath, so the module
+// compiles against signature stubs from scripts/tacz-stub-1182-src
+// (TimelessAPI / IGun / attachment enum / index POJOs; descriptors verified
+// against TACZ's 1.18.2 branch source, runtime targets TACZ 1.1.4-hotfix and
+// every touchpoint sits behind ModList.isLoaded("tacz")). The stub jar joins
+// compileJava's classpath as a files() collection (task-built, so a fresh
+// clone builds with zero local-repo setup — this replaces the old
+// com.tacz:tacz:1.1.8-api-1182 coordinate whose jar was gitignored and its
+// sources uncommitted). The stub compile itself uses configurations.compile
+// Classpath, which already carries the mapped Minecraft artifact via the
+// implementation dependency and cannot cycle (the stub is appended AFTER
+// that configuration, never inside it).
+def taczStubClasses = tasks.register('taczStubClasses', JavaCompile) {
+    source = rootProject.fileTree('scripts/tacz-stub-1182-src') {
+        include '**/*.java'
+    }
+    classpath = configurations.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('tacz-stub-classes')
+    options.encoding = 'UTF-8'
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+def taczStubJarTask = tasks.register('taczStubJar', Jar) {
+    group = 'build'
+    description = 'Builds the TACZ 1.18.2 compile-only API stub jar from scripts/tacz-stub-1182-src.'
+    dependsOn taczStubClasses
+    from layout.buildDirectory.dir('tacz-stub-classes')
+    archiveFileName = 'tacz-1.1.8-api-1182.jar'
+    destinationDirectory = layout.buildDirectory.dir('tacz-stub')
+}
+
+tasks.named('compileJava', JavaCompile).configure {
+    classpath += files(taczStubJarTask)
+}
+
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${mc_version_forge_1_18_2}-${forge_version_forge_1_18_2}")
 
     // TACZ (Timeless & Classics Guns: Zero, official 1.18.2 line) — optional
-    // compileOnly dependency for TACZ item validation + the CsLookItemScreen
-    // inspect viewport. The jar is NOT committed: run
-    // scripts/download-tacz-1182.sh to populate local-repo first. Guarded at
-    // runtime via ModList.isLoaded("tacz").
-    // TACZ API — compile against 1.1.8-hotfix-r6 (1.21.1 build, already in
-    // local-repo). Descriptors verified compatible with TACZ 1.1.4 on 1.18.2
-    // (1.18.2 branch source: TimelessAPI/IGun signatures match 1.1.8 javap).
-    // Runtime targets TACZ 1.1.4-hotfix on 1.18.2.
-    compileOnly 'com.tacz:tacz:1.1.8-api-1182'
+    // compile-only dependency (the in-tree stub jar; see the tasks above) for
+    // TACZ item validation and the /csbox tacz listing. Guarded at runtime via
+    // ModList.isLoaded("tacz").
 
     // JEI 10.x (single artifact on 1.18.2 — the -forge-api/-common-api split
     // started with JEI 15 on MC 1.20.1). Discovery is @JeiPlugin annotation

@@ -1,5 +1,29 @@
 # 更新日志
 
+## [Unreleased]
+
+> 平台扩张批次：**新增 Fabric 1.21.1 与 Forge 1.18.2 两个平台**（多端总数 6 → 8），并为「卓越前线」（Superb Warfare）提供开箱级联动。
+
+### 新增（平台）
+
+- **`fabric_1_21_1`（Fabric 1.21.1，Loom 1.17.21 + Fabric Loader 0.16.14，Java 21）**：以 `v1_21_1` 为基准整模块移植（`scripts/port-fabric-1211.py` 机械转换 + 手工适配），覆盖开箱 / 批量开箱 / 终端机 / 拆解台 / 村民交易 / `/csbox` 全子命令；JEI / REI / EMI / Jade / WTHIT / Cloth Config / Mod Menu 均有 Fabric 构建并接入；TACZ 检视与 3D 枪械渲染经非官方移植 TaCZ: Refabricated 接入（`modCompileOnly` 由 Loom 重映射，运行时经 `FabricLoader.isModLoaded` 检测）。已知限制：dev 环境 Fabric Loader 钉 0.16.14 与 Refabricated 要求的 ≥0.17.2 冲突（生产环境不受影响）；1.21.1 Fabric 无 Create/TOP，对应功能不移植。详见 `docs/PORTING-fabric.md`。
+- **`forge_1_18_2`（Forge 1.18.2-40.3.0，Java 17，ForgeGradle 5 + SRG renamer）**：以 `forge_1_20_1` 为基准回移；1.18.2 无 GuiGraphics，全部 GUI 为 PoseStack 重写（`AnimRenderOps` 吸收渲染原语）；JEI 10.x / REI 8.x / Jade 5.x / Cloth 6.x 接入，EMI/WTHIT/TOP 无 1.18.2 构建不移植；TACZ 为数据级联动（物品校验 + `/csbox tacz` 列表，编译期对包内签名桩 jar）。详见 `docs/PORTING-forge-1182.md`。
+- 两个新平台接入 CI 矩阵（`build.yml` 8 平台全量编译 + 冒烟测试），并补齐 `v1_21_1` / `v26_2` 缺失的 `PlatformSmokeTest`（八平台齐备）。
+
+### 新增（联动）
+
+- **Superb Warfare（卓越前线）3D 预览（零依赖）**：`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 的 `AnimRenderOps.renderItem3D` 新增命名空间门控分支（不引用任何 SBW 类），对其枪械改用 `ItemDisplayContext.FIXED`（展示框上下文）渲染真实 3D 模型（SBW 的 separate-transforms 模型在 GUI 透视只出 2D 图标），异常降级 2D。配套 `compat-packs/superb-warfare-pack/` 示范箱（物品 id 取自 0.8.9.2 发布 jar 实测）与 dev 测试环境脚本 `scripts/download-sbw-dev.sh`（SBW + Kotlin for Forge 5.12.0；5.8.0 与 NeoForge 21.1.248 的 FML 4.0.43 不兼容）。
+
+### 修复
+
+- **`forge_1_18_2` 武库商小屋降级明确化（清理死资源）**：1.18.2 没有数据包驱动的结构放置（无 `structure_set` / `configured_structure_feature` 数据注册表，`template_pool` 与村庄 houses 池也不可数据包注入），首建时机械移植遗留的 8 个小屋资源文件（不匹配任何版本 codec 的结构 JSON、biome tag、6 个结构 NBT）从未生效且无代码消费者，已删除；玩家获取军火商不受影响——合成军火拆解台放置后村民照常转职（动态定价与全部交易照常）。限制说明与未来补全路径见 `docs/PORTING-forge-1182.md`。
+- **武库商小屋群系白名单清理与覆盖策略落档**：白名单删除冗余的 `minecraft:grove`（经 `#minecraft:is_forest` 覆盖，1.20.1 / 1.21.1 / 26.1.2 / 26.2 原版标签已逐一核对；26.x 新增的 pale_garden 同样经该标签自动纳入，行为不变）；`docs/BIOME-INTEGRATION.md` 修正「野外据点 = 沙漠小屋」的错误示例（沙漠小屋只经村庄通道出现），并补齐白名单覆盖策略（刻意排除沙漠 / 高山山峰 / 沼泽 / 红树林；cherry_grove 与 meadow 系从 `#minecraft:is_mountain` 单独捞入以避开山峰）。
+- **军火商铁收购价与 key0 锚点结构性挂钩（防印钞）**：矿物→点数收购价随价格表浮动，但 key0 售价是固定锚点（默认 9 点），此前「3 铁 = 9 点 = 1 key0」的无套利关系只在默认表价下偶然成立——把铁定价到 500 会让 1 铁兑 30 点（3 铁兑 10 把 key0），村民变成印钞机。现在铁的收购价额外钉在 `min(表价 × buy_rate × 波动, floor(key0_price / 3))`：任何价格表下「卖铁换点 → 买 key0」都不会超过直接用 3 铁合成（上限生效时恰好零利润；默认表价下数值不变，铁仍 3 点）。金 / 钻不受影响——key1 / key2 售价与收购价同表浮动，无固定锚点可套利。同时在配置文档补充村民收购（6% 兜底、收未盖章散矿）、拆解台（90%、收盖章物品）与直接合成三者的定位层级说明。
+- **军火商价格表设定修正（八平台）**：(1) 静态回退值与动态默认对齐——铁 / 绿宝石收购 2→3 点、金 4→3 点（此前开关动态定价会让三种收购交易跳价 ±25%~50%，且与配置文档「复现旧经济」的声明不符）；(2) 绿宝石基价优先读取 `_prices.json` 中 `minecraft:emerald` 的直接定价（此前直接定价被忽略，只认 `emerald_block ÷ 9`，服主改价不生效）；(3) 配置文档补齐钥匙锚价口径说明（合成成本全额计价，默认表下高于静态回退价约 2.5~3 倍，切换动态定价开关会改变钥匙性价比，属预期行为）、波动幅度受整数舍入限制（铁 / 金 / key0 在默认参数下实际不波动）与找零向上取整的说明，并修正防套利注释（3 铁 = 9 点 = 1 key0，恰好零利差，而非「低于」）。
+- **军火商 key1 动态定价死交易（八平台）**：key1 的合成成本锚价（3×金表价，默认约 150 点）超过军火点单组 64 上限——1.18.2 / 1.20.1 / 1.21.1（NeoForge 与 Fabric）把该计数直接放进单输入报价，交易永远无法成交；26.x 四平台则被静默钳到 64，锚价失真（key1 反而比设计价便宜约 2.3 倍）。现 key1 与 key2 同构，拆为「≤64 点 + 整金锭找零」双输入报价（模型层新增 `key1Points` / `key1Gold`，找零为 0 时按 1 计，保证双输入报价永不消失）；静态回退统一为「24 点 + 1 金锭」（与 key2 的「45 点 + 1 钻」同构）；legacy 四平台的买入/卖出点数同步补 64 上限钳制，与 26.x number provider 口径一致。
+- **`forge_1_18_2` 无法从全新克隆编译**：TACZ 签名桩 jar（`com.tacz:tacz:1.1.8-api-1182`）此前只存在于被 gitignore 的 local-repo 且源码未提交。现桩源码入库（`scripts/tacz-stub-1182-src/`，10 类签名与原 jar javap 逐一比对一致）并由 Gradle 任务在构建内编译接入（`taczStubJar` → `compileJava` classpath），本地与 CI 均零额外准备。
+- **终端机物品模型重制（v2.4）**：旧模型正面仅采样调色板背景渐变；新四元素 kiosk（基座 / 机体 / 凸出屏 / 徽标）采样 GENESIS 渲染图真实素材区（屏幕 UI 裁剪与面宽高比精确一致、纯色徽标与底盘补丁），体积较 v2.3 缩减 49%，展示框满幅比例按新尺寸重算，展示框内过小与底面贴图拖影一并修复。
+
 ## [2.0.3] - 2026-10-18
 
 > 2.0.2 后续收口批次：**跨平台一致性补齐**（批量开箱结果分片容量与单包物品数护栏在三个平台口径不一），

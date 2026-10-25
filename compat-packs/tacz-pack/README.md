@@ -13,7 +13,7 @@
 | 文件 | 内容 |
 |---|---|
 | `gun_crate.json` | 军火枪械箱（csbox）：高稀有度掉真枪型 TACZ 枪械（`tacz:ak47` / `tacz:m4a1` / `tacz:ai_awp` / `tacz:kar98` / `tacz:rpk` / `tacz:sks_tactical` / `tacz:m1911` / `tacz:glock_17`），低档掉配套弹药（`tacz:ammo` + `AmmoId`）与火药材料 |
-| `tacz_terminal.json` | TACZ 军火终端（terminal）：5 档报价 TACZ 枪械 + 弹药，放置后右键进入交易；报价物品可用「检视」预览 / TACZ 第一人称检视 |
+| `tacz_terminal.json` | TACZ 军火终端（terminal）：5 档报价 TACZ 枪械 + 弹药，手持右键进入交易；报价物品可用「检视」预览 / TACZ 第一人称检视 |
 | `_prices.json` | 全局价格表：`tacz:modern_kinetic_gun#<GunId>` / `tacz:ammo#<AmmoId>` 子键区分各枪/弹售价（v2.0.1 起终端价格统一由价格表管理，箱子 JSON 里不再写 `price`） |
 
 ## 安装（1.20.1 示例）
@@ -25,7 +25,7 @@ cp compat-packs/tacz-pack/*.json config/csbox/
 - 箱子：进游戏 `/csbox reload`，然后 `/give @p csgobox:gun_crate`。
 - 终端机：**新增配置文件后需重启游戏**（动态物品在 RegisterEvent 注册阶段创建，
   `/csbox reload` 只刷新已有物品的配置数据），然后
-  `/give @p csgobox:tacz_terminal`，放置方块右键进入交易。
+  `/give @p csgobox:tacz_terminal`，手持右键打开终端。
 
 ## 各平台正确写法（重要）
 

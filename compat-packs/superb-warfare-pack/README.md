@@ -17,7 +17,7 @@ NBT**：枪械数据（弹药/等级/配件槽）由 SBW 自身在物品入包 t
 | 文件 | 内容 |
 |---|---|
 | `sbw_crate.json` | 卓越前线军火箱（csbox）：高稀有度掉特异武器与狙击枪（`superbwarfare:secondary_cataclysm` / `super_star_shooter` / `awm` / `javelin`），中档步枪/机枪，低档手枪、土制武器与配套弹药（`handgun_ammo` / `rifle_ammo` / `shotgun_ammo` / `sniper_ammo` / `heavy_ammo`） |
-| `sbw_terminal.json` | 卓越前线军火终端（terminal）：5 档报价更多枪型（含 `qbz_95` / `svd` / `m_98b` / `ntw_20` / `devotion` / `sentinel` 等），放置后右键进入交易 |
+| `sbw_terminal.json` | 卓越前线军火终端（terminal）：5 档报价更多枪型（含 `qbz_95` / `svd` / `m_98b` / `ntw_20` / `devotion` / `sentinel` 等），手持右键进入交易 |
 | `_prices.json` | 全局价格表：SBW 物品为普通 id 平价（无 `#变体` 子键需求；箱子产出的都是默认新枪） |
 
 ## 安装（1.21.1 示例）
@@ -28,7 +28,7 @@ cp compat-packs/superb-warfare-pack/*.json config/csbox/
 
 - 箱子：进游戏 `/csbox reload`，然后 `/give @p csgobox:sbw_crate`。
 - 终端机：**新增配置文件后需重启游戏**（动态物品在注册阶段创建，`/csbox reload`
-  只刷新已有物品的配置数据），然后 `/give @p csgobox:sbw_terminal`，放置方块右键进入交易。
+  只刷新已有物品的配置数据），然后 `/give @p csgobox:sbw_terminal`，手持右键打开终端。
 
 ## 3D 预览说明
 

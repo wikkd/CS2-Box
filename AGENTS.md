@@ -143,7 +143,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `common` 有 JUnit 5（2026-09-17 核对：35 个测试类 / 320 用例，其中 `BoxJsonSchemaValidatorTest` 34 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
 - `common` 架构约束检查由 `:common:checkCommonArchitecture` 自动挂载在编译上（见「架构约束」节）
 - AnimRenderOps 跨平台签名漂移检查：`scripts/check-animops-drift.sh`（3 平台，CI 已接线，本地改门面后必跑）
-- 平台层最小测试：`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 均有 `PlatformSmokeTest`（JUnit 5，验证入口类可加载，不初始化 MC 运行时）：`./gradlew :<module>:test -Pactive_versions=<v>`
+- 平台层最小测试：**八平台均有 `PlatformSmokeTest`**（JUnit 5，验证入口类可加载，不初始化 MC 运行时；`v1_21_1` / `v26_2` 于 2026-10-25 补齐——此前文档声称 v26_2 有而实际缺失）：`./gradlew :<module>:test -Pactive_versions=<v>`
 - 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`
 
@@ -163,9 +163,20 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
 | Create 集成 | 4 文件 | ❌ | ❌ | — | — | 4 文件 |
-| **文件数** | **103** | **93** | **94** | **81** | **82** | **104** |
+| **文件数** | **104** | **96** | **97** | **84** | **85** | **105** |
 
 - **刷新纪律**：文件数格子易过期（上一次「刷新」只改了标题没改数字），改矩阵必须实际 `find <module>/src/main/java -name '*.java' | wc -l` 重数后再填。
+
+### 新平台补充矩阵（2026-10-25，`fabric_1_21_1` / `forge_1_18_2`，文件数实数）
+
+| 项目 | fabric_1_21_1 | forge_1_18_2 |
+|---|---|---|
+| TACZ compat | ✅ 2 文件（`compat/TaczInspectViewport(Impl)`，TaCZ: Refabricated，检视 + 3D 枪械渲染） | ✅ 1 文件（门面恒不可用，数据级联动：物品校验 + `/csbox tacz`，编译对**包内签名桩**——`scripts/tacz-stub-1182-src/` 由 Gradle `taczStubJar` 任务在构建内编译，fresh clone 零准备） |
+| JEI / REI / EMI | ✅ 4 / ✅ 3 / ✅ 3 | ✅ 4 / ✅ 3 / ⚠️ 1（`emi/BoxEmiReload` 守卫桩，1.18.2 无 EMI 构建） |
+| Jade / TOP / WTHIT | ✅ 3 / ❌ / ✅ 2（+mcshared 1） | ✅ 3 / ❌ / ❌（1.18.2 无 WTHIT 构建，mcshared/wthit 排除编译） |
+| Create | ⚠️ 1（`create/CreatePlatformItems` 反射降级，无 Fabric 构建） | ⚠️ 1（同左，1.18.2 API 差异未移植 deployer） |
+| `PacketSyncBoxDefinitions` / Networking | ✅ / —（Fabric custom payload） | ✅ / `Networking`（SimpleChannel，FG5） |
+| **文件数** | **103** | **94** |
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）、`forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）与 `fabric_1_21_1`（TaCZ: Refabricated 1.21.1 Fabric 移植，`scripts/download-tacz-fabric.sh`，modCompileOnly）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 三平台已同步移植（forge_1_20_1 亦接入），仅 `v1_21_1` 未采用（非功能阻塞）

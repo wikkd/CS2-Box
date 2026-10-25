@@ -8,8 +8,8 @@
 [![PR checks](https://github.com/wikkd/CS2-Box/actions/workflows/pr-checks.yml/badge.svg)](https://github.com/wikkd/CS2-Box/actions/workflows/pr-checks.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/wikkd/CS2-Box?sort=semver&label=release)](https://github.com/wikkd/CS2-Box/releases)
-![Minecraft](https://img.shields.io/badge/MC-1.20.1%20%7C%201.21.1%20%7C%2026.1.2%20%7C%2026.2-blueviolet)
-![Loader](https://img.shields.io/badge/loader-NeoForge%20%7C%20Forge-8A2BE2)
+![Minecraft](https://img.shields.io/badge/MC-1.18.2%20%7C%201.20.1%20%7C%201.21.1%20%7C%2026.1.2%20%7C%2026.2-blueviolet)
+![Loader](https://img.shields.io/badge/loader-NeoForge%20%7C%20Forge%20%7C%20Fabric-8A2BE2)
 ![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025-critical)
 
 [简体中文](./README.md) | **English**
@@ -22,14 +22,14 @@ CS2-Box brings CS:GO's crate-opening loop into Minecraft: right-click while hold
 
 - **Five rarity tiers** + true server-side randomness + bulk opening + pity system
 - **JSON-driven**: add new crates by editing files — no recompiling
-- **One codebase, six platforms**: NeoForge and Forge, all in sync
+- **One codebase, eight platforms**: NeoForge, Forge and Fabric, all in sync
 - **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
 
 Current version: **`2.0.2`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
 
 ## Quick Start
 
-1. Install the NeoForge (or Forge) loader matching your Minecraft version, grab the jar from [Releases](https://github.com/wikkd/CS2-Box/releases), and drop it into `mods/`
+1. Install the NeoForge (or Forge / Fabric) loader matching your Minecraft version, grab the jar from [Releases](https://github.com/wikkd/CS2-Box/releases), and drop it into `mods/`
 2. Get your first crate and key:
 
    ```bash
@@ -94,6 +94,8 @@ The repo is a multiloader workspace; switch the active build target via `active_
 | `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | Released: developed in sync with v26_1_2 |
 | `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | Released: parity with the 2.0.0 line |
 | `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | Released: 1.20.1 backport (ForgeGradle 7.x) |
+| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14 (Loom 1.17.21) | 21 | New platform: landed after 2.0.3, ships with the next release |
+| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | New platform: landed after 2.0.3, ships with the next release |
 
 <details>
 <summary><strong>Archived (EOL) platforms</strong></summary>

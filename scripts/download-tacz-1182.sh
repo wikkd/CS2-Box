@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Populate local-repo with the TACZ 1.18.2 jar (com.tacz:tacz:1.1.4-hotfix)
-# for the forge_1_18_2 module's compileOnly dependency.
+# Populate local-repo with the REAL TACZ 1.18.2 jar (com.tacz:tacz:1.1.4-hotfix)
+# for forge_1_18_2 RUNTIME experiments only.
 #
-# Same mechanism as download-tacz-1201.sh: the jar is NOT committed (~50MB,
-# repo convention `*.jar` gitignored, only the pom is), CI/local builds run
-# this script before compiling forge_1_18_2. Downloaded from the official
-# TACZ Modrinth release (project SzzJttH8, 1.18.2 1.1.4-hotfix line).
+# NOTE (2026-10-25): compiling forge_1_18_2 no longer needs this script or
+# local-repo at all — the module compiles against the in-tree signature stub
+# (scripts/tacz-stub-1182-src, built by the Gradle taczStubJar task inside
+# forge_1_18_2/build.gradle). This download remains for future real-jar
+# runtime verification; the production jar is SRG-mapped and still cannot sit
+# on the Mojang-mapped dev compile classpath.
+#
+# Downloaded from the official TACZ Modrinth release (project SzzJttH8,
+# 1.18.2 1.1.4-hotfix line).
 #
 # Environment overrides:
 #   TACZ_1182_URL="<direct jar url>"      (e.g. a pre-signed/localhost mirror)

@@ -89,9 +89,9 @@ WTHIT fabric-12.10.2（`waila_plugins.json` 原生机制）、Cloth Config 15.0.
 ## 待办（后续版本）
 
 - [ ] L4 运行时回归：开箱 / 批量开箱 / 终端机 / 回收站 / 村民交易 / `/csbox` 全子命令
-- [ ] AGENTS.md 平台清单与文件差异矩阵补 fabric_1_21_1 行
-- [ ] CHANGELOG Unreleased 段补 Fabric 平台条目
-- [ ] 视需求补 ProGuard minify / CI 矩阵接线
+- [x] AGENTS.md 平台清单与文件差异矩阵补 fabric_1_21_1 行（2026-10-25 以「新平台补充矩阵」形式补齐，与 forge_1_18_2 同表）
+- [x] CHANGELOG Unreleased 段补 Fabric 平台条目（2026-10-25）
+- [x] CI 矩阵接线（2026-10-25：`build.yml` 8 平台全量，fabric job 先跑 `download-tacz-fabric.sh`；ProGuard minify 仍未做，按需另立项）
 
 ## IDEA 启动项（2026-10-24）
 

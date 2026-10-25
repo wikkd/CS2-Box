@@ -8,8 +8,8 @@
 [![PR checks](https://github.com/wikkd/CS2-Box/actions/workflows/pr-checks.yml/badge.svg)](https://github.com/wikkd/CS2-Box/actions/workflows/pr-checks.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/wikkd/CS2-Box?sort=semver&label=release)](https://github.com/wikkd/CS2-Box/releases)
-![Minecraft](https://img.shields.io/badge/MC-1.20.1%20%7C%201.21.1%20%7C%2026.1.2%20%7C%2026.2-blueviolet)
-![Loader](https://img.shields.io/badge/loader-NeoForge%20%7C%20Forge-8A2BE2)
+![Minecraft](https://img.shields.io/badge/MC-1.18.2%20%7C%201.20.1%20%7C%201.21.1%20%7C%2026.1.2%20%7C%2026.2-blueviolet)
+![Loader](https://img.shields.io/badge/loader-NeoForge%20%7C%20Forge%20%7C%20Fabric-8A2BE2)
 ![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025-critical)
 
 **简体中文** | [English](./README.en.md)
@@ -22,14 +22,14 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 
 - **五档稀有度** + 服务端真随机 + 批量开箱 + 开箱保底
 - **JSON 配置驱动**：改文件就上新箱子，无需重新编译
-- **一套代码，六端同步**：同时覆盖 NeoForge 与 Forge 共 6 个平台
+- **一套代码，八端同步**：覆盖 NeoForge / Forge / Fabric 共 8 个平台
 - **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
 
 当前版本 **`2.0.3`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
 
 ## 快速开始
 
-1. 安装对应 Minecraft 版本的 NeoForge（或 Forge），从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载 jar 放入 `mods/`
+1. 安装对应 Minecraft 版本的 NeoForge（或 Forge / Fabric），从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载 jar 放入 `mods/`
 2. 进入世界后获取物品：
 
    ```bash
@@ -94,6 +94,8 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 | `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | 正式发布：随 v26_1_2 同步开发 |
 | `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | 正式发布：2.0.0 线已追平 |
 | `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | 正式发布：1.20.1 回移（ForgeGradle 7.x） |
+| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14（Loom 1.17.21） | 21 | 新平台：2.0.3 后入树，随下版发布 |
+| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | 新平台：2.0.3 后入树，随下版发布 |
 
 <details>
 <summary><strong>已归档（EOL）平台</strong></summary>
