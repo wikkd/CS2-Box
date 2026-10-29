@@ -28,6 +28,12 @@
 | `MANUAL-TEST-CHECKLIST-FORGE-2612.md` | `docs/` | 此前 | Forge 26.1.2 手动测试清单快照 |
 | `MANUAL-TESTING-v1.0.5.md` | `docs/` | 此前 | v1.0.5 手动测试用例快照 |
 | `TEST-REPORT-FORGE-2612-2026-08-11.md` | `docs/` | 此前 | Forge 26.1.2 测试报告快照 |
+| `terminal-ui-design.md` | `docs/` | 2026-10-30 | 终端机功能区设计报告（UI 已实现并迭代至 v2.4，演进见 CHANGELOG） |
+| `OPTIMIZATIONS.md` | `docs/` | 2026-10-30 | 2026-08 底层优化交付总结（成果权威记录见 CHANGELOG） |
+| `SIZE-SLIM.md` | `docs/` | 2026-10-30 | 1.0.6 时代包体积瘦身探索报告 |
+| `2026-09-13-随机抽奖算法审查与修复报告.md` | `docs/tech-analysis/` | 2026-10-30 | 抽奖/保底算法审查修复报告（修复已并入 OddsCalculator / PityTracker） |
+| `优化与死代码审计-2026-08-13.md` | `docs/tech-analysis/` | 2026-10-30 | 体积/内存优化审计与死代码扫描报告 |
+| `EMI与信息显示模组调研.md` | `docs/tech-analysis/` | 2026-10-30 | EMI 与信息显示模组生态调研（现接入现状见 AGENTS.md 差异矩阵） |
 
 
 ## 归档子目录

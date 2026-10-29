@@ -1,3 +1,5 @@
+> ⚠️ **已归档（历史快照 · 2026-10-30）**：原位于 `docs/terminal-ui-design.md`，2026-10 已移入 `docs/archive/`。本文档为当时状态的快照，**不再随项目更新**；权威信息以 `README.md` 与 `docs/` 为准。
+
 # 终端机（UP-Link Terminal）功能区设计报告
 
 > 对象：CS2-Box 终端机谈判式抽卡界面

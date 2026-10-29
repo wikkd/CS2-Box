@@ -1,3 +1,5 @@
+> ⚠️ **已归档（历史快照 · 2026-10-30）**：原位于 `docs/tech-analysis/EMI与信息显示模组调研.md`，2026-10 已移入 `docs/archive/`。本文档为当时状态的快照，**不再随项目更新**；权威信息以 `README.md` 与 `docs/` 为准。
+
 # EMI 与 Jade/WTHIT/TOP 生态调研（CS2-Box 集成前置研究）
 
 > 调研时间：本环境 2026-09；版本数据来自 GitHub Releases / Modrinth API 实时查询。

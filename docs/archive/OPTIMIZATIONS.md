@@ -1,3 +1,5 @@
+> ⚠️ **已归档（历史快照 · 2026-10-30）**：原位于 `docs/OPTIMIZATIONS.md`，2026-10 已移入 `docs/archive/`。本文档为当时状态的快照，**不再随项目更新**；权威信息以 `README.md` 与 `docs/` 为准。
+
 # 底层代码优化交付总结 — Bottom-layer optimizations
 
 > 日期：2026-08-16 · 范围：common + 平台层 packet/gui · 状态：已全平台验证
