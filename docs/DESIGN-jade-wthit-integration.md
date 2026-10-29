@@ -121,5 +121,5 @@ side="CLIENT"
 1. 联网拉取各平台 Jade/WTHIT API jar（Modrinth/CurseForge），先跑一次
    `./gradlew :<m>:compileJava --offline` 确认能解析（或放入 `local-repo/`）。
 2. 按 `scripts/mirror.sh new` 铺 `jade/` 包，`build.gradle`/`mods.toml` 定点合入。
-3. 六平台 `clean compileJava` + `:common:test` + `check-version.sh`。
+3. 八平台 `clean compileJava` + `:common:test` + `check-version.sh`。
 4. 真机回归：装 Jade → 看掉落箱子/回收台；不装 → 无影响。

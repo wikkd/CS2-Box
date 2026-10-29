@@ -122,7 +122,7 @@ Forge 三平台（`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`）自 **2.0.0 �
 ### 4.10 专用服务器 dist 安全（入口类客户端类型隔离）🔴
 平台入口类 `CsgoBox`（`EVENT_BUS.register(this)` 或生命周期反射的扫描对象）**编译产物常量池不得引用任何 `net.minecraft.client` 类型**——专用服务器上 NeoForge 的 `RuntimeDistCleaner` 会直接抛 `Attempted to load class ... for invalid dist DEDICATED_SERVER`（2.0.1 线上事故：Cloth Config 注册 lambda 虽包在 `Dist.CLIENT` 守卫内，但 javac 把它编进主类合成方法，事件总线反射解析方法签名时加载了 `Screen`，issue #2）。
 
-- 门禁：六平台 `checkDistSafety` Gradle 任务（挂 `check`，随 `compileJava` 产物扫描），命中即失败并提示 `config/ClothConfigHook` 持有类模式。
+- 门禁：七平台（NeoForge 三 + Forge 四）`checkDistSafety` Gradle 任务（挂 `check`，随 `compileJava` 产物扫描），命中即失败并提示 `config/ClothConfigHook` 持有类模式；`fabric_1_21_1` 经 `fabric.mod.json` entrypoint 结构天然隔离，无此任务。
 - 审查点：
   - 客户端类型引用（Screen、IConfigScreenFactory、ConfigScreenFactory 等）是否都收敛在「专用服务器永不加载」的类里：`Dist.CLIENT` 嵌套类（`ClientModEvents`）或 `config/ClothConfigHook` 这类持有类？
   - **dist 守卫只防执行、防不住签名扫描**——新增注册逻辑不要把客户端 lambda 写进入口主类，哪怕外面套了 `if (dist == CLIENT)`。
@@ -171,7 +171,7 @@ Forge 三平台（`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`）自 **2.0.0 �
 - [ ] 跨平台改动已在 **所有活跃平台**同步（纯新增走 `mirror.sh`，适配差异走定点合入，未整文件覆盖 `v26_2`）（§4.2）。
 - [ ] 若动版本号：四处同步 + `mods.toml` 保留 `${mod_version}`（§4.3）。
 - [ ] 若动 `AnimRenderOps`：三平台（NeoForge）签名一致、era 头正确（§4.4）。
-- [ ] 配置项六平台 + common 同步，`CONFIG` 无 null 守卫（§4.5）。
+- [ ] 配置项八平台 + common 同步，`CONFIG` 无 null 守卫（§4.5）。
 - [ ] TACZ 代码包在 `isLoaded("tacz")` 内（§4.6）。
 - [ ] 不信任客户端数值，服务端权威 + 复核（§4.7）。
 - [ ] 渲染状态无泄漏，26.2 HUD 走 `HudVisibility`（§4.8）。

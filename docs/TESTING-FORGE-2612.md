@@ -90,7 +90,7 @@ forge_26_1_2 = **MinecraftForge 26.1.2-64.1.0**（Java 25，ForgeGradle 7），
 
 首次启动会生成 `forge_26_1_2/run/`（含 `config/`、`mods/`、`saves/`）。
 如需把产物当正式环境验证，可另建 Forge 26.1.2 实例并把
-`forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.0.jar` 放入 `mods/`。
+`forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.3.jar` 放入 `mods/`。
 建议删掉旧的 `config/csgobox.toml` 与 `config/csbox/` 后再测，避免脏数据。
 
 > **同步开发状态**：forge 模块自 2.0.0 线起与 `v26_1_2` 保持特性同步（同一

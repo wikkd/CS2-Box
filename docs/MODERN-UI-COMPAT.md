@@ -33,7 +33,7 @@ PoseStack + TACZ 枪械 3D）。本文件记录与 **Modern UI**（`modernui`，
 因此把 `modernui` 加入 2D 降级列表会**不必要地牺牲 3D 观感**，与“尽可能保持 3D”
 的目标相反。
 
-## 实现（六平台同步，各平台 `utils/AnimRenderOps.java`）
+## 实现（八平台同步，各平台 `utils/AnimRenderOps.java`）
 
 - `supports3D()` 仍只对 shader 模组返回 false：`!isShaderModActive()`。
 - `isShaderModActive()` 保持 `iris || oculus`，**不包含 modernui**；注释写明决策与

@@ -142,13 +142,13 @@ Archived EOL versions (1.21.0/3/4/5/8/10/11) keep using their existing release j
 
 **Requirements**
 
-| Requirement | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 | forge_1_20_1 |
-|---|---|---|---|---|
-| Java JDK | 21 | 25 (`--enable-preview`) | 25 (`--enable-preview`) | 17 |
-| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 | 1.20.1 |
-| NeoForge / Forge | 21.1.248+ | 26.1.2.95 / 26.2.0.59 (loader 11+) | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 | MinecraftForge 47.4.22 |
-| Gradle | 9.5.1 (wrapper downloads it) | same | same | same |
-| NeoGradle / ForgeGradle | 7.1.38 | same | ForgeGradle 7.0.31/7.0.34 | ForgeGradle [7.0.17,8) |
+| Requirement | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 | forge_1_20_1 / forge_1_18_2 | fabric_1_21_1 |
+|---|---|---|---|---|---|
+| Java JDK | 21 | 25 (`--enable-preview`) | 25 (`--enable-preview`) | 17 | 21 |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 | 1.20.1 / 1.18.2 | 1.21.1 |
+| NeoForge / Forge / Fabric | 21.1.248+ | 26.1.2.95 / 26.2.0.59 (loader 11+) | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 | MinecraftForge 47.4.22 / 40.3.0 | Fabric Loader 0.16.14 + Fabric API 0.116.17+1.21.1 |
+| Gradle | 9.5.1 (wrapper downloads it) | same | same | same | same |
+| NeoGradle / ForgeGradle / Loom | 7.1.38 | 7.1.38 | ForgeGradle 7.0.31/7.0.34 | ForgeGradle 7.0.31 | Loom 1.17.21 |
 
 > Internet access is needed for the first build (NeoForged userdev and dependencies).
 
@@ -159,11 +159,12 @@ Archived EOL versions (1.21.0/3/4/5/8/10/11) keep using their existing release j
 git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 
-# 2. Pick the active version (default 26.1.2): edit gradle.properties
-#    active_versions=26.1.2   # options: 1.21.1 / 26.1.2 / 26.2 / forge-26.1.2
+# 2. Pick the active version (default 1.21.1 for direct IDEA import; CI and run configs pass -P explicitly): edit gradle.properties
+#    active_versions=1.21.1
+#    options: 1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 
 # 3. Build the jar for the active platform
-./gradlew :v26_1_2:jar        # output: v26_1_2/build/libs/csgobox-26.1.2-2.0.1.jar
+./gradlew :v26_1_2:jar        # output: v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar
 
 # 4. Launch the dev client (downloads and injects NeoForge into run/)
 ./gradlew :v26_1_2:runClient
@@ -280,10 +281,11 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 | Document | Contents |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | Player-facing introduction and gameplay guide |
+| [docs/PLAYER-CHANGELOG-2.0.3.md](./docs/PLAYER-CHANGELOG-2.0.3.md) | Player-facing 2.0.3 release notes |
 | [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | Player-facing 2.0.2 release notes |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | Full installation and first-run steps |
 | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) | TOML / JSON config reference (all v2.0.1 fields + [JSON Schema](./docs/box-schema/box.schema.json)) |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Six-platform module topology, core abstractions, data flow, GUI rendering pipeline (legacy/decoupled eras), terminal subsystem and engineering gates |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Eight-platform module topology, core abstractions, data flow, GUI rendering pipeline (legacy/decoupled eras), terminal subsystem and engineering gates |
 | [docs/PLATFORM-APIS.md](./docs/PLATFORM-APIS.md) | Cross-platform API diff matrix + themed development guide (incl. the AnimRenderOps facade chapter) |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local dev setup, build commands, datagen |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Roadmap: candidate directions, priorities, dependencies and rejected ideas |
@@ -292,6 +294,8 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 | [docs/BIOME-INTEGRATION.md](./docs/BIOME-INTEGRATION.md) | Make the arms-dealer cabin generate in modded biomes/villages (pure data + `add-biome.py`) |
 | [docs/SHADER-COMPAT.md](./docs/SHADER-COMPAT.md) | Iris/Oculus shader compat strategy and regression checklist (3D preview falls back to 2D) |
 | [docs/TESTING.md](./docs/TESTING.md) | NeoForge GameTest guide |
+| [docs/PORTING-fabric.md](./docs/PORTING-fabric.md) | Fabric 1.21.1 porting notes (dev-environment limits and TACZ adaptation) |
+| [docs/PORTING-forge-1182.md](./docs/PORTING-forge-1182.md) | Forge 1.18.2 porting notes (API degradations and missing structures) |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history |
 
 <details>
@@ -350,15 +354,20 @@ Open them on [GitHub Issues](https://github.com/wikkd/CS2-Box/issues). Bug repor
 
 ## Project Status
 
-- **Current release**: `2.0.1` (merging "compat batch A + crate config power + odds finishing" into one release, published in sync across all 6 platforms with a shared `mod_version`)
-- **In development**: none (next version line to be planned)
+- **Current release**: `2.0.3` (published in sync across the six released platforms — NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.20.1 / 26.1.2 / 26.2 — with a shared `mod_version`)
+- **In development**: platform expansion batch (new `fabric_1_21_1` and `forge_1_18_2` modules plus Superb Warfare zero-dependency 3D preview, already in-tree and wired into the 8-platform CI; ships with the next release — see [CHANGELOG.md](./CHANGELOG.md) `[Unreleased]`)
 
 <details>
 <summary><strong>Recent progress</strong> (see <a href="./CHANGELOG.md">CHANGELOG.md</a>)</summary>
 
+- **Platform expansion (unreleased)**: `fabric_1_21_1` (Loom + TaCZ: Refabricated inspect/3D gun rendering, JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu all wired) and `forge_1_18_2` (no GuiGraphics, all GUI rewritten on PoseStack, data-level TACZ integration) in-tree, 8-platform CI compile + smoke tests
+- **Superb Warfare compat (unreleased)**: zero-dependency namespace gating; `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` render SBW guns as real 3D models via FIXED display context, plus `compat-packs/superb-warfare-pack/`
+- **2.0.3**: cross-platform consistency pass (bulk result shard capacity and per-packet guards unified), `/csbox editor` embedded `config/csbox` import (`#pack=`), box-editor workspace sharing / EV panel / apply-to-game, Cloth Config lambda dedicated-server crash fix (issue #2) + `checkDistSafety` gate
+- **2.0.2**: terminal `restock_minutes` removed, bulk opening trimmed by remaining quota, sync packet capacity guards, pity progress made visible in UI, unknown-config-field warnings + `format_version`, tooltip caching and line caps
 - **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points
 - **2.0.0**: bulk opening restored + UI polish (no confirmation screen, scrollable "show all" grid), terminal negotiation sessions (random wear + wear-point penalty for undamageable items), arms-dealer cabin world structure, JEI odds category, `blurRadius` background blur
 - **1.0.6**: containerized layout, per-item visual baseline, 3-tier design tokens, dynamic box item, tutorial system, opening leaderboard, TACZ inspect viewport, v26_2 platform
+- **mcshared cross-era source root**: classes byte-identical across platforms and depending only on stable MC APIs are sunk into `common/src/main/mcshared/` and compiled directly to dedupe
 - **AnimRenderOps facade**: all rendering from 6 screens + 3 helpers funneled through the per-platform `utils/AnimRenderOps.java` (13 public ops), zero raw draw calls left, signature consistency guarded by `scripts/check-animops-drift.sh`
 - **forge_26_2 caught up**: migrated from `forge_26_1_2` as baseline, 5-platform `clean compileJava` all green, gates 7/7 PASS
 - **forge_1_20_1 backport**: MC 1.20.1 release line (SRG remap, SimpleChannel networking, NBT storage, JEI/REI integration)

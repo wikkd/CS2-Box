@@ -1,6 +1,7 @@
 # CS2-Box 路线图
 
-> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.2**（2026-09-17 发布，六平台同步，CI 全绿）。
+> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.3**（2026-10-18 发布，八平台同步，CI 全绿）；
+> `fabric_1_21_1` / `forge_1_18_2` 已入树（八平台 CI 矩阵），随下一版本首发。
 > 每个方向给出目标、复用点、影响面与前置条件；**不承诺排期**，由维护者按收益/成本取舍。
 > 落地进度的权威记录仍是 `CHANGELOG.md`，本文件只做方向目录与决策依据。
 
@@ -8,18 +9,20 @@
 
 ## 0. 现状快照
 
-### 0.1 平台矩阵（六平台，`docs/ARCHITECTURE.md`）
+### 0.1 平台矩阵（八平台，`docs/ARCHITECTURE.md`）
 
 | 平台 | 加载器 | MC | Java | 备注 |
 |---|---|---|---|---|
-| `v1_21_1` | NeoForge | 1.21.1 | 21 | legacy 渲染；TACZ / JEI / REI / EMI / Jade / WTHIT / TOP / Create |
+| `v1_21_1` | NeoForge | 1.21.1 | 21 | legacy 渲染；TACZ / JEI / REI / EMI / Jade / WTHIT / TOP / Create / SBW 门控 |
 | `v26_1_2` | NeoForge | 26.1.2 | 25+preview | decoupled 渲染（跨平台基准）；JEI/REI + Jade/WTHIT/TOP |
 | `v26_2` | NeoForge | 26.2 | 25+preview | decoupled 渲染；JEI/REI + Jade/WTHIT/TOP |
-| `forge_1_20_1` | Forge | 1.20.1 | 17 | legacy；TACZ / JEI / REI / EMI / Jade / WTHIT / TOP / Create |
+| `forge_1_20_1` | Forge | 1.20.1 | 17 | legacy；TACZ / JEI / REI / EMI / Jade / WTHIT / TOP / Create / SBW 门控 |
 | `forge_26_1_2` | Forge | 26.1.2 | 25+preview | decoupled；WTHIT（唯一信息显示） |
 | `forge_26_2` | Forge | 26.2 | 25+preview | decoupled；WTHIT |
+| `fabric_1_21_1` | Fabric | 1.21.1 | 21 | Loom；TaCZ: Refabricated / JEI / REI / EMI / Jade / WTHIT / Cloth / Mod Menu；SBW 门控 |
+| `forge_1_18_2` | Forge | 1.18.2 | 17 | 无 GuiGraphics（全 PoseStack）；JEI / REI / Jade / Cloth；TACZ 数据级联动 |
 
-> 已知缺口（详见方向 RP-06 / RP-07）：`forge_26_1_2` / `forge_26_2` 无 JEI/REI（Modrinth 无 26.x Forge 构建）；26.x 无 Create 适配（上游无构建）。
+> 已知缺口（详见方向 RP-06 / RP-07）：`forge_26_1_2` / `forge_26_2` 无 JEI/REI（Modrinth 无 26.x Forge 构建）；26.x 无 Create 适配（上游无构建）；`fabric_1_21_1` 无 Create/TOP、`forge_1_18_2` 无 EMI/WTHIT/TOP（上游无对应构建）。
 
 ### 0.2 已交付能力（截至 2.0.x）
 
@@ -29,6 +32,8 @@
 - **联动**：JEI/REI/EMI 概率面板、Jade/WTHIT/TOP、TACZ 枪械（变体 / NBT / 检视）、KubeJS 事件（开箱 / 终端购买 / 实体掉落 / 拆解）、**Create**（机械手开箱 + 拆解台自动化，反射零编译依赖）
 - **安全与工程**：CSPRNG 种子（48 位 LCG 不外泄约定）、`OpenBlockGuard` 服务端权威冷却、common 纯业务约束（`checkCommonArchitecture`）、AnimRenderOps 渲染门面（漂移守护）、GitHub Actions 门禁（见 `docs/CI-PROTECTION.md`）
 - **2.0.2 体检批次**：终端 `restock_minutes` 整体移除、批量开箱按每玩家剩余额度裁剪、拆解台大额产出流转、同步包容量护栏、保底进度 UI 可见化、配置未知字段警告 + `format_version`、tooltip 缓存与行数上限；CI 补齐 Create compileOnly 依赖供给与平台漂移 baseline 修复
+- **2.0.3 收口批次**：跨平台一致性（批量分片容量与单包护栏统一）、`/csbox editor` 配置内嵌导入（`#pack=`）+ box-editor 工作区分享 / EV 面板 / 应用到游戏、Cloth lambda 专用服务器崩溃修复（issue #2）+ `checkDistSafety` 门禁、`mcshared` 跨时代源码根下沉
+- **平台扩张批次（未发布）**：`fabric_1_21_1` / `forge_1_18_2` 入树（八平台 CI 全量编译 + 冒烟）、Superb Warfare 零依赖 3D 预览（`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`）、村民经济防套利修复（key1 双输入报价、铁收购锚定 key0）
 
 ### 0.3 硬边界（历史决策，勿翻案）
 
@@ -53,7 +58,7 @@
 | RP-07 | JEI/REI 26.x Forge 补齐 | 联动 | S | **上游 Modrinth 构建** | 中（平台一致性） |
 | RP-08 | 权限/付费接范例（LuckPerms 等） | 运营 | S | 无（文档 + 可选示例语句） | 中 |
 | RP-09 | 统计与排行榜、稀有掉落广播 | 运营 | M | 无（复用 BoxConstraintTracker / 成就统计） | 中高：服主口碑 |
-| RP-10 | 六平台 CI + 发布自动化 | 工程 | M | 无（已有 CI 基础） | 高：省人力 |
+| RP-10 | 发布自动化（八平台 CI 矩阵已就位） | 工程 | S–M | 无（CI 矩阵已覆盖 8 平台） | 高：省人力 |
 | RP-11 | 军械库整合包 v2 落地 | 长期主线 | L | FTB Quests 等外挂模组；`docs/superpowers/specs/2026-09-12-...` 草案 | 高（面向整合包发布） |
 
 ---
@@ -67,8 +72,8 @@
 - **复用点**：`common/box/GradeMapCache`（物品池）、`BoxGrades`（档位序）、grade 印记校验（拆解台资格逻辑）、`PriceTable`（可选：合成产物定价提示）
 - **形态**：优先 Crafting（shaped 9 格 × N）或专属「升级台」独立交互界面——需遵守「不新增方块」约束，若选界面则挂在现有方块/手持物品上（类似终端机入口），或纯合成配方
 - **配置**：`config/csbox/*.json` 或单独 `_tradeups.json`：档位、所需数量 N（默认 10，可配 5/10）、目标档、是否允许跨箱（默认同箱池内）
-- **影响面**：common（规则 + 单测）+ 六平台（注册/配方/界面各一处）；可用事件 hook（`TradeUpAttemptEvent`）留给 KubeJS
-- **验证**：`common` 单测（N 守恒、同档校验、权重抽取、保底不参与）、六平台 compile、JEI 配方页展示
+- **影响面**：common（规则 + 单测）+ 八平台（注册/配方/界面各一处）；可用事件 hook（`TradeUpAttemptEvent`）留给 KubeJS
+- **验证**：`common` 单测（N 守恒、同档校验、权重抽取、保底不参与）、八平台 compile、JEI 配方页展示
 
 ### RP-02 · 开箱图鉴 / 收集册
 
@@ -76,7 +81,7 @@
 
 - **复用点**：`BoxOpenedEvent`（已存在）、成就/统计计数、`CsLookItemScreen` 3D 展示（点击图鉴条目直接检视）
 - **配置**：`enabled` 开关 + 完成度奖励表（JSON）
-- **影响面**：common（存储 + 查询逻辑）+ 六平台（界面）。存储内存态（与 `BoxConstraintTracker` 同生命周期）或写入玩家 NBT/能力（每平台能力已有先例）
+- **影响面**：common（存储 + 查询逻辑）+ 八平台（界面）。存储内存态（与 `BoxConstraintTracker` 同生命周期）或写入玩家 NBT/能力（每平台能力已有先例）
 - **风险**：跨服/重启持久化口径需先定（能力 vs 内存）；大图鉴同步包体需分页
 
 ### RP-03 · 限时活动箱时间窗
@@ -85,21 +90,21 @@
 
 - **配套**：可选 `serverEvents` 全服加成——全局掉落率/权重倍率，按日期窗口生效（如周末双倍），服务端权威
 - **复用点**：`enabled/requires` 门控机制、`BoxJsonLoader` 校验、box-editor（新增两个字段）
-- **影响面**：common（schema 校验 + 时间判定，纯 JDK `Instant`）+ 六平台（门控接线 + 界面文案）
+- **影响面**：common（schema 校验 + 时间判定，纯 JDK `Instant`）+ 八平台（门控接线 + 界面文案）
 
 ### RP-04 · 掉落源扩展
 
 **目标**：箱子掉落从「实体击杀」扩展到可配置来源：`source: entity | fishing | chest|structure_loot`（钓鱼钓到箱 / 地牢宝箱开出箱 / 结构战利品表注入）。
 
 - **复用点**：`BoxEntityDropEvent` → 新增 `BoxFishedEvent` / `BoxLootTableEvent`（或统一 `BoxDropSourceEvent`），RNG 纪律与现有实体掉落一致（CSPRNG 派生、可取消、可调概率）
-- **影响面**：common（事件定义 + drop 概率表扩展）+ 六平台（钓鱼事件监听 / loot 注入各一处）
+- **影响面**：common（事件定义 + drop 概率表扩展）+ 八平台（钓鱼事件监听 / loot 注入各一处）
 
 ### RP-05 · KubeJS 事件扩充
 
 **目标**：补齐运营向事件：`PityTriggerEvent`（保底触发，可广播/通知）、`GradeRolledEvent`（掷骰结果只读，供统计/广播）、`TradeUpAttemptEvent`（配合 RP-01）、`DropRateEvent`（全局掉落率查询/覆盖）。
 
 - **复用点**：现有事件总线模式与 `docs/KUBEJS-EVENTS.md`
-- **影响面**：common（事件类）+ 六平台（发布点接线，注意 1.20.1 Forge 与 NeoForge 总线差异，参照 `BoxOpeningEvent.BUS` 既有处理）
+- **影响面**：common（事件类）+ 八平台（发布点接线，注意 1.20.1 Forge 与 NeoForge 总线差异，参照 `BoxOpeningEvent.BUS` 既有处理）
 
 ### RP-06 · Create 26.x 适配（前置：上游）
 
@@ -131,12 +136,12 @@
 - 稀有掉落广播：开出 restricted / classified 时全服消息（可配置开关/频道/文案，走 `BoxOpenedEvent` 不加塞 RNG）
 
 - **复用点**：`PityTracker`、成就统计、`OpenedBoxTrigger`、既有命令框架
-- **影响面**：common（统计聚合）+ 六平台（命令/广播接线）
+- **影响面**：common（统计聚合）+ 八平台（命令/广播接线）
 - **注意**：广播内容不得含 `serverSeed` / 可复现随机流信息（遵守种子纪律）
 
-### RP-10 · 六平台 CI + 发布自动化
+### RP-10 · 发布自动化（八平台 CI 矩阵已就位）
 
-**目标**：现有 `build.yml` 矩阵之外：`forge_1_20_1` 平台加入 matrix（当前以本地构建为主）；发布脚本（Modrinth/CurseForge 上传 + 自动生成 playtest jar/`-srg.jar` 命名）。
+**目标**：`build.yml` 八平台矩阵已就位（compileJava + 冒烟 + jar，2026-10 收口）；剩余为发布自动化——Modrinth / CurseForge 上传、`-srg.jar` 产物命名与发布说明聚合。
 
 - **复用点**：`docs/CI-PROTECTION.md`、`docs/RELEASE.md`
 - **影响面**：`.github/workflows/` + `scripts/`，无运行时改动

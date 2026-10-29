@@ -1,22 +1,22 @@
-<!-- regenerated: 2026-09-10 for 2.0.0 (six-platform release) -->
+<!-- regenerated: 2026-10-30 for 2.0.3 (eight-platform; fabric_1_21_1 / forge_1_18_2 included) -->
 # CS2-Box 架构
 
-> 六平台 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流、渲染管线与工程门禁。
-> 当前版本 **`2.0.0`**（六平台同步正式发布）。
+> 八平台 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流、渲染管线与工程门禁。
+> 当前版本 **`2.0.3`**；`fabric_1_21_1` / `forge_1_18_2` 两个新平台已入树并接入八平台 CI，随下一版本首发。
 
 ## 1. 项目概览
 
-CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO 的开箱机制复刻进 Minecraft。
-所有与 MC 无关的纯业务逻辑都在 `common/` 中，六个平台模块只承担入口注册、Screen 实现、网络接线、
+CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，把 CS:GO 的开箱机制复刻进 Minecraft。
+所有与 MC 无关的纯业务逻辑都在 `common/` 中，八个平台模块只承担入口注册、Screen 实现、网络接线、
 能力注册与渲染适配等版本敏感工作。
 
 **关键事实**：
 
-- 模组 ID：`csgobox`；当前版本 `2.0.0`；License MIT
-- **六平台矩阵**：NeoForge `1.21.1` / `26.1.2` / `26.2` + Forge `1.20.1` / `26.1.2` / `26.2`，共享同一 `mod_version`
-- Java toolchain：`v1_21_1` 用 21；`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 用 25 + `--enable-preview`；
-  `forge_1_20_1` 用 17
-- 共享资源：`common/src/main/resources/` 由六个平台通过
+- 模组 ID：`csgobox`；当前版本 `2.0.3`；License MIT
+- **八平台矩阵**：NeoForge `1.21.1` / `26.1.2` / `26.2` + Forge `1.20.1` / `26.1.2` / `26.2` / `1.18.2` + Fabric `1.21.1`，共享同一 `mod_version`
+- Java toolchain：`v1_21_1` / `fabric_1_21_1` 用 21；`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 用 25 + `--enable-preview`；
+  `forge_1_20_1` / `forge_1_18_2` 用 17
+- 共享资源：`common/src/main/resources/` 由八个平台通过
   `srcDir project(':common').file('src/main/resources')` 引入（平台侧 `duplicatesStrategy = EXCLUDE`，
   平台 srcDir 在前、同名文件平台副本优先）
 - 依赖方向约束：**`common/` 不得直接 `import net.minecraft.*`、`net.neoforged.*` 或 `net.minecraftforge.*`**
@@ -39,39 +39,49 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
 |  Java 25 + preview   |  |  Java 25 + preview   |  |  Java 17             |
 |  era: decoupled      |  |  era: decoupled      |  |  era: legacy         |
 +----------------------+  +----------------------+  +----------------------+
++----------------------+  +----------------------+
+|   fabric_1_21_1/     |  |    forge_1_18_2/     |
+|  Fabric Loader 0.16.14  |  Forge 1.18.2-40.3.0  |
+|  Java 21             |  |  Java 17             |
+|  era: legacy         |  |  era: legacy         |
++----------------------+  +----------------------+
               ↑                      ↑                      ↑
               └──────── common/ (纯 Java 业务逻辑 + 共享资源) ────────┘
 ```
 
-依赖关系：六个平台 → `common`；`common` 不依赖任何平台。`active_versions` 决定单次构建哪个平台。
+依赖关系：八个平台 → `common`；`common` 不依赖任何平台。`active_versions` 决定单次构建哪个平台。
 
-### 2.1 平台规模（2026-09-10 实测）
+### 2.1 平台规模（2026-10-30 实测）
 
 | 模块 | main Java 文件 | main LOC | 平台测试 | 备注 |
 |---|---:|---:|---:|---|
-| `common/` | 29 | 3884 | 25 个测试类 / 210 用例 | 纯 JDK，无 MC 依赖 |
-| `v1_21_1/` | 100 | 17831 | `PlatformSmokeTest` | 含 TACZ compat + JEI/REI/EMI + Jade/WTHIT/TOP |
-| `v26_1_2/` | 95 | 15532 | `PlatformSmokeTest` | **跨平台改动基准模块**；JEI/REI + Jade/WTHIT/TOP |
-| `v26_2/` | 96 | 15508 | — | decoupled API 适配；同 v26_1_2 查查看器套件 |
-| `forge_26_1_2/` | 83 | 14608 | `PlatformSmokeTest` | Forge 侧基准；WTHIT（唯一信息显示） |
-| `forge_26_2/` | 84 | 14634 | `PlatformSmokeTest` | 以 `forge_26_1_2` 为基准迁移；WTHIT |
-| `forge_1_20_1/` | 102 | 17223 | `PlatformSmokeTest` | 三大重写区；TACZ compat + JEI/REI/EMI + Jade/WTHIT/TOP |
+| `common/` | 40 | 6055 | 37 个测试类 / 342 用例 | 纯 JDK，无 MC 依赖（mcshared 另有 5 类跨平台直编） |
+| `v1_21_1/` | 104 | 19976 | `PlatformSmokeTest` | TACZ compat + JEI/REI/EMI + Jade/WTHIT/TOP + Create + SBW 门控 |
+| `v26_1_2/` | 96 | 16707 | `PlatformSmokeTest` | **跨平台改动基准模块**；JEI/REI + Jade/WTHIT/TOP |
+| `v26_2/` | 97 | 16736 | `PlatformSmokeTest` | decoupled API 适配（`HudVisibility`）；同 v26_1_2 查看看器套件 |
+| `forge_26_1_2/` | 84 | 15812 | `PlatformSmokeTest` | Forge 侧基准；WTHIT（唯一信息显示） |
+| `forge_26_2/` | 85 | 15854 | `PlatformSmokeTest` | 以 `forge_26_1_2` 为基准迁移；WTHIT |
+| `forge_1_20_1/` | 105 | 19279 | `PlatformSmokeTest` | 三大重写区；TACZ + JEI/REI/EMI + Jade/WTHIT/TOP + Create + SBW 门控 |
+| `fabric_1_21_1/` | 103 | 19474 | `PlatformSmokeTest` | Loom 1.17.21；TaCZ: Refabricated + JEI/REI/EMI + Jade/WTHIT + SBW 门控 |
+| `forge_1_18_2/` | 94 | 17309 | `PlatformSmokeTest` | 无 GuiGraphics（GUI 全 PoseStack 重写）；TACZ 数据级联动（编译期签名桩） |
 
 ### 2.2 文件存在性差异矩阵
 
-| 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
-|------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|
-| `Networking`（Forge `SimpleChannel`） | — | — | — | ✅ | ✅ | ✅ |
-| TACZ compat（2 文件 + 检视屏） | ✅ | — | — | — | — | ✅ |
-| `HudVisibility`（26.2 无 `Options.hideGui`） | — | — | ✅ | — | ✅ | — |
-| JEI（4 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| REI（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| EMI（4 文件） | ✅ | — | — | — | — | ✅ |
-| Jade（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| WTHIT（3 文件 + `waila_plugins.json`） | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| TOP（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| `gui/pip/`（PIP 3D 渲染器） | — | ✅ | ✅ | ✅ | ✅ | — |
-| `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 | fabric_1_21_1 | forge_1_18_2 |
+|------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|:-------------:|:------------:|
+| `Networking`（Forge `SimpleChannel`） | — | — | — | ✅ | ✅ | ✅ | —（Fabric networking API） | ✅ |
+| TACZ compat | ✅ | — | — | — | — | ✅ | ✅（TaCZ: Refabricated） | ⚠️ 数据级联动（编译期签名桩） |
+| `HudVisibility`（26.2 无 `Options.hideGui`） | — | — | ✅ | — | ✅ | — | — | — |
+| JEI（4 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| REI（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| EMI | ✅ | — | — | — | — | ✅ | ✅ | ⚠️ `BoxEmiReload` 守卫桩 |
+| Jade（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| WTHIT（3 文件 + `waila_plugins.json`） | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| TOP（3 文件） | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| `gui/pip/`（PIP 3D 渲染器） | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| Create（拆解台自动化 + 机械手开箱） | ✅ 4 文件 | — | — | — | — | ✅ 4 文件 | ⚠️ `CreatePlatformItems` 反射降级 | ⚠️ 同左 |
+| SBW FIXED 3D 门控（`isSuperbWarfareItem`） | ✅ | —（SBW mc 范围外） | — | — | — | ✅ | ✅ | —（SBW mc 范围外） |
+| `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > JEI / REI 在 `forge_26_1_2` / `forge_26_2` 缺失是**已知待办**（Modrinth 无 JEI 26.x Forge 构建），非缺陷。
 
@@ -107,6 +117,10 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
   干跑（`/csbox validate`）、解析全部新字段；损坏文件**保留原位**（`/csbox info error` 持续报告）
 - **`GradeGroup` / `RandomItem`**（平台）— 5 档物品 + 加权随机选择（用 `long` 累加总权重避免溢出）。
   **v2.0.1**：`GradeGroup` 新增平行 `itemWeights` 列表（档内物品权重，默认全 1 = 均匀；0 = 禁用条目）
+- **`PriceTable` / `PriceRange` / `PriceTableRegistry`**（v2.0.1）— 全局价格表 `config/csbox/_prices.json` 的纯函数解析 / 固定价与 `[min, max]` 区间价值对象（`sample(IntUnaryOperator)` 服务端每次报价/拆解采样）/ 跨平台持有者（拆解台按 `recycleYield` = 表价 × 90% 向上取整计价；表外未定价物品不可拆解）
+- **`LegacyPriceMigration`**（v2.0.1）— 旧版物品级内联 `price` 一次性迁移进 `_prices.json`（幂等，`loadAll` / reload 前执行）
+- **`QuoteCaps`**（v2.0.1）— 报价数量上限常量
+- **`EditorPack` / `EditorPackStats`**（v2.0.3）— `/csbox editor` 链接内嵌（Gson 清单 → zlib deflate → base64url，注册表 id + 坏文件原文随包，两段回退）与本地配置统计（箱子数 / 物品条目数 / 未定价 id 数）
 
 **物品 schema**（v2.0.1 扩展）：`{ "id" | "tag": "#..." | "loot_table": "...", "count": 1 | [min,max],
 "weight": N, "enchant": true | {id,level}, "components": {...} }`。`#tag` 加载时展开为成员物品；
@@ -125,6 +139,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
   **v2.0.1**：支持档内加权（`fromWeighted` / `Weighted<T>` / `empty()`），`pickRandom` 按权重选取
 - **`BoxConstraintTracker`**（v2.0.1）— 开箱约束内存追踪（每玩家每箱开箱计数 / 最后开箱 tick，
   驱动 `max_per_player` 与 `cooldown_seconds`；重启清零，文档注明）
+- **`PityPolicy` / `PityTracker`**（v2.0.1）— 开箱保底（服务端权威；2.0.2 起进度在 UI 可见化）
 - **`TerminalStockManager`**（v2.0.1，`common/terminal/`）— 终端全局库存 + 补货定时器（内存态）
 - **`AnimationStrip`** — 滚动条动画的纯数学部分（tick → 位置插值）
 - **`OddsCalculator`** — 开箱概率计算（JEI / REI 展示与服务端同口径）
@@ -173,7 +188,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
 - **钥匙/箱子扣减范围（设计决策）**：开箱（单开与批量）时服务端 `tryConsumeKeys` / `tryConsumeBoxes`
   扫描**整个原版 `PlayerInventory`**——主背包 36 格（含快捷栏）+ 护甲 4 格 + 副手 1 格，
   客户端 `hasKeyAnywhere` 镜像同样覆盖；**明确不支持模组扩展槽位（Curios / Trinkets 等）**，
-  钥匙放在任何原版栏位均可被扣到（六平台行为一致）。
+  钥匙放在任何原版栏位均可被扣到（八平台行为一致）。
 
 ### 3.5 终端机模型（`common/terminal/`）
 
@@ -186,6 +201,15 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge 模组，把 CS:GO �
 ### 3.6 平台薄壳与适配
 
 common 无 `platform/` 接口层（2026-08 重构中移除），平台模块直接承载注册、网络、GUI 等版本敏感工作。
+
+**`common/src/main/mcshared/`（2026-09-27 新增）— 跨时代共享的 MC 绑定源码根**：各平台副本逐字节一致
+（包名归一化后哈希相同）、只依赖 1.20.1~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）
+的类，经各平台 `srcDir project(':common').file('src/main/mcshared')` 直编（`fabric_1_21_1` 同样接入；
+`forge_1_18_2` 排除 `mcshared/wthit/**`，1.18.2 无 WTHIT 构建）。当前 5 个类：`BulkOpenResult` /
+`PacketValidation` / `TerminalOfferItems` / `TerminalRoundData` / wthit `RecyclerBlockProvider`。
+`checkCommonArchitecture` 只扫 `src/main/java`/`src/test/java`，不覆盖该根。**下沉新文件前必须先验证
+各平台副本归一化哈希一致**；引用平台类型（如 `CsgoBox.CONFIG`、平台方块类）的类暂不下沉
+（`CsboxClothConfigScreen` / `CsgoBoxWthitPlugin`，需注入式重构）。
 
 **保留在平台、不下沉**（与 MC 强耦合）：packet record 本体与 StreamCodec、`tryConsumeKeys` /
 `tryConsumeBoxes`（inventory / EquipmentSlot / BuiltInRegistries）、`CsboxPlayerData`、
@@ -213,6 +237,10 @@ sequenceDiagram
 **核心安全属性**：客户端在整条链路中**只渲染动画**，不参与任何随机决策。`requestId` 仅用于匹配
 客户端动画结果，服务端从不采信。扣减（钥匙 / 箱子）与 RNG 全部在服务端 packet handler 中完成。
 
+开箱约束（`BoxConstraintTracker`：`max_per_player` / `cooldown_seconds`）与保底（`PityPolicy` /
+`PityTracker`）在服务端 roll 链路中介入。packet 编排已抽服务层：26.x 四平台为
+`service/OpenService`（+ `TerminalBuyService`），其余四平台为 `packet/BoxOpenExecutor`（2.0.3 重构）。
+
 **批量开箱**：`PacketCsgoBulkProgress` 走异步线程池 `BULK_COMPUTE_POOL`（2 daemon 线程）预计算，
 回主线程 finalize 并扣减；`bulkOpenCount` 上限由服务端权威截断，总览屏只做估算显示。
 
@@ -238,6 +266,8 @@ sequenceDiagram
 > `pushPose` + `mulPoseMatrix`），与 26.x 的 `Matrix4fStack` 方案不同。
 > Forge 26.x 的 PIP 保持 **Forge 欧拉角方案**（`event.register(new Icon3DRenderer())` +
 > `getRenderState().addPicturesInPictureState`），与 NeoForge 26.2 的 Quat / Supplier 方案不同。
+> `fabric_1_21_1` / `forge_1_18_2` 同为 `era: legacy`（`forge_1_18_2` 无 GuiGraphics，全部渲染
+> 原语吸收进 AnimRenderOps，签名与 v1_21_1 家族一致）。
 
 ### 5.2 `AnimRenderOps` 渲染门面
 
@@ -258,8 +288,15 @@ sequenceDiagram
 > `gunModelCenter` 是 `v1_21_1` 独有的 TACZ op（依赖 `compileOnly` 的 TACZ），
 > 漂移检查脚本对它单独豁免。
 >
-> **新增原语必须三平台同步补**（`v1_21_1` / `v26_1_2` / `v26_2`），否则
-> `scripts/check-animops-drift.sh` 失败——该脚本以 `v1_21_1` 为签名基准，CI 已接线。
+> **Superb Warfare 零依赖门控**：`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 的 `renderItem3D`
+> 内含 `isSuperbWarfareItem` 命名空间分支（不引用任何 SBW 类），SBW 枪械改用
+> `ItemDisplayContext.FIXED` 渲染真实 3D 模型，异常降级 2D；SBW mc 范围 `[1.21.1,1.22)` 之外的
+> 平台无此分支。
+>
+> **新增原语八平台同步补**：`scripts/check-animops-drift.sh` 以 `v1_21_1` 为签名基准守护
+> `v1_21_1` / `v26_1_2` / `v26_2` 三个平台（CI 已接线），其余五平台（Forge 四 + `fabric_1_21_1`）
+> 手工镜像——漏补不挡 CI，但属镜像纪律违规；`forge_1_18_2` 的渲染原语吸收在 AnimRenderOps 内，
+> 签名口径与 legacy 家族一致。
 
 ### 5.3 Screen 清单（平台 `gui/`）
 
@@ -285,8 +322,9 @@ sequenceDiagram
 ## 6. 网络包
 
 **14 个自定义数据包**。NeoForge 三平台用 `CustomPacketPayload`（`RegisterPayloadHandlersEvent`
-统一注册）；Forge 三平台用 `SimpleChannel`（`forge_1_20_1` 走 `FriendlyByteBuf` 手动序列化，
-26.x Forge 走 `CustomPayloadEvent` + `StreamCodec`），故 Forge 侧多一个 `Networking.java` 接线类。
+统一注册）；`fabric_1_21_1` 用 Fabric networking API v1（`net/` 包）；Forge 四平台用 `SimpleChannel`
+（`forge_1_18_2` / `forge_1_20_1` 走 `FriendlyByteBuf` 手动序列化，26.x Forge 走 `CustomPayloadEvent`
++ `StreamCodec`），故 Forge 侧多一个 `Networking.java` 接线类。
 
 | 包 | 方向 | 内容 |
 |---|---|---|
@@ -367,7 +405,7 @@ JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；
 
 ### 9.2 计时与自毁
 
-- 六平台 `ModEvents.serverTick` 每 1 Hz 驱动 `tickSessions`，按**世界时钟**
+- 八平台 `ModEvents.serverTick` 每 1 Hz 驱动 `tickSessions`，按**世界时钟**
   （`player.level().getGameTime() * 50L`）推进倒计时；世界暂停 / 服务端停机不计时，重启后精确续算
 - 默认超时 3 小时（`NegotiationModel.COUNT_INITIAL_MS`，common 单点）
 - 超时未成交与 5 轮拒绝同等对待：`FAILED` + 系统消息「交易超时，军火商已离开。」并释放锁。
@@ -418,7 +456,7 @@ JEI 概率）**始终以服务端为准**，与本地 JSON 是否一致无关；
 ## 11. 资源分层
 
 ```
-common/src/main/resources/          ← 跨版本共享（六平台经 srcDir 引入）
+common/src/main/resources/          ← 跨版本共享（八平台经 srcDir 引入）
   ├── assets/csgobox/lang/           (en_us / zh_cn)
   ├── assets/csgobox/models/         (block/ + item/)
   ├── assets/csgobox/textures/       (block/ entity/ gui/ item/ screens/)
@@ -442,7 +480,7 @@ common/src/main/resources/          ← 跨版本共享（六平台经 srcDir �
 > **资源路径必须用单数 `recipe`**——Minecraft `RecipeManager` 的
 > `Registries.elementsDirPath(Registries.RECIPE)` 要求，写成 `recipes` 会静默不加载。
 >
-> 物品定义目录为 `items/`（1.21.4+ 的 `assets/<ns>/items/` 形态），六平台一致；
+> 物品定义目录为 `items/`（1.21.4+ 的 `assets/<ns>/items/` 形态），八平台一致；
 > 各平台另有自己的 `data/csgobox/advancement(s)/` 副本用于平台特有节点。
 
 ## 12. 依赖方向约束与工程门禁
@@ -457,33 +495,38 @@ common/src/main/resources/          ← 跨版本共享（六平台经 srcDir �
 
 ### 12.2 平台模块镜像纪律
 
-六个平台**不是纯拷贝**，各有 API 适配。**禁止用 `v26_1_2` 整文件覆盖 `v26_2` / `forge_*`**——
+八个平台**不是纯拷贝**，各有 API 适配。**禁止用 `v26_1_2` 整文件覆盖 `v26_2` / `forge_*` / `fabric_*`**——
 会破坏适配（历史教训）。正确姿势：
 
-1. **先改基准模块**：新功能以 `v26_1_2` 为基准；Forge 侧以 `forge_26_1_2` 为基准
+1. **先改基准模块**：新功能以 `v26_1_2` 为基准；Forge 侧以 `forge_26_1_2` 为基准；legacy 线直接改 `v1_21_1`
 2. **新增无差异文件**用 `scripts/mirror.sh new <rel-path>`（目标已存在会警告跳过，
    `--force` 覆盖，`--dry-run` 预演）
 3. **有适配差异的文件定点合入**，不得被脚本覆盖
 4. 每平台 `compileJava` 验证；**改动涉及平台时用 `clean` 编译确认**（增量缓存可能造假象）
 
-Forge 侧的机械移植脚本：`scripts/port-forge-2612.py`（`v26_1_2` → `forge_26_1_2`）、
-`scripts/port-forge-262.py`（`forge_26_1_2` → `forge_26_2`）。入口 `CsgoBox.java`、`Networking`、
-`ModItems`、`ModCapability`、packet handler、GUI / 渲染层、`AnimRenderOps` 等**走手工适配**。
+Forge / Fabric 侧的机械移植脚本：`scripts/port-forge-2612.py`（`v26_1_2` → `forge_26_1_2`）、
+`scripts/port-forge-262.py`（`forge_26_1_2` → `forge_26_2`）、`scripts/port-fabric-1211.py`
+（`v1_21_1` → `fabric_1_21_1`）、`scripts/port-forge-1182.py`（`forge_1_20_1` → `forge_1_18_2`）。
+入口 `CsgoBox.java`、`Networking`、`ModItems`、`ModCapability`、packet handler、GUI / 渲染层、
+`AnimRenderOps` 等**走手工适配**。镜像漂移由 `scripts/check-platform-drift.py` +
+`scripts/drift-baseline.json` 基线守护（历史漂移显式登记，新增差异需定点刷新基线）。
 
 ### 12.3 门禁清单
 
 | 门禁 | 脚本 / 任务 | 覆盖 |
 |---|---|---|
-| common 架构约束 | `:common:checkCommonArchitecture` | 六平台编译均触发 |
-| common 单元测试 | `./gradlew :common:test` | 25 个测试类 / 210 用例（JUnit 5） |
+| common 架构约束 | `:common:checkCommonArchitecture` | 八平台编译均触发 |
+| common 单元测试 | `./gradlew :common:test` | 37 个测试类 / 342 用例（JUnit 5） |
 | AnimRenderOps 漂移 | `scripts/check-animops-drift.sh` | `v1_21_1` / `v26_1_2` / `v26_2`，以 `v1_21_1` 为签名基准 |
-| 版本四同步 | `scripts/check-version.sh` | `gradle.properties` + `mods.toml` + `CHANGELOG.md` + `README.md` |
-| 平台冒烟测试 | `./gradlew :<module>:test` | `v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` / `forge_1_20_1` |
-| Forge 门禁 | `scripts/test-forge-2612.sh` / `test-forge-262.sh` | Forge 模块（7 项） |
+| 平台镜像漂移 | `scripts/check-platform-drift.py` + `drift-baseline.json` | 镜像文件对差异基线（历史漂移显式登记） |
+| 版本四同步 | `scripts/check-version.sh` | `gradle.properties` + `mods.toml` + `CHANGELOG.md` + `README.md` / `README.en.md` |
+| 平台冒烟测试 | `./gradlew :<module>:test` | 八平台均有 `PlatformSmokeTest` |
+| 客户端类隔离 | `checkDistSafety`（NeoForge 三 + Forge 四平台 build.gradle，挂 `check`） | 扫描入口类编译产物常量池是否引用 `net/minecraft/client`（fabric 经 entrypoint 结构天然隔离，无此任务） |
+| Forge 门禁 | `scripts/test-forge-2612.sh` / `test-forge-262.sh` | Forge 26.x 模块（7 项） |
+| box-editor 冒烟 | Playwright（CI `box-editor-smoke.yml`） | 网页配置工具 |
 
-CI（`.github/workflows/build.yml`）矩阵只覆盖 **3 个 NeoForge 平台**；Forge 三平台为手工 / 门禁脚本
-产出（`forge_26_1_2` / `forge_26_2` 不参与镜像纪律与 AnimRenderOps 漂移门禁）。
-
+CI（`.github/workflows/build.yml`）矩阵覆盖**全部 8 平台**（compileJava + `PlatformSmokeTest` + jar）；
+Forge 模块另有独立门禁脚本；box-editor 有 GitHub Pages 自动发布（`box-editor-pages.yml`）。
 代码审查标准见 [`CODE-REVIEW.md`](./CODE-REVIEW.md)；PR 模板由 CI `pr-checks.yml` 校验。
 
 ### 12.4 永久移除项
@@ -495,20 +538,21 @@ CI（`.github/workflows/build.yml`）矩阵只覆盖 **3 个 NeoForge 平台**�
 
 ## 13. 版本矩阵
 
-| 组件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
-|---|---|---|---|---|---|---|
-| Minecraft | 1.21.1 | 26.1.2 | 26.2 | 26.1.2 | 26.2 | 1.20.1 |
-| 加载器 | NeoForge 21.1.248 | NeoForge 26.1.2.95 | NeoForge 26.2.0.59 | Forge 26.1.2-64.1.0 | Forge 26.2-65.1.1 | Forge 1.20.1-47.4.22 |
-| NeoGradle / ForgeGradle | 7.1.38 | 7.1.38 | 7.1.38 | `[7.0.17,8)` 动态 | `[7.0.17,8)` 动态 | 7.0.31 固定 |
-| Gradle | 9.5.1 | 9.5.1 | 9.5.1 | 9.5.1 | 9.5.1 | 9.5.1 |
-| Java toolchain | 21 | 25 + preview | 25 + preview | 25 + preview | 25 + preview | 17 |
-| `pack_format` | 34 | 80 | 81 | 80 | 81 | 15 |
-| rendering era | legacy | decoupled | decoupled | decoupled | decoupled | legacy |
-| 包名 | `...csgobox.v1_21_1.*` | `...csgobox.v26_1_2.*` | `...csgobox.v26_2.*` | `...csgobox.forge_26_1_2.*` | `...csgobox.forge_26_2.*` | `...csgobox.forge_1_20_1.*` |
-| `mod_version` | `2.0.0` | `2.0.0` | `2.0.0` | `2.0.0` | `2.0.0` | `2.0.0` |
-| CI 矩阵 | ✅ | ✅ | ✅ | — | — | — |
+| 组件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 | fabric_1_21_1 | forge_1_18_2 |
+|---|---|---|---|---|---|---|---|---|
+| Minecraft | 1.21.1 | 26.1.2 | 26.2 | 26.1.2 | 26.2 | 1.20.1 | 1.21.1 | 1.18.2 |
+| 加载器 | NeoForge 21.1.248 | NeoForge 26.1.2.95 | NeoForge 26.2.0.59 | Forge 26.1.2-64.1.0 | Forge 26.2-65.1.1 | Forge 1.20.1-47.4.22 | Fabric Loader 0.16.14（Loom 1.17.21） | Forge 1.18.2-40.3.0 |
+| NeoGradle / ForgeGradle / Loom | 7.1.38 | 7.1.38 | 7.1.38 | 7.0.34（固定） | 7.0.34（固定） | 7.0.31（固定） | Loom 1.17.21 | 7.0.31（固定） |
+| Gradle | 9.5.1 | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 |
+| Java toolchain | 21 | 25 + preview | 25 + preview | 25 + preview | 25 + preview | 17 | 21 | 17 |
+| `pack_format` | 34 | 80 | 81 | 80 | 81 | 15 | 34 | 9 |
+| rendering era | legacy | decoupled | decoupled | decoupled | decoupled | legacy | legacy | legacy |
+| 包名 | `...csgobox.v1_21_1.*` | `...csgobox.v26_1_2.*` | `...csgobox.v26_2.*` | `...csgobox.forge_26_1_2.*` | `...csgobox.forge_26_2.*` | `...csgobox.forge_1_20_1.*` | `...csgobox.fabric_1_21_1.*` | `...csgobox.forge_1_18_2.*` |
+| `mod_version` | `2.0.3` | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 |
+| CI 矩阵 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**jar 命名**：NeoForge `csgobox-<mc>-<mod_version>.jar`，Forge `csgobox-forge-<mc>-<mod_version>.jar`。
+**jar 命名**：NeoForge `csgobox-<mc>-<mod_version>.jar`，Forge `csgobox-forge-<mc>-<mod_version>.jar`，
+Fabric `csgobox-fabric-<mc>-<mod_version>.jar`。
 
 > **已归档（EOL）平台**：`v1_21_0` / `v1_21_3` / `v1_21_4` / `v1_21_5` / `v1_21_8` / `v1_21_10` /
 > `v1_21_11` 于 2026-08-09 移出仓库，最后状态保留在 tag `eol-legacy-21x-1.0.6`；旧版本玩家仍可下载

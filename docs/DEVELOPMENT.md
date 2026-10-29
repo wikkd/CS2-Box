@@ -14,16 +14,20 @@
    - 同一文件两次读取内容不一致（正被其他进程改写）。
 2. **命中后**：停止编译动作，向用户报告探测到的信号与冲突风险，**等待用户发起下一轮对话**再继续；不得自动重试，不得绕过（clean / 移走文件 / 修改他人领域文件）强行编译。
 3. **确认可编译时**：优先 `--no-build-cache` / `--rerun-tasks` 或先删除编译输出，避免陈旧 `UP-TO-DATE` / `FROM-CACHE` 快照掩盖真实结果；报告时注明重编译方式与平台清单。
-4. 单次 Gradle 调用只能构建一个 MC 版本（`-Pactive_versions=<v>`）；六平台全量验证需串行执行。
+4. 单次 Gradle 调用只能构建一个 MC 版本（`-Pactive_versions=<v>`）；八平台全量验证需串行执行。
 
 ## 前置要求
 
-| 平台 | Java | Minecraft | NeoForge / Forge | Gradle | NeoGradle / ForgeGradle |
+| 平台 | Java | Minecraft | NeoForge / Forge / Fabric | Gradle | NeoGradle / ForgeGradle / Loom |
 |---|---|---|---|---|---|
-| `v1_21_1/` | 21 | 1.21.1 | 21.1.248 | 9.5.1 | 7.1.38 |
-| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | 26.1.2.95 | 9.5.1 | 7.1.38 |
-| `v26_2/` | 25 `--enable-preview` | 26.2 | 26.2.0.59 | 9.5.1 | 7.1.38 |
-| `forge_26_1_2/` | 25 `--enable-preview` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 9.5.1 | ForgeGradle 7.0.31 |
+| `v1_21_1/` | 21 | 1.21.1 | NeoForge 21.1.248 | 9.5.1 | 7.1.38 |
+| `v26_1_2/` | 25 `--enable-preview` | 26.1.2 | NeoForge 26.1.2.95 | 9.5.1 | 7.1.38 |
+| `v26_2/` | 25 `--enable-preview` | 26.2 | NeoForge 26.2.0.59 | 9.5.1 | 7.1.38 |
+| `forge_26_1_2/` | 25 `--enable-preview` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 9.5.1 | ForgeGradle 7.0.34 |
+| `forge_26_2/` | 25 `--enable-preview` | 26.2 | MinecraftForge 26.2-65.1.1 | 9.5.1 | ForgeGradle 7.0.34 |
+| `forge_1_20_1/` | 17 | 1.20.1 | MinecraftForge 47.4.22 | 9.5.1 | ForgeGradle 7.0.31 |
+| `forge_1_18_2/` | 17 | 1.18.2 | MinecraftForge 40.3.0 | 9.5.1 | ForgeGradle 7.0.31 |
+| `fabric_1_21_1/` | 21 | 1.21.1 | Fabric Loader 0.16.14 + Fabric API 0.116.17+1.21.1 | 9.5.1 | Loom 1.17.21 |
 
 Gradle Wrapper 自带,无需系统安装。
 
@@ -41,7 +45,7 @@ cd CS2-Box
 `gradle.properties`:
 
 ```properties
-active_versions=26.1.2  # 可选：1.21.1 / 26.2 / forge-26.1.2
+active_versions=1.21.1  # 可选：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 ```
 
 ### 3. 构建项目
@@ -54,17 +58,22 @@ active_versions=26.1.2  # 可选：1.21.1 / 26.2 / forge-26.1.2
 
 构建产物:
 
-NeoForge 平台（jar 名 `csgobox-<mc>-<mod_version>.jar`）：
+NeoForge 平台（jar 名 `csgobox-<mc>-<mod_version>.jar`，当前 `mod_version=2.0.3`）：
 
-- `v1_21_1/build/libs/csgobox-1.21.1-2.0.0.jar`
-- `v26_1_2/build/libs/csgobox-26.1.2-2.0.0.jar`
-- `v26_2/build/libs/csgobox-26.2-2.0.0.jar`
+- `v1_21_1/build/libs/csgobox-1.21.1-2.0.3.jar`
+- `v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar`
+- `v26_2/build/libs/csgobox-26.2-2.0.3.jar`
 
 Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
 
-- `forge_1_20_1/build/libs/csgobox-forge-1.20.1-2.0.0-srg.jar`（**发布产物**；`renameJar` 的 SRG 重映射版，1.20.1 生产必需）
-- `forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.0.jar`
-- `forge_26_2/build/libs/csgobox-forge-26.2-2.0.0.jar`
+- `forge_1_20_1/build/libs/csgobox-forge-1.20.1-2.0.3-srg.jar`（**发布产物**；`renameJar` 的 SRG 重映射版，1.20.1 生产必需）
+- `forge_1_18_2/build/libs/csgobox-forge-1.18.2-2.0.3-srg.jar`（同上，`renameJar` SRG 重映射版）
+- `forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.3.jar`
+- `forge_26_2/build/libs/csgobox-forge-26.2-2.0.3.jar`
+
+Fabric 平台（jar 名 `csgobox-fabric-<mc>-<mod_version>.jar`）：
+
+- `fabric_1_21_1/build/libs/csgobox-fabric-1.21.1-2.0.3.jar`
 
 ### 4. 运行开发客户端
 
@@ -88,6 +97,7 @@ Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
 | `./gradlew :v26_1_2:runClient` | 启动 v26_1_2 客户端 |
 | `./gradlew :v26_1_2:runServer` | 启动 v26_1_2 专用服务端 |
 | `./gradlew :v1_21_1:runClient` | 启动 v1_21_1 客户端 |
+| `./gradlew :fabric_1_21_1:runClient` | 启动 fabric_1_21_1 客户端（Loom 默认 run 配置） |
 | `./gradlew :forge_1_20_1:renameJar -Pactive_versions=forge-1.20.1` | Forge 1.20.1 生产 jar（SRG 重映射，产出 `-srg.jar`；直接 `jar` 产物只供 dev） |
 | `./gradlew gameTestServer` | 在测试服务器中运行集成测试 |
 | `./gradlew clean` | 删除所有 build/ 目录 |
@@ -108,7 +118,7 @@ Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
 
 - **`common/` 不允许** `import net.minecraft.*` 或 `import net.neoforged.*` / `net.minecraftforge.*`（`:common:checkCommonArchitecture` 自动拦截）
 - 所有 GUI / Attachment / 网络上下文 / 注册表访问留在平台模块
-- 修改 `common/` 后**必须**在全部受影响平台重新构建验证；**每次 Gradle 调用只能构建一个 MC 版本**，用 `-Pactive_versions=<v>` 指定（`26.1.2` / `26.2` / `1.21.1` / `forge-26.1.2`）
+- 修改 `common/` 后**必须**在全部受影响平台重新构建验证；**每次 Gradle 调用只能构建一个 MC 版本**，用 `-Pactive_versions=<v>` 指定（`1.21.1` / `26.1.2` / `26.2` / `forge-26.1.2` / `forge-26.2` / `forge-1.20.1` / `fabric-1.21.1` / `forge-1.18.2`）
 - 验证一律带 `clean`（增量缓存可能造假象）：
 
 ```bash
@@ -119,7 +129,7 @@ Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
 ./gradlew :forge_26_1_2:clean :forge_26_1_2:compileJava -Pactive_versions=forge-26.1.2
 ```
 
-- **镜像纪律**：跨平台改动先改基准 `v26_1_2`，再定点合入其余平台；**禁止整文件覆盖** `v26_2` 与 `forge_26_1_2`（有 API 适配差异），纯新增文件用 `scripts/mirror.sh new <rel-path>`，forge 同步用 `scripts/port-forge-2612.py`（仅机械转换）+ 手工适配
+- **镜像纪律**：跨平台改动先改基准 `v26_1_2`（legacy 线直接改 `v1_21_1`），再定点合入其余平台；**禁止整文件覆盖** `v26_2` / `forge_*` / `fabric_*`（有 API 适配差异），纯新增文件用 `scripts/mirror.sh new <rel-path>`，forge/fabric 同步用 `scripts/port-forge-2612.py` / `port-forge-262.py` / `port-fabric-1211.py` / `port-forge-1182.py`（仅机械转换）+ 手工适配；镜像漂移基线见 `scripts/check-platform-drift.py` + `scripts/drift-baseline.json`
 - `CONFIG` 是 `public static final`,**不要写 `null` 守卫**
 
 ### 多平台 API 差异
@@ -154,15 +164,16 @@ GUI 代码先以 v26_1_2 为基准落地,再定点合入其余平台。
 CS2-Box/
 ├── common/                              # 跨版本业务逻辑 + 共享资源
 │   ├── src/main/java/com/reclizer/csgobox/
-│   │   ├── box/                         # BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验 / 教程下载
-│   │   ├── logic/                       # GradeMap / OddsCalculator / OpenBlockGuard / 终端谈判模型
-│   │   ├── config/                      # CsboxConfigDefaults（六平台配置默认值唯一来源）
-│   │   ├── terminal/                    # 谈判算法（平台无关）
+│   │   ├── box/                         # BoxGrades / BoxRegistryStore / BoxStripGenerator / 价格表 / schema 校验 / EditorPack
+│   │   ├── logic/                       # GradeMap / OddsCalculator / OpenBlockGuard / PityPolicy(保底) / 约束追踪
+│   │   ├── config/                      # CsboxConfigDefaults（八平台配置默认值唯一来源）
+│   │   ├── terminal/                    # NegotiationModel 谈判状态机 / 磨损 / 库存
 │   │   └── utils/                       # ColorTools / OverlayColor / GuiRegion 等
+│   ├── src/main/mcshared/               # 跨时代共享 MC 绑定源码根（各平台 srcDir 直编）
 │   ├── src/test/java/                   # JUnit 5 单测
-│   └── src/main/resources/              # 共享资源(纹理、配方、advancement、lang、音效)
+│   └── src/main/resources/              # 共享资源(纹理、配方、advancement、lang、音效、内嵌教程)
 │
-├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.248 / Java 21
+├── v1_21_1/                             # MC 1.21.1 / NeoForge 21.1.248 / Java 21（legacy era）
 │   └── src/main/java/com/reclizer/csgobox/v1_21_1/
 │       ├── CsgoBox.java                 # 模组入口
 │       ├── advancement/                 # OpenedBoxTrigger / ModLoadedTrigger
@@ -172,19 +183,23 @@ CS2-Box/
 │       ├── event/                       # ClickEvent / ModEvents
 │       ├── gui/                         # CsboxScreen / CsboxProgressScreen / CsLookItemScreen
 │       ├── item/                        # ItemCsgoBox / ItemCsgoKey / ModItems
-│       ├── packet/                      # 网络协议接线
+│       ├── packet/                      # 网络协议接线 + BoxOpenExecutor
 │       └── utils/                       # 共享工具类
 │
-├── v26_1_2/                             # MC 26.1.2 / NeoForge 26.1.2.95 / Java 25
+├── v26_1_2/                             # MC 26.1.2 / NeoForge 26.1.2.95 / Java 25（decoupled era，跨平台基准）
 │   └── src/main/java/com/reclizer/csgobox/v26_1_2/
 │       ├── (同 v1_21_1 结构)
 │       ├── gui/pip/                     # 独有:Icon3DRenderer / Icon3DRenderState
+│       ├── service/                     # OpenService / TerminalBuyService（packet 编排服务层）
 │       └── utils/                       # 独有:ButtonPalette / RenderFontTool
 │
-├── forge_26_1_2/                        # MC 26.1.2 / MinecraftForge 64.1.0 / Java 25（实验模块）
-│   └── src/main/java/com/reclizer/csgobox/forge_26_1_2/
-│       ├── (与 v26_1_2 特性同步,loader 为 MinecraftForge)
-│       └── 手工适配:入口 / Networking / ModItems / GUI / AnimRenderOps 等
+├── v26_2/                               # MC 26.2 / NeoForge 26.2.0.59 / Java 25（v26_1_2 + 26.2 API 适配）
+├── forge_26_1_2/                        # MC 26.1.2 / MinecraftForge 64.1.0 / Java 25（与 v26_1_2 特性同步）
+│   └── 手工适配:入口 / Networking / ModItems / GUI / AnimRenderOps 等
+├── forge_26_2/                          # MC 26.2 / MinecraftForge 65.1.1 / Java 25（forge_26_1_2 + 26.2 适配）
+├── forge_1_20_1/                        # MC 1.20.1 / MinecraftForge 47.4.22 / Java 17（SRG 发布、SimpleChannel、NBT）
+├── fabric_1_21_1/                       # MC 1.21.1 / Fabric Loader 0.16.14 / Java 21（Loom，modCompileOnly TACZ）
+├── forge_1_18_2/                        # MC 1.18.2 / MinecraftForge 40.3.0 / Java 17（无 GuiGraphics，全 PoseStack）
 │
 ├── settings.gradle                       # 模块注册 + active_versions 切换
 ├── gradle.properties                     # mod_version / pack_format / active_versions
@@ -233,7 +248,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 ### 资源缺失
 
-`common/src/main/resources/` 由六个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
+`common/src/main/resources/` 由八个平台共享。如果 v26_1_2 启动时找不到 `csgo_background.png`,检查 `v26_1_2/build.gradle` 的 `sourceSets.main.resources.srcDirs` 是否包含 common 路径。
 
 ## 相关文档
 

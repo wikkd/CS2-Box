@@ -52,16 +52,16 @@ CS2-Box 有 5 档稀有度（consumer → classified，权重驱动）。玩家�
 - `csgobox:rarity` 是**语义层**；名字颜色是**表现层**（现有 `nameColor` 注入 style）。
 - 协议只写语义，颜色不双源——避免两套颜色打架。
 
-## 3. 六平台同步
+## 3. 八平台同步
 
-- 26.1/26.2/1.21.1 写组件，1.20.1 写 tag。
+- 26.1/26.2/1.21.1 写组件，1.18.2/1.20.1 写 tag。
 - `PacketBoxOpenResult` 等已处理 `CUSTOM_DATA`，新组件纳入同一打包/剥离路径。
 - 旧档迁移：读旧 tag → 补写组件（幂等）。
 
 ## 4. 风险
 
 - Apotheosis rarity 是动态注册表，reload 后 `DynamicHolder` 可能 unbound → 弱依赖需容错。
-- 双写横跨六平台，测试矩阵大（`GRADE`/`CUSTOM_DATA` 先例可复用）。
+- 双写横跨八平台，测试矩阵大（`GRADE`/`CUSTOM_DATA` 先例可复用）。
 - **无先例**，协议需自建并文档化；对无公开 API 的模组（原版 1.20.1）只能写 custom_data，
   对方无法原生读取 → 明确「写语义 vs 写表现」边界。
 
@@ -78,4 +78,4 @@ CS2-Box 有 5 档稀有度（consumer → classified，权重驱动）。玩家�
 - 组件 + tag 双写：小。
 - 映射表加载/校验：中。
 - Apotheosis 弱依赖：中-高。
-- 六平台回归：高。
+- 八平台回归：高。

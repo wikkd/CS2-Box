@@ -142,13 +142,13 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 **前置要求**
 
-| 要求 | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 | forge_1_20_1 |
-|---|---|---|---|---|
-| Java JDK | 21 | 25（`--enable-preview`） | 25（`--enable-preview`） | 17 |
-| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 | 1.20.1 |
-| NeoForge / Forge | 21.1.248+ | 26.1.2.95 / 26.2.0.59（loader 11+） | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 | MinecraftForge 47.4.22 |
-| Gradle | 9.5.1（wrapper 自动下载，无需手动安装） | 同左 | 同左 | 同左 |
-| NeoGradle / ForgeGradle | 7.1.38 | 同左 | ForgeGradle 7.0.31/7.0.34 | ForgeGradle [7.0.17,8) |
+| 要求 | v1_21_1 | v26_1_2 / v26_2 | forge_26_1_2 / forge_26_2 | forge_1_20_1 / forge_1_18_2 | fabric_1_21_1 |
+|---|---|---|---|---|---|
+| Java JDK | 21 | 25（`--enable-preview`） | 25（`--enable-preview`） | 17 | 21 |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 26.1.2 / 26.2 | 1.20.1 / 1.18.2 | 1.21.1 |
+| NeoForge / Forge / Fabric | 21.1.248+ | 26.1.2.95 / 26.2.0.59（loader 11+） | MinecraftForge 26.1.2-64.1.0 / 26.2-65.1.1 | MinecraftForge 47.4.22 / 40.3.0 | Fabric Loader 0.16.14 + Fabric API 0.116.17+1.21.1 |
+| Gradle | 9.5.1（wrapper 自动下载，无需手动安装） | 同左 | 同左 | 同左 | 同左 |
+| NeoGradle / ForgeGradle / Loom | 7.1.38 | 7.1.38 | ForgeGradle 7.0.31/7.0.34 | ForgeGradle 7.0.31 | Loom 1.17.21 |
 
 > 互联网连接：首次构建需下载 NeoForged userdev 与依赖。
 
@@ -159,11 +159,12 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 
-# 2. 选择活动版本（默认 26.1.2）：编辑 gradle.properties
-#    active_versions=26.1.2   # 可选值：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2
+# 2. 选择活动版本（默认 1.21.1，便于 IDEA 直接导入；CI 与 run 配置均显式传 -P）：编辑 gradle.properties
+#    active_versions=1.21.1
+#    可选值：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 
 # 3. 构建当前平台的 jar
-./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.0.1.jar
+./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar
 
 # 4. 启动开发客户端（自动下载并注入 NeoForge 到 run/ 目录）
 ./gradlew :v26_1_2:runClient
@@ -284,7 +285,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 | [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | 玩家向 2.0.2 更新说明 |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | 完整安装与首次运行步骤 |
 | [docs/CONFIGURATION.md](./docs/CONFIGURATION.md) | TOML / JSON 配置参考（v2.0.1 全字段 + [JSON Schema](./docs/box-schema/box.schema.json)） |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 六平台模块拓扑、核心抽象、数据流、GUI 渲染管线（legacy/decoupled 双 era）、终端机子系统与工程门禁 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 八平台模块拓扑、核心抽象、数据流、GUI 渲染管线（legacy/decoupled 双 era）、终端机子系统与工程门禁 |
 | [docs/PLATFORM-APIS.md](./docs/PLATFORM-APIS.md) | 多平台 API 差异速查矩阵 + 主题展开开发指南（含 AnimRenderOps 渲染门面章节） |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | 本地开发配置、构建命令、数据生成 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 总体规划：后续可做方向、优先级、前置依赖与已否决项 |
@@ -293,6 +294,8 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 | [docs/BIOME-INTEGRATION.md](./docs/BIOME-INTEGRATION.md) | 让武库商小屋在模组群系/村庄生成（纯数据 + `add-biome.py` 脚本） |
 | [docs/SHADER-COMPAT.md](./docs/SHADER-COMPAT.md) | Iris/Oculus shader 兼容策略与回归清单（3D 预览降级 2D） |
 | [docs/TESTING.md](./docs/TESTING.md) | NeoForge GameTest 测试指南 |
+| [docs/PORTING-fabric.md](./docs/PORTING-fabric.md) | Fabric 1.21.1 平台移植记录（dev 环境限制与 TACZ 适配） |
+| [docs/PORTING-forge-1182.md](./docs/PORTING-forge-1182.md) | Forge 1.18.2 平台移植记录（API 降级与结构缺失说明） |
 | [CHANGELOG.md](./CHANGELOG.md) | 各版本发布记录 |
 
 <details>
@@ -351,15 +354,20 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 ## 项目状态
 
-- **当前发布版本**：`2.0.1`（正式版，合并「联动批次 A + 箱子配置优化 + 抽奖收尾」三个批次，6 平台同步发行，共享同一 `mod_version`）
-- **开发中版本**：无（下一版本线待规划）
+- **当前发布版本**：`2.0.3`（正式版；NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.20.1 / 26.1.2 / 26.2 六平台同步发行，共享同一 `mod_version`）
+- **开发中版本**：平台扩张批次（新增 `fabric_1_21_1` / `forge_1_18_2` 两个平台 + Superb Warfare 零依赖 3D 预览联动，已入树并接入八平台 CI，随下一版本首发；详见 [CHANGELOG.md](./CHANGELOG.md) `[Unreleased]`）
 
 <details>
 <summary><strong>近期进度</strong>（详见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
 
+- **平台扩张（未发布）**：`fabric_1_21_1`（Loom + TaCZ: Refabricated 检视/3D 枪械渲染，JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu 全接入）与 `forge_1_18_2`（无 GuiGraphics、GUI 全 PoseStack 重写，TACZ 数据级联动）入树，八平台 CI 全量编译 + 冒烟测试
+- **Superb Warfare 联动（未发布）**：零依赖命名空间门控，`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 对 SBW 枪械改用 FIXED 透视渲染真实 3D 模型，配套 `compat-packs/superb-warfare-pack/`
+- **2.0.3**：跨平台一致性收口（批量开箱分片容量与单包物品护栏统一）、`/csbox editor` 内嵌 `config/csbox` 一键导入（`#pack=`）、box-editor 工作区分享 / EV 面板 / 应用到游戏、Cloth Config lambda 专用服务器崩溃修复（issue #2）+ `checkDistSafety` 门禁
+- **2.0.2**：终端 `restock_minutes` 移除、批量开箱按剩余额度裁剪、同步包容量护栏、保底进度 UI 可见化、配置未知字段警告 + `format_version`、tooltip 缓存与行数上限
 - **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口
 - **2.0.0**：批量开箱恢复 + UI 打磨（无二次确认、可滚动「显示全部」网格）、终端机谈判会话（随机磨损 + 无耐久物品磨损点数惩罚）、武库商小屋世界生成结构、JEI 开箱概率分类、`blurRadius` 背景模糊
 - **1.0.6**：容器化布局、per-item 视觉基线、三档设计 token、动态 box item、教程系统、开箱排行榜、TACZ 检视视口、v26_2 平台扩展
+- **mcshared 跨时代源码根**：跨平台逐字节一致、只依赖稳定 MC API 的类下沉 `common/src/main/mcshared/` 直编去重
 - **AnimRenderOps 渲染门面**：6 屏 + 3 助手渲染调用全部收口到每平台唯一的 `utils/AnimRenderOps.java`（13 个公开 op），零原始 draw 调用残留，签名一致性由 `scripts/check-animops-drift.sh` 守护
 - **forge_26_2 追平 2.0.0 线**：以 `forge_26_1_2` 为基准迁移，5 平台 `clean compileJava` 全通过，门禁 7/7 PASS
 - **forge_1_20_1 回移**：MC 1.20.1 正式发布线（SRG 重映射、SimpleChannel 网络、NBT 存储、JEI/REI 接入）

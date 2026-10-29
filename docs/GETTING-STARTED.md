@@ -5,13 +5,13 @@
 
 ## 前置要求
 
-| 要求 | v1_21_1 | v26_1_2 / v26_2 |
-|---|---|---|
-| Java JDK | 21 | 25(`--enable-preview`) |
-| Minecraft | 1.21.1 | 26.1.2 / 26.2 |
-| NeoForge | 21.1.248+ | 26.1.2.95 / 26.2.0.59(loader 11+) |
-| Gradle | 9.5.1(wrapper 自动下载) | 9.5.1(wrapper 自动下载) |
-| NeoGradle | 7.1.38 | 7.1.38 |
+| 要求 | v1_21_1 | v26_1_2 / v26_2 | forge_1_20_1 / forge_1_18_2 | fabric_1_21_1 |
+|---|---|---|---|---|
+| Java JDK | 21 | 25(`--enable-preview`) | 17 | 21 |
+| Minecraft | 1.21.1 | 26.1.2 / 26.2 | 1.20.1 / 1.18.2 | 1.21.1 |
+| NeoForge / Forge / Fabric | 21.1.248+ | 26.1.2.95 / 26.2.0.59(loader 11+) | MinecraftForge 47.4.22 / 40.3.0 | Fabric Loader 0.16.14 |
+| Gradle | 9.5.1(wrapper 自动下载) | 同左 | 同左 | 同左 |
+| NeoGradle / ForgeGradle / Loom | 7.1.38 | 7.1.38 | ForgeGradle 7.0.31 | Loom 1.17.21 |
 
 Java 版本必须与平台对应。Gradle Wrapper 自动下载对应 Gradle 版本。
 
@@ -30,12 +30,12 @@ git clone https://github.com/wikkd/CS2-Box.git
 cd CS2-Box
 ```
 
-2. **选择活动版本**(默认 `26.1.2`):
+2. **选择活动版本**(默认 `1.21.1`,便于 IDEA 直接导入):
 
 编辑 `gradle.properties`:
 
 ```properties
-active_versions=26.1.2  # 或 1.21.1
+active_versions=1.21.1  # 可选:1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 ```
 
 3. **验证 Gradle Wrapper**:
@@ -50,7 +50,7 @@ active_versions=26.1.2  # 或 1.21.1
 ./gradlew build
 ```
 
-成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-2.0.0.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-2.0.0.jar`（Forge 平台为 `csgobox-forge-<mc>-2.0.0.jar`，见 [DEVELOPMENT.md](./DEVELOPMENT.md)）。
+成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-2.0.3.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar`（Forge 平台为 `csgobox-forge-<mc>-2.0.3.jar`,1.20.1 / 1.18.2 发布产物为 `-srg.jar` 重映射版;Fabric 平台为 `csgobox-fabric-1.21.1-2.0.3.jar`,见 [DEVELOPMENT.md](./DEVELOPMENT.md)）。
 
 ## 首次运行
 

@@ -1,22 +1,26 @@
 # CS2-Box 多平台 API 差异开发指南
 
-> 面向全部 **6 个在维护平台模块**的 API 差异开发说明。按「版本分类 → 全量速查矩阵 → 主题展开」组织，帮助你在开发任何平台时快速定位「哪个 API、哪个版本、怎么写」。
+> 面向全部 **8 个在维护平台模块**的 API 差异开发说明。按「版本分类 → 全量速查矩阵 → 主题展开」组织，帮助你在开发任何平台时快速定位「哪个 API、哪个版本、怎么写」。
 
-- **基准模块**：legacy 用 `v1_21_1`（Forge 侧 `forge_1_20_1`），new 用 `v26_1_2`（Forge 侧 `forge_26_1_2` → `forge_26_2`）
-- **平台列表**：NeoForge `v1_21_1` / `v26_1_2` / `v26_2` + Forge `forge_1_20_1` / `forge_26_1_2` / `forge_26_2`（六平台均为 2.0.0 正式发布平台）
+- **基准模块**：legacy 用 `v1_21_1`（Forge 侧 `forge_1_20_1`），new 用 `v26_1_2`（Forge 侧 `forge_26_1_2` → `forge_26_2`；Fabric `fabric_1_21_1` 以 `v1_21_1` 为基准）
+- **平台列表**：NeoForge `v1_21_1` / `v26_1_2` / `v26_2` + Forge `forge_1_20_1` / `forge_26_1_2` / `forge_26_2` / `forge_1_18_2` + Fabric `fabric_1_21_1`（前六平台为 2.0.x 正式发布平台；`fabric_1_21_1` / `forge_1_18_2` 已入树，随下一版本首发）
 - **适用范围**：各平台 `src/main/java/com/reclizer/csgobox/<platform>/` 下的版本敏感代码
 - **配套文档**：架构总览见 [ARCHITECTURE.md](./ARCHITECTURE.md)；1.21.1→26.1.2 单次移植记录见 [port-26.1.2.md](./archive/port-26.1.2.md)
 - **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库（tag `eol-legacy-21x-1.0.6`）；下文矩阵中的 legacy 中间断点行仅作历史参考
-- **注**：下方速查矩阵以 **NeoForge 三平台**为主干（legacy / decoupled 两条 API 线）；Forge 三平台的 loader 差异（`SimpleChannel` vs `CustomPayload`、`ForgeConfigSpec`、`LazyOptional` 能力、无 PIP 的 1.20.1 渲染降级）另见 [ARCHITECTURE.md](./ARCHITECTURE.md) §5 与各平台的 `TESTING-FORGE-*.md`
+- **注**：下方速查矩阵以 **NeoForge 平台**为主干（legacy / decoupled 两条 API 线）；Forge 四平台与 `fabric_1_21_1` 的 loader 差异（`SimpleChannel` vs `CustomPayload` vs Fabric networking、`ForgeConfigSpec`、`LazyOptional` 能力、无 PIP 的 1.20.1 / 1.18.2 渲染降级）另见 [ARCHITECTURE.md](./ARCHITECTURE.md) §5 与各平台的 `TESTING-FORGE-*.md` / `PORTING-*.md`
 
 ## 版本分类速查
 
-| 分类 | 模块 | MC | NeoForge | Java | pack_format | 基准 |
+| 分类 | 模块 | MC | NeoForge / Forge / Fabric | Java | pack_format | 基准 |
 |---|---|---|---|---|---|---|
 | **legacy (旧 API)** | `v1_21_1` | 1.21.1 | 21.1.248 | 21 | 34 | ★ 基准 |
 | **new (decoupled)** | `v26_1_2` | 26.1.2 | 26.1.2.95 | 25 + `--enable-preview` | 80 | ★ 基准 |
 | | `v26_2` | 26.2 | 26.2.0.59 | 25 + `--enable-preview` | 81 | |
-| **实验** | `forge_26_1_2` | 26.1.2 | Forge 64.1.0 | 25 | 80 | 非正式，勿当平台 |
+| | `forge_26_1_2` | 26.1.2 | Forge 64.1.0 | 25 + `--enable-preview` | 80 | Forge 侧基准 |
+| | `forge_26_2` | 26.2 | Forge 65.1.1 | 25 + `--enable-preview` | 81 | |
+| **legacy (旧 API)** | `forge_1_20_1` | 1.20.1 | Forge 47.4.22 | 17 | 15 | Forge 侧基准（legacy） |
+| | `forge_1_18_2` | 1.18.2 | Forge 40.3.0 | 17 | 9 | |
+| | `fabric_1_21_1` | 1.21.1 | Fabric Loader 0.16.14（Loom 1.17.21） | 21 | 34 | |
 
 > 关键结论：**21.x→26.x** 是全面重构的 decoupled API，**26.1.2→26.2** 是小改。legacy 内部 6 个断点（1.21.3/.4/.5/.8/.10/.11）已随 EOL 平台归档。
 

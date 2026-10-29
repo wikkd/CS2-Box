@@ -1,6 +1,6 @@
 # Release Process
 
-> 适用于 2.0.0+ 的六平台发布流程（NeoForge 3 + Forge 3，共享同一 `mod_version`）。版本矩阵见 `gradle.properties` 的 `active_versions`。
+> 适用于 2.0.3+ 的八平台发布流程（NeoForge 3 + Forge 4 + Fabric 1，共享同一 `mod_version`；`fabric_1_21_1` / `forge_1_18_2` 随下一版本首发）。版本矩阵见 `gradle.properties` 的 `active_versions`。
 
 ## 1. 版本号同步（四处在升级时必须一致）
 
@@ -18,8 +18,8 @@
 NeoGradle userdev 无法在同一次 Gradle 调用中并行加载多个 MC 版本（IDEA 扩展冲突，历史限制），因此**每次 Gradle 调用只构建一个版本**：
 
 ```bash
-# 6 个平台逐个打包（NeoGradle/ForgeGradle 每次只能构建一个版本）
-for v in 1.21.1 26.1.2 26.2 forge-26.1.2 forge-26.2 forge-1.20.1; do
+# 8 个平台逐个打包（NeoGradle/ForgeGradle/Loom 每次只能构建一个版本）
+for v in 1.21.1 26.1.2 26.2 forge-26.1.2 forge-26.2 forge-1.20.1 forge-1.18.2 fabric-1.21.1; do
   case $v in
     1.21.1)         ./gradlew :v1_21_1:jar -Pactive_versions=$v ;;
     26.1.2)         ./gradlew :v26_1_2:jar -Pactive_versions=$v ;;
@@ -27,6 +27,8 @@ for v in 1.21.1 26.1.2 26.2 forge-26.1.2 forge-26.2 forge-1.20.1; do
     forge-26.1.2)   ./gradlew :forge_26_1_2:jar -Pactive_versions=$v ;;
     forge-26.2)     ./gradlew :forge_26_2:jar -Pactive_versions=$v ;;
     forge-1.20.1)   ./gradlew :forge_1_20_1:renameJar -Pactive_versions=$v ;;  # renameJar 依赖 jar；产物为 -srg.jar（SRG 重映射，1.20.1 生产必需）
+    forge-1.18.2)   ./gradlew :forge_1_18_2:renameJar -Pactive_versions=$v ;;  # 同 1.20.1：发布产物为 csgobox-forge-1.18.2-<v>-srg.jar
+    fabric-1.21.1)  ./gradlew :fabric_1_21_1:build -Pactive_versions=$v ;;     # Loom；产物 csgobox-fabric-1.21.1-<v>.jar
   esac
 done
 ```
@@ -35,15 +37,16 @@ done
 
 > Forge 三模块（`forge_26_1_2` / `forge_26_2` / `forge_1_20_1`）自 2.0.0 起纳入
 > **正式发布**（与对应 NeoForge 平台保持特性同步，同步纪律见 AGENTS.md「forge_26_1_2 同步」）；
-> 不在 CI 构建矩阵，发布门禁独立运行 `scripts/test-forge-2612.sh` /
+> 发布门禁独立运行 `scripts/test-forge-2612.sh` /
 > `scripts/test-forge-262.sh` / `docs/TESTING-FORGE-1201.md` 对应的门禁脚本（L0-L3）
-> + L4 运行时 E2E。
+> + L4 运行时 E2E；`forge_1_18_2` / `fabric_1_21_1` 随下一版本首发，发布前按各自
+> `docs/PORTING-forge-1182.md` / `docs/PORTING-fabric.md` 的限制说明做运行时回归。
 
-产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.0.jar` / `csgobox-forge-26.1.2-2.0.0.jar`）。**例外：`forge_1_20_1` 的发布产物是 `forge_1_20_1/build/libs/csgobox-forge-1.20.1-<mod_version>-srg.jar`**（SRG 重映射版，`renameJar` 任务产出）；`jar` 直出产物只用于 dev/内部，进生产会因 SRG 命名域不匹配而崩溃（如 2.0.0-beta 的 `NoSuchMethodError: CriteriaTriggers.register`）。
+产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`、Fabric `fabric_1_21_1/build/libs/csgobox-fabric-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.3.jar` / `csgobox-forge-26.1.2-2.0.3.jar`）。**例外：`forge_1_20_1` / `forge_1_18_2` 的发布产物是 `build/libs/csgobox-forge-<mc>-<mod_version>-srg.jar`**（SRG 重映射版，`renameJar` 任务产出）；`jar` 直出产物只用于 dev/内部，进生产会因 SRG 命名域不匹配而崩溃（如 2.0.0-beta 的 `NoSuchMethodError: CriteriaTriggers.register`）。
 
 ## 3. 质量门（发布前必须全绿）
 
-1. **6 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
+1. **8 平台 clean 编译**：`./gradlew :<module>:clean compileJava -Pactive_versions=<v>`（防止增量缓存假象——曾有模块因 build 产物残留而"假通过"）
 2. **common 单元测试**：`./gradlew :common:test`
 3. **运行时回归**（至少 26.1.2 + 1.21.1 两个代表平台）：
    - 开箱动画 + 3D 拖拽旋转（PIP）
@@ -53,7 +56,7 @@ done
    - `/csbox reload`、`/csbox reload tutorial`、`/csbox info error`（加载错误）
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）
    - GUI 渲染验证走自动化工作流：`docs/RUNTIME-UI-TESTING.md`（CGEvent 驱动 + 帧缓冲像素断言）
-   - 终端机屏幕（`terminal` 物品右键打开，六平台）：
+   - 终端机屏幕（`terminal` 物品右键打开，八平台）：
      - 四区静态布局对齐原型（左聊天气泡 / 右下报价卡 / 左下操作条 / 底行三格）；点阵为 512px tile 平铺，无白色块状失真
      - 时间轴：倒计时 DD:HH:MM:SS 每秒递减（初始 2天23:57:45）、打字点循环、武器 2.5s 轮换、8-F 磨损条箭头 0.95s 滑入 + 扫描带
      - 交互：长按「接受」胶囊（700ms）成交 → 第 2 轮报价；长按「拒绝」→ 第 3 轮；第 5 轮拒绝出红色失败横幅；批量上限下拉（30/64/200/400/800/无上限）；「检视」胶囊切换 3D 自转拖拽预览；ESC / ✕ 关闭恢复 HUD
@@ -62,7 +65,7 @@ done
 
 ## 4. 发布产物
 
-- CI：`.github/workflows/build.yml` 的 matrix 自动产出 3 个 NeoForge 平台 jar（artifacts）；Forge 三模块为手工/门禁脚本产出
+- CI：`.github/workflows/build.yml` 的 matrix 覆盖全部 8 平台，自动编译 + 冒烟 + 产出 jar（artifacts）
 - 手动：见上文构建矩阵脚本
 - 可选项：`./gradlew :<module>:minifyJar -Pactive_versions=<v>` 产出 ProGuard 混淆版（`-minified.jar`），`proguard-rules.pro` 需与新增反射面同步
 
