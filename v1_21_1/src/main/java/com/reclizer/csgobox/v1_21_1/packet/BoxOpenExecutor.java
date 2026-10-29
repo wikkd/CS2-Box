@@ -56,6 +56,12 @@ public final class BoxOpenExecutor {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+    /**
+     * Parsed once at class load; the availability/consume paths run on every
+     * open request and used to re-parse this literal each time.
+     */
+    private static final ResourceLocation AIR_ID = ResourceLocation.parse("minecraft:air");
+
     /** Outcome of a successful open, in the shape both callers need. */
     public record Outcome(
             int grade,
@@ -319,7 +325,7 @@ public final class BoxOpenExecutor {
     }
 
     private static Availability countAvailability(Player player, ItemStack box, ResourceLocation keyId) {
-        boolean noKey = keyId == null || keyId.equals(ResourceLocation.parse("minecraft:air"));
+        boolean noKey = keyId == null || keyId.equals(AIR_ID);
         boolean countKeys = !noKey && !player.getAbilities().instabuild;
         int boxes = 0;
         int keys = countKeys ? 0 : Integer.MAX_VALUE;

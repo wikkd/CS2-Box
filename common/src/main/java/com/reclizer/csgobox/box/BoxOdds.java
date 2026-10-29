@@ -1,7 +1,5 @@
 package com.reclizer.csgobox.box;
 
-import com.reclizer.csgobox.logic.OddsCalculator;
-
 /**
  * Pure probability math for the box opening display (JEI category, commands).
  *
@@ -19,12 +17,23 @@ public final class BoxOdds {
 
     /**
      * Sum of positive weights; 0 when weights is null, empty or all non-positive.
-     * Delegates to {@link OddsCalculator#precomputeWeights} so the display layer
-     * and the roll layer share one "positive-weight sum" source of truth.
+     * Plain loop (allocation-free, same definition the roll layer's
+     * {@code OddsCalculator#precomputeWeights} encodes): this sits on
+     * per-frame paths — the Jade/TOP/WTHIT drop-entity providers and the
+     * JEI/REI categories call {@link #gradeChance}, which lands here, every
+     * render frame.
      */
     public static long totalWeight(int[] weights) {
-        OddsCalculator.Precomputed pre = OddsCalculator.precomputeWeights(weights);
-        return pre == null ? 0L : pre.total();
+        if (weights == null) {
+            return 0L;
+        }
+        long sum = 0L;
+        for (int w : weights) {
+            if (w > 0) {
+                sum += w;
+            }
+        }
+        return sum;
     }
 
     /**

@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -28,7 +29,26 @@ import java.util.Optional;
  * generator, so {@code /csbox reload} and file hot reloads are reflected with
  * no manual refresh.</p>
  */
-public record BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemStack keyStack) implements Display {
+public record BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemStack keyStack,
+                            List<EntryIngredient> outputs) implements Display {
+
+    /** Convenience constructor: derives the cached output list. */
+    public BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemStack keyStack) {
+        this(definition, boxStack, keyStack, null);
+    }
+
+    public BoxReiDisplay {
+        List<EntryIngredient> computed = new ArrayList<>();
+        computed.add(EntryIngredient.of(EntryStacks.of(boxStack)));
+        for (var grade : definition.grades()) {
+            for (ItemStack item : grade.items()) {
+                if (!item.isEmpty()) {
+                    computed.add(EntryIngredient.of(EntryStacks.of(item)));
+                }
+            }
+        }
+        outputs = List.copyOf(computed);
+    }
 
     /** Builds displays for every definition currently in the client registry. */
     public static List<BoxReiDisplay> fromRegistry() {
@@ -62,18 +82,32 @@ public record BoxReiDisplay(BoxDefinition definition, ItemStack boxStack, ItemSt
         return List.of(EntryIngredient.of(EntryStacks.of(keyStack)));
     }
 
+    /**
+     * Cached at construction (the {@code outputs} component): REI re-queries
+     * the output list per display during search/filter/render passes, and it
+     * only depends on the immutable components — it used to rebuild one
+     * EntryStack allocation per pool item on every query.
+     */
     @Override
     public List<EntryIngredient> getOutputEntries() {
-        List<EntryIngredient> outputs = new ArrayList<>();
-        outputs.add(EntryIngredient.of(EntryStacks.of(boxStack)));
-        for (var grade : definition.grades()) {
-            for (ItemStack item : grade.items()) {
-                if (!item.isEmpty()) {
-                    outputs.add(EntryIngredient.of(EntryStacks.of(item)));
-                }
-            }
-        }
         return outputs;
+    }
+
+    /** Keeps the pre-caching three-component identity semantics: the derived
+     *  outputs list must not affect display equality. */
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof BoxReiDisplay other)) {
+            return false;
+        }
+        return definition.equals(other.definition)
+                && boxStack.equals(other.boxStack)
+                && keyStack.equals(other.keyStack);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(definition, boxStack, keyStack);
     }
 
     @Override

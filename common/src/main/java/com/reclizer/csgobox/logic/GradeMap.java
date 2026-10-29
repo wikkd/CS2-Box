@@ -2,6 +2,7 @@ package com.reclizer.csgobox.logic;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,19 @@ public final class GradeMap<T> {
     private final Set<Integer> noFallback = ConcurrentHashMap.newKeySet();
 
     /**
+     * Precomputed per-grade positive-weight cumulative table, built once in
+     * the constructor. The roll path draws ~50 slots per animation strip plus
+     * one pick per bulk follow-up box, so hoisting the per-pick weight re-sum
+     * to build time removes two linear scans per roll (mirrors
+     * {@link OddsCalculator#precomputeWeights}, which already does this for
+     * the grade-level weights). Immutable and thread-safe like the map.
+     */
+    private record Pool(long[] cumulative, long total) {
+    }
+
+    private final Map<Integer, Pool> pools;
+
+    /**
      * @param map    grade → weighted items (defensively copied)
      * @param valid  predicate returning true for valid (non-empty) items
      * @param copier copy function applied to items before returning
@@ -66,6 +80,18 @@ public final class GradeMap<T> {
             }
             this.map = Collections.unmodifiableMap(copy);
         }
+        Map<Integer, Pool> poolBuilder = new HashMap<>();
+        for (Map.Entry<Integer, List<Weighted<T>>> entry : this.map.entrySet()) {
+            List<Weighted<T>> list = entry.getValue();
+            long[] cumulative = new long[list.size()];
+            long running = 0L;
+            for (int i = 0; i < list.size(); i++) {
+                running += Math.max(0, list.get(i).weight());
+                cumulative[i] = running;
+            }
+            poolBuilder.put(entry.getKey(), new Pool(cumulative, running));
+        }
+        this.pools = poolBuilder.isEmpty() ? Map.of() : Map.copyOf(poolBuilder);
     }
 
     /**
@@ -154,24 +180,27 @@ public final class GradeMap<T> {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
-        return copier.apply(pickWeighted(rng, candidates));
+        return copier.apply(pickWeighted(rng, candidates, pools.get(grade)));
     }
 
-    /** Weighted pick over one grade's pool (linear scan; pools are ≤256 items). */
-    private T pickWeighted(Random rng, List<Weighted<T>> candidates) {
-        long total = 0;
-        for (Weighted<T> c : candidates) {
-            total += Math.max(0, c.weight());
-        }
-        if (total <= 0) {
+    /**
+     * Weighted pick over one grade's pool via the precomputed cumulative
+     * table (single linear scan per roll; the sum step moved to build time).
+     * Selection order and the {@code roll < cumulative[i]} condition match
+     * the historical re-summing scan exactly, so a given RNG stream yields
+     * the same item as before.
+     */
+    private T pickWeighted(Random rng, List<Weighted<T>> candidates, Pool pool) {
+        if (pool == null || pool.total() <= 0) {
+            // Unreachable through the public factories (both filter weight
+            // <= 0); kept for parity with the historical uniform fallback.
             return candidates.get(rng.nextInt(candidates.size())).item();
         }
-        long roll = OddsCalculator.nextBoundedLong(rng, total);
-        long running = 0;
-        for (Weighted<T> c : candidates) {
-            running += Math.max(0, c.weight());
-            if (roll < running) {
-                return c.item();
+        long roll = OddsCalculator.nextBoundedLong(rng, pool.total());
+        long[] cumulative = pool.cumulative();
+        for (int i = 0; i < cumulative.length; i++) {
+            if (roll < cumulative[i]) {
+                return candidates.get(i).item();
             }
         }
         return candidates.get(candidates.size() - 1).item();

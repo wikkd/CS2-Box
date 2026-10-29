@@ -61,6 +61,13 @@ public final class OpenService {
     // is a 48-bit LCG; anyone holding the seed can replay the roll.
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+    /**
+     * Parsed once at class load; {@code countAvailability} and
+     * {@code tryConsumeKeys} run on every open request and used to re-parse
+     * this literal each time.
+     */
+    private static final Identifier AIR_ID = Identifier.parse("minecraft:air");
+
     // ------------------------------------------------------------------
     // Single open (PacketCsgoProgress)
     // ------------------------------------------------------------------
@@ -483,7 +490,7 @@ public final class OpenService {
     }
 
     private static Availability countAvailability(Player player, ItemStack box, Identifier keyId) {
-        boolean noKey = keyId == null || keyId.equals(Identifier.parse("minecraft:air"));
+        boolean noKey = keyId == null || keyId.equals(AIR_ID);
         boolean countKeys = !noKey && !player.getAbilities().instabuild;
         int boxes = 0;
         int keys = countKeys ? 0 : Integer.MAX_VALUE;
@@ -887,7 +894,7 @@ public final class OpenService {
      */
     private static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
         Identifier keyId = ItemCsgoBox.getKey(box);
-        if (keyId == null || keyId.equals(Identifier.parse("minecraft:air"))) {
+        if (keyId == null || keyId.equals(AIR_ID)) {
             return true;
         }
         if (count <= 0) {

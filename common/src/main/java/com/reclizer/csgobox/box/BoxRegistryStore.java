@@ -46,6 +46,17 @@ public final class BoxRegistryStore<K, V> {
     private final Runnable onCleared;
 
     /**
+     * Cached immutable snapshots backing {@link #getAll()} / {@link #getIds()}.
+     * Nulled on every mutation and rebuilt lazily on the next read, so hot
+     * readers (the per-death drop scan walks the whole registry; tab
+     * completion asks for the ids on every keystroke) no longer pay an O(n)
+     * copy per call. Same observable behaviour: readers still see an
+     * immutable snapshot that a later mutation never changes under them.
+     */
+    private List<V> allSnapshot = List.of();
+    private Set<K> idsSnapshot = Set.of();
+
+    /**
      * @param onEntryChanged invoked with the key after every register/remove
      * @param onCleared        invoked after every clear
      */
@@ -57,6 +68,8 @@ public final class BoxRegistryStore<K, V> {
     /** Registers (or replaces) the value under its key, then invalidates. */
     public synchronized void register(K key, V value) {
         registry.put(key, value);
+        allSnapshot = null;
+        idsSnapshot = null;
         onEntryChanged.accept(key);
     }
 
@@ -64,14 +77,26 @@ public final class BoxRegistryStore<K, V> {
         return registry.get(key);
     }
 
-    /** Immutable snapshot of all values, in insertion order. */
+    /** Immutable snapshot of all values, in insertion order (cached until the
+     *  next mutation). */
     public synchronized Collection<V> getAll() {
-        return List.copyOf(registry.values());
+        List<V> snapshot = allSnapshot;
+        if (snapshot == null) {
+            snapshot = List.copyOf(registry.values());
+            allSnapshot = snapshot;
+        }
+        return snapshot;
     }
 
-    /** Immutable snapshot of all keys, in insertion order. */
+    /** Immutable snapshot of all keys, in insertion order (cached until the
+     *  next mutation). */
     public synchronized Set<K> getIds() {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(registry.keySet()));
+        Set<K> snapshot = idsSnapshot;
+        if (snapshot == null) {
+            snapshot = Collections.unmodifiableSet(new LinkedHashSet<>(registry.keySet()));
+            idsSnapshot = snapshot;
+        }
+        return snapshot;
     }
 
     public synchronized int size() {
@@ -81,12 +106,16 @@ public final class BoxRegistryStore<K, V> {
     /** Removes the entry for the key (if any), then invalidates. */
     public synchronized void remove(K key) {
         registry.remove(key);
+        allSnapshot = null;
+        idsSnapshot = null;
         onEntryChanged.accept(key);
     }
 
     /** Removes every entry, then fires the clear callback. */
     public synchronized void clear() {
         registry.clear();
+        allSnapshot = null;
+        idsSnapshot = null;
         onCleared.run();
     }
 }
