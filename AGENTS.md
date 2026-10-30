@@ -77,8 +77,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 ### ⚠️ 版本号变更铁律
 
 - **未经维护者明确给出新版本号，严禁修改 `gradle.properties` 的 `mod_version`** —— 改版本号即发布动作，只能由维护者拍板执行。
-- 教程落盘文件名与 `mod_version` 强耦合（`_tutorial_v<版本>.md`，首次启动从**包内资源**复制，不再联网下载）。内嵌源为固定名 `common/src/main/resources/assets/csgobox/tutorials/tutorial.md` 与 `tutorial_zh_cn.md`；改版本号之前必须确认内嵌源内容已更新，并把同步副本 `docs/tutorials/_tutorial_v<新版本>*.md` 推送到 Gitee 在线版（见 `docs/RELEASE.md` §5「发布后收尾」）。
-- 版本号无法从 jar 清单解析时（dev/IDE 无 manifest），教程系统自动整体跳过（`BoxDefaults.modVersion()` 返回 null → 不复制、不删除），杜绝 `_tutorial_vunknown.md` 落盘与误删已有教程。
+- 教程**仅在线版**：源在 `docs/tutorials/`（文件名带版本号仅为归档习惯，与 `mod_version` 解耦），推送到 Gitee 在线仓库后由 `/csbox help` 的可点击链接打开；包内不再内置教程，`config/csbox/` 不再生成 `_tutorial_v*.md`（历史落盘文件不清理，可手动删除）。
 
 ## 关键文件
 
@@ -88,7 +87,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `packet/PacketCsgoProgress.java` — 服务端权威 RNG + `OPEN_BLOCKED_UNTIL_TICK`（ConcurrentHashMap，`tickOpenBlockMap` 每 100 tick 清理）
 - `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize）
 - `gui/CsboxBulkOverviewScreen.java` — 批量开箱总览屏（Shift+右键进入；点「开启」直接发包 `PacketCsgoBulkProgress` 并进 `CsboxProgressScreen`，无二次确认屏；服务端权威复核库存与扣减）
-- `common/box/BoxDefaults.java` — 教程内嵌资源复制（`writeTutorialIfMissing` + `refreshTutorials`；**当前版本教程全部就位后**才按 `^_tutorial_v.*\.md$` 白名单删除旧版；复制失败/无 jar 清单版本时**绝不删除**；无网络、无回收站）
+- `common/box/BoxDefaults.java` — 默认 `_villager_prices.json` 写入 + 遗留 `terminal.json` 一次性迁移（空文件视为合法未配置；损坏保留原位 + `terminal.json.corrupt-<时间戳>` 备份；不生成任何默认箱子/终端配置）。原教程安装器（`writeTutorialIfMissing` / `refreshTutorials`）已随本地教程功能整体移除
 - `common/box/BoxGrades.java` / `BoxRegistryStore.java` / `BoxStripGenerator.java` — 等级常量与纯函数 / 泛型注册表容器（回调契约固化）/ 泛型开箱滚动条（2026-08 重构下沉，平台 `BoxDefinition`/`BoxRegistry`/packet 引用指向 common）
 - `common/logic/OpenBlockGuard.java` — 服务端权威开箱冷却（10 tick，`isBlocked`/`block`/`tick`），八平台 packet 与 `ModEvents#serverTick` 共用
 - `common/config/CsboxConfigDefaults.java` — 八平台 `CsboxConfig` 默认值与取值范围唯一来源（枚举默认以常量名字符串存储）
@@ -98,7 +97,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `box/BoxItemResolver.java`（v2.0.1 新增，每平台一份）— 开箱/购买时解析 `item_spec`（count 区间、随机附魔、loot_table 掷表），仅服务端调用
 - `box/GradeGroup.java` — v2.0.1 第 7 字段 `itemWeights`（平行列表，默认全 1 = 均匀）；`itemWeightAt` / `positiveItemWeightSum`
 - `box/BoxDefinition.java` — v2.0.1 新字段 `enabled`/`requires`/`icon`/`discount`/`stock`/`maxPerPlayer`/`cooldownSeconds`/`permission`；`discountedPrice` / `missingRequirement`
-- `box/BoxJsonLoader.java` — v2.0.1 文件名校验 / enabled+requires 门控 / 空档位 warning / `/csbox validate` 干跑（`validateFile`）/ 新字段解析；`downloadTutorialsAsync()` 统一教程入口（服务端 `loadAll()` + 客户端 `ClientModEvents#onClientSetup` 共用，把包内教程复制到本地 `config/csbox/`，无网络）
+- `box/BoxJsonLoader.java` — v2.0.1 文件名校验 / enabled+requires 门控 / 空档位 warning / `/csbox validate` 干跑（`validateFile`）/ 新字段解析
 - `box/PriceTable.java`（v2.0.1 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 固定非负整数或 `[min, max]` 随机范围，`PriceRange`；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中 = 无价格（终端机不售、拆解 0，装载器对未定价 id 物品报错，无默认价回退））；`lookupRange` + `PriceRange.sample(IntUnaryOperator)` 服务端每次报价/拆解采样；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
 - `box/PriceRange.java`（v2.0.1 新增）— 固定价/范围价值对象（`[min, max]` 闭区间、`UNPRICED` 哨兵、`sample` 取整），纯 Java 无 MC 依赖；八平台 `GradeGroup.priceForIndex` 返回 `PriceRange`，网络流按 `[min, max]` 双 int 序列化
 - `box/LegacyPriceMigration.java`
@@ -116,7 +115,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `common/logic/BoxConstraintTracker.java`（v2.0.1 新增）— 开箱约束（max_per_player / cooldown）内存追踪，八平台共用
 - `common/terminal/TerminalStockManager.java`（v2.0.1 新增）— 终端库存内存态（`stock` 售罄即止，重启回满；补货设定已于 2.0.2 移除），八平台共用
 - `command/CsboxCommand.java` — `/csbox` 命令树；`showInfoOverview` 末尾输出「物品来源模组」命名空间统计（v26 系 `BuiltInRegistries` / forge_1_20_1 `ForgeRegistries`）；v2.0.1 起 `/csbox validate [box]` 干跑 + info 展示新字段
-- `command/EditorCommand.java`（八平台各一份，v2.0.1 新增）— 独立类注册 `/csbox editor` 子命令（**全员可用，无需 OP**），聊天栏输出可点击的网页配置工具链接（https://wikkd.github.io/CS2-Box/）；链接能装下时经 `common/box/EditorPack`（Gson 清单 → zlib deflate → base64url）内嵌 `config/csbox/*.json` + `_prices.json` 到 fragment（`#pack=`），网站解压后自动导入工作区草稿（超限/读失败回退纯链接，版本键与站点 versions 对齐：`1.21.1`/`26.1.2`/`26.2`/`forge-26.1.2`/`forge-26.2`/`forge-1.20.1`/`fabric-1.21.1`/`forge-1.18.2`），并在输出前追加一行本地配置统计（`common/box/EditorPackStats.summarize` 扫描 `config/csbox/` 的箱子数 / 物品条目数 / 未定价 id 数，lang 键 `commands.csgobox.editor.stats` 中英双语，目录缺失或空统计静默跳过；`_` 前缀文件与坏 JSON 容错跳过）；`CsboxCommand` 的 `/csbox help` 复用 `EditorCommand.EDITOR_URL` 聚合同一链接，并另给两个可点击入口：**打开教程文件夹**（`open_file` 相对路径 `config/csbox`，客户端游戏目录下）与**在线教程**（Gitee `docs/tutorials/`），help 全员可用（`info`/`reload`/`validate`/`give` 权限不变）；新增/调整需八平台同步并逐平台编译验证
+- `command/EditorCommand.java`（八平台各一份，v2.0.1 新增）— 独立类注册 `/csbox editor` 子命令（**全员可用，无需 OP**），聊天栏输出可点击的网页配置工具链接（https://wikkd.github.io/CS2-Box/）；链接能装下时经 `common/box/EditorPack`（Gson 清单 → zlib deflate → base64url）内嵌 `config/csbox/*.json` + `_prices.json` 到 fragment（`#pack=`），网站解压后自动导入工作区草稿（超限/读失败回退纯链接，版本键与站点 versions 对齐：`1.21.1`/`26.1.2`/`26.2`/`forge-26.1.2`/`forge-26.2`/`forge-1.20.1`/`fabric-1.21.1`/`forge-1.18.2`），并在输出前追加一行本地配置统计（`common/box/EditorPackStats.summarize` 扫描 `config/csbox/` 的箱子数 / 物品条目数 / 未定价 id 数，lang 键 `commands.csgobox.editor.stats` 中英双语，目录缺失或空统计静默跳过；`_` 前缀文件与坏 JSON 容错跳过）；`CsboxCommand` 的 `/csbox help` 复用 `EditorCommand.EDITOR_URL` 聚合同一链接，并另给可点击入口：**在线教程**（Gitee `docs/tutorials/`），help 全员可用（`info`/`reload`/`validate`/`give` 权限不变）；新增/调整需八平台同步并逐平台编译验证
 - `scripts/add-biome.py` — 向 `has_structure/*` 群系标签追加 biome（去重/幂等/`--dry-run`/`--replace`），让武库商小屋在模组群系生成（机制见 `docs/BIOME-INTEGRATION.md`）
 - `scripts/boxgen.py` / `scripts/check-ids.py`（v2.0.1 新增）— 箱子配置生成器 / compat-packs id 核查工具
 - `scripts/sync-box-editor-data.py`（v2.0.1 新增）+ `box-editor/` — 可视化网页配置工具（纯前端零构建，`file://` 可离线打开，可整目录发布 GitHub Pages；中英双语、跟随八平台版本控制 TACZ 变体/Data Components 可见性（TACZ 专属字段另有手动开关可强制启用/禁用；撤销/重做、校验项点击定位、物品
@@ -183,5 +182,5 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - JEI：NeoForge 3 平台已同步；`forge_1_20_1` 已接入（JEI 15.x，`mods.toml` 可选依赖 `[15.20,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（已知待办，Modrinth 无 JEI 26.x Forge 构建）
 - REI：`v1_21_1`（16.x）/`v26_1_2`（26.1.x）/`v26_2`（26.2.x）NeoForge 已同步——`@REIPluginClient` + 动态显示生成器（`/csbox reload` / 文件热重载后无需手动刷新），`forge_1_20_1` 已接入（REI 12.x，`mods.toml` 可选依赖 `[12.0,)`）；**`forge_26_1_2` / `forge_26_2` 缺失**（与 JEI 同策略，暂不接入）
 - Networking vs PacketSyncBoxDefinitions：Forge 用 `SimpleChannel`，NeoForge 用 `CustomPacketPayload`，平台差异正常；`forge_1_20_1` 同为 `SimpleChannel`（Forge 47.x API）。**Forge 三平台已补齐全量定义同步**（`PacketSyncBoxDefinitions`，`sync_box_definitions`：玩家加入 / `/csbox reload` / 文件热重载时服务端广播整份 `BoxRegistry`，客户端 `clear + register` 覆盖，`forge_1_20_1` 同时刷新 JEI），与 NeoForge 三平台架构对齐——专用服务器下客户端定义内容（权重/价格/物品清单/JEI 概率）始终以服务端为准
-- Tutorial/Validator：`BoxJsonSchemaValidator` 走 `common/` 唯一实现（八平台共用，无平台本地副本）；教程**随包内置**（固定资源名 `assets/csgobox/tutorials/tutorial.md` / `tutorial_zh_cn.md`），八平台统一为后台线程把内嵌资源复制到 `config/csbox/`（落盘名带版本号 `_tutorial_v<版本>.md`），服务端（`loadAll`）与客户端（`onClientSetup`）各触发一次，`BoxDefaults.writeTutorialIfMissing` 幂等 + synchronized 串行防单机双线程并发；**联网下载类 `TutorialFetcher` / `TutorialSources` 已随 v2.0.1 换用包内嵌而删除，运行时零网络外联**
+- Validator：`BoxJsonSchemaValidator` 走 `common/` 唯一实现（八平台共用，无平台本地副本）。教程**仅在线版**（Gitee `docs/tutorials/`，`/csbox help` 可点击链接，八平台同文）：包内嵌教程复制器、`/csbox reload tutorial` 子命令与死字段 `MODVERSION` 已随本地教程功能移除（联网下载类 `TutorialFetcher` / `TutorialSources` 更早随 v2.0.1 删除），运行时零网络外联
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`（当前无用例时跳过）；分支保护设置见 `docs/CI-PROTECTION.md`

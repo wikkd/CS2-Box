@@ -45,8 +45,6 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -86,31 +84,6 @@ public final class BoxJsonLoader {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }
     });
-
-    /**
-     * Background executor for the startup tutorial download: network timeouts
-     * must not block the server thread. Failure-safe — a shutdown mid-download
-     * just leaves the tutorial missing and the next launch retries.
-     */
-    private static final ExecutorService TUTORIAL_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "csgobox-tutorial");
-        t.setDaemon(true);
-        return t;
-    });
-
-    /**
-     * Downloads the version-stamped tutorial markdown files into
-     * {@code config/csbox/} on the background {@link #TUTORIAL_EXECUTOR}.
-     * Called by the server startup path ({@link #loadAll()}) and by the
-     * client setup path ({@code CsgoBox.ClientModEvents#onClientSetup}) so
-     * dedicated-server players also get a local copy. Same-JVM duplicate
-     * calls are safe: the executor is single-threaded and
-     * {@link BoxDefaults#writeTutorialIfMissing(Path)} is synchronized and
-     * idempotent.
-     */
-    public static void downloadTutorialsAsync() {
-        TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
-    }
 
     /** Hash -> parse result; empty {@code definition} = failed parse with diagnostics.
      *  {@code tableHash} is the price-table hash that produced this result, so a
@@ -176,8 +149,6 @@ public final class BoxJsonLoader {
                     priceTable.size(), PriceTable.FILE_NAME);
         }
 
-        // Background download: network timeouts must not block the server thread.
-        TUTORIAL_EXECUTOR.execute(() -> BoxDefaults.writeTutorialIfMissing(BOXES_DIR));
 
         List<Path> scannedFiles = new ArrayList<>();
         int[] loaded = {0};

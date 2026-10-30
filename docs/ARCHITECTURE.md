@@ -100,18 +100,15 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 - **`BoxStripGenerator`** — 泛型开箱滚动条生成（`Strip<T>` = items / grades / winningIndex），
   经 `GradeMap.isValid` 定位中奖位；平台传 `ItemStack.EMPTY` 作空值
 - **`BoxJsonSchemaValidator`** — JSON schema 校验（common 单测主力，34 用例），产出 `SchemaIssue` 列表
-- **`BoxDefaults`** — 教程内嵌资源复制（`writeTutorialIfMissing` / `refreshTutorials`）+ 遗留 `terminal.json`
-  一次性 `type` 迁移。教程 markdown **随包内置**（`assets/csgobox/tutorials/tutorial.md` / `tutorial_zh_cn.md`，
-  固定资源名；落盘文件名带版本号），首次启动复制到 `config/csbox/`，离线可用、**无网络依赖**。
-  **当前版本教程全部就位后**才按 `^_tutorial_v.*\.md$` 白名单删除旧版教程；复制失败/无 jar 清单版本
-  （dev/IDE）时**跳过复制与删除**（v2.0.1 修复：杜绝 `_tutorial_vunknown.md` 与误删已有教程）
+- **`BoxDefaults`** — 默认配置写入与遗留 `terminal.json` 一次性 `type` 迁移（`_villager_prices.json`
+  兜底写入；损坏 terminal 保留原位 + `corrupt-<时间戳>` 备份副本）。本地教程安装器已随本地教程功能移除：
+  教程改为**仅在线版**（`/csbox help` 的 Gitee 链接，源在 `docs/tutorials/`）
 - **`BoxFileWatcher`** — `config/csbox/` 文件监听（300ms 防抖热重载），纯 JDK `WatchService`
-- **（v2.0.1 已移除）`TutorialFetcher` / `TutorialSources`** — 原教程联网下载与镜像源机制，换用包内嵌
-  后彻底删除，运行时零网络外联
+- **（已移除）`TutorialFetcher` / `TutorialSources`（v2.0.1 联网下载）与包内嵌教程复制器（本地教程移除时）** —
+  教程分发最终收敛为 Gitee 在线版链接，运行时零网络外联
 - **`BoxOdds` / `NetworkLimits` / `BoxReloadCallback`** — 概率展示模型 / 包体上限常量 / 重载回调契约
-- **`BoxJsonLoader`**（平台）— 加载 `config/csbox/*.json`：首次启动保证目录存在、把包内教程复制到本机
-  （`downloadTutorialsAsync()` 供服务端 `loadAll()` 与客户端 `onClientSetup` 共用，专用服务器玩家
-  本机也落一份教程）、对遗留 `terminal.json` 做一次性 type 迁移；在 `ServerStartingEvent` 触发 `loadAll()`。
+- **`BoxJsonLoader`**（平台）— 加载 `config/csbox/*.json`：首次启动保证目录存在、对遗留
+  `terminal.json` 做一次性 type 迁移；在 `ServerStartingEvent` 触发 `loadAll()`。
   **2.0.0 起终端机不再生成默认配置**——出厂即空箱，与普通箱一样由玩家自建 JSON。
   **v2.0.1**：文件名合法性校验、`enabled`/`requires` 门控、空档位 warning、`validateFile`
   干跑（`/csbox validate`）、解析全部新字段；损坏文件**保留原位**（`/csbox info error` 持续报告）

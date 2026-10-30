@@ -53,7 +53,7 @@ done
    - 批量开箱（Shift+右键 → 总览屏点「开启」直接开箱 → 流水结果屏；「显示全部」网格滚轮 / ↑↓ 滚动浏览，不被收集按钮遮挡）
    - 磨损耐久：单开有耐久物品按磨损值扣耐久（查看界面 wear 显示=实际扣损率，无耐久物品仍为随机磨损率）；`damageItemByWear=false` 时关闭
    - 成就触发（`csgobox:opened_boxes` 累计）
-   - `/csbox reload`、`/csbox reload tutorial`、`/csbox info error`（加载错误）
+   - `/csbox reload`、`/csbox info error`（加载错误）
    - 动态 box item（`/give @p csgobox:<filename>` 图标非紫黑）
    - GUI 渲染验证走自动化工作流：`docs/RUNTIME-UI-TESTING.md`（CGEvent 驱动 + 帧缓冲像素断言）
    - 终端机屏幕（`terminal` 物品右键打开，八平台）：
@@ -71,8 +71,7 @@ done
 
 ## 5. 发布后收尾
 
-- **版本号提升（`gradle.properties` 的 `mod_version`）是发布动作，仅由维护者在发布时明确执行**；未明确给出新版本号时严禁修改（教程落盘文件名与它强耦合，见 AGENTS.md「版本号变更铁律」）
+- **版本号提升（`gradle.properties` 的 `mod_version`）是发布动作，仅由维护者在发布时明确执行**；未明确给出新版本号时严禁修改
 - 更新 `docs/` 下相关文档（`ARCHITECTURE.md` / `CONFIGURATION.md` 若涉及变更）
-- 按新版本号准备教程内容：更新内嵌源 `common/src/main/resources/assets/csgobox/tutorials/tutorial.md` 与 `tutorial_zh_cn.md`（固定文件名；首次启动随包复制到 `config/csbox/_tutorial_v<mod_version>.md` / `_zh_cn.md`，离线可用，**不再联网下载**，无缺文件落空问题）
-- 同步在线版（Mod 列表地球按钮指向）：把上述内嵌内容复制为 `docs/tutorials/_tutorial_v<mod_version>.md` / `_zh_cn.md` 并推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要
+- 教程内容更新（如有）：直接更新 `docs/tutorials/` 在线版并推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要；包内不再内置教程，教程内容与 `mod_version` 解耦
 - 打 tag：`git tag v<mod_version> && git push origin v<mod_version>`

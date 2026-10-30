@@ -220,11 +220,10 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 | 命令 | 权限 | 说明 |
 |---|---|---|
-| `/csbox help` | 全员 | 显示帮助，含可点击链接：打开教程文件夹、在线教程、网页配置工具 |
+| `/csbox help` | 全员 | 显示帮助，含可点击链接：在线教程、网页配置工具 |
 | `/csbox info [<箱子ID>]` | OP | 列出所有箱子与加载错误（含物品来源模组统计）；加 `<箱子ID>` 查看该箱权重、掉落实体、各档物品等详情 |
 | `/csbox info error` | OP | 仅显示当前箱子加载错误（无错误时绿色提示） |
 | `/csbox reload` | OP | 重新加载 `config/csbox/*.json` 箱子定义 |
-| `/csbox reload tutorial` | OP | 重载箱子定义，并强制刷新教程文档 |
 | `/csbox validate [<箱子ID>]` | OP | v2.0.1 干跑校验，不发布到运行时 |
 | `/csbox give <玩家> <箱子ID> [数量]` | OP | v2.0.1 发放配置箱 |
 | `/csbox nbt hand` | 任意玩家 | 打印主手物品序列化后的 JSON（可直接粘贴进箱子 `items`） |
@@ -241,7 +240,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 ### 配置一个自定义箱子
 
-箱子数据放在 `config/csbox/<箱子ID>.json`，**文件名即箱子 ID**。下面是最简示例（完整字段与 `_tutorial` 注释见 `common/src/main/resources/data/csgobox/` 下的示例，以及 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)）：
+箱子数据放在 `config/csbox/<箱子ID>.json`，**文件名即箱子 ID**。下面是最简示例（完整字段见 [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)）：
 
 ```json
 {

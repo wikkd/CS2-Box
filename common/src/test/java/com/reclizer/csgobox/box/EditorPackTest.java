@@ -48,7 +48,7 @@ class EditorPackTest {
     void packsBoxAndPricesIntoFragment() throws Exception {
         write("weapon_box.json", BOX_JSON);
         write("_prices.json", PRICES_JSON);
-        write("_tutorial_v2.0.2.md", "not json, must be ignored");
+        write("_notes.md", "not json, must be ignored");
 
         String url = EditorPack.buildUrl(tempDir, "https://example.test/ed/", "26.2");
         assertNotNull(url);

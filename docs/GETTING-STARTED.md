@@ -88,7 +88,7 @@ active_versions=1.21.1  # 可选:1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-2
 | `/csbox editor` | 打开网页配置工具（与 help 中的链接相同，保留兼容入口）|
 | `/csbox info` / `/csbox info error` | 列出箱子与加载错误 / 仅显示加载错误;加 `<箱子ID>` 查看详情 |
 | `/give @p csgobox:csgo_box` | 发放箱子(vanilla);用 `csgobox:box_id` 组件覆盖指定箱子 |
-| `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义;`/csbox reload tutorial` 同时刷新教程 |
+| `/csbox reload` | 重新加载 `config/csbox/*.json` 箱子定义 |
 
 详细命令列表见 `command/CsboxCommand.java`。
 

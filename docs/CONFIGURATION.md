@@ -238,7 +238,7 @@
 首次启动时 `BoxJsonLoader.loadAll()` 会保证 `config/csbox/` 目录存在，并：
 
 - **不生成任何箱子默认配置（含终端机）**：2.0.0 起终端机也出厂即**空箱**——`terminal.json` 不再自动生成，终端机与默认箱行为一致（打开为空谈判屏，不绑定奖池）。旧版（无 `type` 且带遗留 `key`）的 `terminal.json` 会自动迁移；空文件视为合法未配置状态；损坏文件**保留原位**（让 `/csbox info error` 持续报告）并另存 `terminal.json.corrupt-<时间戳>` 备份副本（v2.0.1 行为，此前是移出加载路径）。
-- 把**随包内置**的 `_tutorial_v<版本>.md` 教程文档（中英双份）复制到 `config/csbox/`——**无网络依赖、离线可用**。**服务端与客户端都会触发**：客户端 `onClientSetup` 同样调用复制（`BoxJsonLoader.downloadTutorialsAsync`），专用服务器玩家的本机 `config/csbox/` 也会落一份；单机/局域网与服务端同一目录，复制幂等且同 JVM 串行，不会重复覆盖。只复制缺失文件、不覆盖玩家修改；当前版本就位后才清理旧版本残留。**Mod 列表入口**：模组详情页的描述会写明教程位置，且详情页有"Website（地球）"按钮（`displayURL`）可直接打开在线教程（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）。
+- **教程不再本地生成**：教程文档只提供在线版——`/csbox help` 的"在线教程"链接与模组详情页"Website（地球）"按钮（`displayURL`）均指向 Gitee 在线教程目录（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）；本地 `config/csbox/` 只放箱子 JSON 与 `_prices.json`（历史版本落盘的 `_tutorial_v*.md` 不再清理，可手动删除）。
 
 **普通箱子同样没有内置默认配置**：`weapon_supply_box.json` 等普通箱文件需要由玩家/服主自行创建（或从教程文档中复制示例），创建后才会出现在创造物品栏。
 
@@ -261,7 +261,7 @@
 
 **箱子 JSON(`config/csbox/*.json`)重载**:
 
-- `/csbox reload` 立即重新加载（`/csbox reload tutorial` 同时刷新教程文档）
+- `/csbox reload` 立即重新加载
 - `enableHotReload`（默认开启）开启时，`config/csbox/*.json` 文件变化会自动热重载（300ms 防抖）
 - **价格表随箱重载**：`/csbox reload` 与热重载会同时重读 `config/csbox/_prices.json`。
   加载缓存按「箱子文件内容 + 价格表内容」双重 hash 判定，价格表一改，所有箱子定义

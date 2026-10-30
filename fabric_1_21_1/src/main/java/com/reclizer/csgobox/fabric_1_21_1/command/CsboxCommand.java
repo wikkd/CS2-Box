@@ -106,9 +106,7 @@ public final class CsboxCommand {
                                 .executes(ctx -> showLoadErrors(ctx.getSource()))))
                 .then(Commands.literal("reload")
                         .requires(CsboxCommand::isGameMaster)
-                        .executes(CsboxCommand::reloadBoxes)
-                        .then(Commands.literal("tutorial")
-                                .executes(CsboxCommand::refreshTutorials)))
+                        .executes(CsboxCommand::reloadBoxes))
                 .then(Commands.literal("validate")
                         .requires(CsboxCommand::isGameMaster)
                         .executes(CsboxCommand::validateAll)
@@ -177,7 +175,7 @@ public final class CsboxCommand {
         return players.size();
     }
 
-    /** Help is visible to everyone; carries clickable links to the web editor, the local tutorial folder and the online tutorial mirror. */
+    /** Help is visible to everyone; carries clickable links to the web editor and the online tutorial mirror. */
     private static int showHelp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.title"), false);
@@ -190,12 +188,10 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.editor")
                 .append(editorLink()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.tutorial")
-                .append(tutorialFolderLink()).append("  ").append(tutorialOnlineLink()), false);
+                .append(tutorialOnlineLink()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.footer"), false);
         return Command.SINGLE_SUCCESS;
     }
-    /** Folder opened by /csbox help (path is relative to the client game directory). */
-    private static final String TUTORIAL_DIR = "config/csbox";
     /** Online tutorial mirror, kept in sync with docs/tutorials/ in the repo. */
     private static final String TUTORIAL_URL = "https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/tutorials";
 
@@ -207,16 +203,6 @@ public final class CsboxCommand {
                         .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, EditorCommand.EDITOR_URL))
                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                                 Component.translatable("commands.csgobox.editor.hover"))));
-    }
-
-    /** Opens the local config/csbox folder, where the bundled tutorials are written. */
-    private static Component tutorialFolderLink() {
-        return Component.translatable("commands.csgobox.help.tutorial.folder")
-                .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE)
-                .withStyle(style -> style
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, TUTORIAL_DIR))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.translatable("commands.csgobox.help.tutorial.folder_hover"))));
     }
 
     /** Opens the online tutorial mirror in the player's browser. */
@@ -469,14 +455,6 @@ public final class CsboxCommand {
         com.reclizer.csgobox.fabric_1_21_1.CsgoBox.broadcastBoxDefinitions();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
-    }
-
-    /** Force a refresh of the JAR-bundled tutorial markdown files (offline re-copy). */
-    private static int refreshTutorials(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack source = ctx.getSource();
-        BoxDefaults.refreshTutorials(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("csbox"));
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tutorial.refresh.success"), false);
-        return Command.SINGLE_SUCCESS;
     }
 
     // --- TACZ registry browser (/csbox tacz list) ---

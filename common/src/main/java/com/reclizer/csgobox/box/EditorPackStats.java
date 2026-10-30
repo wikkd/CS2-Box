@@ -30,7 +30,7 @@ public final class EditorPackStats {
 
     /**
      * @param boxes    box JSON files found (underscore-prefixed helpers such as
-     *                 {@code _prices.json} and tutorial files are excluded)
+     *                 {@code _prices.json} are excluded)
      * @param items    total grade entries across every box file
      * @param unpriced distinct item ids referenced with no price-table entry
      */

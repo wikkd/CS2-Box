@@ -57,7 +57,7 @@ class EditorPackStatsTest {
         write("box.json", """
                 {"name":"Box","type":"csbox","key":"minecraft:iron_ingot",
                  "random":[625,125,25,5,2],"grade1":[{"id":"minecraft:diamond"}]}""");
-        write("_tutorial_v2.0.1.md", "not json");
+        write("_notes.md", "not json");
         write("notes.txt", "not a box");
         write("_prices.json", "{\"minecraft:diamond\":1}");
         EditorPackStats.Summary s = EditorPackStats.summarize(dir);

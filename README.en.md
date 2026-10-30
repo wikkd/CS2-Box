@@ -220,11 +220,10 @@ Key ladder: iron (key0) → gold (key1) → diamond (key2) → netherite (key3, 
 
 | Command | Permission | Description |
 |---|---|---|
-| `/csbox help` | everyone | Help text with clickable links: tutorial folder, online tutorial, web box editor |
+| `/csbox help` | everyone | Help text with clickable links: online tutorials, web box editor |
 | `/csbox info [<boxId>]` | OP | List all crates and load errors (plus namespace statistics); with `<boxId>`, show weights, dropped entities and per-tier items |
 | `/csbox info error` | OP | Show only current crate load errors (green message when none) |
 | `/csbox reload` | OP | Reload `config/csbox/*.json` crate definitions |
-| `/csbox reload tutorial` | OP | Reload crate definitions and force-refresh tutorial docs |
 | `/csbox validate [<boxId>]` | OP | v2.0.1 dry-run validation, published to runtime only on a clean pass |
 | `/csbox give <player> <boxId> [count]` | OP | v2.0.1 hand out configured crates |
 | `/csbox nbt hand` | any player | Print the held item as serialized JSON (paste-ready for crate `items`) |
@@ -241,7 +240,7 @@ Examples:
 
 ### Configuring a custom crate
 
-Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box ID**. Minimal example (full fields and `_tutorial` comments: see the samples under `common/src/main/resources/data/csgobox/` and [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)):
+Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box ID**. Minimal example (full fields: see [docs/CONFIGURATION.md](./docs/CONFIGURATION.md)):
 
 ```json
 {

@@ -50,8 +50,6 @@ import net.minecraft.core.Registry;
 public class CsgoBox implements ModInitializer {
 
     public static final String MODID = "csgobox";
-    /** Mod version from the Fabric mod container; consumed by the tutorial copy. */
-    public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     /** Whether a mod with the given id is loaded (v2.0.1: box JSON missing-mod
@@ -111,9 +109,6 @@ public class CsgoBox implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        MODVERSION = FabricLoader.getInstance().getModContainer(MODID)
-                .map(container -> container.getMetadata().getVersion().getFriendlyString())
-                .orElse("unknown");
 
         registerCustomStatsAndTriggers();
         ModSounds.register();

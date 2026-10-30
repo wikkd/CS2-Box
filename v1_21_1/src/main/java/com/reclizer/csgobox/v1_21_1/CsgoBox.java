@@ -78,9 +78,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CsgoBox {
 
     public static final String MODID = "csgobox";
-    /** Mod version from {@code ModContainer}; consumed by the tutorial download
-     *  which fires after this constructor. "unknown" only if loaded pre-init. */
-    public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     /** Whether a mod with the given id is loaded (v2.0.1: box JSON missing-mod
@@ -142,12 +139,6 @@ public class CsgoBox {
     }
 
     public CsgoBox(IEventBus modEventBus) {
-        try {
-            MODVERSION = ModLoadingContext.get().getActiveContainer()
-                    .getModInfo().getVersion().toString();
-        } catch (Exception e) {
-            LOGGER.warn("Could not read mod version from container: {}", e.getMessage());
-        }
         ModLoadingContext.get().getActiveContainer().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
         // Cloth Config GUI (optional client mod). The registration lives in
@@ -343,11 +334,6 @@ public class CsgoBox {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
-            // Client-side tutorial download: a dedicated-server player's client
-            // never fires ServerStartingEvent, so without this they get no local
-            // copy. Same-JVM duplicates (integrated server) are safe — the
-            // single-threaded executor + synchronized idempotent download.
-            BoxJsonLoader.downloadTutorialsAsync();
                     }
 
         /**

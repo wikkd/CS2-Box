@@ -30,10 +30,6 @@ public final class CsgoBoxClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CsgoBox.LOGGER.info("CS2 Box client setup complete");
-        // Client-side tutorial copy: a dedicated-server player's client never
-        // reaches ServerLifecycleEvents, so without this they get no local
-        // copy. Idempotent — see BoxDefaults.
-        BoxJsonLoader.downloadTutorialsAsync();
         // Load once more now that EVERY mod's main init has run (Fabric runs
         // all client entrypoints after all main entrypoints): other mods'
         // items are registered by now, so id validation sees them.

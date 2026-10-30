@@ -64,7 +64,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CsgoBox {
 
     public static final String MODID = "csgobox";
-    public static String MODVERSION = "unknown";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     /** Whether a mod with the given id is loaded. Used by the box JSON loader
@@ -128,12 +127,6 @@ public class CsgoBox {
 
     public CsgoBox() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        try {
-            MODVERSION = ModLoadingContext.get().getContainer()
-                    .getModInfo().getVersion().toString();
-        } catch (Exception e) {
-            LOGGER.warn("Could not read mod version from container: {}", e.getMessage());
-        }
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "csgobox.toml");
 
         // Cloth Config GUI (optional client mod). The registration lives in
@@ -315,11 +308,6 @@ public class CsgoBox {
         @net.minecraftforge.eventbus.api.SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("CS2 Box client setup complete");
-            // Client-side tutorial download: a dedicated-server player's client
-            // never fires ServerStartingEvent, so without this they get no local
-            // copy. Same-JVM duplicates (integrated server) are safe — the
-            // single-threaded executor + synchronized idempotent download.
-            BoxJsonLoader.downloadTutorialsAsync();
                         event.enqueueWork(() -> {
                 // 1.20.1 屏幕注册：MenuScreens.register 必须在主线程执行（FMLClientSetupEvent.enqueueWork）
                 net.minecraft.client.gui.screens.MenuScreens.register(

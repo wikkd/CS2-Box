@@ -141,7 +141,6 @@ Forge 三平台（`forge_1_20_1` / `forge_26_1_2` / `forge_26_2`）自 **2.0.0 �
 
 ### 安全
 - 客户端包是否做了输入校验与权限检查（勿信任客户端）？
-- 教程下载（`writeTutorialIfMissing` / `refreshTutorials`）是否受 `^_tutorial_v.*\.md$` 白名单约束、不会误删用户数据？注意：旧版教程**无回收站直接删除**，审查相关改动须格外谨慎数据丢失。
 - 命令参数、NBT/DataComponent 解析是否有注入/崩溃风险（畸形 JSON 不应导致服务端崩溃）？
 - RNG 是否服务端权威，客户端无法操纵开箱结果？
 
@@ -251,7 +250,7 @@ PacketCsgoProgress.java:88 `tickOpenBlockMap` —— 考虑 `cleanupExpiredOpenB
 
 ```
 ❓ **澄清（先问再判）**
-BoxDefaults.java 的 refreshTutorials 按白名单直接删除旧版教程且无回收站——这次改动是否覆盖用户已自定义教程的场景？确认不会误删，再决定优先级。
+BoxDefaults.upgradeLegacyTerminalConfig 会改写用户已有的 terminal.json——这次改动是否覆盖玩家自定义配置的场景？确认不会误伤，再决定优先级。
 ```
 
 ---
