@@ -220,7 +220,7 @@ try {
   await page.waitForSelector('#example-list .example-group');
   const compatBtns = await page.locator('#example-list [data-action="load-compat"]').count();
   check('examples dialog lists the official compat-pack templates',
-    compatBtns === 3 &&
+    compatBtns === 4 &&
     ((await page.locator('#example-list .example-group').textContent()) || '').trim().length > 0,
     'packs=' + compatBtns);
   await page.click('#example-close');

@@ -414,42 +414,6 @@ window.CSBDATA = {
         "en": "Legacy NBT tag (no Data Components); TACZ variants supported.",
         "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键。"
       }
-    },
-    {
-      "key": "fabric-1.21.1",
-      "label": {
-        "en": "1.21.1 (Fabric)",
-        "zh": "1.21.1 (Fabric)"
-      },
-      "short": {
-        "en": "1.21.1 Fabric",
-        "zh": "1.21.1 Fabric"
-      },
-      "taczVariants": false,
-      "components": true,
-      "itemModel": false,
-      "note": {
-        "en": "Data Components; TACZ has no Fabric build — variant keys disabled.",
-        "zh": "Data Components；TACZ 无 Fabric 构建——变体键禁用。"
-      }
-    },
-    {
-      "key": "forge-1.18.2",
-      "label": {
-        "en": "Forge 1.18.2",
-        "zh": "Forge 1.18.2"
-      },
-      "short": {
-        "en": "1.18.2 Forge",
-        "zh": "1.18.2 Forge"
-      },
-      "taczVariants": true,
-      "components": false,
-      "itemModel": false,
-      "note": {
-        "en": "Legacy NBT tag (no Data Components); TACZ 1.1.4 variants supported.",
-        "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 1.1.4 变体键。"
-      }
     }
   ],
   "gradeNames": [
@@ -2683,6 +2647,397 @@ window.CSBDATA = {
         }
       },
       "prices": null
+    },
+    {
+      "key": "superb-warfare-pack",
+      "name": {
+        "en": "Superb Warfare compat pack",
+        "zh": "卓越前线（Superb Warfare）联动包"
+      },
+      "files": {
+        "sbw_crate.json": {
+          "name": "#AA3333 卓越前线军火箱",
+          "key": "csgobox:csgo_key3",
+          "drop": 0.02,
+          "random": [
+            625,
+            125,
+            25,
+            6,
+            4
+          ],
+          "requires": [
+            "superbwarfare"
+          ],
+          "grade5": [
+            {
+              "id": "superbwarfare:secondary_cataclysm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:super_star_shooter",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:awm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:javelin",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "superbwarfare:rpg",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:minigun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_2_hb",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:igla_9k38",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "superbwarfare:qbz_191",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:ak_12",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_4",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:hk_416",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:svd",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "superbwarfare:ak_47",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_870",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_5",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:vector",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rpk",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rifle_ammo",
+              "count": 64
+            }
+          ],
+          "grade1": [
+            {
+              "id": "superbwarfare:glock_17",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_443",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_1911",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:homemade_shotgun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:handgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "superbwarfare:shotgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "minecraft:iron_ingot",
+              "count": 6
+            }
+          ]
+        },
+        "sbw_terminal.json": {
+          "name": "#AA3333 卓越前线军火终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "random": [
+            625,
+            125,
+            25,
+            6,
+            4
+          ],
+          "requires": [
+            "superbwarfare"
+          ],
+          "grade5": [
+            {
+              "id": "superbwarfare:secondary_cataclysm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:super_star_shooter",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:awm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:javelin",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:ntw_20",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_98b",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "superbwarfare:rpg",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:minigun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_2_hb",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:igla_9k38",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:svd",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_60",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mk_14",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:devotion",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "superbwarfare:qbz_191",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:qbz_95",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:ak_12",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_4",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:hk_416",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:sentinel",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:insidious",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_79",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "superbwarfare:ak_47",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:sks",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_870",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_5",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:vector",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rpk",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:bocek",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:taser",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rifle_ammo",
+              "count": 64
+            },
+            {
+              "id": "superbwarfare:sniper_ammo",
+              "count": 32
+            }
+          ],
+          "grade1": [
+            {
+              "id": "superbwarfare:glock_17",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_443",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_1911",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:homemade_shotgun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:hunting_rifle",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:marlin",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:k_98",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mosin_nagant",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:handgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "superbwarfare:shotgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "superbwarfare:heavy_ammo",
+              "count": 16
+            },
+            {
+              "id": "superbwarfare:ammo_box",
+              "count": 1
+            },
+            {
+              "id": "minecraft:gunpowder",
+              "count": 8
+            }
+          ]
+        }
+      },
+      "prices": {
+        "minecraft:gunpowder": 100,
+        "minecraft:iron_ingot": 150,
+        "superbwarfare:ammo_box": 800,
+        "superbwarfare:handgun_ammo": 150,
+        "superbwarfare:heavy_ammo": 500,
+        "superbwarfare:rifle_ammo": 400,
+        "superbwarfare:shotgun_ammo": 200,
+        "superbwarfare:sniper_ammo": 600,
+        "superbwarfare:ak_12": 2200,
+        "superbwarfare:ak_47": 1800,
+        "superbwarfare:awm": 22000,
+        "superbwarfare:bocek": 1500,
+        "superbwarfare:devotion": 9000,
+        "superbwarfare:glock_17": 500,
+        "superbwarfare:hk_416": 2500,
+        "superbwarfare:homemade_shotgun": 400,
+        "superbwarfare:hunting_rifle": 800,
+        "superbwarfare:igla_9k38": 13000,
+        "superbwarfare:insidious": 5500,
+        "superbwarfare:javelin": 16000,
+        "superbwarfare:k_98": 900,
+        "superbwarfare:m_1911": 500,
+        "superbwarfare:m_2_hb": 10000,
+        "superbwarfare:m_4": 2000,
+        "superbwarfare:m_60": 7000,
+        "superbwarfare:m_79": 5000,
+        "superbwarfare:m_870": 1100,
+        "superbwarfare:m_98b": 8000,
+        "superbwarfare:marlin": 700,
+        "superbwarfare:minigun": 12000,
+        "superbwarfare:mk_14": 4500,
+        "superbwarfare:mosin_nagant": 1000,
+        "superbwarfare:mp_443": 450,
+        "superbwarfare:mp_5": 1200,
+        "superbwarfare:ntw_20": 15000,
+        "superbwarfare:qbz_191": 2100,
+        "superbwarfare:qbz_95": 1700,
+        "superbwarfare:rpg": 14000,
+        "superbwarfare:rpk": 6000,
+        "superbwarfare:secondary_cataclysm": 30000,
+        "superbwarfare:sentinel": 6500,
+        "superbwarfare:sks": 1600,
+        "superbwarfare:super_star_shooter": 28000,
+        "superbwarfare:svd": 7000,
+        "superbwarfare:taser": 600,
+        "superbwarfare:vector": 1400
+      }
     },
     {
       "key": "tacz-pack",

@@ -467,10 +467,13 @@ COMPAT_PACK_NAMES = {
     "apotheosis-pack": {"en": "Apotheosis compat pack", "zh": "Apotheosis 联动包"},
     "irons-spells-pack": {"en": "Iron's Spells compat pack", "zh": "铁魔法书（Iron's Spells）联动包"},
     "tacz-pack": {"en": "TACZ compat pack", "zh": "TACZ 联动包"},
+    "superb-warfare-pack": {"en": "Superb Warfare compat pack", "zh": "卓越前线（Superb Warfare）联动包"},
 }
 
-# Test fixtures are not player-facing templates.
-COMPAT_PACK_EXCLUDE = {"test-pack"}
+# Test fixtures are not player-facing templates. `test-pack` is the generic
+# vanilla fixture; platform variants (`test-pack-fabric-1.21.1`,
+# `test-pack-forge-1.18.2`) share the same prefix, so exclusion is prefix-based.
+COMPAT_PACK_EXCLUDE_PREFIX = "test-pack"
 
 
 def build_compat_packs():
@@ -482,7 +485,7 @@ def build_compat_packs():
     packs = []
     compat_dir = ROOT / "compat-packs"
     for sub in sorted(compat_dir.iterdir()):
-        if not sub.is_dir() or sub.name in COMPAT_PACK_EXCLUDE:
+        if not sub.is_dir() or sub.name.startswith(COMPAT_PACK_EXCLUDE_PREFIX):
             continue
         files = {}
         prices = None
