@@ -1,0 +1,212 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.gradle",
+    "module": "utils",
+    "version": "7.1.38",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "31.1-jre"
+          }
+        },
+        {
+          "group": "commons-io",
+          "module": "commons-io",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "srgutils",
+          "version": {
+            "requires": "0.4.13"
+          }
+        },
+        {
+          "group": "de.siegmar",
+          "module": "fastcsv",
+          "version": {
+            "requires": "2.2.0"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.9"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "utils-7.1.38.jar",
+          "url": "utils-7.1.38.jar",
+          "size": 58100,
+          "sha512": "110526678767cd1afe59f84f118c2e2e5bd163140e1d54b73a18d30a93d3818162affd5f117b58c79cd6cbff667ada230d46e954ea72c59ccc27f9797ff633d9",
+          "sha256": "46caebeeddf85830db5c7dc2fcf35ce9c9e407eef9b86c0134ef113d73f33bf1",
+          "sha1": "cb2cdd4d8e48aad8789880dc2b39c4fadcf08760",
+          "md5": "38753b9a470b8b6088fa7e229837cb16"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "31.1-jre"
+          }
+        },
+        {
+          "group": "commons-io",
+          "module": "commons-io",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "srgutils",
+          "version": {
+            "requires": "0.4.13"
+          }
+        },
+        {
+          "group": "de.siegmar",
+          "module": "fastcsv",
+          "version": {
+            "requires": "2.2.0"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.9"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "utils-7.1.38.jar",
+          "url": "utils-7.1.38.jar",
+          "size": 58100,
+          "sha512": "110526678767cd1afe59f84f118c2e2e5bd163140e1d54b73a18d30a93d3818162affd5f117b58c79cd6cbff667ada230d46e954ea72c59ccc27f9797ff633d9",
+          "sha256": "46caebeeddf85830db5c7dc2fcf35ce9c9e407eef9b86c0134ef113d73f33bf1",
+          "sha1": "cb2cdd4d8e48aad8789880dc2b39c4fadcf08760",
+          "md5": "38753b9a470b8b6088fa7e229837cb16"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "utils-7.1.38-sources.jar",
+          "url": "utils-7.1.38-sources.jar",
+          "size": 30885,
+          "sha512": "ded9462ac653dfb839e2d8f88098dffb53bbbac2ae9e32ca9a2e429e84818321d9891a3c0e0a6d735bb49eb2448a59d7f55f678758b8c1b76a0de5040371dc42",
+          "sha256": "2e966cfd5a68ee7838d58bcaabef2c23ed115cb1b2620c265f0f739bf65f4d0f",
+          "sha1": "e5c534ff47d2df7b5a1ae9c9769d445d565dfd82",
+          "md5": "2d4800d5f005c179cf7cab23cac04773"
+        }
+      ]
+    }
+  ]
+}

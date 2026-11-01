@@ -1,0 +1,109 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged",
+    "module": "VscLaunchConfigs",
+    "version": "1.0.8",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "VscLaunchConfigs-1.0.8.jar",
+          "url": "VscLaunchConfigs-1.0.8.jar",
+          "size": 31057,
+          "sha512": "3c2c66d11cec068b16d896acff5a578996f03fd4df38211442805e4ce5331437d34293d09799a4fe432b960fa29cac8c8ca3421a49b6a360fb3dea64c19c4a69",
+          "sha256": "0b98d083cee439b4b8d2f79dcc27e35e023b65ffabfa49b1cc6e1525e84336b8",
+          "sha1": "75b7f96b888d026b2b2d74194a28ffdc2633d323",
+          "md5": "8f56b0d41fda4218f850974c599da1c3"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.10.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "VscLaunchConfigs-1.0.8.jar",
+          "url": "VscLaunchConfigs-1.0.8.jar",
+          "size": 31057,
+          "sha512": "3c2c66d11cec068b16d896acff5a578996f03fd4df38211442805e4ce5331437d34293d09799a4fe432b960fa29cac8c8ca3421a49b6a360fb3dea64c19c4a69",
+          "sha256": "0b98d083cee439b4b8d2f79dcc27e35e023b65ffabfa49b1cc6e1525e84336b8",
+          "sha1": "75b7f96b888d026b2b2d74194a28ffdc2633d323",
+          "md5": "8f56b0d41fda4218f850974c599da1c3"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "VscLaunchConfigs-1.0.8-sources.jar",
+          "url": "VscLaunchConfigs-1.0.8-sources.jar",
+          "size": 13543,
+          "sha512": "89aead37791eb8f7cbfc6ef878e1258d477c3f9ec00f9909eb3ca751d280feb8c8d1cbbf6560529e11f3dd9301e7a99dba9685c5c05d6a6e984354492b78ab5a",
+          "sha256": "99d96610466a99d507a3fd8a36badcb8d0ddf6a409e37a2c47f571ac00da2408",
+          "sha1": "e3ef0ce1d613fbf394628b68261c05042cc48144",
+          "md5": "bc4fdab478e51793c769ee0497eb5255"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "VscLaunchConfigs-1.0.8-javadoc.jar",
+          "url": "VscLaunchConfigs-1.0.8-javadoc.jar",
+          "size": 94762,
+          "sha512": "5d778a45e38d0cf8fd07f11934514b564652a5a9658be3e800e9f674378af2a38391af3ffbb3bab29831aef4e39332336c4fbec24dc5b199ff689dd059bd8d88",
+          "sha256": "20505df43d0489d1d4251bdc5ad5a0ab9c89d5b5f6afb879edc8dbc03c40b382",
+          "sha1": "71cf94503623bb763b507f21716a4420587efc5e",
+          "md5": "caf268b53c8437733a2f71feae811913"
+        }
+      ]
+    }
+  ]
+}

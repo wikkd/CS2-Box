@@ -1,0 +1,199 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "forge-transformers",
+    "version": "26.1.2-64.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.5.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "forge-transformers-26.1.2-64.1.0.jar",
+          "url": "forge-transformers-26.1.2-64.1.0.jar",
+          "size": 14668,
+          "sha512": "c5dbaba2e1278a35d1de5908b835dd287400478b3324b06f6562ad7635703c03669167236e07f93986ab40cdf24abac658dc7ff6078aea5c385ae043b6ad1a46",
+          "sha256": "b7595c78cdfea0fa9bd3d9653892600f3f50529fc03a11fa7c5d35ee9873d9e1",
+          "sha1": "f2a62b3e44ce0f6674c2d91977ad96432cc46a1b",
+          "md5": "c597463a4ddc4afa03cd31be3ed0bc12"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-util",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-analysis",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.25.2"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.11.0"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "modlauncher",
+          "version": {
+            "requires": "10.2.6"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "coremods-api",
+          "version": {
+            "requires": "5.3.1"
+          },
+          "excludes": [
+            {
+              "group": "*",
+              "module": "*"
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "forge-transformers-26.1.2-64.1.0.jar",
+          "url": "forge-transformers-26.1.2-64.1.0.jar",
+          "size": 14668,
+          "sha512": "c5dbaba2e1278a35d1de5908b835dd287400478b3324b06f6562ad7635703c03669167236e07f93986ab40cdf24abac658dc7ff6078aea5c385ae043b6ad1a46",
+          "sha256": "b7595c78cdfea0fa9bd3d9653892600f3f50529fc03a11fa7c5d35ee9873d9e1",
+          "sha1": "f2a62b3e44ce0f6674c2d91977ad96432cc46a1b",
+          "md5": "c597463a4ddc4afa03cd31be3ed0bc12"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "forge-transformers-26.1.2-64.1.0-sources.jar",
+          "url": "forge-transformers-26.1.2-64.1.0-sources.jar",
+          "size": 7265,
+          "sha512": "3973232f25c655035ad912cee4178799e8e3255ad88b617e9aa50e8e315a86dd0d9137e11f29ebce187debf0391ef43856d93151d860f4c21e5595ab79cb449b",
+          "sha256": "cbbe7d8a4741df70527f0a2cc064b32a5a1445a155e69fea5710d14f98aef464",
+          "sha1": "564ccc73721871361e641b39b315efff321cd508",
+          "md5": "8107989b58004178e656234682546ca3"
+        }
+      ]
+    }
+  ]
+}

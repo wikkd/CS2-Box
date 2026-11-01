@@ -1,0 +1,79 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "renamer-gradle",
+    "version": "1.1.7",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.3.0-rc-2"
+    }
+  },
+  "variants": [
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "renamer-gradle-1.1.7-sources.jar",
+          "url": "renamer-gradle-1.1.7-sources.jar",
+          "size": 29281,
+          "sha512": "9f716dcffb488d49e116074919a4fba702d1a277766deca736e293022918ce1e8736b03661b38ed1aeb8399f73f1f61122325be1a0db56e8a8960c045e329e18",
+          "sha256": "396e3b2da130169edcbcd8f64ceb74ced806e9d92f58b713403f2cb79f5949e9",
+          "sha1": "38276b8acdcfc3bba44d9620fb80d00fcedade0f",
+          "md5": "b4b995772b7a4b74db5711eff47f670b"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "renamer-gradle-1.1.7-javadoc.jar",
+          "url": "renamer-gradle-1.1.7-javadoc.jar",
+          "size": 159039,
+          "sha512": "6bf18e14996b8990e5c00a0444e0291f695d08e5aa70bd431d703b4df650ce1a076da2154c39d353bd64015c0242d8ae0d2e46df6de0c90631b2f4799f8f5144",
+          "sha256": "a3d44fef3d200805b7ac9e9feeed9fd5ecd6c9e4a72ae24365d6cc1b0e3d4338",
+          "sha1": "be87f16ed45c7d2ac7b73e607023e8f0b21447ac",
+          "md5": "01a9a0afc23aceac789f4dc7373371e6"
+        }
+      ]
+    },
+    {
+      "name": "shadowRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "shadowed",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "renamer-gradle-1.1.7.jar",
+          "url": "renamer-gradle-1.1.7.jar",
+          "size": 258572,
+          "sha512": "541d78e5de21fbaf9c4e70cc3cc08d5c960da55a1c323938b116f6cfe33bb7255b33a1804d29f9ceebd44432be80bd266b23fe87198a463384cd5384d84eb670",
+          "sha256": "a63ea17cdad432eb65726ec84decca67d6023bf44879fb0f95cb7f533c138949",
+          "sha1": "63d758cf22340fe9aa36e2de0dedd7d915b474cf",
+          "md5": "98dd206b70e8ca8bec855bda93c39099"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "bootstrap-api",
+    "version": "2.1.8",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "bootstrap-api-2.1.8.jar",
+          "url": "bootstrap-api-2.1.8.jar",
+          "size": 2059,
+          "sha512": "59447e5a415b110e5b1ac8265e55f98992b9df474dd285d6bdd67cca41bfa0b52db4852707d028dfc588d9728274ce3ce7d8341864bfca421b78b66dcf4ae6e1",
+          "sha256": "b9b5b5b3b441a42920eeaf181395e858642874f09f64cd7f9e4a0cd7a34b8938",
+          "sha1": "f77d6527282dfc12e2460a3155467f40f9a2673b",
+          "md5": "80e1ccc33e0ac0a995a352ec2977d131"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "bootstrap-api-2.1.8.jar",
+          "url": "bootstrap-api-2.1.8.jar",
+          "size": 2059,
+          "sha512": "59447e5a415b110e5b1ac8265e55f98992b9df474dd285d6bdd67cca41bfa0b52db4852707d028dfc588d9728274ce3ce7d8341864bfca421b78b66dcf4ae6e1",
+          "sha256": "b9b5b5b3b441a42920eeaf181395e858642874f09f64cd7f9e4a0cd7a34b8938",
+          "sha1": "f77d6527282dfc12e2460a3155467f40f9a2673b",
+          "md5": "80e1ccc33e0ac0a995a352ec2977d131"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "bootstrap-api-2.1.8-sources.jar",
+          "url": "bootstrap-api-2.1.8-sources.jar",
+          "size": 2543,
+          "sha512": "e73a6717ccbbaabef2b1c1dc46ee76e1be83073be29a513627820622878746f5eea9ed1bda43a3b43c67046cb6efc9a62f03a10cf94e803a8563ea68a50728f5",
+          "sha256": "6d9dbb27be48f1630e4fe8fce7b6c0ef8679ef0f4437343e062438db38aefe1d",
+          "sha1": "9322a6c42865a5bc988eaa50c8edfb8060d2cc87",
+          "md5": "2d8d03b142cb8dc75ff5b0fc92b7bf1f"
+        }
+      ]
+    }
+  ]
+}

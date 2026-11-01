@@ -1,0 +1,78 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged",
+    "module": "EclipseLaunchConfigs",
+    "version": "0.1.3",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "com.fasterxml.jackson.dataformat",
+          "module": "jackson-dataformat-xml",
+          "version": {
+            "requires": "2.15.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "EclipseLaunchConfigs-0.1.3.jar",
+          "url": "EclipseLaunchConfigs-0.1.3.jar",
+          "size": 36913,
+          "sha512": "567929a99bf945a695c8854c37010cc9d066c397dc4a0c9a874a2edeccbf93ebd3ac628219ef66243a6bb9ec48a002072049bdb6e7a7003fba6f2e53938b93f9",
+          "sha256": "959ff5eaf039e26e39cdbc7cbdc26680a6be6bb345f236656758571aac417998",
+          "sha1": "b088af8d08afe8069504ae9d26d766e202f936d4",
+          "md5": "f8e0c709c8d695f86c977044f34165ee"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "com.fasterxml.jackson.dataformat",
+          "module": "jackson-dataformat-xml",
+          "version": {
+            "requires": "2.15.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "EclipseLaunchConfigs-0.1.3.jar",
+          "url": "EclipseLaunchConfigs-0.1.3.jar",
+          "size": 36913,
+          "sha512": "567929a99bf945a695c8854c37010cc9d066c397dc4a0c9a874a2edeccbf93ebd3ac628219ef66243a6bb9ec48a002072049bdb6e7a7003fba6f2e53938b93f9",
+          "sha256": "959ff5eaf039e26e39cdbc7cbdc26680a6be6bb345f236656758571aac417998",
+          "sha1": "b088af8d08afe8069504ae9d26d766e202f936d4",
+          "md5": "f8e0c709c8d695f86c977044f34165ee"
+        }
+      ]
+    }
+  ]
+}

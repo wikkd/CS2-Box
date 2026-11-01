@@ -1,0 +1,145 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "accesstransformers",
+    "version": "8.2.17",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "accesstransformers-8.2.17.jar",
+          "url": "accesstransformers-8.2.17.jar",
+          "size": 41635,
+          "sha512": "4ccca2e4e4fd408dc5bb1ac076f112f6bfc9b7a16c427c35f11e35e23ab033769acf8ee928fbc219f9aa127a2dc894f20f08739071551852e8401862fb8d77d6",
+          "sha256": "d89305f8de0c1ba48a0e898b7da95e29262cb55d14970fcbbcade0ac93631457",
+          "sha1": "8834af62843c7c8fb17d00208a3831e9efb3e6b1",
+          "md5": "ec2fef14ed858e65ae30d272120296e8"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.sf.jopt-simple",
+          "module": "jopt-simple",
+          "version": {
+            "requires": "5.0.4"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.9.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.9.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.9.1"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-api",
+          "version": {
+            "requires": "2.19.0"
+          }
+        },
+        {
+          "group": "org.apache.logging.log4j",
+          "module": "log4j-core",
+          "version": {
+            "requires": "2.19.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "accesstransformers-8.2.17.jar",
+          "url": "accesstransformers-8.2.17.jar",
+          "size": 41635,
+          "sha512": "4ccca2e4e4fd408dc5bb1ac076f112f6bfc9b7a16c427c35f11e35e23ab033769acf8ee928fbc219f9aa127a2dc894f20f08739071551852e8401862fb8d77d6",
+          "sha256": "d89305f8de0c1ba48a0e898b7da95e29262cb55d14970fcbbcade0ac93631457",
+          "sha1": "8834af62843c7c8fb17d00208a3831e9efb3e6b1",
+          "md5": "ec2fef14ed858e65ae30d272120296e8"
+        }
+      ]
+    },
+    {
+      "name": "shadowRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "shadowed",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "accesstransformers-8.2.17-fatjar.jar",
+          "url": "accesstransformers-8.2.17-fatjar.jar",
+          "size": 2746890,
+          "sha512": "1edbad6bbe1436e2a080b00e9254c49bea74f9e26c38de99ba524318fb876a6737e4f03390edc982dee33c36cf122fbb75a4e2354d2c5f46766bfd6a2cbf0a10",
+          "sha256": "d64bd0d1d3d1b7d1e2977c12669217e21e44e3d7036a02b50742ba8709b540fc",
+          "sha1": "ab4c84f8b4307a865685bf8bd1f6327045c28e56",
+          "md5": "0d2ce81db7d19443943acc9a4bfa0b72"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "accesstransformers-8.2.17-sources.jar",
+          "url": "accesstransformers-8.2.17-sources.jar",
+          "size": 16224,
+          "sha512": "36280dcac86af8cfab658a24b161f9c66cfcf9c1e3a05d26d091ecad6ebb259198277ed93f53a8ae88ffa837533f39c496e68a22c427030d849ebc40c841bb93",
+          "sha256": "66e553d9911ac099c7393a4daaadd3f056df2369d1422b6bf82f68494087e8df",
+          "sha1": "170812ed8d77954508148a50f6086bcc30b29141",
+          "md5": "549758a2496c5fa918f12c03d6dc1b3b"
+        }
+      ]
+    }
+  ]
+}

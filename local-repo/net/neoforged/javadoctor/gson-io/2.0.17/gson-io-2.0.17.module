@@ -1,0 +1,132 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.javadoctor",
+    "module": "gson-io",
+    "version": "2.0.17",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.0.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged.javadoctor",
+          "module": "spec",
+          "version": {
+            "requires": "2.0.17"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.10.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "gson-io-2.0.17.jar",
+          "url": "gson-io-2.0.17.jar",
+          "size": 5747,
+          "sha512": "3fcfbcd3c7f49dfd1fd0b11d1cfdb96dd87ac4c416e9694fd099837b4eccc7b60e85e39d14e120d521530d6f748c98bda24c40e3c171c8f25fe19fd9b90df00a",
+          "sha256": "de40a10adb58105e84864dff41e3ef490d87411afa390d86a940c74a6bf69821",
+          "sha1": "040edf7077205615bffe214a9d250c50cd0d13de",
+          "md5": "ad81da1c3e11df65590d365975c1ff1c"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged.javadoctor",
+          "module": "spec",
+          "version": {
+            "requires": "2.0.17"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.10.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "gson-io-2.0.17.jar",
+          "url": "gson-io-2.0.17.jar",
+          "size": 5747,
+          "sha512": "3fcfbcd3c7f49dfd1fd0b11d1cfdb96dd87ac4c416e9694fd099837b4eccc7b60e85e39d14e120d521530d6f748c98bda24c40e3c171c8f25fe19fd9b90df00a",
+          "sha256": "de40a10adb58105e84864dff41e3ef490d87411afa390d86a940c74a6bf69821",
+          "sha1": "040edf7077205615bffe214a9d250c50cd0d13de",
+          "md5": "ad81da1c3e11df65590d365975c1ff1c"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "gson-io-2.0.17-javadoc.jar",
+          "url": "gson-io-2.0.17-javadoc.jar",
+          "size": 19340,
+          "sha512": "95b5e88d0ea702b98ef66b8680d4b78def5b1e16eb4b9d72e8c8f45d230fd656cd5aa769fc41662579b392c6fcaf732b95c03a8daa499c1b9e891d3aa919e18e",
+          "sha256": "f1cca521d54c2688d18ad5ca9442e7cf410e0525c1cec0875b92d12569c0dc0d",
+          "sha1": "acfe78a6c7ab03d7df9371129ee3e9031d90d660",
+          "md5": "2c24355bff8e026c257e5256e0b40610"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "gson-io-2.0.17-sources.jar",
+          "url": "gson-io-2.0.17-sources.jar",
+          "size": 2056,
+          "sha512": "c19b0d3ce8d251a02e61f21d3734c9c2d916e7d9f2c65a2cb94e77b3d9503ae3fef44a80a39b3bf351a38dbf6d74f839623e6811cb27cc747a8494dcf26c3eec",
+          "sha256": "b8fedbe117d7717677b78023d3b1fa6f1b3ab241bea00151b4fbc0da9c71d02d",
+          "sha1": "aea31ca84351c92749d35fc605ae4ff530eeec6c",
+          "md5": "9b90ec4e94678a428e687e6a6a652199"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "unsafe",
+    "version": "0.9.2",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "unsafe-0.9.2.jar",
+          "url": "unsafe-0.9.2.jar",
+          "size": 7768,
+          "sha512": "08451b6834f2fdb3ab81558497651cdf9947be5b9050dfc6a12361e352a254c76f90c19cfdc94e21098bd1bdccdc93e244fe230e50aefaa560a8f5efc62669a4",
+          "sha256": "f5035ab2dd1c02aa354f948a28daf2ff4215956194a98634f076ad71610fe3a4",
+          "sha1": "33bad02861cabd77c54a8c9d1205e8638bbbbb4f",
+          "md5": "a4b1f17fbeea6b548c3530451e45c5c6"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "unsafe-0.9.2.jar",
+          "url": "unsafe-0.9.2.jar",
+          "size": 7768,
+          "sha512": "08451b6834f2fdb3ab81558497651cdf9947be5b9050dfc6a12361e352a254c76f90c19cfdc94e21098bd1bdccdc93e244fe230e50aefaa560a8f5efc62669a4",
+          "sha256": "f5035ab2dd1c02aa354f948a28daf2ff4215956194a98634f076ad71610fe3a4",
+          "sha1": "33bad02861cabd77c54a8c9d1205e8638bbbbb4f",
+          "md5": "a4b1f17fbeea6b548c3530451e45c5c6"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "unsafe-0.9.2-sources.jar",
+          "url": "unsafe-0.9.2-sources.jar",
+          "size": 3826,
+          "sha512": "ace4ff19ac0547daee5efccafe59e02e370842c264019e7fde6fee8f3bb20c184b2470611a5799327ebec58da904ab9641a87dc2124ce847e4daff099f756480",
+          "sha256": "0a853f51741b26fcffedfb647280a563111816fd2452be81fd3333d040f18a86",
+          "sha1": "82f2e5f0d152925ac7c9accbe73e560e84255769",
+          "md5": "ba4517ff8412d42da3038b42b6488b87"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "coremods-api",
+    "version": "5.3.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.3.0-rc-2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-util",
+          "version": {
+            "requires": "9.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "coremods-api-5.3.1.jar",
+          "url": "coremods-api-5.3.1.jar",
+          "size": 15300,
+          "sha512": "3298e54082b1a87bf47c616be2dae330295f695404a3e22d5e6be81d9f06bb6c3e04c0d83c2d22852f52750dbe3b40b334be3216269031b849b3edcad370fd81",
+          "sha256": "5c2f1f88ebd1a74c56c4a8fcd6d9078ff9889b64ed5ca5869af268b1e2e2f41e",
+          "sha1": "86c7b8efae5d43de06bc7d4da4292c1ee0f543bf",
+          "md5": "558301ce3ab4b4ba776426db8ea7cd52"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.7.1"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-util",
+          "version": {
+            "requires": "9.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "coremods-api-5.3.1.jar",
+          "url": "coremods-api-5.3.1.jar",
+          "size": 15300,
+          "sha512": "3298e54082b1a87bf47c616be2dae330295f695404a3e22d5e6be81d9f06bb6c3e04c0d83c2d22852f52750dbe3b40b334be3216269031b849b3edcad370fd81",
+          "sha256": "5c2f1f88ebd1a74c56c4a8fcd6d9078ff9889b64ed5ca5869af268b1e2e2f41e",
+          "sha1": "86c7b8efae5d43de06bc7d4da4292c1ee0f543bf",
+          "md5": "558301ce3ab4b4ba776426db8ea7cd52"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "coremods-api-5.3.1-sources.jar",
+          "url": "coremods-api-5.3.1-sources.jar",
+          "size": 10222,
+          "sha512": "3afb93d649bbbaa1ee31816f29f0830f07890663c2fc91083497fcbc986ca7635fb7f94b27b754c0523b3f3dd48c227d66b1bdd73622bd2718022779a4dea4e8",
+          "sha256": "4d30e040f329ab4e4a1aa7ed838014026f0ad2fa9d58a045b06af9d91dee3767",
+          "sha1": "b3e3b7681f861d3ea4c1ca7ef414c5a5c86919d9",
+          "md5": "858b8640aea02bd6728a39ac9bd9f302"
+        }
+      ]
+    }
+  ]
+}

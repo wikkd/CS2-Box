@@ -1,0 +1,134 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.fancymodloader",
+    "module": "earlydisplay",
+    "version": "11.0.16",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.4.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "earlydisplay-11.0.16.jar",
+          "url": "earlydisplay-11.0.16.jar",
+          "size": 360749,
+          "sha512": "d4545395ef7a5cc941ae86c94e4365703e79f52b932b367823ef2b893f69f9dd413dc1f1e072f63fd1c37a92289c26648325e8ef1c23a38e9a305d0fd31a1871",
+          "sha256": "d58742116712f8817c871cc58217e15a99054dc4ffcf437028e745dcdc41b1dc",
+          "sha1": "2d357375a7ea94a1ca86042d48fa4f719a552894",
+          "md5": "f5b6e88d84339b08b0d8c1efed7d9991"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged.fancymodloader",
+          "module": "loader",
+          "version": {
+            "requires": "11.0.16"
+          }
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl-bom",
+          "version": {
+            "requires": "3.4.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl"
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl-glfw"
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl-opengl"
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl-stb"
+        },
+        {
+          "group": "org.lwjgl",
+          "module": "lwjgl-tinyfd"
+        },
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.16"
+          }
+        },
+        {
+          "group": "net.sf.jopt-simple",
+          "module": "jopt-simple",
+          "version": {
+            "requires": "5.0.4"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "earlydisplay-11.0.16.jar",
+          "url": "earlydisplay-11.0.16.jar",
+          "size": 360749,
+          "sha512": "d4545395ef7a5cc941ae86c94e4365703e79f52b932b367823ef2b893f69f9dd413dc1f1e072f63fd1c37a92289c26648325e8ef1c23a38e9a305d0fd31a1871",
+          "sha256": "d58742116712f8817c871cc58217e15a99054dc4ffcf437028e745dcdc41b1dc",
+          "sha1": "2d357375a7ea94a1ca86042d48fa4f719a552894",
+          "md5": "f5b6e88d84339b08b0d8c1efed7d9991"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "earlydisplay-11.0.16-sources.jar",
+          "url": "earlydisplay-11.0.16-sources.jar",
+          "size": 262819,
+          "sha512": "5b962488128ab4e1ccffda876bdc9e8debae477945c3d126924e6b15cac1a75a6d798bf3a94600b926d5a1da5c517f57a050becf895c49ae730144a0d3fcb62c",
+          "sha256": "f69198cc941e0f47124d4e53b4926585389df11603f675e09a2cca7cee9e969d",
+          "sha1": "02ebc12d559028f48211bed6c676d10a0e9130c9",
+          "md5": "ac2a32007cf7a816da1cd02e8ba0fa16"
+        }
+      ]
+    }
+  ]
+}

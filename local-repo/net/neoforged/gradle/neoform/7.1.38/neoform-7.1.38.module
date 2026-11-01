@@ -1,0 +1,168 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.gradle",
+    "module": "neoform",
+    "version": "7.1.38",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "common",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "dsl-common",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "dsl-neoform",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          },
+          "requestedCapabilities": [
+            {
+              "group": "net.neoforged",
+              "name": "groovydslimprover-base"
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "neoform-7.1.38.jar",
+          "url": "neoform-7.1.38.jar",
+          "size": 92525,
+          "sha512": "7dda495181549b5e28fa860559b9c80e8b844ff865029ea91e68931fbbbc0e4c202efe0fd44d74ed6149f141a0ca02bb3ddfe2d4fe715b85e34b1d8d0c77ed08",
+          "sha256": "ae5431bc0fb2cfe1c1335f3209206ad7f6a915efc87891490d4d4e561be515e7",
+          "sha1": "ab6d041295c64437f22932c4da9e2f39adb36cf5",
+          "md5": "f1c0b5f9142a88003e22dad8b213c8b1"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "common",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "dsl-common",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "dsl-neoform",
+          "version": {
+            "requires": "7.1.38"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          },
+          "requestedCapabilities": [
+            {
+              "group": "net.neoforged",
+              "name": "groovydslimprover-base"
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "neoform-7.1.38.jar",
+          "url": "neoform-7.1.38.jar",
+          "size": 92525,
+          "sha512": "7dda495181549b5e28fa860559b9c80e8b844ff865029ea91e68931fbbbc0e4c202efe0fd44d74ed6149f141a0ca02bb3ddfe2d4fe715b85e34b1d8d0c77ed08",
+          "sha256": "ae5431bc0fb2cfe1c1335f3209206ad7f6a915efc87891490d4d4e561be515e7",
+          "sha1": "ab6d041295c64437f22932c4da9e2f39adb36cf5",
+          "md5": "f1c0b5f9142a88003e22dad8b213c8b1"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "neoform-7.1.38-sources.jar",
+          "url": "neoform-7.1.38-sources.jar",
+          "size": 38906,
+          "sha512": "13f714530d454836abc8183ffee1037e5e2fedad84ef5273791cd2b17c12df1a5b19602ac70cca6ac2bb9f4e183fef56104341c1c219ee20f18d56e1c1a0a03a",
+          "sha256": "764d11ff3e483360d938f9623539a200f8ef030a485f8e513f477d3440f05753",
+          "sha1": "a9f19ea30917c0d7471915badd19a81a7bdb610a",
+          "md5": "795381e513b3c3ae57d9451da649caad"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.gradle",
+    "module": "dsl-userdev",
+    "version": "7.1.38",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "dsl-userdev-7.1.38.jar",
+          "url": "dsl-userdev-7.1.38.jar",
+          "size": 27739,
+          "sha512": "ad7373bddfeebaf676468518d1d094c605fd93ee400d56d9d4b581bbb2c4398fe5447359aa25b10e15d1f0aad9ba2f1eed6de06e7033be170943ed6dbcdfbe93",
+          "sha256": "099df0a0f83bbeae2c5960d859e80005158a617bf136ed842cba20470e5b0848",
+          "sha1": "243ea2cbd97ee81ec1a2f4c69909bd7f62f8e86c",
+          "md5": "d8a5a7b452413ca86c2a9aaf0ac57111"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "dsl-userdev-7.1.38.jar",
+          "url": "dsl-userdev-7.1.38.jar",
+          "size": 27739,
+          "sha512": "ad7373bddfeebaf676468518d1d094c605fd93ee400d56d9d4b581bbb2c4398fe5447359aa25b10e15d1f0aad9ba2f1eed6de06e7033be170943ed6dbcdfbe93",
+          "sha256": "099df0a0f83bbeae2c5960d859e80005158a617bf136ed842cba20470e5b0848",
+          "sha1": "243ea2cbd97ee81ec1a2f4c69909bd7f62f8e86c",
+          "md5": "d8a5a7b452413ca86c2a9aaf0ac57111"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "dsl-userdev-7.1.38-sources.jar",
+          "url": "dsl-userdev-7.1.38-sources.jar",
+          "size": 5062,
+          "sha512": "aac23686183a0b0c4e622c673017d38f447c886f8d33083c9768f63b4e42c165df2975381bee2eb7843f9f8135a94a94bf6d8d2e83cc7c134eacec94aca8880f",
+          "sha256": "d6bd943e9eaac50b3a7cc7b17f71d32b4fbfb535da6e9cc58741e07d2fb8ec19",
+          "sha1": "7b9a7c17c7129c3a8b11c670acee7e3549aeedd7",
+          "md5": "81892b77f34399308f4013708d57b3b6"
+        }
+      ]
+    }
+  ]
+}

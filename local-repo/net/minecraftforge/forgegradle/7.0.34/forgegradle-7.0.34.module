@@ -1,0 +1,78 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "forgegradle",
+    "version": "7.0.34",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.3.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "forgegradle-7.0.34-sources.jar",
+          "url": "forgegradle-7.0.34-sources.jar",
+          "size": 77548,
+          "sha512": "536d26319c5144482e1659e715e23243cd22334483e21802b90b66f25dd8aab9b957de132c3ec760feb500710b23a68e276c8f5ba965377d94a66196bede99f0",
+          "sha256": "9abf555b44925897d038e616079b44b558b6de6ab5e805b73c0890bf360609e0",
+          "sha1": "86026eac8856cb9d1f161a1b8a1f27250c7ebfbc",
+          "md5": "c36bcb805cc1fb7180cd936dd4e2e3a4"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "forgegradle-7.0.34-javadoc.jar",
+          "url": "forgegradle-7.0.34-javadoc.jar",
+          "size": 4230490,
+          "sha512": "a1356b13b78fb6d0ed373682e207dafc343945af0e358e2f42d6a43afdcb8cccfc7924cead40a85d70301a0451ea6d578fbb08f2c71cc587281a63768c332653",
+          "sha256": "3b67a9efc8136de41062d5de47dc0877b7c340e77fe76ec00f6b6d8b3b9b99bb",
+          "sha1": "038a1357af24a25aef12d54b93e452dbeb7f7008",
+          "md5": "a1e0a7746e57a12c5f3618edad679d6c"
+        }
+      ]
+    },
+    {
+      "name": "shadowRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "shadowed",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "forgegradle-7.0.34.jar",
+          "url": "forgegradle-7.0.34.jar",
+          "size": 706908,
+          "sha512": "9c6b39eac50b636fe16daacdca6d24f955e96a1c20f2a6da3a952dc19ab3706559e789bcc759566af030f9400307f8d8b20c15adb59230c012965263a9b54623",
+          "sha256": "50313429bb8c9a924364de8e0ac60698f8223d464a27096d64322be36d03a9aa",
+          "sha1": "b96973ce7a1627e252bc790ffcfcd316616a53c5",
+          "md5": "86741b2571181ab1d3eb5f42c55bb644"
+        }
+      ]
+    }
+  ]
+}

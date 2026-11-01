@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <!-- This module was also published with a richer model, Gradle metadata,  -->
+  <!-- which should be used instead. Do not delete the following line which  -->
+  <!-- is to indicate to Gradle or any Gradle module metadata file consumer  -->
+  <!-- that they should prefer consuming it instead. -->
+  <!-- do_not_remove: published-with-gradle-metadata -->
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>net.neoforged</groupId>
+  <artifactId>neoform</artifactId>
+  <version>26.1.2-1</version>
+  <packaging>zip</packaging>
+  <name>NeoForm</name>
+  <description>Data and patches required to produce recompilable Minecraft source code</description>
+  <url>https://github.com/NeoForged/NeoForm</url>
+  <licenses>
+    <license>
+      <name>LGPL-2.1-only</name>
+      <url>https://spdx.org/licenses/LGPL-2.1-only</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>neoforged</id>
+      <name>NeoForged</name>
+      <email>contact@neoforged.net</email>
+      <url>https://github.com/neoforged</url>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/NeoForged/NeoForm.git</connection>
+    <developerConnection>scm:git:git@github.com:NeoForged/NeoForm.git</developerConnection>
+    <url>https://github.com/NeoForged/NeoForm</url>
+  </scm>
+  <issueManagement>
+    <system>github</system>
+    <url>https://github.com/NeoForged/NeoForm/issues</url>
+  </issueManagement>
+  <dependencies>
+    <dependency>
+      <groupId>net.neoforged.installertools</groupId>
+      <artifactId>installertools</artifactId>
+      <version>4.0.16</version>
+      <classifier>fatjar</classifier>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.vineflower</groupId>
+      <artifactId>vineflower</artifactId>
+      <version>1.11.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.neoforged</groupId>
+      <artifactId>vineflower-plugins</artifactId>
+      <version>0.1.5</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.neoforged</groupId>
+      <artifactId>minecraft-dependencies</artifactId>
+      <version>26.1.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.neoforged</groupId>
+      <artifactId>mergetool</artifactId>
+      <version>2.0.7</version>
+      <classifier>api</classifier>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>26.0.2-1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>ca.weblite</groupId>
+      <artifactId>java-objc-bridge</artifactId>
+      <version>1.1</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+</project>

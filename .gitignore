@@ -145,7 +145,7 @@ init.gradle
 build_and_deploy.ps1
 
 # Local dev-only auxiliary files (never part of the build)
-net/
+/net/
 .qoder/
 .zcode/
 
@@ -161,6 +161,10 @@ __pycache__/
 
 # Local dependency probe artifacts (Modrinth API responses / downloaded jars)
 /local-repo/_probe/
+# Local-repo mirrors track pom/module metadata only (jars fall under the
+# global *.jar rule); checksums and zips are disposable artifacts
+/local-repo/**/*.sha1
+/local-repo/**/*.zip
 
 # Local tool state (never commit)
 .reasonix/

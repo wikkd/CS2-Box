@@ -1,0 +1,193 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged",
+    "module": "neoform",
+    "version": "26.2-2",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "neoformData",
+      "attributes": {
+        "org.gradle.jvm.version": 25
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged.installertools",
+          "module": "installertools",
+          "version": {
+            "requires": "4.0.16"
+          },
+          "thirdPartyCompatibility": {
+            "artifactSelector": {
+              "name": "installertools",
+              "type": "jar",
+              "extension": "jar",
+              "classifier": "fatjar"
+            }
+          }
+        },
+        {
+          "group": "org.vineflower",
+          "module": "vineflower",
+          "version": {
+            "requires": "1.12.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "vineflower-plugins",
+          "version": {
+            "requires": "0.1.6"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "neoform-26.2-2.zip",
+          "url": "neoform-26.2-2.zip",
+          "size": 94156,
+          "sha512": "7f50c5036ec43dd21b8ef3c5bd68d20e156b4286b14ffcb0e3d6cf5ad15462af4515c7835efb3312979fda638bef0257c1568d76877c6d7fef0cfca93a99d0ba",
+          "sha256": "09fd01e2371a94c78bc4d0d28645ab88206fcef395795182cee841765ebd5a63",
+          "sha1": "03d2a141ade741ddf729e22f48db391c9b3f5da0",
+          "md5": "13eba3bfc8105cf779b872a13facaef1"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.neoforged",
+          "name": "neoform",
+          "version": "26.2-2"
+        }
+      ]
+    },
+    {
+      "name": "neoformRuntimeElements",
+      "attributes": {
+        "org.gradle.jvm.version": 25,
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged",
+          "module": "minecraft-dependencies",
+          "version": {
+            "requires": "26.2"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "net.neoforged",
+          "module": "mergetool",
+          "version": {
+            "requires": "2.0.7"
+          },
+          "thirdPartyCompatibility": {
+            "artifactSelector": {
+              "name": "mergetool",
+              "type": "jar",
+              "extension": "jar",
+              "classifier": "api"
+            }
+          }
+        },
+        {
+          "group": "com.google.code.findbugs",
+          "module": "jsr305",
+          "version": {
+            "requires": "3.0.2"
+          }
+        },
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "26.0.2-1"
+          }
+        },
+        {
+          "group": "ca.weblite",
+          "module": "java-objc-bridge",
+          "version": {
+            "requires": "1.1"
+          }
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.neoforged",
+          "name": "neoform-dependencies",
+          "version": "26.2-2"
+        }
+      ]
+    },
+    {
+      "name": "neoformApiElements",
+      "attributes": {
+        "org.gradle.jvm.version": 25,
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "net.neoforged",
+          "module": "minecraft-dependencies",
+          "version": {
+            "requires": "26.2"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "net.neoforged",
+          "module": "mergetool",
+          "version": {
+            "requires": "2.0.7"
+          },
+          "thirdPartyCompatibility": {
+            "artifactSelector": {
+              "name": "mergetool",
+              "type": "jar",
+              "extension": "jar",
+              "classifier": "api"
+            }
+          }
+        },
+        {
+          "group": "com.google.code.findbugs",
+          "module": "jsr305",
+          "version": {
+            "requires": "3.0.2"
+          }
+        },
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "26.0.2-1"
+          }
+        },
+        {
+          "group": "ca.weblite",
+          "module": "java-objc-bridge",
+          "version": {
+            "requires": "1.1"
+          }
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.neoforged",
+          "name": "neoform-dependencies",
+          "version": "26.2-2"
+        }
+      ]
+    }
+  ]
+}

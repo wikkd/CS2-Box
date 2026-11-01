@@ -1,0 +1,80 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "roimfs",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "roimfs-1.0.0.jar",
+          "url": "roimfs-1.0.0.jar",
+          "size": 30240,
+          "sha512": "614734d15f6ad5328603585e6a3837f6fe6a1f8e05e15ccf1b8ab5e472cba140bca12312cfd146b421e9dd41b56339bd5242d3e91d57f2aeaaca1187ac1a21d1",
+          "sha256": "ed862aa6927a05e2e2a2f7486858624c390527fb77a8a6d44d9b31ee8691f423",
+          "sha1": "8a9f5b427f8e419d635ba1e347e323b355a43007",
+          "md5": "d174cdf26574775cbc86572d7fdbf523"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "roimfs-1.0.0.jar",
+          "url": "roimfs-1.0.0.jar",
+          "size": 30240,
+          "sha512": "614734d15f6ad5328603585e6a3837f6fe6a1f8e05e15ccf1b8ab5e472cba140bca12312cfd146b421e9dd41b56339bd5242d3e91d57f2aeaaca1187ac1a21d1",
+          "sha256": "ed862aa6927a05e2e2a2f7486858624c390527fb77a8a6d44d9b31ee8691f423",
+          "sha1": "8a9f5b427f8e419d635ba1e347e323b355a43007",
+          "md5": "d174cdf26574775cbc86572d7fdbf523"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "roimfs-1.0.0-sources.jar",
+          "url": "roimfs-1.0.0-sources.jar",
+          "size": 17144,
+          "sha512": "d44a3ba338913e4f329653a79340a1bef0330c393ddbe7e3d39487ae36dc5565c305a2ba4b905280b54aed88d5e1b49dcd63dd714f01dc665bf93eeafa842643",
+          "sha256": "da5cbc1f384ddcf245e24710f20e5875f732841066971e79b85ed9d907c1a0cc",
+          "sha1": "92ab9fe5a999f1e19908b6d7cb0b65604e0ca6ca",
+          "md5": "33e7cbe5bda79c6e488734c4e25b3c93"
+        }
+      ]
+    }
+  ]
+}

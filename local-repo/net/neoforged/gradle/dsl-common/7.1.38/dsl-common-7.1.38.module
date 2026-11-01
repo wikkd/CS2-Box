@@ -1,0 +1,210 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged.gradle",
+    "module": "dsl-common",
+    "version": "7.1.38",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "commons-io",
+          "module": "commons-io",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "org.apache.maven",
+          "module": "maven-artifact",
+          "version": {
+            "requires": "3.8.5"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "31.1-jre"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          },
+          "requestedCapabilities": [
+            {
+              "group": "net.neoforged",
+              "name": "groovydslimprover-base"
+            }
+          ]
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "utils",
+          "version": {
+            "requires": "7.1.38"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "dsl-common-7.1.38.jar",
+          "url": "dsl-common-7.1.38.jar",
+          "size": 374868,
+          "sha512": "2462fbb60cffd273de8aa68c52a000804d46652463ef4c91354d8fb081d8c21f40df42a5fdbc36b9a061511248394b7ecc7df24445c1c57f119129b4f2432172",
+          "sha256": "7f6681ae0c095061156eaee61c235fdeaab97aa7f286565424a7cd3ed9857536",
+          "sha1": "2d053f42c4ebd44ecb8579875c3df441486e5dbe",
+          "md5": "6d528440cf81fe770dbfe0ffd8f71891"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.plugin.api-version": "8.14",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains",
+          "module": "annotations",
+          "version": {
+            "requires": "23.0.0"
+          }
+        },
+        {
+          "group": "commons-io",
+          "module": "commons-io",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "org.apache.maven",
+          "module": "maven-artifact",
+          "version": {
+            "requires": "3.8.5"
+          }
+        },
+        {
+          "group": "com.google.guava",
+          "module": "guava",
+          "version": {
+            "requires": "31.1-jre"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.9.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          }
+        },
+        {
+          "group": "net.neoforged",
+          "module": "groovydslimprover",
+          "version": {
+            "requires": "2.0.0"
+          },
+          "requestedCapabilities": [
+            {
+              "group": "net.neoforged",
+              "name": "groovydslimprover-base"
+            }
+          ]
+        },
+        {
+          "group": "net.neoforged.gradle",
+          "module": "utils",
+          "version": {
+            "requires": "7.1.38"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "dsl-common-7.1.38.jar",
+          "url": "dsl-common-7.1.38.jar",
+          "size": 374868,
+          "sha512": "2462fbb60cffd273de8aa68c52a000804d46652463ef4c91354d8fb081d8c21f40df42a5fdbc36b9a061511248394b7ecc7df24445c1c57f119129b4f2432172",
+          "sha256": "7f6681ae0c095061156eaee61c235fdeaab97aa7f286565424a7cd3ed9857536",
+          "sha1": "2d053f42c4ebd44ecb8579875c3df441486e5dbe",
+          "md5": "6d528440cf81fe770dbfe0ffd8f71891"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "dsl-common-7.1.38-sources.jar",
+          "url": "dsl-common-7.1.38-sources.jar",
+          "size": 98418,
+          "sha512": "b7eb00bfe3cfe88ca32cc0155278671d9bad29a47112dc747446a72e48aacadf4193411161534ea5f11fd10fe4fd246e38da51f3fe85fab1fcd42ce947092450",
+          "sha256": "1cbe1dbf4bc3ad302afbbf220d8d5be599e56d327f7e417e6c7801b8ebf4fa76",
+          "sha1": "a23d9e5a2d970a90f2aefef5af1c711bb5b64c28",
+          "md5": "d6b14e9444999a1256a4f023b41c67b6"
+        }
+      ]
+    }
+  ]
+}

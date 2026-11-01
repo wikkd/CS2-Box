@@ -1,0 +1,154 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.neoforged",
+    "module": "accesstransformers",
+    "version": "10.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.antlr",
+          "module": "antlr4-runtime",
+          "version": {
+            "requires": "4.13.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "accesstransformers-10.0.1.jar",
+          "url": "accesstransformers-10.0.1.jar",
+          "size": 67234,
+          "sha512": "052ccdef32cb2a07efcaeceaf4d3be7e5cb056e9cef00c1e5587e1512cd36c53538992f423dc81ec7550d55bd3c0e29e6e18dc16b715b9984302491de39ea2c9",
+          "sha256": "89fb0dc3d68f8a5961f309ee110dad7d2c1094ba204595602b71e02e104838a1",
+          "sha1": "fd83b5725f76eae9115e9355fa1c456a6a441400",
+          "md5": "3a01a09a2b0900381dce48e118882849"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.slf4j",
+          "module": "slf4j-api",
+          "version": {
+            "requires": "2.0.9"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.4"
+          }
+        },
+        {
+          "group": "org.antlr",
+          "module": "antlr4-runtime",
+          "version": {
+            "requires": "4.13.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "accesstransformers-10.0.1.jar",
+          "url": "accesstransformers-10.0.1.jar",
+          "size": 67234,
+          "sha512": "052ccdef32cb2a07efcaeceaf4d3be7e5cb056e9cef00c1e5587e1512cd36c53538992f423dc81ec7550d55bd3c0e29e6e18dc16b715b9984302491de39ea2c9",
+          "sha256": "89fb0dc3d68f8a5961f309ee110dad7d2c1094ba204595602b71e02e104838a1",
+          "sha1": "fd83b5725f76eae9115e9355fa1c456a6a441400",
+          "md5": "3a01a09a2b0900381dce48e118882849"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "accesstransformers-10.0.1-sources.jar",
+          "url": "accesstransformers-10.0.1-sources.jar",
+          "size": 38853,
+          "sha512": "72ed8bda7cdb8eab85d7cbd1d08d9d6bc1dbf690895461d2a95d124b9ef35b8d621c7f8a4acdaf916c20aa48a23f70ac599872fc77f3cfde43158cdcd9665ec6",
+          "sha256": "03b7b9819a61fd718da21850841c430959d70c9b3673958da967711d5bdf3b4f",
+          "sha1": "491e1d524ddcba8f981dee9b6cc79fa12affbf48",
+          "md5": "0d9d92276c2321da13cc330952563637"
+        }
+      ]
+    }
+  ]
+}

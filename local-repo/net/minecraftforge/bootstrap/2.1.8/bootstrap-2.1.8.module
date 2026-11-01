@@ -1,0 +1,103 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "bootstrap",
+    "version": "2.1.8",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "bootstrap-2.1.8.jar",
+          "url": "bootstrap-2.1.8.jar",
+          "size": 11124,
+          "sha512": "b4730e35e6a9cd5f1192f44878294ddd7ea294a44752aa2bc2467d2aecd497dfb48f9a8de32dca128b45da54d4e9de51dd0d7dfe38a33602b409358c9b86ffe9",
+          "sha256": "6b0641339bc8872c4eb6978e302935d74fcc93871e3ea2b1b81f03fb3b16e708",
+          "sha1": "7ce55508387cf35eeb0eb4895bd84bec854ead93",
+          "md5": "5e88694e0e5f6656830eee83d462550e"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.minecraftforge",
+          "module": "unsafe",
+          "version": {
+            "requires": "0.9.2"
+          }
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "securemodules",
+          "version": {
+            "requires": "2.2.6"
+          }
+        },
+        {
+          "group": "net.minecraftforge",
+          "module": "bootstrap-api",
+          "version": {
+            "requires": "2.1.8"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "bootstrap-2.1.8.jar",
+          "url": "bootstrap-2.1.8.jar",
+          "size": 11124,
+          "sha512": "b4730e35e6a9cd5f1192f44878294ddd7ea294a44752aa2bc2467d2aecd497dfb48f9a8de32dca128b45da54d4e9de51dd0d7dfe38a33602b409358c9b86ffe9",
+          "sha256": "6b0641339bc8872c4eb6978e302935d74fcc93871e3ea2b1b81f03fb3b16e708",
+          "sha1": "7ce55508387cf35eeb0eb4895bd84bec854ead93",
+          "md5": "5e88694e0e5f6656830eee83d462550e"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "bootstrap-2.1.8-sources.jar",
+          "url": "bootstrap-2.1.8-sources.jar",
+          "size": 5271,
+          "sha512": "082dc3711bb60d5084c36b9a0d817b65feee6b1049dd4217a0ff6c56d6eae8d082e6f49ab693fb335000fb07dac1a781d06b376e42e956ff748779a339580f33",
+          "sha256": "87e688687e2449a7ef114edf1e37be33269b088b68d0a23d54cbdf65aec3b500",
+          "sha1": "f8af94a5f718886a5cc51625f0a385b083137436",
+          "md5": "b5e56b5a0add2a72c5bd497110b92048"
+        }
+      ]
+    }
+  ]
+}

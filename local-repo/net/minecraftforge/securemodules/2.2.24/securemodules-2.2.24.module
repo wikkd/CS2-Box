@@ -1,0 +1,184 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.minecraftforge",
+    "module": "securemodules",
+    "version": "2.2.24",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.7"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.7"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.7"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "securemodules-2.2.24.jar",
+          "url": "securemodules-2.2.24.jar",
+          "size": 101247,
+          "sha512": "c562e2ef4ba8e0ec81fb9c946d6211825633a46de85ed777199863fa96756419c9fe0e74ad326633e68365432a0f2bb25a291aafb2f2c949d1df55e78e8b4193",
+          "sha256": "40cb1fa55f48e3812eb3f823019cf906d9995bc4c9015f3f8f28471315c2a656",
+          "sha1": "d8402fa81935b1a6440240f98079b14d0462ccac",
+          "md5": "f10f10eadf7bb25079383b3d24d0219d"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.minecraftforge",
+          "name": "SecureModules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "net.minecraftforge",
+          "name": "securemodules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "cpw.mods",
+          "name": "securejarhandler",
+          "version": "2.2.24"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 16,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "net.minecraftforge",
+          "module": "unsafe",
+          "version": {
+            "requires": "0.9.2"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm",
+          "version": {
+            "requires": "9.7"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-tree",
+          "version": {
+            "requires": "9.7"
+          }
+        },
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-commons",
+          "version": {
+            "requires": "9.7"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "securemodules-2.2.24.jar",
+          "url": "securemodules-2.2.24.jar",
+          "size": 101247,
+          "sha512": "c562e2ef4ba8e0ec81fb9c946d6211825633a46de85ed777199863fa96756419c9fe0e74ad326633e68365432a0f2bb25a291aafb2f2c949d1df55e78e8b4193",
+          "sha256": "40cb1fa55f48e3812eb3f823019cf906d9995bc4c9015f3f8f28471315c2a656",
+          "sha1": "d8402fa81935b1a6440240f98079b14d0462ccac",
+          "md5": "f10f10eadf7bb25079383b3d24d0219d"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.minecraftforge",
+          "name": "SecureModules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "net.minecraftforge",
+          "name": "securemodules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "cpw.mods",
+          "name": "securejarhandler",
+          "version": "2.2.24"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "securemodules-2.2.24-sources.jar",
+          "url": "securemodules-2.2.24-sources.jar",
+          "size": 43390,
+          "sha512": "967c0da8176be69afb6579bc392ebe37c19d807797c343c1c976181b43c51ec585ce8dfce3d6ffa0ce5e132df2670baac7d4b366d3a05a92665ca8d80509495e",
+          "sha256": "e0bae1026685c4e3aca9130e89989c9581e4855dbd5665e618cacaf212c702e2",
+          "sha1": "b3ae0c30a82b8aeeaf0ed8fe4670fc211b7b38dd",
+          "md5": "c5e9ebd0358875022a45ae6d20b86fe8"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "net.minecraftforge",
+          "name": "SecureModules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "net.minecraftforge",
+          "name": "securemodules",
+          "version": "2.2.24"
+        },
+        {
+          "group": "cpw.mods",
+          "name": "securejarhandler",
+          "version": "2.2.24"
+        }
+      ]
+    }
+  ]
+}

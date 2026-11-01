@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>net.minecraftforge</groupId>
+  <artifactId>mergetool-api</artifactId>
+  <version>1.0</version>
+  <name>MergeTool-API</name>
+  <description>API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool</description>
+  <url>https://github.com/MinecraftForge/MergeTool</url>
+  <licenses>
+    <license>
+      <name>LGPLv2.1</name>
+      <url>https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>LexManos</id>
+      <name>Lex Manos</name>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/MinecraftForge/MergeTool.git</connection>
+    <developerConnection>scm:git:git@github.com:MinecraftForge/MergeTool.git</developerConnection>
+    <url>https://github.com/MinecraftForge/MergeTool</url>
+  </scm>
+  <issueManagement>
+    <system>github</system>
+    <url>https://github.com/MinecraftForge/MergeTool/issues</url>
+  </issueManagement>
+</project>
