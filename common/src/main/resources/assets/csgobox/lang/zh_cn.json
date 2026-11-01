@@ -284,6 +284,7 @@
   "top.csgobox.recycler.hint": "军械回收：投入物品换军械点",
   "stat.csgobox.opened_boxes": "开启的 CS 箱子数",
   "stat.csgobox.terminal_buys": "终端机购买次数",
+  "tooltips.csgobox.item.item_chance": "  %1$s · %2$s",
   "commands.csgobox.constraint.capped": "你已达到 %1$s 的每人开箱上限（%2$s 次）。",
   "commands.csgobox.constraint.cooldown": "%1$s 正在冷却中——请稍后再试。",
   "commands.csgobox.constraint.permission": "你没有权限打开 %1$s。",
