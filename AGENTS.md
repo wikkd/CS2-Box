@@ -38,7 +38,7 @@
 
 - **`common/` 不得 import 任何 `net.minecraft.*` / `net.neoforged.*`**（编译环境无 MC classpath，违反即编译失败）。共享资源（纹理/音效/lang/配方/成就）也放在 `common/src/main/resources/`。该约束由 `:common:checkCommonArchitecture` Gradle task 自动化执行（挂载在 `compileJava` 依赖上，任何编译/测试都会触发，含 forge_26_1_2 把 common 源码编进自身 classpath 的场景）。
 - 平台模块通过 `srcDir project(':common').file('src/main/resources')` 共享资源。
-- **`common/src/main/mcshared/`（2026-09-27 新增）— 跨时代共享的 MC 绑定源码根**：八平台经 `srcDir project(':common').file('src/main/mcshared')` 直编（`forge_1_18_2` 排除 `mcshared/wthit/**`：1.18.2 无 WTHIT 构建），存放各平台**逐字节一致**（包名归一化后哈希相同）、只依赖 1.20.1~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）的类。当前 5 个：`mcshared/box/BulkOpenResult`、`mcshared/packet/PacketValidation`（原包私有，已改 public）、`mcshared/gui/terminal/TerminalOfferItems`、`mcshared/terminal/TerminalRoundData`、`mcshared/wthit/RecyclerBlockProvider`。该目录**合法 import MC**，`checkCommonArchitecture` 只扫 `src/main/java`/`src/test/java`、不覆盖它；`check-platform-drift.py` 两个家族中这些文件已随之消失。**下沉新文件前必须先验证各平台副本归一化哈希一致**；已知暂不可下沉：`config/CsboxClothConfigScreen`（引用平台 `CsgoBox.CONFIG`，ConfigSpec 类型跨 loader 不同，需注入式重构）与 `wthit/CsgoBoxWthitPlugin`（引用平台方块类）。
+- **`common/src/main/mcshared/`（2026-09-27 新增）— 跨时代共享的 MC 绑定源码根**：八平台经 `srcDir project(':common').file('src/main/mcshared')` 直编（`forge_1_18_2` 排除 `mcshared/wthit/**`：1.18.2 无 WTHIT 构建），存放各平台**逐字节一致**（包名归一化后哈希相同）、只依赖 1.20.1~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）的类。当前 5 类 + 1 package-info（共 6 文件）：`mcshared/box/BulkOpenResult`、`mcshared/packet/PacketValidation`（原包私有，已改 public）、`mcshared/gui/terminal/TerminalOfferItems`、`mcshared/terminal/TerminalRoundData`、`mcshared/wthit/RecyclerBlockProvider`。该目录**合法 import MC**，`checkCommonArchitecture` 只扫 `src/main/java`/`src/test/java`、不覆盖它；`check-platform-drift.py` 两个家族中这些文件已随之消失。**下沉新文件前必须先验证各平台副本归一化哈希一致**；已知暂不可下沉：`config/CsboxClothConfigScreen`（引用平台 `CsgoBox.CONFIG`，ConfigSpec 类型跨 loader 不同，需注入式重构）与 `wthit/CsgoBoxWthitPlugin`（引用平台方块类）。
 - 依赖方向：`平台 → common`，`common` 不依赖任何平台。
 - **`premium_supply_box` / `ItemPremiumBox` 永久移除（2026-08-19）**：该「军火商高级箱」物品已从代码、资源、配置与全部文档中彻底删除，**禁止以任何形式再次引入**（含历史条目复活）。`forge_26_1_2` / `forge_26_2` 的 `PlatformSmokeTest` 含反向守卫（`premiumBoxItemIsPermanentlyRemoved`）断言该字段永不回归，新增字段/资源/交易时勿再使用该命名。
 
@@ -93,14 +93,14 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `common/config/CsboxConfigDefaults.java` — 八平台 `CsboxConfig` 默认值与取值范围唯一来源（枚举默认以常量名字符串存储）
 - `common/box/BoxOdds.java` — 纯概率数学（`totalWeight` / `gradeChance` / `itemChance` / `percent` / v2.0.1 起 `weightedItemChance` / `positiveItemWeightSum`）；JEI 分类、`/csbox info`、箱子 tooltip 概率行共用同一来源（与服务端 roll 同口径）
 - `item/ItemCsgoBox.java` — 箱子物品；`appendHoverText` 显示 5 档概率行 + 每档物品清单（v2.0.1 加权时逐物品显示概率）；`buildGradeMap()` 构建加权池；`applyIcon` 应用每箱图标（26.x 支持 ITEM_MODEL，1.21.1/1.20.1 仅 CMD）
-- `box/BoxItemCodec.java` — v2.0.1 物品解析（`weight` / `count:[min,max]` / `#tag` 展开 / `loot_table` / `enchant` / 缺模组 id 区分；`item_spec` 标记）；forge_1_20_1 用 NBT 变体、v1_21_1 保留 TACZ 特判
+- `box/BoxItemCodec.java` — v2.0.1 物品解析（`weight` / `count:[min,max]` / `#tag` 展开 / `loot_table` / `enchant` / 缺模组 id 区分；`item_spec` 标记）；forge_1_20_1 用 NBT 变体、v1_21_1 保留 TACZ 特判。**路径注意（2026-11-01 核对）**：`PriceTable` / `PriceRange` / `LegacyPriceMigration` / `PriceTableRegistry` 位于 **common**（`common/src/main/java/com/reclizer/csgobox/box/`）；`BoxItemCodec` / `BoxItemResolver` / `GradeGroup` / `BoxDefinition` / `BoxJsonLoader`（连同 `BoxRegistry` / `LoadError` / `BulkBoxContext`）自 v2.0.x 重构后位于**各平台** `box/` 包（非 common）
 - `box/BoxItemResolver.java`（v2.0.1 新增，每平台一份）— 开箱/购买时解析 `item_spec`（count 区间、随机附魔、loot_table 掷表），仅服务端调用
 - `box/GradeGroup.java` — v2.0.1 第 7 字段 `itemWeights`（平行列表，默认全 1 = 均匀）；`itemWeightAt` / `positiveItemWeightSum`
 - `box/BoxDefinition.java` — v2.0.1 新字段 `enabled`/`requires`/`icon`/`discount`/`stock`/`maxPerPlayer`/`cooldownSeconds`/`permission`；`discountedPrice` / `missingRequirement`
 - `box/BoxJsonLoader.java` — v2.0.1 文件名校验 / enabled+requires 门控 / 空档位 warning / `/csbox validate` 干跑（`validateFile`）/ 新字段解析
 - `box/PriceTable.java`（v2.0.1 新增）— 全局终端价格表 `config/csbox/_prices.json` 的纯函数解析/查价（物品 id → 固定非负整数或 `[min, max]` 随机范围，`PriceRange`；`id#变体` 子键支持 TACZ 等 NBT 变体定价；未命中 = 无价格（终端机不售、拆解 0，装载器对未定价 id 物品报错，无默认价回退））；`lookupRange` + `PriceRange.sample(IntUnaryOperator)` 服务端每次报价/拆解采样；`box.schema.json` 已移除物品级 `price`，残留字段由 `BoxJsonSchemaValidator` 报错
 - `box/PriceRange.java`（v2.0.1 新增）— 固定价/范围价值对象（`[min, max]` 闭区间、`UNPRICED` 哨兵、`sample` 取整），纯 Java 无 MC 依赖；八平台 `GradeGroup.priceForIndex` 返回 `PriceRange`，网络流按 `[min, max]` 双 int 序列化
-- `box/LegacyPriceMigration.java`
+- `box/LegacyPriceMigration.java`（v2.0.1 新增，位于 common）— 旧版适配：每次 `loadAll`/`/csbox reload` 前把残留的旧 `price` 自动转移进 `_prices.json`（同物不同价按平均值四舍五入；表已有价优先；`#tag`/`loot_table`/非法价保留报错；表损坏则整体中止不写入），并幂等清除已迁移字段（八平台 `BoxJsonLoader` 各在 loadAll + reloadPreserving 调一次）
 - `box/PriceTableRegistry.java`（v2.0.1 新增）— 当前价格表的跨平台持有者：八平台 `BoxJsonLoader` 每次 load/reload 发布（/csbox validate 干跑不发布），武库拆解台只读消费，按 `PriceTable.recycleYield`(表价 × 90% 向上取整) 计价，表外未定价物品不可拆解（产出 0）
 - **Create/自动化联动（v2.0.1）**：武库拆解台开放物品处理 capability——Forge 三平台
   `ArmoryRecyclerBlockEntity` 覆盖 `getCapability`（`ForgeCapabilities.ITEM_HANDLER` +
@@ -111,7 +111,6 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
   `v26_1_2` / `v26_2`（NeoForge 26.x）刻意未做——该线 capability 已迁移 transfer API
   （`Capabilities.Item.BLOCK` = `ResourceHandler<ItemResource>`）且 Create 无 26.x 构建，
   待 Create 26.x 发布后按 transfer API 适配
-（v2.0.1 新增）— 旧版适配：每次 `loadAll`/`/csbox reload` 前把残留的旧 `price` 自动转移进 `_prices.json`（同物不同价按平均值四舍五入；表已有价优先；`#tag`/`loot_table`/非法价保留报错；表损坏则整体中止不写入），并幂等清除已迁移字段（八平台 `BoxJsonLoader` 各在 loadAll + reloadPreserving 调一次）
 - `common/logic/BoxConstraintTracker.java`（v2.0.1 新增）— 开箱约束（max_per_player / cooldown）内存追踪，八平台共用
 - `common/terminal/TerminalStockManager.java`（v2.0.1 新增）— 终端库存内存态（`stock` 售罄即止，重启回满；补货设定已于 2.0.2 移除），八平台共用
 - `command/CsboxCommand.java` — `/csbox` 命令树；`showInfoOverview` 末尾输出「物品来源模组」命名空间统计（v26 系 `BuiltInRegistries` / forge_1_20_1 `ForgeRegistries`）；v2.0.1 起 `/csbox validate [box]` 干跑 + info 展示新字段
@@ -139,7 +138,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 
 ## 测试
 
-- `common` 有 JUnit 5（2026-09-17 核对：35 个测试类 / 320 用例，其中 `BoxJsonSchemaValidatorTest` 34 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
+- `common` 有 JUnit 5（2026-11-01 核对：37 个测试类 / 339 用例，其中 `BoxJsonSchemaValidatorTest` 54 用例）：`./gradlew :common:test`（CI 独立 `common-test` job 跑一次，不再随各平台矩阵重复执行）
 - `common` 架构约束检查由 `:common:checkCommonArchitecture` 自动挂载在编译上（见「架构约束」节）
 - AnimRenderOps 跨平台签名漂移检查：`scripts/check-animops-drift.sh`（3 平台，CI 已接线，本地改门面后必跑）
 - 平台层最小测试：**八平台均有 `PlatformSmokeTest`**（JUnit 5，验证入口类可加载，不初始化 MC 运行时；`v1_21_1` / `v26_2` 于 2026-10-25 补齐——此前文档声称 v26_2 有而实际缺失）：`./gradlew :<module>:test -Pactive_versions=<v>`
