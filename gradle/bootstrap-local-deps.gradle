@@ -1,0 +1,99 @@
+// Shared Gradle hook: fresh clones lack the compileOnly artifacts (TACZ /
+// Create) that are never committed to git (*.jar gitignore convention).
+// setupBootstrapLocalDeps registers a `bootstrapLocalDeps` task that runs the
+// repo's own idempotent download wrapper (scripts/bootstrap-dev.sh — every
+// sub-script skips artifacts that are already present and integrity-checked)
+// and wires it in front of the tasks whose classpaths resolve those
+// coordinates. CI keeps calling the download scripts explicitly before
+// Gradle, so the hook is a no-op there; it only fires on unprepared checkouts.
+//
+// Usage (in a platform build.gradle):
+//   apply from: rootProject.file('gradle/bootstrap-local-deps.gradle')
+//   // Lazy (NeoGradle / ForgeGradle — external compileOnly deps resolve at
+//   // task execution, after the bootstrap task has run):
+//   setupBootstrapLocalDeps([
+//       scriptArgs: ['v1_21_1'],   // forwarded to scripts/bootstrap-dev.sh
+//       markers: [                 // local-repo paths whose absence triggers the fetch
+//           'com/tacz/tacz/1.1.8-hotfix-r6/tacz-1.1.8-hotfix-r6.jar',
+//       ],
+//   ])
+//   // Eager (Fabric Loom — modCompileOnly is resolved during task-graph
+//   // calculation, BEFORE any task can run, so the fetch must happen at
+//   // configuration time; same phase where NeoGradle downloads MC itself):
+//   bootstrapLocalDepsNow([scriptArgs: ['fabric_1_21_1'], markers: [...]])
+
+ext.bootstrapFindBash = {
+    def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
+
+    // bash discovery. On Linux/macOS PATH lookup is enough. On Windows the
+    // PATH can also expose WSL's System32\bash.exe, which mishandles Windows
+    // paths — there, only a Git-for-Windows bash (sibling of `where git`) is
+    // accepted.
+    if (isWindows) {
+        try {
+            def p = ['where', 'git'].execute()
+            if (p.waitFor() == 0) {
+                for (String line : p.in.readLines()) {
+                    File gitExe = new File(line.trim())
+                    if (!gitExe.isFile() || gitExe.parentFile?.parentFile == null) continue
+                    def bashCand = new File(gitExe.parentFile.parentFile, 'usr/bin/bash.exe')
+                    if (bashCand.isFile()) return bashCand.absolutePath.replace('\\', '/')
+                }
+            }
+        } catch (IOException ignored) { }
+        return null
+    }
+    for (String cand : ['bash', '/usr/bin/bash', '/bin/bash']) {
+        try {
+            def p = [cand, '-c', 'echo ok'].execute()
+            if (p.waitFor() == 0 && p.text.trim() == 'ok') return cand
+        } catch (IOException ignored) { }
+    }
+    return null
+}
+
+ext.bootstrapRunScript = { List<String> scriptArgs ->
+    def bash = bootstrapFindBash.call()
+    if (bash == null) {
+        throw new GradleException(
+            'Missing local-repo artifacts (TACZ/Create) and no usable bash to fetch them. ' +
+            'Install Git for Windows (bash ships with it) and rerun, or run ' +
+            'scripts/bootstrap-dev.sh manually — see docs/DEVELOPMENT.md.')
+    }
+    def cmd = [bash, rootProject.file('scripts/bootstrap-dev.sh').absolutePath.replace('\\', '/')] + scriptArgs
+    logger.lifecycle "bootstrapLocalDeps: ${cmd.join(' ')}"
+    def proc = new ProcessBuilder(cmd).inheritIO().start()
+    if (proc.waitFor() != 0) {
+        throw new GradleException('bootstrapLocalDeps: download script failed — see the output above.')
+    }
+}
+
+// Task-based variant: fetches lazily in front of the classpath-consuming
+// tasks (no cost for `gradlew tasks` etc. once artifacts are in place).
+ext.setupBootstrapLocalDeps = { Map cfg ->
+    def markers = (cfg.markers as List).asImmutable()
+    def scriptArgs = ((cfg.scriptArgs ?: ['all']) as List).asImmutable()
+
+    def bootstrapTask = tasks.register('bootstrapLocalDeps') {
+        group = 'build'
+        description = 'First-build bootstrap: fetch the non-committed local-repo artifacts (TACZ/Create) via the repo download scripts.'
+        onlyIf { markers.any { !rootProject.file("local-repo/${it}").isFile() } }
+        doLast {
+            bootstrapRunScript(scriptArgs as List)
+        }
+    }
+    ['compileJava', 'compileTestJava', 'test', 'runClient', 'runServer'].each { name ->
+        tasks.matching { it.name == name }.configureEach { dependsOn bootstrapTask }
+    }
+}
+
+// Config-time variant: Loom resolves modCompileOnly during task-graph
+// calculation, before any task action — so the fetch has to happen while the
+// build is still configuring (the same phase NeoGradle/ForgeGradle download
+// the MC client in). Zero cost once the markers exist.
+ext.bootstrapLocalDepsNow = { Map cfg ->
+    def markers = (cfg.markers as List)
+    def scriptArgs = ((cfg.scriptArgs ?: ['all']) as List)
+    if (!markers.any { !rootProject.file("local-repo/${it}").isFile() }) return
+    bootstrapRunScript(scriptArgs)
+}

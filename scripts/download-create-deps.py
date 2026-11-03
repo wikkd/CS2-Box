@@ -16,10 +16,16 @@ Artifacts produced (coordinates already pinned in the build.gradle files):
 
 Env overrides (mainly for testing): LOCAL_REPO, CREATE_SIDE (v1_21_1 |
 forge_1_20_1; default = both).
+
+Network notes: cdn.modrinth.com (Fastly) and api.modrinth.com are blocked on
+some CN campus networks; urllib honors HTTPS_PROXY/HTTP_PROXY if you have a
+proxy, and each phase is hard-capped so a DNS-poisoning window fails in
+seconds instead of hanging the build forever.
 """
 import json
 import os
 import pathlib
+import threading
 import urllib.error
 import urllib.request
 import zipfile
@@ -38,6 +44,35 @@ TARGETS = [
 ]
 
 
+def urlopen_capped(req, timeout, cap):
+    """urlopen with a hard wall-clock cap.
+
+    socket timeouts do not cover DNS resolution (getaddrinfo), which hangs
+    indefinitely on polluted networks — observed 2026-11-04: a build stuck
+    15+ minutes on api.modrinth.com during a DNS-poisoning window (GitHub
+    release assets worked fine on the same network, so per-host flakiness is
+    real). The thread leaks on cap but the process exits right after.
+    """
+    result = {}
+
+    def run():
+        try:
+            result["resp"] = urllib.request.urlopen(req, timeout=timeout)
+        except BaseException as exc:  # relayed to the caller below
+            result["err"] = exc
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(cap)
+    if t.is_alive():
+        raise RuntimeError(
+            f"connect still hanging after {cap}s (DNS pollution? set HTTPS_PROXY "
+            "or fetch on a network that reaches Modrinth)")
+    if "err" in result:
+        raise result["err"]
+    return result["resp"]
+
+
 def modrinth_file_url(target):
     """Exact release file URL from the Modrinth API. Modrinth version_number
     formats are inconsistent across Create releases (6.0.10+mc1.21.1 vs
@@ -47,8 +82,8 @@ def modrinth_file_url(target):
     api = (f"https://api.modrinth.com/v2/project/create/version"
            f"?game_versions=%5B%22{target['game']}%22%5D"
            f"&loaders=%5B%22{target['loader']}%22%5D")
-    with urllib.request.urlopen(
-            urllib.request.Request(api, headers=UA), timeout=30) as resp:
+    with urlopen_capped(urllib.request.Request(api, headers=UA),
+                        timeout=30, cap=60) as resp:
         versions = json.load(resp)
     for v in versions:
         for f in v.get("files", []):
@@ -62,8 +97,8 @@ def download(url, dest):
     tmp = dest.with_name(dest.name + ".part")
     for attempt in range(1, 4):
         try:
-            with urllib.request.urlopen(
-                    urllib.request.Request(url, headers=UA), timeout=180) as resp, \
+            with urlopen_capped(urllib.request.Request(url, headers=UA),
+                                timeout=180, cap=210) as resp, \
                     open(tmp, "wb") as out:
                 while True:
                     chunk = resp.read(1 << 20)

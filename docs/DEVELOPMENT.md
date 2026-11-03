@@ -48,9 +48,26 @@ cd CS2-Box
 active_versions=1.21.1  # 可选：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 ```
 
-### 3. 构建项目
+### 3. 引导依赖（可选，通常可跳过）
 
-首次构建会下载 NeoForge 依赖,可能需要几分钟:
+TACZ（永恒枪械工坊）/ Create（机械动力）的 compileOnly jar 不入库（`*.jar` 全局忽略惯例）。v1_21_1 / forge_1_20_1 / fabric_1_21_1 三个平台在**首次 Gradle 构建时会自动运行下载脚本补齐**（`bootstrapLocalDeps` 任务，产物齐全时零开销跳过），所以直接做第 4 步即可。需要手动触发（例如给 IDE 的 Gradle 同步预热、或脚本需要代理）时：
+
+```bash
+bash scripts/bootstrap-dev.sh                 # 全部平台
+bash scripts/bootstrap-dev.sh v1_21_1         # 单平台：v1_21_1 / forge_1_20_1 / fabric_1_21_1
+# 国内网络慢可加镜像环境变量，见 scripts/download-*.sh 头部说明
+```
+
+forge_1_18_2 与其余平台零额外准备（1.18.2 的 TACZ 签名桩在构建内编译）。
+
+补充说明：
+
+- fabric_1_21_1 的补齐发生在**配置期**（Loom 对 `modCompileOnly` 急切解析，任务接线不生效）；给 IDE 首次 Gradle 同步预热时也建议先手动跑一遍上面的脚本。
+- 部分校园/企业网封锁 Modrinth（Fastly）等下载源：`download-create-deps.py` 各阶段有硬超时（DNS 污染窗口内快速失败，不再挂死构建）；有代理时 `HTTPS_PROXY=... bash scripts/bootstrap-dev.sh`，或在一台可达的网络上下好后把 jar 拷进 `local-repo/`。
+
+### 4. 构建项目
+
+首次构建会下载 NeoForge/ForgeGradle/Loom 的 userdev 全套依赖（GB 级，十几分钟起步，之后有 Gradle 缓存）:
 
 ```bash
 ./gradlew :v26_1_2:build
@@ -75,7 +92,7 @@ Fabric 平台（jar 名 `csgobox-fabric-<mc>-<mod_version>.jar`）：
 
 - `fabric_1_21_1/build/libs/csgobox-fabric-1.21.1-2.0.3.jar`
 
-### 4. 运行开发客户端
+### 5. 运行开发客户端
 
 ```bash
 # 客户端(单人创造模式)

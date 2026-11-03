@@ -189,3 +189,20 @@ tasks.named('jar', Jar).configure {
     // Same stale incremental-javac guard as the other platforms.
     exclude { it.name ==~ /.+[ ][0-9]+(\..+)?/ || it.name ==~ /.+\+[0-9]+(\..+)?/ }
 }
+
+
+// ---- Fresh-clone bootstrap: fetch non-committed local-repo artifacts ----
+// TaCZ: Refabricated modCompileOnly jar is not in git (*.jar convention).
+// Loom resolves modCompileOnly eagerly during task-graph calculation (before
+// any task can run — a task-based dependsOn never fires, verified 2026-11-04),
+// so unlike the NeoForge/Forge modules this fetches at configuration time,
+// the same phase where Loom/NeoGradle download MC itself. CI fetches
+// explicitly before Gradle and pays only the marker check here.
+apply from: rootProject.file('gradle/bootstrap-local-deps.gradle')
+bootstrapLocalDepsNow([
+    scriptArgs: ['fabric_1_21_1'],
+    markers: [
+        'com/tacz/tacz-refabricated/1.21.1-0.7.1-forge1.1.8-hotfix2/tacz-refabricated-1.21.1-0.7.1-forge1.1.8-hotfix2.jar',
+        'com/github/mcmodderanchor/simplebedrockmodel-fabric/2.3.0.1+mc1.21.1/simplebedrockmodel-fabric-2.3.0.1+mc1.21.1.jar',
+    ],
+])
