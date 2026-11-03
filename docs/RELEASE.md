@@ -67,7 +67,10 @@ done
 
 - CI：`.github/workflows/build.yml` 的 matrix 覆盖全部 8 平台，自动编译 + 冒烟 + 产出 jar（artifacts）
 - 手动：见上文构建矩阵脚本
-- 可选项：`./gradlew :<module>:minifyJar -Pactive_versions=<v>` 产出 ProGuard 混淆版（`-minified.jar`），`proguard-rules.pro` 需与新增反射面同步
+- 可选瘦身构建（仅代码层体积；每平台实测总收益 -15.4%~-16.4%，1.0.6 时代全量探索归档于 `docs/archive/SIZE-SLIM.md`）：
+  - `-Pslim` 开关（编译期剥离 LocalVariableTable，-8%，**八平台支持**）：`./gradlew :<module>:jar -Pactive_versions=<v> -Pslim`；保留 LineNumberTable/SourceFile，崩溃堆栈仍带行号
+  - `minifyJar`（ProGuard shrink-only，再省 ~-8%）：仅 v1_21_1 / v26_1_2 / v26_2 / forge_26_1_2 / forge_26_2 五平台；`forge_1_18_2` / `forge_1_20_1` 发布产物走 `renameJar` SRG 重映射、`fabric_1_21_1` 走 Loom intermediary 重映射，ProGuard 与重映射链序未验证，**有意不设** minify 任务
+  - 产物 `build/libs/csgobox-<mc>-<mod_version>-minified.jar`；发布 minified 前必须过类清单硬门禁：`python scripts/slim-audit-classes.py <orig>.jar <min>.jar --allow com/reclizer/csgobox/box/NetworkLimits.class --allow com/reclizer/csgobox/config/CsboxConfigDefaults.class`（非预期删除必须落成新 `-keep` 规则），`proguard-rules.pro` 需与新增反射面同步，并按 §3 质量门对 minified jar 跑 L4 清单
 
 ## 5. 发布后收尾
 

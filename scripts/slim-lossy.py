@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lossy texture slim pass (accepted quality tradeoffs, see docs/SIZE-SLIM.md).
+"""Lossy texture slim pass (accepted quality tradeoffs, see docs/archive/SIZE-SLIM.md).
 
 Applied to shared textures only (four platforms share the same resources).
 Uses pngquant (RGBA palette quantization with perceptual quality targeting);

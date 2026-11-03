@@ -1,4 +1,4 @@
-"""Helpers for comment trimming passes (see docs/SIZE-SLIM.md)."""
+"""Helpers for comment trimming passes (see docs/archive/SIZE-SLIM.md)."""
 
 
 def comment_blocks(lines):

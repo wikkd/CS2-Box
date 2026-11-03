@@ -1,6 +1,10 @@
 # ProGuard / R8 minify rules for CS2-Box mod.
 # Applied via: ./gradlew :v1_21_1:minifyJar -Pactive_versions=1.21.1
-# (or :v26_1_2 / :v26_2 / :forge_26_1_2 / :forge_26_2 / :forge_1_20_1).
+# (or :v26_1_2 / :v26_2 / :forge_26_1_2 / :forge_26_2 — the platforms that
+# ship a minifyJar task: NeoForge official-mapped runtime. forge_1_18_2 /
+# forge_1_20_1 go through renameJar SRG remap and fabric_1_21_1 through
+# Loom intermediary remap; ProGuard-before-remap chains are unvalidated,
+# so those three intentionally have no minify task).
 # Output: build/libs/csgobox-<mc>-<mod_version>-minified.jar.
 
 # ---- 1. Mod entry point ----
@@ -76,14 +80,10 @@
 }
 
 # ---- 7. Open-platform common/ utility (no MC dep) ----
-# BoxFileWatcher / BoxDefaults / TutorialFetcher / TutorialSources /
-# BoxJsonSchemaValidator live in common/ and are also referenced from
-# the 3 platform-specific entry points.
+# BoxFileWatcher / BoxDefaults / BoxJsonSchemaValidator live in common/ and
+# are also referenced from the platform-specific entry points.
 -keep class com.reclizer.csgobox.box.BoxFileWatcher { *; }
 -keep class com.reclizer.csgobox.box.BoxDefaults { *; }
--keep class com.reclizer.csgobox.box.TutorialFetcher { *; }
--keep class com.reclizer.csgobox.box.TutorialSources { *; }
--keep class com.reclizer.csgobox.box.TutorialSources$Source { *; }
 -keep class com.reclizer.csgobox.box.BoxJsonSchemaValidator { *; }
 -keep class com.reclizer.csgobox.box.BoxJsonSchemaValidator$SchemaIssue { *; }
 -keep class com.reclizer.csgobox.utils.ColorTools { *; }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Class-list audit for ProGuard minified jars (hard gate, see SIZE-SLIM.md).
+"""Class-list audit for ProGuard minified jars (hard gate, see docs/archive/SIZE-SLIM.md).
 
 Diffs the class entries of the original jar against the minified jar and
 fails (exit 1) when classes were removed that are not on the allowlist.

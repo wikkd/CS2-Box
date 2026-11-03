@@ -258,6 +258,11 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Slim builds drop LocalVariableTable (keeps LineNumberTable for crash
+    // reports). Default builds are untouched.
+    if (project.hasProperty('slim')) {
+        options.debugOptions.debugLevel = 'lines,source'
+    }
 }
 
 // Same issue #2 dist guard as every other platform.
