@@ -94,6 +94,30 @@ VERSIONS = [
             "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键。",
         },
     },
+    {
+        "key": "fabric-1.21.1",
+        "label": {"en": "1.21.1 (Fabric)", "zh": "1.21.1 (Fabric)"},
+        "short": {"en": "1.21.1 (Fabric)", "zh": "1.21.1 (Fabric)"},
+        "taczVariants": True,
+        "components": True,
+        "itemModel": False,  # MC 1.21.1 has no minecraft:item_model component
+        "note": {
+            "en": "Data Components; TACZ GunId/AmmoId variants supported (TaCZ: Refabricated).",
+            "zh": "Data Components；支持 TACZ GunId/AmmoId 变体键（TaCZ: Refabricated）。",
+        },
+    },
+    {
+        "key": "forge-1.18.2",
+        "label": {"en": "Forge 1.18.2", "zh": "Forge 1.18.2"},
+        "short": {"en": "Forge 1.18.2", "zh": "Forge 1.18.2"},
+        "taczVariants": True,
+        "components": False,
+        "itemModel": False,
+        "note": {
+            "en": "Legacy NBT tag (no Data Components); TACZ variants supported (data-level).",
+            "zh": "旧版 NBT tag（无 Data Components）；支持 TACZ 变体键（数据级）。",
+        },
+    },
 ]
 
 # The five grade bands (grade1..grade5).
