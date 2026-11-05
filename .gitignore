@@ -197,6 +197,9 @@ run-data/
 /.planning/
 .planning/*.tmp
 
+# Session scratch (build metrics, bootstrap-test jar backups, stub experiments)
+/local-tmp/
+
 # Runtime config backups
 *.bak
 
