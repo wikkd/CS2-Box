@@ -44,7 +44,10 @@ runs {
     }
 
     gameTestServer {
-        systemProperty 'forge.enabledGameTestNamespaces', mod_id
+        // 26.x 的 GameTestServer 入口是 net.minecraft.gametest.Main（用户端
+        // userdev run 模板已自动带 neoforge.enableGameTest=true——这正是
+        // RegisterGameTestsEvent 在 RegistryDataLoader 里触发的开关）。
+        // 旧 forge.enabledGameTestNamespaces 属性在 26.x 是无操作。
     }
 
 }
@@ -367,3 +370,13 @@ tasks.register('checkDistSafety') {
     }
 }
 tasks.named('check').configure { dependsOn(tasks.named('checkDistSafety')) }
+
+// CI/本地统一入口：./gradlew :v26_2:gameTestServer -Pactive_versions=26.2
+// NeoGradle userdev 生成的 run 任务名是 runGameTestServer；这里提供与 forge
+// 平台（build.gradle 里 register('gameTestServer')）一致的无前缀别名，
+// .github/workflows/gametest.yml 与 docs 里的命令两边通用。
+tasks.register('gameTestServer') {
+    group = 'verification'
+    description = 'Runs the mod GameTest server headless (alias for runGameTestServer).'
+    dependsOn tasks.named('runGameTestServer')
+}

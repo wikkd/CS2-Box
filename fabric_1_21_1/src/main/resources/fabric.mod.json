@@ -18,6 +18,9 @@
     ],
     "rei_client": [
       "com.reclizer.csgobox.fabric_1_21_1.rei.CsgoBoxReiPlugin"
+    ],
+    "fabric-gametest": [
+      "com.reclizer.csgobox.fabric_1_21_1.gametest.CsgoBoxGameTests"
     ]
   },
   "accessWidener": "csgobox-fabric.accesswidener",

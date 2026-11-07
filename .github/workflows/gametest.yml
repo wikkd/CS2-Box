@@ -1,11 +1,23 @@
 name: GameTest Integration
 
 # 集成测试门禁：在实际 MC 服务端内跑 GameTest 用例。
-# 注意：项目当前没有 @GameTest 用例源码（只有测试文档），job 内含守卫步骤——
-# 扫描不到用例时跳过运行，避免空跑挂起；后续在 common/ 或平台模块写下
-# @GameTestHolder("csgobox") + @GameTest 用例后，本 job 自动开始执行。
-# 覆盖两个代表平台（legacy 1.21.1 / decoupled 26.1.2），与 docs/RELEASE.md
-# 运行时回归口径一致；需要覆盖 26.2 时在 matrix 增补一行即可。
+# 覆盖 5 个平台（v1_21_1 / v26_1_2 / v26_2 / forge_1_18_2 / forge_1_20_1），
+# 与 docs/TESTING-PIPELINE.md §L3 的口径一致。
+#
+# 已知平台限制（2026-11-07 考古/实测，详见 docs/TESTING-PIPELINE.md §L3）：
+# - forge_26_1_2 / forge_26_2：MinecraftForge 26.x 保留了 @GameTest 注解与
+#   ForgeGameTestHooks.gatherTests()，但没有提供把扫描结果接进运行时
+#   TEST_INSTANCE 注册表的路径（无注册事件，FML 不自动扫描），代码注册的
+#   用例跑不起来。
+# - fabric_1_21_1：套件已就位（fabric-gametest entrypoint，编译通过），但
+#   dev 专用服务器在上游 Loom officialMojangMappings 半重映射下崩于
+#   fabric-resource-loader-v0 的 server.LanguageMixin（与 runServer 同一
+#   已知问题，见 docs/PORTING-fabric.md），gametest run 同为 dev 服务器
+#   无法运行；上游修复后再加回矩阵。
+#
+# 用例源码守卫：扫描不到用例时跳过运行，避免空跑挂起；job 支持
+# @GameTestHolder/@GameTest 注解（NeoForge 21.1 / Forge legacy / Fabric）与
+# RegisterGameTestsEvent 事件注册（NeoForge 26.x）两种形态。
 
 on:
   push:
@@ -30,6 +42,18 @@ jobs:
             version_key: 26.1.2
             module: v26_1_2
             java: 25
+          - mc: 26.2
+            version_key: 26.2
+            module: v26_2
+            java: 25
+          - mc: forge-1.18.2
+            version_key: forge-1.18.2
+            module: forge_1_18_2
+            java: 17
+          - mc: forge-1.20.1
+            version_key: forge-1.20.1
+            module: forge_1_20_1
+            java: 17
 
     steps:
       - uses: actions/checkout@v4
@@ -58,15 +82,19 @@ jobs:
         if: matrix.module == 'v1_21_1'
         run: scripts/download-tacz.sh
 
+      - name: Download TACZ compileOnly jar (forge_1_20_1 inspect viewport)
+        if: matrix.module == 'forge_1_20_1'
+        run: scripts/download-tacz-1201.sh
+
       - name: Check for GameTest sources
         id: has-gametest
         run: |
-          if grep -rqE '@GameTest(\(|\b)|@GameTestHolder' --include='*.java' common "${{ matrix.module }}"; then
+          if grep -rqE '@GameTest(\(|\b)|@GameTestHolder|RegisterGameTestsEvent' --include='*.java' common "${{ matrix.module }}"; then
             echo "has=true" >> "$GITHUB_OUTPUT"
           else
             echo "has=false" >> "$GITHUB_OUTPUT"
-            echo "No @GameTest sources found — skipping (add cases under"
-            echo "common/src/test/java/ or ${{ matrix.module }}/src/test/java/ to enable)."
+            echo "No GameTest sources found — skipping (add cases under"
+            echo "common/src/test/java/ or ${{ matrix.module }}/src/main/java/ to enable)."
           fi
 
       - name: Run GameTest server (${{ matrix.mc }})
