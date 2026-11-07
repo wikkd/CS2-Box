@@ -86,7 +86,7 @@ Forge 1.20.1 生产运行时是 **SRG 命名域**；`jar` 直出产物（officia
 4. **终端机**：打开 → 启动屏 → 谈判（5 轮报价 / 接受长按 / 拒绝 / 上限下拉 /
    倒计时 / 超时自毁 / 会话锁续谈）——**物品预览为 2D**（无 PIP 属预期）；
 5. **武库拆解台**：方块放置、菜单、回收产出、`ArmoryRecycleEvent` 取消语义；
-6. **村民**：`arms_dealer` 职业与交易（结构生成数据在 common 资源内共享）；
+6. **村民**：`arms_dealer` 职业与交易（worldgen JSON 为 1.19+ 单数布局在 1.20.1 直读；结构模板 NBT 与战利品表走本平台复数副本 `structures/` / `loot_tables/`，2026-11-06 修复——此前 NBT 不被读取导致小屋模板缺失；NBT 无 DataVersion 按名称解析，L4 需实机确认小屋正常生成）；
 7. **命令**：`/csbox info` / `/csbox nbt hand` / `/csbox reload`；
 8. **配置**：`csbox-common.toml` 生成且默认值与 `CsboxConfigDefaults` 一致；
 9. **JEI（可选，需先装 JEI 15.x 或用 `-PwithJei` 进 dev）**：「开箱概率」分类出现在 JEI 目录；每个箱子一条配方（钥匙输入槽 / 箱子输出槽 / 物品池 4×5 网格）；左侧概率文本（掉率、各稀有度权重百分比、实体掉率）与 `BoxOdds` 口径一致；物品 tooltip 含 `[等级] 权重 x/y · 单件 z%`；`/csbox reload` 后配方即时刷新。

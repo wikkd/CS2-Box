@@ -1,0 +1,26 @@
+{
+  "parent": "csgobox:grade_restricted",
+  "display": {
+    "title": {
+      "translate": "advancement.csgobox.grade_classified.title"
+    },
+    "description": {
+      "translate": "advancement.csgobox.grade_classified.description"
+    },
+    "icon": {
+      "item": "minecraft:nether_star"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "open_classified": {
+      "trigger": "csgobox:opened_box",
+      "conditions": {
+        "grade": 5
+      }
+    }
+  },
+  "rewards": {}
+}

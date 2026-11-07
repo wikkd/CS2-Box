@@ -5,6 +5,8 @@ import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.BoxFileWatcher;
 import com.reclizer.csgobox.forge_1_18_2.advancement.ModLoadedTrigger;
 import com.reclizer.csgobox.forge_1_18_2.advancement.OpenedBoxTrigger;
+import com.reclizer.csgobox.forge_1_18_2.advancement.TerminalBrokeTrigger;
+import com.reclizer.csgobox.forge_1_18_2.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxRegistry;
 import com.reclizer.csgobox.forge_1_18_2.config.ClothConfigHook;
@@ -149,6 +151,8 @@ public class CsgoBox {
         try {
             net.minecraft.advancements.CriteriaTriggers.register(OpenedBoxTrigger.INSTANCE);
             net.minecraft.advancements.CriteriaTriggers.register(ModLoadedTrigger.INSTANCE);
+            net.minecraft.advancements.CriteriaTriggers.register(TerminalBrokeTrigger.INSTANCE);
+            net.minecraft.advancements.CriteriaTriggers.register(TerminalDealTrigger.INSTANCE);
         } catch (NoSuchMethodError | Exception e) {
             LOGGER.warn("Could not register advancement triggers via CriteriaTriggers.register(): {}", e.getMessage());
         }

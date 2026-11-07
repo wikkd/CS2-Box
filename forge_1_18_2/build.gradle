@@ -88,6 +88,27 @@ tasks.named('processResources', ProcessResources).configure {
     // excluded. See docs/PORTING-forge-1182.md.
     exclude 'data/csgobox/worldgen/structure/**'
     exclude 'data/csgobox/structure/**'
+    // Pre-1.21 datapack layout: 1.18.2 only reads plural folders. Recipes and
+    // advancements ship as era-mapped copies in this module's
+    // src/main/resources (structures have no datapack placement at all on
+    // 1.18.2 — code-registered registry, so the hut loot table is dead too).
+    exclude 'data/csgobox/recipe/**'
+    exclude 'data/csgobox/advancement/**'
+    exclude 'data/csgobox/loot_table/**'
+    // 1.18.2 has NO datapack-driven structure placement at all (see commit
+    // 6c06a388 and docs/PORTING-fabric.md sibling PORTING-forge-1182.md): the
+    // shared 1.19+-layout worldgen files are dead here — worse, the
+    // structure_set JSON references csgobox:arms_dealer_hut, leaving the
+    // worldgen registry with an unbound value that aborts the GameTest
+    // server's datapack load ("Unbound values in registry
+    // worldgen/configured_structure_feature", RegistryAccess.freeze). The
+    // vanilla village template_pool overrides are equally dead (1.19+ format
+    // parse errors: "No key name in MapLike") and used to poison every normal
+    // boot's registry load too.
+    exclude 'data/csgobox/worldgen/structure_set/**'
+    exclude 'data/csgobox/worldgen/template_pool/**'
+    exclude 'data/csgobox/tags/worldgen/**'
+    exclude 'data/minecraft/worldgen/template_pool/**'
 }
 
 repositories {

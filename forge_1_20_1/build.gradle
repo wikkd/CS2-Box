@@ -69,6 +69,15 @@ sourceSets.main.java {
 
 tasks.named('processResources', ProcessResources).configure {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Pre-1.21 datapack layout: 1.20.1 only reads the plural folder names
+    // (recipes/, advancements/, loot_tables/, structures/) — common's
+    // singular dirs (1.21/24w21a layout) are dead here. Era-mapped copies
+    // live in this module's src/main/resources; the shared singular files
+    // must not ship or they would just be dead weight.
+    exclude 'data/csgobox/recipe/**'
+    exclude 'data/csgobox/advancement/**'
+    exclude 'data/csgobox/loot_table/**'
+    exclude 'data/csgobox/structure/**'
 }
 
 repositories {

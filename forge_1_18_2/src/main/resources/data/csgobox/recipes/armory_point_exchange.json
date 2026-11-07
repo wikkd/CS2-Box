@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PPP",
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "csgobox:armory_point"
+    }
+  },
+  "result": {
+    "item": "csgobox:csgo_key0",
+    "count": 1
+  }
+}

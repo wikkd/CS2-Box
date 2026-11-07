@@ -134,7 +134,19 @@ definitions`，无 tag/NBT 错误。
 `tags/worldgen/biome/has_structure/arms_dealer_hut.json`、`structures/*.nbt` 共 8 个）——
 那个 JSON 是不匹配任何真实版本 codec 的杂交格式，且引用了不存在的 start_pool，从未生效。
 
-**玩家获取军火商的方式不受影响**：合成军火拆解台（共享配方 `data/csgobox/recipe/armory_recycler.json`）
+**2026-11-07 补刀（processResources 排除共享泄漏）**：上面删的只是本模块的本地副本，
+common 的共享 1.19+ 版式 worldgen 资源（`worldgen/structure_set`、`worldgen/template_pool`、
+`tags/worldgen/biome`、`data/minecraft/worldgen/template_pool/village/*` 村庄池覆盖）经
+共享资源 srcDir 仍会打进 1.18.2 jar——structure_set 引用 `csgobox:arms_dealer_hut` 使
+`worldgen/configured_structure_feature` 注册表出现 **Unbound value**；GameTest 服务器的
+datapack 加载在 `RegistryAccess.freeze` 直接拒绝（普通 boot 的同一次加载早前已被村庄池
+覆盖文件的解析错误打断而"侥幸"通过）。已在 `forge_1_18_2/build.gradle` 的
+processResources 排除这四组死资源（`gameTestServer` 6/6 全绿，普通 boot 的注册表
+解析错误随之消失）。
+
+**玩家获取军火商的方式不受影响**：合成军火拆解台（**本平台复数副本 `data/csgobox/recipes/armory_recycler.json`**
+——2026-11-06 修复前这里引用的共享单数 `recipe/` 目录在 1.18.2 不被读取、配方实际全部失效，
+同批补齐 `advancements/` 13 份并接线 `TerminalDealTrigger`/`TerminalBrokeTrigger` 注册与触发）
 放置后，原版村民经 `minecraft:acquirable_job_site` 标签（含 `csgobox:armory_recycler`，1.18.2 生效）
 转职军火商，动态定价与全部交易照常。若未来要真正补上小屋生成：需代码注册 configured
 structure feature + `StructureFeature` 放置 + start_pool（1.18.2 的 template pool 同为代码
