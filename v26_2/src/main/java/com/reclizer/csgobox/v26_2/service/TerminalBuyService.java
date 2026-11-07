@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.v26_2.service;
 
+import com.reclizer.csgobox.v26_2.box.GradeGroup;
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalStockManager;
 import com.reclizer.csgobox.terminal.WearPenalty;
@@ -79,7 +81,7 @@ public final class TerminalBuyService {
         // buyable in the ≤1s window before the 1 Hz tick destroys it, and a
         // crafted buy before the 1100ms typing window elapsed would skip the
         // reveal animation — both are refused here.
-        long worldMs = sp.level().getGameTime() * 50L;
+        long worldMs = WorldClock.now(sp.level());
         if (worldMs >= session.model().countdownDeadlineMs()
                 || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
             return invalid;
@@ -163,6 +165,22 @@ public final class TerminalBuyService {
             return new PacketTerminalBuyResult(message.requestId(),
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
         }
+        // v2.x tier stock: consume one unit of the bought item's tier.
+        String boughtTierId = null;
+        for (GradeGroup tierGroup : def.grades()) {
+            for (ItemStack candidate : tierGroup.items()) {
+                if (ItemStack.isSameItemSameComponents(offerItem, candidate)) {
+                    boughtTierId = tierGroup.id();
+                    break;
+                }
+            }
+            if (boughtTierId != null) {
+                break;
+            }
+        }
+        if (boughtTierId != null) {
+            com.reclizer.csgobox.terminal.TierStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), boughtTierId);
+        }
 
         if (!creative) {
             consumeArmoryPoints(sp, price);
@@ -195,7 +213,7 @@ public final class TerminalBuyService {
 
     // ---- Armory Point inventory walking (same slot coverage as key consumption) ----
 
-    private static int countArmoryPoints(Player entity) {
+    public static int countArmoryPoints(Player entity) {
         int total = countFromList(entity.getInventory().getNonEquipmentItems());
         total += countFromSlot(entity, EquipmentSlot.HEAD);
         total += countFromSlot(entity, EquipmentSlot.CHEST);
@@ -205,7 +223,7 @@ public final class TerminalBuyService {
         return total;
     }
 
-    private static void consumeArmoryPoints(Player entity, int amount) {
+    public static void consumeArmoryPoints(Player entity, int amount) {
         int remaining = consumeFromList(entity.getInventory().getNonEquipmentItems(), amount);
         if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.HEAD, remaining);
         if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.CHEST, remaining);

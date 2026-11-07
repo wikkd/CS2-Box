@@ -8,7 +8,8 @@ import com.reclizer.csgobox.box.BoxGrades;
  *
  * <p>Semantics: after {@code every - 1} consecutive successful opens whose
  * result was BELOW {@code targetLevel} (the configured grade or higher), the
- * next open is forced to roll a grade within {@code [targetLevel .. 5]}
+ * next open is forced to roll a grade within
+ * {@code [targetLevel .. the box's tier count]}
  * (weighted by the existing per-grade weights). A result at or above the
  * target resets the counter; a forced pity roll also counts as a hit.</p>
  *
@@ -18,12 +19,14 @@ import com.reclizer.csgobox.box.BoxGrades;
  */
 public final class PityPolicy {
 
-    private final int targetLevel; // 1..GRADE_COUNT
+    private final int targetLevel; // 1..the box's tier count (bounded by MAX_GRADES)
     private final int every;       // >= 2
+    private final boolean firstOpen; // v2.x: the very first open is forced
 
-    private PityPolicy(int targetLevel, int every) {
+    private PityPolicy(int targetLevel, int every, boolean firstOpen) {
         this.targetLevel = targetLevel;
         this.every = every;
+        this.firstOpen = firstOpen;
     }
 
     /**
@@ -32,15 +35,37 @@ public final class PityPolicy {
      * disabled, never forces a roll).
      */
     public static PityPolicy of(String gradeId, int every) {
-        return ofLevel(BoxGrades.gradeLevel(gradeId), every);
+        return of(gradeId, every, false);
     }
 
-    /** Creates a policy from a 1-based grade level, {@code null} when invalid. */
+    /** v2.x variant with the first-open guarantee (config {@code pity.first_open}). */
+    public static PityPolicy of(String gradeId, int every, boolean firstOpen) {
+        return ofLevel(BoxGrades.gradeLevel(gradeId), every, firstOpen);
+    }
+
+    /**
+     * Creates a policy from a 1-based grade level, {@code null} when invalid.
+     * The level is validated against {@link BoxGrades#MAX_GRADES} (the
+     * network tier cap) rather than the legacy five-tier count — the box's
+     * actual tier count is enforced where the policy is parsed and again at
+     * roll time ({@code pickGradeWithPity} falls back to a normal roll when
+     * the target exceeds the box's weights array).
+     */
     public static PityPolicy ofLevel(int targetLevel, int every) {
-        if (targetLevel < 1 || targetLevel > BoxGrades.GRADE_COUNT || every < 2) {
+        return ofLevel(targetLevel, every, false);
+    }
+
+    /** v2.x variant with the first-open guarantee (config {@code pity.first_open}). */
+    public static PityPolicy ofLevel(int targetLevel, int every, boolean firstOpen) {
+        if (targetLevel < 1 || targetLevel > BoxGrades.MAX_GRADES || every < 2) {
             return null;
         }
-        return new PityPolicy(targetLevel, every);
+        return new PityPolicy(targetLevel, every, firstOpen);
+    }
+
+    /** v2.x: whether the very first open (no tracker record yet) is forced. */
+    public boolean firstOpen() {
+        return firstOpen;
     }
 
     /** The 1-based grade that a forced pity roll must reach (or exceed). */

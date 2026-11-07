@@ -31,6 +31,12 @@ public final class PityTracker {
     private static final int CLEANUP_INTERVAL = 2048;
 
     private static final Map<String, Entry> MISS_STREAKS = new ConcurrentHashMap<>();
+
+    /** "Has ever opened (this session)" markers backing the v2.x first-open
+     *  guarantee — kept SEPARATE from {@link #MISS_STREAKS} because a streak
+     *  reset on a pity hit removes streak entries and must not re-arm the
+     *  first-open force. Value = last-touch millis for stale reaping. */
+    private static final Map<String, Long> OPENED = new ConcurrentHashMap<>();
     private static final AtomicInteger MUTATIONS = new AtomicInteger();
 
     /** Streak plus the last time it was touched (for stale reaping). */
@@ -42,6 +48,20 @@ public final class PityTracker {
 
     private static String key(String playerUuid, String boxId) {
         return playerUuid + "|" + boxId;
+    }
+
+    /** Whether any open was ever recorded for (player, box) — used by the
+     *  v2.x first-open guarantee. Absent record = never opened (modulo
+     *  stale eviction, which can re-grant a "first open"). */
+    public static boolean hasRecord(String playerUuid, String boxId) {
+        return OPENED.containsKey(key(playerUuid, boxId));
+    }
+
+    /** Marks (player, box) as opened at least once — call after a successful
+     *  grant, single or bulk. In-memory; resets on restart. */
+    public static void markOpened(String playerUuid, String boxId) {
+        OPENED.put(key(playerUuid, boxId), System.currentTimeMillis());
+        maybeCleanup();
     }
 
     /** Current miss streak for (player, box); 0 when none recorded (or last
@@ -60,6 +80,7 @@ public final class PityTracker {
      */
     public static void recordOpen(String playerUuid, String boxId,
                                   int resultGrade, int pityTargetLevel) {
+        markOpened(playerUuid, boxId);
         String k = key(playerUuid, boxId);
         MISS_STREAKS.compute(k, (key, cur) -> {
             int base = cur == null ? 0 : cur.streak();
@@ -117,6 +138,7 @@ public final class PityTracker {
     /** Drops all pity state (server stop). */
     public static void reset() {
         MISS_STREAKS.clear();
+        OPENED.clear();
     }
 
     /** Amortized sweep: drop entries untouched for {@link #STALE_MILLIS} and,
@@ -128,6 +150,15 @@ public final class PityTracker {
         long now = System.currentTimeMillis();
         MISS_STREAKS.entrySet()
                 .removeIf(e -> now - e.getValue().lastTouchMillis() > STALE_MILLIS);
+        OPENED.entrySet().removeIf(e -> now - e.getValue() > STALE_MILLIS);
+        if (OPENED.size() > MAX_ENTRIES) {
+            long oldestOpened = Long.MAX_VALUE;
+            for (Long v : OPENED.values()) {
+                oldestOpened = Math.min(oldestOpened, v);
+            }
+            final long cutoffOpened = oldestOpened;
+            OPENED.entrySet().removeIf(e -> e.getValue() <= cutoffOpened);
+        }
         if (MISS_STREAKS.size() <= MAX_ENTRIES) {
             return;
         }

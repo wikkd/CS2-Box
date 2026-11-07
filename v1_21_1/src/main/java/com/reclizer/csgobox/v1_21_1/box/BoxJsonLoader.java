@@ -469,68 +469,27 @@ public final class BoxJsonLoader {
             }
             float dropRate = getFloat(json, "drop", 0.12F);
 
-            int[] weights = parseWeights(json, file, fileName);
+            // v2.x: a "grades" array replaces the legacy random/grade1..5
+            // format entirely; the legacy weights array is then unused.
+            boolean customTiers = json.has("grades") && json.get("grades").isJsonArray();
+            int[] weights = customTiers ? null : parseWeights(json, file, fileName);
 
             List<ResourceLocation> dropEntityIds = new ArrayList<>();
             Map<ResourceLocation, Float> entityDropRates = new HashMap<>();
             parseEntities(json, dropEntityIds, entityDropRates, file, fileName);
 
-            List<GradeGroup> grades = new ArrayList<>();
-            boolean unpricedRejected = false;
-            for (int i = 0; i < 5; i++) {
-                String gradeKey = "grade" + (5 - i);
-                if (json.has(gradeKey)) {
-                    JsonArray itemsArr = json.getAsJsonArray(gradeKey);
-                    List<ItemStack> items = new ArrayList<>();
-                    List<PriceRange> prices = new ArrayList<>();
-                    List<Integer> itemWeights = new ArrayList<>();
-                    for (JsonElement elem : itemsArr) {
-                        BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
-                        if (outcome.isSuccess()) {
-                            for (String warning : outcome.warnings()) {
-                                recordLoadWarning(file, fileName, "Item: " + warning);
-                            }
-                            items.addAll(outcome.stacks());
-                            itemWeights.addAll(outcome.weights());
-                            // v2.0.1+: prices come from the central price
-                            // table (config/csbox/_prices.json), never from
-                            // box JSON. UNPRICED = no price at all — the
-                            // grade-default fallback was removed, so any
-                            // unpriced id entry rejects the whole box.
-                            boolean isLootTable = elem.isJsonObject()
-                                    && elem.getAsJsonObject().has("loot_table");
-                            List<PriceRange> resolved = resolvePrices(elem, outcome, priceTable);
-                            if (!isLootTable) {
-                                for (PriceRange r : resolved) {
-                                    if (r == null || r.isUnpriced()) {
-                                        unpricedRejected = true;
-                                        recordLoadError(file, fileName,
-                                                "物品未定价：该物品在 " + PriceTable.FILE_NAME
-                                                        + " 中没有价格（表外默认价回退已移除，终端机不售卖、"
-                                                        + "拆解回收为 0，请先在价格表补价再加载）");
-                                        break;
-                                    }
-                                }
-                            } else {
-                                recordLoadWarning(file, fileName,
-                                        "loot_table 条目没有固定物品 id，无法定价——不会出现在终端机报价中"
-                                                + "（开箱掉落不受影响）");
-                            }
-                            prices.addAll(resolved);
-                        } else {
-                            recordLoadError(file, fileName,
-                                    "Item: " + outcome.error());
-                        }
-                    }
-                    if (!items.isEmpty()) {
-                        grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i],
-                                weights[4 - i], items, prices, itemWeights));
-                    } else {
-                        recordLoadWarning(file, fileName,
-                                "Grade " + gradeKey + " has no valid items — the tier will fall back "
-                                        + "to lower grades when rolled (empty tiers are invisible to players)");
-                    }
-                }
+            List<GradeGroup> grades;
+            boolean unpricedRejected;
+            if (customTiers) {
+                // v2.x custom tier array ({id, name?, color?, weight?, items},
+                // lowest tier first) replaces the legacy format entirely.
+                ParsedGrades parsed = parseCustomGrades(json, priceTable, boxIdStr, file, fileName);
+                grades = parsed.grades();
+                unpricedRejected = parsed.unpricedRejected();
+            } else {
+                ParsedGrades parsed = parseLegacyGrades(json, weights, priceTable, file, fileName);
+                grades = parsed.grades();
+                unpricedRejected = parsed.unpricedRejected();
             }
 
             if (unpricedRejected) {
@@ -584,6 +543,81 @@ public final class BoxJsonLoader {
             if (json.has("permission")) {
                 builder.permission(getString(json, "permission", ""));
             }
+            if (json.has("sound") && json.get("sound").isJsonPrimitive()) {
+                builder.sound(parseResourceLocationSafe(json.get("sound").getAsString(), "sound"));
+            }
+            // v2.x gameplay fields.
+            if (json.has("hide_odds")) {
+                builder.hideOdds(json.get("hide_odds").getAsBoolean());
+            }
+            if (json.has("allow_bulk")) {
+                builder.allowBulk(json.get("allow_bulk").getAsBoolean());
+            }
+            if (json.has("keys") && json.get("keys").isJsonArray()) {
+                for (JsonElement ke : json.getAsJsonArray("keys")) {
+                    if (ke.isJsonPrimitive() && ke.getAsJsonPrimitive().isString()) {
+                        builder.extraKey(ke.getAsString());
+                    }
+                }
+            }
+            if (json.has("wear") && json.get("wear").isJsonArray() && json.getAsJsonArray("wear").size() == 2) {
+                builder.wearRange(json.getAsJsonArray("wear").get(0).getAsFloat(),
+                        json.getAsJsonArray("wear").get(1).getAsFloat());
+            }
+            if (json.has("bonus") && json.get("bonus").isJsonObject()) {
+                JsonObject bonus = json.getAsJsonObject("bonus");
+                builder.bonus(bonus.has("chance") ? bonus.get("chance").getAsFloat() : 0.0F,
+                        getString(bonus, "mode", "double"));
+            }
+            if (json.has("announce_above")) {
+                JsonElement ae = json.get("announce_above");
+                int announceLevel = 0;
+                if (ae.isJsonPrimitive() && ae.getAsJsonPrimitive().isNumber()) {
+                    announceLevel = ae.getAsInt();
+                } else if (ae.isJsonPrimitive() && ae.getAsJsonPrimitive().isString()) {
+                    announceLevel = tierLevelOf(grades, ae.getAsString());
+                    if (announceLevel == 0) {
+                        announceLevel = BoxGrades.gradeLevel(ae.getAsString());
+                    }
+                }
+                builder.announceAbove(announceLevel);
+            }
+            if (json.has("available_from")) {
+                Long fromMs = parseIsoMillis(json.get("available_from").getAsString());
+                if (fromMs == null) {
+                    recordLoadError(file, fileName, "available_from: expected ISO-8601 date-time, got \""
+                            + json.get("available_from").getAsString() + "\"");
+                } else {
+                    builder.availableFrom(fromMs);
+                }
+            }
+            if (json.has("available_until")) {
+                Long untilMs = parseIsoMillis(json.get("available_until").getAsString());
+                if (untilMs == null) {
+                    recordLoadError(file, fileName, "available_until: expected ISO-8601 date-time, got \""
+                            + json.get("available_until").getAsString() + "\"");
+                } else {
+                    builder.availableUntil(untilMs);
+                }
+            }
+            if (json.has("open_cost")) {
+                builder.openCost(getInt(json, "open_cost", 0));
+            }
+            if (json.has("negotiation") && json.get("negotiation").isJsonObject()) {
+                JsonObject neg = json.getAsJsonObject("negotiation");
+                builder.negotiation(
+                        neg.has("rounds") ? neg.get("rounds").getAsInt() : 0,
+                        neg.has("timeout_minutes") ? neg.get("timeout_minutes").getAsInt() : 0,
+                        neg.has("price_bias") ? neg.get("price_bias").getAsFloat() : 0.0F);
+            }
+            if (json.has("upgrade") && json.get("upgrade").isJsonObject()) {
+                JsonObject up = json.getAsJsonObject("upgrade");
+                String target = getString(up, "target", "");
+                int consume = getInt(up, "consume", 1);
+                if (!target.isBlank() && consume >= 1) {
+                    builder.upgrade(new BoxDefinition.UpgradeRule(target, consume));
+                }
+            }
             // v2.0.1 pity (保底): { "grade": "classified", "every": 20 } —
             // an invalid config degrades to no pity (the schema validator
             // reports the mistake at load time).
@@ -591,7 +625,14 @@ public final class BoxJsonLoader {
                 JsonObject pity = json.getAsJsonObject("pity");
                 String gradeId = getString(pity, "grade", "");
                 int every = getInt(pity, "every", 0);
-                PityPolicy policy = PityPolicy.of(gradeId, every);
+                boolean firstOpen = pity.has("first_open")
+                        && pity.get("first_open").isJsonPrimitive()
+                        && pity.get("first_open").getAsBoolean();
+                // Custom tiers resolve the level from the configured tier ids;
+                // the legacy format keeps the canonical five-id mapping.
+                PityPolicy policy = customTiers
+                        ? PityPolicy.ofLevel(tierLevelOf(grades, gradeId), every, firstOpen)
+                        : PityPolicy.of(gradeId, every, firstOpen);
                 builder.pity(policy);
                 // v2.0.1-fix(A): warn when the guaranteed tier (target and up)
                 // has zero total weight — the forced roll could never fire
@@ -599,8 +640,10 @@ public final class BoxJsonLoader {
                 if (policy != null) {
                     int target = policy.targetLevel();
                     int pityWeight = 0;
-                    for (int i = target - 1; i < weights.length; i++) {
-                        pityWeight += Math.max(0, weights[i]);
+                    for (int i = 0; i < grades.size(); i++) {
+                        if (BoxGrades.levelAt(grades.size(), i) >= target) {
+                            pityWeight += Math.max(0, grades.get(i).weight());
+                        }
                     }
                     if (pityWeight <= 0) {
                         recordLoadWarning(file, fileName,
@@ -631,15 +674,209 @@ public final class BoxJsonLoader {
         }
     }
 
+    /** Parsed result of a tier-format grade list. */
+    private record ParsedGrades(List<GradeGroup> grades, boolean unpricedRejected) {
+    }
+
+    /** Legacy tier format: "grade5".."grade1" item arrays weighted by the
+     *  "random" array (grade1 → grade5 order); tiers are created highest →
+     *  lowest and empty ones are skipped with a warning. */
+    private static ParsedGrades parseLegacyGrades(JsonObject json, int[] weights, PriceTable priceTable,
+                                                  Path file, String fileName) {
+        List<GradeGroup> grades = new ArrayList<>();
+        boolean unpricedRejected = false;
+        for (int i = 0; i < 5; i++) {
+            String gradeKey = "grade" + (5 - i);
+            if (json.has(gradeKey)) {
+                List<ItemStack> items = new ArrayList<>();
+                List<PriceRange> prices = new ArrayList<>();
+                List<Integer> itemWeights = new ArrayList<>();
+                if (parseTierItems(json.getAsJsonArray(gradeKey), items, prices, itemWeights, file, fileName, priceTable)) {
+                    unpricedRejected = true;
+                }
+                if (!items.isEmpty()) {
+                    grades.add(new GradeGroup(GRADE_IDS[i], GRADE_NAMES[i], GRADE_COLORS[i],
+                            weights[4 - i], items, prices, itemWeights));
+                } else {
+                    recordLoadWarning(file, fileName,
+                            "Grade " + gradeKey + " has no valid items — the tier will fall back "
+                                    + "to lower grades when rolled (empty tiers are invisible to players)");
+                }
+            }
+        }
+        return new ParsedGrades(grades, unpricedRejected);
+    }
+
+    /** v2.x custom tier format: "grades" = tier objects lowest tier first,
+     *  each {id, name?, color?, weight?, items}. The internal tier list
+     *  stays highest → lowest (the network/display invariant), so the array
+     *  is consumed in reverse. */
+    private static ParsedGrades parseCustomGrades(JsonObject json, PriceTable priceTable, String boxId,
+                                                  Path file, String fileName) {
+        List<GradeGroup> grades = new ArrayList<>();
+        boolean unpricedRejected = false;
+        JsonArray tiersArr = json.getAsJsonArray("grades");
+        if (tiersArr.size() > BoxGrades.MAX_GRADES) {
+            recordLoadError(file, fileName,
+                    "Grades: too many tiers (" + tiersArr.size() + ", max " + BoxGrades.MAX_GRADES + ")");
+            return new ParsedGrades(grades, unpricedRejected);
+        }
+        for (int t = tiersArr.size() - 1; t >= 0; t--) {
+            JsonElement te = tiersArr.get(t);
+            if (!te.isJsonObject()) {
+                recordLoadError(file, fileName, "Grades[" + t + "]: expected a tier object");
+                continue;
+            }
+            JsonObject tier = te.getAsJsonObject();
+            String tierId = getString(tier, "id", "");
+            if (tierId.isBlank()) {
+                recordLoadError(file, fileName, "Grades[" + t + "]: missing required 'id'");
+                continue;
+            }
+            boolean duplicate = false;
+            for (GradeGroup existing : grades) {
+                if (existing.id().equals(tierId)) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) {
+                recordLoadError(file, fileName, "Grades[" + t + "]: duplicate tier id '" + tierId + "'");
+                continue;
+            }
+            String display = getString(tier, "name", tierId);
+            int color = BoxGrades.DEFAULT_TIER_COLOR;
+            String rawColor = getString(tier, "color", "");
+            if (!rawColor.isBlank()) {
+                Integer parsedColor = BoxGrades.parseTierColor(rawColor);
+                if (parsedColor == null) {
+                    recordLoadError(file, fileName,
+                            "Grades[" + t + "].color: expected \"#RRGGBB\", got \"" + rawColor + "\"");
+                } else {
+                    color = parsedColor;
+                }
+            }
+            int weight = 1;
+            if (tier.has("weight") && tier.get("weight").isJsonPrimitive()) {
+                weight = tier.get("weight").getAsInt();
+                if (weight < 0) {
+                    recordLoadError(file, fileName,
+                            "Grades[" + t + "].weight: negative weight " + weight + " treated as 0 (tier never rolls)");
+                    weight = 0;
+                } else if (weight > 10000) {
+                    CsgoBox.LOGGER.warn("Weight {} for grades[{}] exceeds maximum, clamping to 10000", weight, t);
+                    weight = 10000;
+                }
+            }
+            JsonArray itemsArr = tier.has("items") && tier.get("items").isJsonArray()
+                    ? tier.getAsJsonArray("items") : new JsonArray();
+            List<ItemStack> items = new ArrayList<>();
+            List<PriceRange> prices = new ArrayList<>();
+            List<Integer> itemWeights = new ArrayList<>();
+            if (parseTierItems(itemsArr, items, prices, itemWeights, file, fileName, priceTable)) {
+                unpricedRejected = true;
+            }
+            if (!items.isEmpty()) {
+                int tierStock = tier.has("stock") && tier.get("stock").isJsonPrimitive()
+                        ? tier.get("stock").getAsInt() : -1;
+                if (tierStock >= 0) {
+                    com.reclizer.csgobox.terminal.TierStockManager.configure(
+                            boxId, tierId, tierStock);
+                }
+                grades.add(new GradeGroup(tierId, display, color, weight, items, prices, itemWeights));
+            } else {
+                recordLoadWarning(file, fileName,
+                        "Grades[" + t + "] ('" + tierId + "') has no valid items — the tier will fall back "
+                                + "to lower grades when rolled (empty tiers are invisible to players)");
+            }
+        }
+        return new ParsedGrades(grades, unpricedRejected);
+    }
+
+    /** One tier's item array → parallel item/price/weight lists; the
+     *  returned flag is true when an unpriced entry rejects the whole box. */
+    private static boolean parseTierItems(JsonArray itemsArr, List<ItemStack> items, List<PriceRange> prices,
+                                          List<Integer> itemWeights, Path file, String fileName,
+                                          PriceTable priceTable) {
+        boolean unpricedRejected = false;
+        for (JsonElement elem : itemsArr) {
+            BoxItemCodec.ParseOutcome outcome = BoxItemCodec.parseItem(elem);
+            if (outcome.isSuccess()) {
+                for (String warning : outcome.warnings()) {
+                    recordLoadWarning(file, fileName, "Item: " + warning);
+                }
+                items.addAll(outcome.stacks());
+                itemWeights.addAll(outcome.weights());
+                // v2.0.1+: prices come from the central price
+                // table (config/csbox/_prices.json), never from
+                // box JSON. UNPRICED = no price at all — the
+                // grade-default fallback was removed, so any
+                // unpriced id entry rejects the whole box.
+                boolean isLootTable = elem.isJsonObject()
+                        && elem.getAsJsonObject().has("loot_table");
+                List<PriceRange> resolved = resolvePrices(elem, outcome, priceTable);
+                if (!isLootTable) {
+                    for (PriceRange r : resolved) {
+                        if (r == null || r.isUnpriced()) {
+                            unpricedRejected = true;
+                            recordLoadError(file, fileName,
+                                    "物品未定价：该物品在 " + PriceTable.FILE_NAME
+                                            + " 中没有价格（表外默认价回退已移除，终端机不售卖、"
+                                            + "拆解回收为 0，请先在价格表补价再加载）");
+                            break;
+                        }
+                    }
+                } else {
+                    recordLoadWarning(file, fileName,
+                            "loot_table 条目没有固定物品 id，无法定价——不会出现在终端机报价中"
+                                    + "（开箱掉落不受影响）");
+                }
+                prices.addAll(resolved);
+            } else {
+                recordLoadError(file, fileName,
+                        "Item: " + outcome.error());
+            }
+        }
+        return unpricedRejected;
+    }
+
+    /** Parses an ISO-8601 date-time ("2026-12-24T00:00:00+08:00" or a UTC
+     *  instant) into epoch millis; null when unparseable (the validator
+     *  reports the mistake; the loader ignores the field). */
+    private static Long parseIsoMillis(String raw) {
+        try {
+            return java.time.OffsetDateTime.parse(raw).toInstant().toEpochMilli();
+        } catch (RuntimeException ignored) {
+            try {
+                return java.time.Instant.parse(raw).toEpochMilli();
+            } catch (RuntimeException ignored2) {
+                return null;
+            }
+        }
+    }
+
+    /** Level of the tier with the given id in a parsed tier list (highest →
+     *  lowest), or 0 when absent. */
+    private static int tierLevelOf(List<GradeGroup> grades, String tierId) {
+        for (int i = 0; i < grades.size(); i++) {
+            if (grades.get(i).id().equals(tierId)) {
+                return BoxGrades.levelAt(grades.size(), i);
+            }
+        }
+        return 0;
+    }
+
     /**
      * JSON "random" is ordered grade1 -> grade5.
      */
     private static int[] parseWeights(JsonObject json, Path file, String fileName) {
         int[] weights = BoxGrades.DEFAULT_WEIGHTS.clone();
+        boolean[] explicitWeight = new boolean[5];
         if (json.has("random")) {
             JsonArray randomArr = json.getAsJsonArray("random");
             for (int i = 0; i < Math.min(randomArr.size(), 5); i++) {
                 weights[i] = randomArr.get(i).getAsInt();
+                explicitWeight[i] = true;
             }
         }
         for (int i = 0; i < 5; i++) {
@@ -651,8 +888,14 @@ public final class BoxJsonLoader {
                     recordLoadError(file, fileName,
                             "Random[" + (i + 1) + "]: negative weight " + weights[i]
                                     + ", using default " + BoxGrades.DEFAULT_WEIGHTS[i]);
+                    weights[i] = BoxGrades.DEFAULT_WEIGHTS[i];
+                } else if (!explicitWeight[i]) {
+                    // Slot absent from "random" (short array / no field):
+                    // keep the per-grade default. An EXPLICIT 0 stays 0 —
+                    // that tier legitimately never rolls, matching the
+                    // weight:0 semantics of the v2.x custom grades array.
+                    weights[i] = BoxGrades.DEFAULT_WEIGHTS[i];
                 }
-                weights[i] = BoxGrades.DEFAULT_WEIGHTS[i];
             } else if (weights[i] > 10000) {
                 CsgoBox.LOGGER.warn("Weight {} for {} exceeds maximum, clamping to 10000", weights[i], gradeKey);
                 recordLoadError(file, fileName,

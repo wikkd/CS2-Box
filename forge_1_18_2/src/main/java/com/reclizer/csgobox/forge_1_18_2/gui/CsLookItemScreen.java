@@ -454,7 +454,9 @@ public class CsLookItemScreen extends Screen {
         float gradeX = centeredTextX(new TranslatableComponent("gui.csgobox.csgo_box.grade" + grade).getString(), 1.0F,
                 Math.round(this.width * 24F / 100F));
         renderText(pose,
-                new TranslatableComponent("gui.csgobox.csgo_box.grade" + grade).getVisualOrderText(),
+                (grade >= 1 && grade <= 5
+                        ? new TranslatableComponent("gui.csgobox.csgo_box.grade" + grade)
+                        : new TranslatableComponent("gui.csgobox.csgo_box.grade_n", grade)).getVisualOrderText(),
                 gradeX, this.height * 11.5F / 100F, 1F);
         // Button text colour tracks the panel painted in renderBg: hovered
         // button -> textColorHover, otherwise -> textColor. The previous

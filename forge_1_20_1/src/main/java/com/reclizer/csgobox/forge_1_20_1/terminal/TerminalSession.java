@@ -50,6 +50,9 @@ public final class TerminalSession {
         if (!TerminalStockManager.available(boxId.toString(), def.stock())) {
             return null;
         }
+        // v2.x tier stock: exhausted tiers are excluded at sampling time
+        // (sampleItem checks TierStockManager.offerable).
+
         // v2.0.1: no grade default price fallback anymore — only items with
         // an entry in _prices.json are sellable. A box without any priced
         // item is treated like an unconfigured terminal (empty state).
@@ -75,6 +78,7 @@ public final class TerminalSession {
         ItemStack slotItem = sampleSessionItem(def, rnd);
 
         NegotiationModel model = new NegotiationModel();
+        model.setParams(def.effectiveRounds(), def.effectiveTimeoutMs());
         model.setOfferSource(r -> {
             TerminalRoundData rd = sampled.get(r);
             return rd == null ? null : rd.offer();
@@ -141,6 +145,10 @@ public final class TerminalSession {
             if (gradeGroup == null || gradeGroup.items().isEmpty()) {
                 continue;
             }
+            // v2.x tier stock: a sold-out tier is never offered.
+            if (!com.reclizer.csgobox.terminal.TierStockManager.offerable(def.id().toString(), gradeGroup.id())) {
+                continue;
+            }
             int idx = pickWeightedPricedIndex(gradeGroup, rnd);
             if (idx < 0) {
                 continue; // this tier holds no priced item — fall to a lower tier
@@ -148,6 +156,7 @@ public final class TerminalSession {
             PriceRange range = gradeGroup.priceForIndex(idx);
             int price = range.sample(rnd::nextInt);
             price = def.discountedPrice(price);
+            price = (int) def.biasedPrice(price);
             return new Sample(gradeGroup.items().get(idx).copy(), g, price);
         }
         return null;
@@ -185,9 +194,7 @@ public final class TerminalSession {
     private static ItemStack sampleSessionItem(BoxDefinition def, Random rnd) {
         List<ItemStack> all = new ArrayList<>();
         for (GradeGroup grade : def.grades()) {
-            if (BoxGrades.gradeLevel(grade.id()) > 0) {
-                all.addAll(grade.items());
-            }
+            all.addAll(grade.items());
         }
         return all.isEmpty()
                 ? new ItemStack(Items.DIAMOND)
@@ -196,9 +203,10 @@ public final class TerminalSession {
 
 
     private static GradeGroup findGrade(BoxDefinition def, int gradeLevel) {
-        for (GradeGroup grade : def.grades()) {
-            if (BoxGrades.gradeLevel(grade.id()) == gradeLevel) {
-                return grade;
+        List<GradeGroup> tiers = def.grades();
+        for (int i = 0; i < tiers.size(); i++) {
+            if (BoxGrades.levelAt(tiers.size(), i) == gradeLevel) {
+                return tiers.get(i);
             }
         }
         return null;

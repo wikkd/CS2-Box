@@ -59,16 +59,38 @@ public final class EditorPackStats {
                     }
                     boxes++;
                     JsonObject obj = root.getAsJsonObject();
-                    for (int grade = 1; grade <= BoxGrades.GRADE_COUNT; grade++) {
-                        JsonElement arr = obj.get("grade" + grade);
-                        if (arr == null || !arr.isJsonArray()) {
-                            continue;
+                    JsonElement gradesArr = obj.get("grades");
+                    if (gradesArr != null && gradesArr.isJsonArray()) {
+                        // v2.x custom tier format: item entries live in
+                        // grades[].items (lowest tier first).
+                        for (JsonElement tier : gradesArr.getAsJsonArray()) {
+                            if (!tier.isJsonObject()) {
+                                continue;
+                            }
+                            JsonElement arr = tier.getAsJsonObject().get("items");
+                            if (arr == null || !arr.isJsonArray()) {
+                                continue;
+                            }
+                            for (JsonElement entry : arr.getAsJsonArray()) {
+                                items++;
+                                String id = itemId(entry);
+                                if (id != null) {
+                                    ids.add(id);
+                                }
+                            }
                         }
-                        for (JsonElement entry : arr.getAsJsonArray()) {
-                            items++;
-                            String id = itemId(entry);
-                            if (id != null) {
-                                ids.add(id);
+                    } else {
+                        for (int grade = 1; grade <= BoxGrades.GRADE_COUNT; grade++) {
+                            JsonElement arr = obj.get("grade" + grade);
+                            if (arr == null || !arr.isJsonArray()) {
+                                continue;
+                            }
+                            for (JsonElement entry : arr.getAsJsonArray()) {
+                                items++;
+                                String id = itemId(entry);
+                                if (id != null) {
+                                    ids.add(id);
+                                }
                             }
                         }
                     }

@@ -175,6 +175,11 @@ public final class NegotiationModel {
      * absolute clock value, so it must never be used as the default here.
      */
     private long countdownDeadlineMs = Long.MAX_VALUE;
+    /** v2.x per-box overrides (0 = built-in defaults); server-side only —
+     *  round COUNTDOWN_ARM ticks and the round markers stay MAX_ROUNDS
+     *  sized on the client (a shorter session just leaves markers idle). */
+    private int roundCap = MAX_ROUNDS;
+    private long timeoutMs = COUNT_INITIAL_MS;
     private long lastTickMs;
     private Offer pending;
     /** Dealer lines for this session's rounds: 5 unique picks from {@link #LINES}. */
@@ -188,6 +193,16 @@ public final class NegotiationModel {
     }
 
     /** Start a fresh negotiation (generation token invalidates stale state). */
+    /** v2.x per-box negotiation params; call BEFORE {@link #start(long)}. */
+    public void setParams(int roundCap, long timeoutMs) {
+        if (roundCap > 0) {
+            this.roundCap = Math.min(roundCap, MAX_ROUNDS);
+        }
+        if (timeoutMs > 0L) {
+            this.timeoutMs = timeoutMs;
+        }
+    }
+
     public void start(long nowMs) {
         shuffleRoundLine();
         generation++;
@@ -196,7 +211,7 @@ public final class NegotiationModel {
         round = 0;
         pending = null;
         cap = CAP_UNLIMITED;
-        countdownDeadlineMs = nowMs + COUNT_INITIAL_MS;
+        countdownDeadlineMs = nowMs + timeoutMs;
         lastTickMs = nowMs;
         presentRound(nowMs);
     }
@@ -269,7 +284,7 @@ public final class NegotiationModel {
             }
             case REJECT_BUSY -> {
                 if (nowMs - statusSinceMs >= REJECT_BUSY_MS) {
-                    if (round < MAX_ROUNDS) {
+                    if (round < roundCap) {
                         presentRound(nowMs);
                     } else {
                         status = Status.FAILED;
@@ -353,7 +368,7 @@ public final class NegotiationModel {
         ensureOfferEntry(nowMs);
         markOfferStatus(OFFER_REJECTED);
         appendHistory(new SystemEntry("csgobox.terminal.sys.rejected", false, nowMs));
-        if (round < MAX_ROUNDS) {
+        if (round < roundCap) {
             presentRound(nowMs);
             // The legit client plays REJECT_BUSY (450ms) + TYPING (1100ms) before
             // the next offer is revealed; shift the server's round start by the
@@ -576,7 +591,7 @@ public final class NegotiationModel {
         // authoritative in real sessions (this fallback only guards paths
         // without an offer source).
         float wearVal = rnd.nextFloat();
-        boolean finalRound = round == MAX_ROUNDS;
+        boolean finalRound = round == roundCap;
         return new Offer(round, skinIdx, wearVal,
                 rnd.nextInt(5),                    // style 0..4 (style.* keys)
                 1000 + rnd.nextInt(900),           // serial no

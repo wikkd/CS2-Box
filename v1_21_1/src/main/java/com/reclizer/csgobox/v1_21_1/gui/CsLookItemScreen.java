@@ -463,7 +463,9 @@ public class CsLookItemScreen extends Screen {
         renderText(guiGraphics, openItem.getItem().getName(openItem).getVisualOrderText(),
                 this.width * 45F / 100F, this.height * 5F / 100F, 1.8F, (titleAlpha << 24) | 0xFFFFFFFF);
         renderText(guiGraphics,
-                Component.translatable("gui.csgobox.csgo_box.grade" + grade).getVisualOrderText(),
+                (grade >= 1 && grade <= 5
+                        ? Component.translatable("gui.csgobox.csgo_box.grade" + grade)
+                        : Component.translatable("gui.csgobox.csgo_box.grade_n", grade)).getVisualOrderText(),
                 this.width * 45F / 100F, this.height * 11F / 100F, 1F, (titleAlpha << 24) | 0xFFFFFFFF);
         renderCenteredText(guiGraphics,
                 Component.translatable("gui.csgobox.csgo_box.close").withStyle(style).getVisualOrderText(),

@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.packet;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.advancement.TerminalBrokeTrigger;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
@@ -67,7 +68,7 @@ public record PacketTerminalReject(int round) implements CustomPacketPayload {
             // World clock (game ticks × 50): the typing window is
             // server-authoritative — a crafted reject before the 1100ms
             // reveal elapsed (or after the countdown expired) is refused.
-            long worldMs = sp.level().getGameTime() * 50L;
+            long worldMs = WorldClock.now(sp.level());
             if (worldMs >= session.model().countdownDeadlineMs()
                     || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
                 return;

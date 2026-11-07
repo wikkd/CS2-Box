@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.terminal;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.v26_1_2.box.BoxDefinition;
 import com.reclizer.csgobox.v26_1_2.box.BoxRegistry;
 import com.reclizer.csgobox.v26_1_2.item.ItemCsgoBox;
@@ -87,7 +88,7 @@ public final class TerminalSessionManager {
             return existing;
         }
         // Deadline in world time (game ticks × 50): expires only while the world runs.
-        long worldMs = player.level().getGameTime() * 50L;
+        long worldMs = WorldClock.now(player.level());
         TerminalSession created = TerminalSession.create(player.getStringUUID(), uid, boxId, def, worldMs);
         // v2.0.1: a sold-out terminal (stock exhausted) yields no session —
         // the screen shows the empty/unconfigured state. Never store null.

@@ -156,5 +156,10 @@ jobs:
       - name: Architecture constraint check (CONSTRAINT-001)
         run: ./gradlew :common:checkCommonArchitecture --console=plain
 
+      # Compat-pack box JSON syntax/structure check (pure Python, no registry
+      # mirror needed in CI — registry cross-references stay local-only).
+      - name: Check compat-pack box JSON ids
+        run: python3 scripts/check-ids.py
+
       - name: Run common unit tests
         run: ./gradlew :common:test --console=plain

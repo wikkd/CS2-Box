@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v26_1_2.gui;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalPalette;
@@ -205,7 +206,7 @@ public class TerminalScreen extends Screen {
      */
     private static long worldNowMs() {
         Minecraft mc = Minecraft.getInstance();
-        return mc.level != null ? mc.level.getGameTime() * 50L : System.currentTimeMillis();
+        return mc.level != null ? WorldClock.now(mc.level) : System.currentTimeMillis();
     }
 
     // ---- layout fractions (HTML prototype) ----

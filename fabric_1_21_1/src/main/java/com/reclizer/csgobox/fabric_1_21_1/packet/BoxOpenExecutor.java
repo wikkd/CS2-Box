@@ -215,9 +215,13 @@ public final class BoxOpenExecutor {
         // [targetLevel..5] when the miss streak reached the threshold.
         // pickGradeWithPity returns forced=false when the pity slice has
         // no positive weight (misconfigured) — the plain roll stands.
-        if (pity != null && pity.shouldForce(pityStreak)) {
+        if (pity != null && (pity.shouldForce(pityStreak)
+                || (pity.firstOpen() && !PityTracker.hasRecord(trackerKey, boxId.toString())))) {
             OddsCalculator.PityResult pityRoll =
-                    OddsCalculator.pickGradeWithPity(rng, weights, pity, pityStreak);
+                    OddsCalculator.pickGradeWithPity(rng, weights, pity,
+                            // Effective streak: first_open alone must force too (pickGradeWithPity
+                            // re-checks shouldForce(streak) internally — pass the armed value).
+                            Math.max(pityStreak, pity.every() - 1));
             if (pityRoll.forced()) {
                 ItemStack pityItem = gradeMap.pickRandom(rng, pityRoll.grade());
                 if (pityItem == null) {
@@ -258,16 +262,49 @@ public final class BoxOpenExecutor {
         // whole roll is validated — a broken definition must never eat a key.
         // Create's deployer recipe path disables this (Create consumes the
         // deployer's held item itself).
+        // v2.x gates: availability window, then open cost (server-authoritative).
+        BoxDefinition gateDef = BoxRegistry.get(boxId);
+        if (gateDef != null && !gateDef.isAvailableNow(System.currentTimeMillis())) {
+            player.sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
+            return null;
+        }
+        if (gateDef != null && gateDef.openCost() > 0 && !player.getAbilities().instabuild) {
+            if (PacketTerminalBuy.countArmoryPoints(player) < gateDef.openCost()) {
+                player.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", gateDef.openCost()));
+                return null;
+            }
+            PacketTerminalBuy.consumeArmoryPoints(player, gateDef.openCost());
+        }
         if (consumeKey && !PacketCsgoProgress.tryConsumeKeys(player, box, 1)) {
             return null;
         }
 
         float wear = 0F;
         if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
-            wear = rng.nextFloat();
+            wear = gateDef != null ? gateDef.sampleWear(rng) : rng.nextFloat();
             PacketCsgoProgress.applyWearDamage(giveItem, wear);
         }
 
+        if (gateDef != null && gateDef.announceLevel() > 0 && finalGrade >= gateDef.announceLevel()) {
+            String tierName = gateDef.tierDisplayName(finalGrade);
+            Component announceMsg = Component.translatable("messages.csgobox.announce.rare",
+                    player.getDisplayName(), giveItem.getHoverName(),
+                    tierName == null ? Component.translatable("gui.csgobox.csgo_box.grade_n", finalGrade)
+                            : Component.literal(tierName),
+                    gateDef.name());
+            player.level().getServer().getPlayerList().broadcastSystemMessage(announceMsg, false);
+        }
+        if (gateDef != null && gateDef.bonusChance() > 0F && rng.nextFloat() < gateDef.bonusChance()) {
+            ItemStack bonusStack = gateDef.bonusIsBox()
+                    ? ItemCsgoBox.setBoxId(boxId, new ItemStack(ModItems.itemForBox(boxId, gateDef.isTerminal())))
+                    : giveItem.copy();
+            if (bonusStack != null && !bonusStack.isEmpty()) {
+                if (!player.getInventory().add(bonusStack)) {
+                    player.drop(bonusStack, false);
+                }
+                player.sendSystemMessage(Component.translatable("messages.csgobox.bonus", bonusStack.getCount(), bonusStack.getHoverName()));
+            }
+        }
         // v2.2.0-fix: sync the resolved (and wear-damaged) winner back into the
         // animation strip so the client reveal always matches the granted item
         // exactly (count-range / random-enchant / loot-table / wear). The plain
@@ -282,7 +319,12 @@ public final class BoxOpenExecutor {
         stampedGive.set(ItemCsgoBox.GRADE.get(), finalGrade);
 
         if (giveToPlayer) {
-            ItemStack toGive = stampedGive;
+            // Inventory.add has consume semantics (vanilla transfers the
+            // count and empties the passed stack), so hand the inventory
+            // a COPY — otherwise Outcome.giveItem() is always an empty
+            // stack on the giveToPlayer=true path (locked by the
+            // GameTest suite).
+            ItemStack toGive = stampedGive.copy();
             boolean added = player.getInventory().add(toGive);
             if (!added && !toGive.isEmpty()) {
                 player.drop(toGive, false);
@@ -325,8 +367,9 @@ public final class BoxOpenExecutor {
     private record Availability(int boxes, int keys) {
     }
 
-    private static Availability countAvailability(Player player, ItemStack box, ResourceLocation keyId) {
-        boolean noKey = keyId == null || keyId.equals(AIR_ID);
+    private static Availability countAvailability(Player player, ItemStack box, java.util.List<String> keyIds) {
+        java.util.Set<String> keySet = new java.util.HashSet<>(keyIds);
+        boolean noKey = keySet.isEmpty();
         boolean countKeys = !noKey && !player.getAbilities().instabuild;
         int boxes = 0;
         int keys = countKeys ? 0 : Integer.MAX_VALUE;
@@ -335,7 +378,7 @@ public final class BoxOpenExecutor {
                 if (ItemStack.isSameItemSameComponents(stack, box)) {
                     boxes += stack.getCount();
                 }
-            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            } else if (countKeys && keySet.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) {
                 keys += stack.getCount();
             }
         }
@@ -344,7 +387,7 @@ public final class BoxOpenExecutor {
                 if (ItemStack.isSameItemSameComponents(stack, box)) {
                     boxes += stack.getCount();
                 }
-            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            } else if (countKeys && keySet.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) {
                 keys += stack.getCount();
             }
         }
@@ -353,7 +396,7 @@ public final class BoxOpenExecutor {
                 if (ItemStack.isSameItemSameComponents(stack, box)) {
                     boxes += stack.getCount();
                 }
-            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            } else if (countKeys && keySet.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) {
                 keys += stack.getCount();
             }
         }
@@ -367,7 +410,12 @@ public final class BoxOpenExecutor {
      * roll at/above the target when the streak reached the threshold).
      */
     private static List<BulkOpenResult> computeKResults(BulkBoxContext snapshot, int K,
-                                                        int initialStreak, PityPolicy pity) {
+                                                        int initialStreak, PityPolicy pity, boolean firstOpenForce) {
+        // v2.x: per-box bulk gate (server-authoritative).
+        var bulkGateDef = BoxRegistry.get(snapshot.boxId());
+        if (bulkGateDef != null && !bulkGateDef.allowBulk()) {
+            return new ArrayList<>();
+        }
         List<BulkOpenResult> out = new ArrayList<>(K);
         // Precompute the weight table once for the whole batch so the K-1
         // follow-up rolls don't each rebuild it (pickGrade(int[]) re-scans).
@@ -386,9 +434,12 @@ public final class BoxOpenExecutor {
                 int pityRollGrade = finalGrade;
                 boolean fallback = giveItem.isEmpty();
                 // v2.0.1 pity: patch the winning slot when the threshold is met.
-                if (pity != null && pity.shouldForce(streak)) {
+                // v2.x first_open: a never-opened player's very first box is
+                // forced too (only item 0 of the batch; later items roll plain).
+                if (pity != null && (pity.shouldForce(streak) || firstOpenForce)) {
                     OddsCalculator.PityResult pr = OddsCalculator.pickGradeWithPity(
-                            rng, snapshot.weights(), pity, streak);
+                            rng, snapshot.weights(), pity,
+                            firstOpenForce ? Math.max(streak, pity.every() - 1) : streak);
                     if (pr.forced()) {
                         ItemStack pityItem = snapshot.gradeMap().pickRandom(rng, pr.grade());
                         if (pityItem == null) {
@@ -413,7 +464,7 @@ public final class BoxOpenExecutor {
                         strip.grades().set(winningIndex, finalGrade);
                     }
                 }
-                float wear = rng.nextFloat();
+                float wear = bulkGateDef != null ? bulkGateDef.sampleWear(rng) : rng.nextFloat();
                 out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), wear, fallback, pityRollGrade));
                 // v2.0.1-fix(D): only granted (non-empty) results advance the
                 // batch-local streak, matching finalizeBulkOpen's write-back.
@@ -437,7 +488,7 @@ public final class BoxOpenExecutor {
                 if (s == null) {
                     s = ItemStack.EMPTY;
                 }
-                float wear = rng.nextFloat();
+                float wear = bulkGateDef != null ? bulkGateDef.sampleWear(rng) : rng.nextFloat();
                 // v2.0.1-fix: every follow-up result needs its OWN seed — a
                 // constant 0L made the spec resolve (count-range / enchant /
                 // loot-table) in finalizeBulkOpen deterministic and identical
@@ -472,7 +523,7 @@ public final class BoxOpenExecutor {
         ResourceLocation keyId = ItemCsgoBox.getKey(templateBox);
 
         // Re-validate after async compute; inventory might have changed.
-        Availability avail = countAvailability(sp, templateBox, keyId);
+        Availability avail = countAvailability(sp, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
         int recheckBoxes = avail.boxes();
         int recheckKeys = avail.keys();
         int actualK = Math.min(recheckBoxes, recheckKeys);
@@ -490,6 +541,25 @@ public final class BoxOpenExecutor {
         }
 
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
+        // v2.x open_cost: clamp the granted batch to what the player can still
+        // afford (points may have changed during the async compute), then
+        // charge after consumption succeeds — never for boxes not granted.
+        BoxDefinition costDef = BoxRegistry.get(snapshot.boxId());
+        int openCost = costDef != null && costDef.openCost() > 0 && !sp.getAbilities().instabuild
+                ? costDef.openCost() : 0;
+        if (openCost > 0) {
+            int affordable = PacketTerminalBuy.countArmoryPoints(sp) / openCost;
+            if (affordable < actualK) {
+                CsgoBox.LOGGER.warn("[csgo-bulk] player {} points changed during compute: affordable={}",
+                        sp.getName().getString(), affordable);
+                actualK = Math.max(0, affordable);
+            }
+            if (actualK <= 0) {
+                sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", openCost));
+                return;
+            }
+        }
+
         List<BulkOpenResult> truncated = results.subList(0, actualK);
 
         // A fully-broken definition (every grade pool empty even after
@@ -570,6 +640,29 @@ public final class BoxOpenExecutor {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeKeys failed for player={} want={}; refunding boxes", sp.getName().getString(), actualK);
             refundBoxes(sp, snapshot.boxId(), templateBox, actualK);
             return;
+        }
+
+        // v2.x open_cost: charge for the actually granted batch (creative
+        // exempt players never reach this with openCost > 0).
+        if (openCost > 0) {
+            PacketTerminalBuy.consumeArmoryPoints(sp, openCost * actualK);
+        }
+        // v2.x: the batch counts as "opened" for the first-open guarantee.
+        PityTracker.markOpened(sp.getStringUUID(), snapshot.boxId().toString());
+        // v2.x announce_above: bulk winners at/above the level broadcast too.
+        if (costDef != null && costDef.announceLevel() > 0) {
+            for (BulkOpenResult r : truncated) {
+                if (r.resultItem().isEmpty() || r.resultGrade() < costDef.announceLevel()) {
+                    continue;
+                }
+                String tierName = costDef.tierDisplayName(r.resultGrade());
+                Component announceMsg = Component.translatable("messages.csgobox.announce.rare",
+                        sp.getDisplayName(), r.resultItem().getHoverName(),
+                        tierName == null ? Component.translatable("gui.csgobox.csgo_box.grade_n", r.resultGrade())
+                                : Component.literal(tierName),
+                        costDef.name());
+                sp.level().getServer().getPlayerList().broadcastSystemMessage(announceMsg, false);
+            }
         }
 
         BulkOpenResult box1 = truncated.get(0);
@@ -771,6 +864,13 @@ public final class BoxOpenExecutor {
             // v2.0.1 constraints (batch-level): per-player cap / cooldown /
             // permission are checked once for the whole batch.
             BoxDefinition constraintDef = BoxRegistry.get(boxId);
+                if (!constraintDef.isAvailableNow(System.currentTimeMillis())) {
+                    player.sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
+                    if (player instanceof ServerPlayer sp) {
+                        PacketCsgoProgress.sendRejected(sp, message.requestId());
+                    }
+                    return;
+                }
             if (constraintDef != null) {
                 if (!BoxConstraintTracker.underPerPlayerCap(
                         player.getStringUUID(), boxId.toString(), constraintDef.maxPerPlayer())) {
@@ -799,7 +899,7 @@ public final class BoxOpenExecutor {
                 }
             }
 
-            Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getKey(templateBox));
+            Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
             int availableBoxes = avail.boxes();
             int availableKeys = avail.keys();
             int K = Math.min(availableBoxes, availableKeys);
@@ -819,6 +919,20 @@ public final class BoxOpenExecutor {
             // v2.0.1-fix(max_per_player): the batch is clamped to the player's
             // remaining per-player allowance, not merely boolean-checked — a
             // hoarded stack could otherwise drain the whole quota in one ask.
+            // v2.x open_cost: clamp the batch to what the player can afford
+            // (creative exempt), mirroring the single-open charge.
+            if (constraintDef != null && constraintDef.openCost() > 0 && !player.getAbilities().instabuild) {
+                int affordable = PacketTerminalBuy.countArmoryPoints(player) / constraintDef.openCost();
+                if (affordable <= 0) {
+                    player.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points",
+                     constraintDef.openCost()));
+                    if (player instanceof ServerPlayer sp) {
+                        PacketCsgoProgress.sendRejected(sp, message.requestId());
+                    }
+                    return;
+                }
+                K = Math.min(K, affordable);
+            }
             if (constraintDef != null && constraintDef.maxPerPlayer() > 0) {
                 int allowance = constraintDef.maxPerPlayer()
                         - BoxConstraintTracker.openCount(player.getStringUUID(), boxId.toString());
@@ -856,13 +970,17 @@ public final class BoxOpenExecutor {
             final int pityStreak = pity != null
                     ? PityTracker.startStreak(player.getStringUUID(), boxId.toString())
                     : 0;
+            // v2.x first_open: a player who never opened this box forces
+            // the first box of the batch (single-open parity).
+            final boolean firstOpenForce = pity != null && pity.firstOpen()
+                    && !PityTracker.hasRecord(player.getStringUUID(), boxId.toString());
 
             try {
                 final Player playerFinal = player;
                 CompletableFuture
                         .supplyAsync(() -> {
                             try {
-                                return computeKResults(snapshot, requestedK, pityStreak, pity);
+                                return computeKResults(snapshot, requestedK, pityStreak, pity, firstOpenForce);
                             } catch (Throwable t) {
                                 CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
                                 return List.<BulkOpenResult>of();

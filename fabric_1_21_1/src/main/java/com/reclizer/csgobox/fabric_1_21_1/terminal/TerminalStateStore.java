@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.fabric_1_21_1.terminal;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.fabric_1_21_1.CsgoBox;
 import com.reclizer.csgobox.fabric_1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.fabric_1_21_1.packet.PacketTerminalState;
@@ -57,7 +58,7 @@ public final class TerminalStateStore {
             }
             byte[] payload = in.readAllBytes();
             RegistryFriendlyByteBuf buf = wrap(payload, server);
-            long worldMs = server.overworld().getGameTime() * 50L;
+            long worldMs = WorldClock.now(server.overworld());
             int sessionCount = buf.readVarInt();
             if (sessionCount < 0 || sessionCount > 65536) {
                 throw new IOException("implausible session count " + sessionCount);

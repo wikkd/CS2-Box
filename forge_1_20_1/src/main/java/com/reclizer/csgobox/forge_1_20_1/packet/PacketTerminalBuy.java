@@ -1,9 +1,12 @@
 package com.reclizer.csgobox.forge_1_20_1.packet;
 
+import com.reclizer.csgobox.forge_1_20_1.box.GradeGroup;
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.terminal.TerminalStockManager;
 import com.reclizer.csgobox.terminal.WearPenalty;
 import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
+import com.reclizer.csgobox.forge_1_20_1.advancement.TerminalDealTrigger;
 import com.reclizer.csgobox.forge_1_20_1.event.TerminalBuyAttemptEvent;
 import com.reclizer.csgobox.forge_1_20_1.event.TerminalBuyEvent;
 import com.reclizer.csgobox.forge_1_20_1.box.BoxDefinition;
@@ -102,7 +105,7 @@ public class PacketTerminalBuy {
         if (session == null || session.isFinished() || session.model().round() != message.offerRound) {
             return invalid;
         }
-        long worldMs = sp.level().getGameTime() * 50L;
+        long worldMs = WorldClock.now(sp.level());
         if (worldMs >= session.model().countdownDeadlineMs()
                 || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
             return invalid;
@@ -185,6 +188,22 @@ public class PacketTerminalBuy {
             return new PacketTerminalBuyResult(message.requestId,
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
         }
+        // v2.x tier stock: consume one unit of the bought item's tier.
+        String boughtTierId = null;
+        for (GradeGroup tierGroup : def.grades()) {
+            for (ItemStack candidate : tierGroup.items()) {
+                if (ItemStack.isSameItemSameTags(offerItem, candidate)) {
+                    boughtTierId = tierGroup.id();
+                    break;
+                }
+            }
+            if (boughtTierId != null) {
+                break;
+            }
+        }
+        if (boughtTierId != null) {
+            com.reclizer.csgobox.terminal.TierStockManager.consume(ItemCsgoBox.getBoxId(held).toString(), boughtTierId);
+        }
         if (!creative) {
             consumeArmoryPoints(sp, price);
         }
@@ -197,6 +216,9 @@ public class PacketTerminalBuy {
         }
         session.model().buyForced(worldMs);
         sp.awardStat(CsgoBox.TERMINAL_BUYS_STAT, 1);
+        if (CsgoBox.CONFIG.enableAchievements()) {
+            TerminalDealTrigger.INSTANCE.trigger(sp);
+        }
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);
@@ -205,7 +227,7 @@ public class PacketTerminalBuy {
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
     }
 
-    private static int countArmoryPoints(Player entity) {
+    public static int countArmoryPoints(Player entity) {
         int total = countFromList(entity.getInventory().items);
         total += countFromSlot(entity, EquipmentSlot.HEAD);
         total += countFromSlot(entity, EquipmentSlot.CHEST);
@@ -215,7 +237,7 @@ public class PacketTerminalBuy {
         return total;
     }
 
-    private static void consumeArmoryPoints(Player entity, int amount) {
+    public static void consumeArmoryPoints(Player entity, int amount) {
         int remaining = consumeFromList(entity.getInventory().items, amount);
         if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.HEAD, remaining);
         if (remaining > 0) remaining = consumeFromSlot(entity, EquipmentSlot.CHEST, remaining);

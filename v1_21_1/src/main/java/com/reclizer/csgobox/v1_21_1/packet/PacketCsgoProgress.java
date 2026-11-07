@@ -123,16 +123,15 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    /** Resolves the grade (1..5) of a fallback item against the box definition. */
+    /** Resolves the fallback item's tier level (1..tier count) against the box definition. */
     static int resolveGrade(ItemStack item, ResourceLocation boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
-                for (ItemStack candidate : grade.items()) {
+            List<GradeGroup> tiers = def.grades();
+            for (int i = 0; i < tiers.size(); i++) {
+                for (ItemStack candidate : tiers.get(i).items()) {
                     if (ItemStack.isSameItemSameComponents(item, candidate)) {
-                        return Mth.clamp(gradeLevel, 1, 5);
+                        return Mth.clamp(BoxGrades.levelAt(tiers.size(), i), 1, Math.max(1, tiers.size()));
                     }
                 }
             }
@@ -145,8 +144,16 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
      * true only when fully consumed (or no key required).
      */
     static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
-        ResourceLocation keyId = ItemCsgoBox.getKey(box);
-        return tryConsumeKeys(entity, keyId, count);
+        java.util.List<String> acceptedKeys = ItemCsgoBox.getAcceptedKeys(box);
+        if (acceptedKeys.isEmpty()) {
+            return true;
+        }
+        for (String acceptedKey : acceptedKeys) {
+            if (tryConsumeKeys(entity, ResourceLocation.parse(acceptedKey), count)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Consume keys by id directly; avoids lookups that could change if the hand switches mid-call. */

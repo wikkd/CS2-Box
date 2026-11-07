@@ -39,8 +39,10 @@ public final class BoxJsonSchemaValidator {
         validatePity(json, issues);
         validateDrop(json, issues);
         validateGrades(json, issues);
+        validateGradesArray(json, issues);
         validateEntity(json, issues);
         validateNameColorPrefix(json, issues);
+        validateV2xGameplayFields(json, issues);
         validateRemovedPriceField(json, issues);
         validateV21Fields(json, issues);
         validateTopLevelKeys(json, issues);
@@ -56,10 +58,17 @@ public final class BoxJsonSchemaValidator {
      */
     private static final java.util.Set<String> KNOWN_TOP_KEYS = java.util.Set.of(
             "name", "key", "drop", "type", "random", "entity",
-            "grade1", "grade2", "grade3", "grade4", "grade5",
+            "grade1", "grade2", "grade3", "grade4", "grade5", "grades",
             "enabled", "requires", "icon", "discount", "stock",
             "max_per_player", "cooldown_seconds", "permission", "pity",
-            "format_version", "restock_minutes");
+            "format_version", "restock_minutes",
+            "hide_odds", "allow_bulk", "keys", "wear", "bonus",
+            "announce_above", "available_from", "available_until", "open_cost",
+            "sound", "negotiation", "upgrade");
+
+    /** Tier-level fields of the custom {@code "grades"} array. */
+    private static final java.util.Set<String> KNOWN_TIER_KEYS = java.util.Set.of(
+            "id", "name", "color", "weight", "items", "stock");
 
     /** Item-level fields consumed by the item codec ({@code price} is
      *  whitelisted here because {@link #validateRemovedPriceField} reports it
@@ -152,73 +161,184 @@ public final class BoxJsonSchemaValidator {
             for (int i = 0; i < arr.size(); i++) {
                 JsonElement e = arr.get(i);
                 if (!e.isJsonObject()) continue;
-                JsonObject item = e.getAsJsonObject();
-                String base = key + "[" + i + "]";
+                validateItemEntry(e.getAsJsonObject(), key + "[" + i + "]", issues);
+            }
+        }
+    }
 
-                // Unknown item-level fields: the codec ignores anything it
-                // does not read, so a typo silently degrades to defaults.
-                for (String itemKey : item.keySet()) {
-                    if (KNOWN_ITEM_KEYS.contains(itemKey)) continue;
-                    issues.add(new SchemaIssue(base + "." + itemKey,
-                            "Unknown item field — a typo is loaded with defaults"));
-                }
+    /** Shared per-item-entry validation (legacy gradeN arrays and the custom
+     *  {@code grades[].items} arrays use the same item codec). */
+    private static void validateItemEntry(JsonObject item, String base, List<SchemaIssue> issues) {
+        // Unknown item-level fields: the codec ignores anything it
+        // does not read, so a typo silently degrades to defaults.
+        for (String itemKey : item.keySet()) {
+            if (KNOWN_ITEM_KEYS.contains(itemKey)) continue;
+            issues.add(new SchemaIssue(base + "." + itemKey,
+                    "Unknown item field — a typo is loaded with defaults"));
+        }
 
-                // Source exclusivity: id / tag / loot_table (only one).
-                int sources = 0;
-                if (item.has("id")) sources++;
-                if (item.has("tag") && item.get("tag").isJsonPrimitive()
-                        && item.get("tag").getAsString().startsWith("#")) sources++;
-                if (item.has("loot_table")) sources++;
-                if (sources > 1) {
-                    issues.add(new SchemaIssue(base,
-                            "An item entry must declare exactly one of 'id', '#tag' or 'loot_table'"));
-                }
+        // Source exclusivity: id / tag / loot_table (only one).
+        int sources = 0;
+        if (item.has("id")) sources++;
+        if (item.has("tag") && item.get("tag").isJsonPrimitive()
+                && item.get("tag").getAsString().startsWith("#")) sources++;
+        if (item.has("loot_table")) sources++;
+        if (sources > 1) {
+            issues.add(new SchemaIssue(base,
+                    "An item entry must declare exactly one of 'id', '#tag' or 'loot_table'"));
+        }
 
-                if (item.has("weight")) {
-                    JsonElement w = item.get("weight");
-                    if (!w.isJsonPrimitive() || !w.getAsJsonPrimitive().isNumber()) {
-                        issues.add(new SchemaIssue(base + ".weight", "Expected integer, got " + typeOf(w)));
-                    } else if (w.getAsDouble() < 0) {
-                        issues.add(new SchemaIssue(base + ".weight", "Expected non-negative integer, got " + w.getAsDouble()));
-                    }
+        if (item.has("weight")) {
+            JsonElement w = item.get("weight");
+            if (!w.isJsonPrimitive() || !w.getAsJsonPrimitive().isNumber()) {
+                issues.add(new SchemaIssue(base + ".weight", "Expected integer, got " + typeOf(w)));
+            } else if (w.getAsDouble() < 0) {
+                issues.add(new SchemaIssue(base + ".weight", "Expected non-negative integer, got " + w.getAsDouble()));
+            }
+        }
+        if (item.has("count")) {
+            JsonElement c = item.get("count");
+            if (c.isJsonPrimitive() && c.getAsJsonPrimitive().isNumber()) {
+                if (c.getAsDouble() < 1) {
+                    issues.add(new SchemaIssue(base + ".count", "Expected count >= 1, got " + c.getAsDouble()));
                 }
-                if (item.has("count")) {
-                    JsonElement c = item.get("count");
-                    if (c.isJsonPrimitive() && c.getAsJsonPrimitive().isNumber()) {
-                        if (c.getAsDouble() < 1) {
-                            issues.add(new SchemaIssue(base + ".count", "Expected count >= 1, got " + c.getAsDouble()));
+            } else if (c.isJsonArray()) {
+                JsonArray ca = c.getAsJsonArray();
+                if (ca.size() != 2 || !ca.get(0).isJsonPrimitive() || !ca.get(1).isJsonPrimitive()
+                        || !ca.get(0).getAsJsonPrimitive().isNumber()
+                        || !ca.get(1).getAsJsonPrimitive().isNumber()) {
+                    issues.add(new SchemaIssue(base + ".count",
+                            "Expected integer or [min,max] array, got " + typeOf(c)));
+                } else if (ca.get(0).getAsDouble() < 1 || ca.get(1).getAsDouble() < ca.get(0).getAsDouble()) {
+                    issues.add(new SchemaIssue(base + ".count",
+                            "Invalid count range [" + ca.get(0).getAsDouble() + ","
+                                    + ca.get(1).getAsDouble() + "]"));
+                }
+            } else {
+                issues.add(new SchemaIssue(base + ".count",
+                        "Expected integer or [min,max] array, got " + typeOf(c)));
+            }
+        }
+        if (item.has("loot_table") && !item.get("loot_table").isJsonPrimitive()) {
+            issues.add(new SchemaIssue(base + ".loot_table",
+                    "Expected loot table id string, got " + typeOf(item.get("loot_table"))));
+        }
+        if (item.has("enchant")) {
+            JsonElement en = item.get("enchant");
+            boolean okEnchant = (en.isJsonPrimitive() && en.getAsJsonPrimitive().isBoolean())
+                    || en.isJsonObject();
+            if (!okEnchant) {
+                issues.add(new SchemaIssue(base + ".enchant",
+                        "Expected true or an object {id, level}, got " + typeOf(en)));
+            }
+        }
+        // price validation already covered by validateItemPrices.
+    }
+
+    /**
+     * v2.x custom tier array ({@code "grades"}): ordered lowest → highest,
+     * each entry {@code {id, name?, color?, weight?, items}}. When present it
+     * replaces the legacy {@code random}/{@code grade1..5} keys entirely —
+     * those are reported as ignored instead of silently doing nothing.
+     */
+    private static void validateGradesArray(JsonObject json, List<SchemaIssue> issues) {
+        if (!json.has("grades")) {
+            return;
+        }
+        JsonElement elem = json.get("grades");
+        if (!elem.isJsonArray()) {
+            issues.add(new SchemaIssue("grades",
+                    "Expected an array of tier objects (lowest tier first), got " + typeOf(elem)));
+            return;
+        }
+        JsonArray arr = elem.getAsJsonArray();
+        if (arr.isEmpty()) {
+            issues.add(new SchemaIssue("grades", "Expected at least 1 tier"));
+        }
+        if (arr.size() > BoxGrades.MAX_GRADES) {
+            issues.add(new SchemaIssue("grades",
+                    "Too many tiers: " + arr.size() + " (max " + BoxGrades.MAX_GRADES + ")"));
+        }
+        java.util.Set<String> seenIds = new java.util.LinkedHashSet<>();
+        for (int t = 0; t < arr.size(); t++) {
+            JsonElement te = arr.get(t);
+            String base = "grades[" + t + "]";
+            if (!te.isJsonObject()) {
+                issues.add(new SchemaIssue(base, "Expected a tier object, got " + typeOf(te)));
+                continue;
+            }
+            JsonObject tier = te.getAsJsonObject();
+            for (String tierKey : tier.keySet()) {
+                if (KNOWN_TIER_KEYS.contains(tierKey)) continue;
+                issues.add(new SchemaIssue(base + "." + tierKey,
+                        "Unknown tier field — a typo is loaded with defaults"));
+            }
+            if (tier.has("id")) {
+                JsonElement id = tier.get("id");
+                if (!id.isJsonPrimitive() || !id.getAsJsonPrimitive().isString()
+                        || id.getAsString().isBlank()) {
+                    issues.add(new SchemaIssue(base + ".id", "Expected a non-empty id string"));
+                } else if (!seenIds.add(id.getAsString())) {
+                    issues.add(new SchemaIssue(base + ".id",
+                            "Duplicate tier id '" + id.getAsString() + "' — pity and /csbox info key off it"));
+                }
+            } else {
+                issues.add(new SchemaIssue(base + ".id", "Missing required field 'id'"));
+            }
+            if (tier.has("name") && (!tier.get("name").isJsonPrimitive()
+                    || !tier.get("name").getAsJsonPrimitive().isString())) {
+                issues.add(new SchemaIssue(base + ".name",
+                        "Expected a display name string, got " + typeOf(tier.get("name"))));
+            }
+            if (tier.has("color")) {
+                JsonElement c = tier.get("color");
+                if (!c.isJsonPrimitive() || !c.getAsJsonPrimitive().isString()
+                        || !c.getAsString().matches("#[0-9A-Fa-f]{6}")) {
+                    issues.add(new SchemaIssue(base + ".color",
+                            "Expected \"#RRGGBB\", got " + typeOf(c)));
+                }
+            }
+            if (tier.has("weight")) {
+                JsonElement w = tier.get("weight");
+                if (!w.isJsonPrimitive() || !w.getAsJsonPrimitive().isNumber()
+                        || w.getAsDouble() != Math.floor(w.getAsDouble())) {
+                    issues.add(new SchemaIssue(base + ".weight",
+                            "Expected an integer, got " + typeOf(w)));
+                } else if (w.getAsDouble() < 0 || w.getAsDouble() > 10000) {
+                    issues.add(new SchemaIssue(base + ".weight",
+                            "Expected an integer in [0, 10000] (0 = tier never rolls), got " + w.getAsDouble()));
+                }
+            }
+            if (tier.has("items")) {
+                JsonElement it = tier.get("items");
+                if (!it.isJsonArray()) {
+                    issues.add(new SchemaIssue(base + ".items",
+                            "Expected an array of item entries, got " + typeOf(it)));
+                } else if (it.getAsJsonArray().isEmpty()) {
+                    issues.add(new SchemaIssue(base + ".items",
+                            "Tier has no items — it falls back to lower tiers when rolled (empty tiers are invisible to players)"));
+                } else {
+                    JsonArray items = it.getAsJsonArray();
+                    for (int i = 0; i < items.size(); i++) {
+                        JsonElement e = items.get(i);
+                        if (e.isJsonObject()) {
+                            validateItemEntry(e.getAsJsonObject(), base + ".items[" + i + "]", issues);
                         }
-                    } else if (c.isJsonArray()) {
-                        JsonArray ca = c.getAsJsonArray();
-                        if (ca.size() != 2 || !ca.get(0).isJsonPrimitive() || !ca.get(1).isJsonPrimitive()
-                                || !ca.get(0).getAsJsonPrimitive().isNumber()
-                                || !ca.get(1).getAsJsonPrimitive().isNumber()) {
-                            issues.add(new SchemaIssue(base + ".count",
-                                    "Expected integer or [min,max] array, got " + typeOf(c)));
-                        } else if (ca.get(0).getAsDouble() < 1 || ca.get(1).getAsDouble() < ca.get(0).getAsDouble()) {
-                            issues.add(new SchemaIssue(base + ".count",
-                                    "Invalid count range [" + ca.get(0).getAsDouble() + ","
-                                            + ca.get(1).getAsDouble() + "]"));
-                        }
-                    } else {
-                        issues.add(new SchemaIssue(base + ".count",
-                                "Expected integer or [min,max] array, got " + typeOf(c)));
                     }
                 }
-                if (item.has("loot_table") && !item.get("loot_table").isJsonPrimitive()) {
-                    issues.add(new SchemaIssue(base + ".loot_table",
-                            "Expected loot table id string, got " + typeOf(item.get("loot_table"))));
-                }
-                if (item.has("enchant")) {
-                    JsonElement en = item.get("enchant");
-                    boolean okEnchant = (en.isJsonPrimitive() && en.getAsJsonPrimitive().isBoolean())
-                            || en.isJsonObject();
-                    if (!okEnchant) {
-                        issues.add(new SchemaIssue(base + ".enchant",
-                                "Expected true or an object {id, level}, got " + typeOf(en)));
-                    }
-                }
-                // price validation already covered by validateItemPrices.
+            } else {
+                issues.add(new SchemaIssue(base + ".items", "Missing required field 'items'"));
+            }
+        }
+        // Legacy keys are ignored entirely once "grades" is present.
+        if (json.has("random")) {
+            issues.add(new SchemaIssue("random",
+                    "Ignored — \"grades\" replaces the legacy random/grade1..5 format; remove it"));
+        }
+        for (int g = 1; g <= 5; g++) {
+            if (json.has("grade" + g)) {
+                issues.add(new SchemaIssue("grade" + g,
+                        "Ignored — \"grades\" replaces the legacy random/grade1..5 format; remove it"));
             }
         }
     }
@@ -330,7 +450,13 @@ public final class BoxJsonSchemaValidator {
                 issues.add(new SchemaIssue("pity.grade", "Expected a grade id string"));
             } else {
                 grade = g.getAsString();
-                if (BoxGrades.gradeLevel(grade) == 0) {
+                if (json.has("grades") && json.get("grades").isJsonArray()) {
+                    // Custom tiers: the id must name one of the configured tiers.
+                    if (findTierIndex(json.getAsJsonArray("grades"), grade) < 0) {
+                        issues.add(new SchemaIssue("pity.grade",
+                                "Unknown tier id '" + grade + "' — not among the box's configured grades ids"));
+                    }
+                } else if (BoxGrades.gradeLevel(grade) == 0) {
                     issues.add(new SchemaIssue("pity.grade",
                             "Unknown grade id '" + grade + "' (expected consumer/industrial/mil_spec/restricted/classified)"));
                 }
@@ -352,7 +478,32 @@ public final class BoxJsonSchemaValidator {
             issues.add(new SchemaIssue("pity.every", "Missing required field 'every'"));
         }
         int level = BoxGrades.gradeLevel(grade);
-        if (level > 0 && json.has("random") && json.get("random").isJsonArray()) {
+        if (json.has("grades") && json.get("grades").isJsonArray()) {
+            // Custom tiers: no positive weight at/above the target tier means
+            // the forced roll has an empty slice and can never fire.
+            JsonArray tiers = json.getAsJsonArray("grades");
+            int idx = findTierIndex(tiers, grade);
+            if (idx >= 0) {
+                boolean anyPositive = false;
+                for (int t = idx; t < tiers.size(); t++) {
+                    JsonElement te = tiers.get(t);
+                    if (te.isJsonObject() && te.getAsJsonObject().has("weight")) {
+                        JsonElement w = te.getAsJsonObject().get("weight");
+                        if (w.isJsonPrimitive() && w.getAsJsonPrimitive().isNumber() && w.getAsDouble() > 0) {
+                            anyPositive = true;
+                            break;
+                        }
+                    } else {
+                        anyPositive = true; // default tier weight is 1
+                        break;
+                    }
+                }
+                if (!anyPositive) {
+                    issues.add(new SchemaIssue("pity",
+                            "No positive weight at/above target tier '" + grade + "' — the pity can never fire"));
+                }
+            }
+        } else if (level > 0 && json.has("random") && json.get("random").isJsonArray()) {
             JsonArray arr = json.getAsJsonArray("random");
             boolean anyPositive = false;
             for (int i = gradeLevelToIndex(level); i < arr.size(); i++) {
@@ -367,6 +518,20 @@ public final class BoxJsonSchemaValidator {
                         "No positive weight at/above target grade '" + grade + "' in random — the pity can never fire"));
             }
         }
+    }
+
+    /** Index (0-based, lowest tier first) of a tier id in a {@code grades}
+     *  array, or -1 when absent/malformed. */
+    private static int findTierIndex(JsonArray tiers, String id) {
+        for (int t = 0; t < tiers.size(); t++) {
+            JsonElement te = tiers.get(t);
+            if (te.isJsonObject() && te.getAsJsonObject().has("id")
+                    && te.getAsJsonObject().get("id").isJsonPrimitive()
+                    && id.equals(te.getAsJsonObject().get("id").getAsString())) {
+                return t;
+            }
+        }
+        return -1;
     }
 
     /** random array index (0-based) of a 1-based grade level. */
@@ -437,6 +602,195 @@ public final class BoxJsonSchemaValidator {
                                     + "win; this field is then stripped from the box file). "
                                     + "Until then this item falls back to the grade default price."));
                 }
+            }
+        }
+    }
+
+
+    /** v2.x gameplay fields: hide_odds / allow_bulk / keys / wear / bonus /
+     *  announce_above / available_from+until / open_cost (server-authoritative
+     *  gates; shape errors here instead of silent fallbacks). */
+    private static void validateV2xGameplayFields(JsonObject json, List<SchemaIssue> issues) {
+        for (String boolField : new String[]{"hide_odds", "allow_bulk"}) {
+            if (json.has(boolField) && (!json.get(boolField).isJsonPrimitive()
+                    || !json.get(boolField).getAsJsonPrimitive().isBoolean())) {
+                issues.add(new SchemaIssue(boolField, "Expected boolean, got " + typeOf(json.get(boolField))));
+            }
+        }
+        if (json.has("sound") && (!json.get("sound").isJsonPrimitive()
+                || !json.get("sound").getAsJsonPrimitive().isString()
+                || json.get("sound").getAsString().isBlank())) {
+            issues.add(new SchemaIssue("sound",
+                    "Expected a sound event id string like minecraft:block.note_block.pling"));
+        }
+        if (json.has("negotiation")) {
+            JsonElement n = json.get("negotiation");
+            if (!n.isJsonObject()) {
+                issues.add(new SchemaIssue("negotiation",
+                        "Expected an object {rounds, timeout_minutes, price_bias}, got " + typeOf(n)));
+            } else {
+                JsonObject neg = n.getAsJsonObject();
+                for (String k : neg.keySet()) {
+                    if (!"rounds".equals(k) && !"timeout_minutes".equals(k) && !"price_bias".equals(k)) {
+                        issues.add(new SchemaIssue("negotiation." + k, "Unknown negotiation field"));
+                    }
+                }
+                if (neg.has("rounds") && (!neg.get("rounds").isJsonPrimitive()
+                        || !neg.get("rounds").getAsJsonPrimitive().isNumber()
+                        || neg.get("rounds").getAsDouble() != Math.floor(neg.get("rounds").getAsDouble())
+                        || neg.get("rounds").getAsInt() < 1 || neg.get("rounds").getAsInt() > 5)) {
+                    issues.add(new SchemaIssue("negotiation.rounds", "Expected integer 1..5"));
+                }
+                if (neg.has("timeout_minutes") && (!neg.get("timeout_minutes").isJsonPrimitive()
+                        || !neg.get("timeout_minutes").getAsJsonPrimitive().isNumber()
+                        || neg.get("timeout_minutes").getAsDouble() != Math.floor(neg.get("timeout_minutes").getAsDouble())
+                        || neg.get("timeout_minutes").getAsInt() < 1)) {
+                    issues.add(new SchemaIssue("negotiation.timeout_minutes", "Expected integer >= 1"));
+                }
+                if (neg.has("price_bias") && (!neg.get("price_bias").isJsonPrimitive()
+                        || !neg.get("price_bias").getAsJsonPrimitive().isNumber()
+                        || neg.get("price_bias").getAsDouble() < -0.9
+                        || neg.get("price_bias").getAsDouble() > 9.0)) {
+                    issues.add(new SchemaIssue("negotiation.price_bias", "Expected number in -0.9..9.0"));
+                }
+            }
+        }
+        if (json.has("upgrade")) {
+            JsonElement u = json.get("upgrade");
+            if (!u.isJsonObject()) {
+                issues.add(new SchemaIssue("upgrade",
+                        "Expected an object {target, consume}, got " + typeOf(u)));
+            } else {
+                JsonObject up = u.getAsJsonObject();
+                for (String k : up.keySet()) {
+                    if (!"target".equals(k) && !"consume".equals(k)) {
+                        issues.add(new SchemaIssue("upgrade." + k, "Unknown upgrade field"));
+                    }
+                }
+                if (!up.has("target")) {
+                    issues.add(new SchemaIssue("upgrade.target", "Missing required field 'target'"));
+                } else if (!up.get("target").isJsonPrimitive()
+                        || !up.get("target").getAsJsonPrimitive().isString()
+                        || up.get("target").getAsString().isBlank()) {
+                    issues.add(new SchemaIssue("upgrade.target", "Expected a box id string"));
+                }
+                if (up.has("consume") && (!up.get("consume").isJsonPrimitive()
+                        || !up.get("consume").getAsJsonPrimitive().isNumber()
+                        || up.get("consume").getAsDouble() != Math.floor(up.get("consume").getAsDouble())
+                        || up.get("consume").getAsInt() < 1)) {
+                    issues.add(new SchemaIssue("upgrade.consume", "Expected integer >= 1"));
+                }
+            }
+        }
+        if (json.has("keys")) {
+            JsonElement k = json.get("keys");
+            if (!k.isJsonArray()) {
+                issues.add(new SchemaIssue("keys", "Expected an array of key item ids, got " + typeOf(k)));
+            } else {
+                for (int i = 0; i < k.getAsJsonArray().size(); i++) {
+                    JsonElement e = k.getAsJsonArray().get(i);
+                    if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString()
+                            || e.getAsString().isBlank()) {
+                        issues.add(new SchemaIssue("keys[" + i + "]", "Expected a key item id string"));
+                    }
+                }
+                if (k.getAsJsonArray().size() > 8) {
+                    issues.add(new SchemaIssue("keys", "Too many keys: " + k.getAsJsonArray().size() + " (max 8)"));
+                }
+            }
+        }
+        if (json.has("wear")) {
+            JsonElement w = json.get("wear");
+            if (!w.isJsonArray() || w.getAsJsonArray().size() != 2
+                    || !w.getAsJsonArray().get(0).isJsonPrimitive()
+                    || !w.getAsJsonArray().get(1).isJsonPrimitive()
+                    || !w.getAsJsonArray().get(0).getAsJsonPrimitive().isNumber()
+                    || !w.getAsJsonArray().get(1).getAsJsonPrimitive().isNumber()) {
+                issues.add(new SchemaIssue("wear", "Expected a [min, max] pair of numbers in 0..1, got " + typeOf(w)));
+            } else {
+                double min = w.getAsJsonArray().get(0).getAsDouble();
+                double max = w.getAsJsonArray().get(1).getAsDouble();
+                if (min < 0 || max > 1 || min > max) {
+                    issues.add(new SchemaIssue("wear", "Expected 0 <= min <= max <= 1, got [" + min + ", " + max + "]"));
+                }
+            }
+        }
+        if (json.has("bonus")) {
+            JsonElement b = json.get("bonus");
+            if (!b.isJsonObject()) {
+                issues.add(new SchemaIssue("bonus", "Expected an object {chance, mode}, got " + typeOf(b)));
+            } else {
+                JsonObject bonus = b.getAsJsonObject();
+                if (bonus.has("chance") && (!bonus.get("chance").isJsonPrimitive()
+                        || !bonus.get("chance").getAsJsonPrimitive().isNumber()
+                        || bonus.get("chance").getAsDouble() < 0
+                        || bonus.get("chance").getAsDouble() > 1)) {
+                    issues.add(new SchemaIssue("bonus.chance", "Expected a number in 0..1"));
+                }
+                if (bonus.has("mode") && (!bonus.get("mode").isJsonPrimitive()
+                        || !bonus.get("mode").getAsJsonPrimitive().isString()
+                        || !("double".equals(bonus.get("mode").getAsString())
+                            || "box".equals(bonus.get("mode").getAsString())))) {
+                    issues.add(new SchemaIssue("bonus.mode", "Expected \"double\" or \"box\""));
+                }
+            }
+        }
+        if (json.has("announce_above")) {
+            JsonElement a = json.get("announce_above");
+            boolean ok = a.isJsonPrimitive() && a.getAsJsonPrimitive().isNumber();
+            if (!ok && a.isJsonPrimitive() && a.getAsJsonPrimitive().isString()) {
+                ok = BoxGrades.gradeLevel(a.getAsString()) > 0;
+            }
+            if (!ok) {
+                issues.add(new SchemaIssue("announce_above",
+                        "Expected a 1-based tier level or a tier id (legacy ids or the box's grades ids), got " + typeOf(a)));
+            }
+        }
+        Long fromMs = null;
+        Long untilMs = null;
+        for (String timeField : new String[]{"available_from", "available_until"}) {
+            if (!json.has(timeField)) continue;
+            JsonElement e = json.get(timeField);
+            if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString()) {
+                issues.add(new SchemaIssue(timeField, "Expected an ISO-8601 date-time string, got " + typeOf(e)));
+                continue;
+            }
+            Long ms = parseIsoMillisLenient(e.getAsString());
+            if (ms == null) {
+                issues.add(new SchemaIssue(timeField, "Unparseable ISO-8601 date-time: " + e.getAsString()));
+            } else if (timeField.endsWith("from")) {
+                fromMs = ms;
+            } else {
+                untilMs = ms;
+            }
+        }
+        if (fromMs != null && untilMs != null && fromMs > untilMs) {
+            issues.add(new SchemaIssue("available_from", "available_from is after available_until"));
+        }
+        if (json.has("open_cost") && (!json.get("open_cost").isJsonPrimitive()
+                || !json.get("open_cost").getAsJsonPrimitive().isNumber()
+                || json.get("open_cost").getAsDouble() < 0
+                || json.get("open_cost").getAsDouble() != Math.floor(json.get("open_cost").getAsDouble()))) {
+            issues.add(new SchemaIssue("open_cost", "Expected a non-negative integer (Armory Points)"));
+        }
+        if (json.has("pity") && json.get("pity").isJsonObject()
+                && json.getAsJsonObject("pity").has("first_open")
+                && (!json.getAsJsonObject("pity").get("first_open").isJsonPrimitive()
+                    || !json.getAsJsonObject("pity").get("first_open").getAsJsonPrimitive().isBoolean())) {
+            issues.add(new SchemaIssue("pity.first_open", "Expected boolean"));
+        }
+    }
+
+    /** Duplicate of the loader ISO parse (the validator stays a pure-gson
+     *  class with no loader dependencies). */
+    private static Long parseIsoMillisLenient(String raw) {
+        try {
+            return java.time.OffsetDateTime.parse(raw).toInstant().toEpochMilli();
+        } catch (RuntimeException ignored) {
+            try {
+                return java.time.Instant.parse(raw).toEpochMilli();
+            } catch (RuntimeException ignored2) {
+                return null;
             }
         }
     }

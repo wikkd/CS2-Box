@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.fabric_1_21_1.box;
 
+import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.logic.PityPolicy;
 import io.netty.handler.codec.DecoderException;
@@ -44,6 +45,21 @@ public record BoxDefinition(
         int maxPerPlayer,
         int cooldownSeconds,
         String permission,
+        boolean hideOdds,
+        boolean allowBulk,
+        List<String> extraKeys,
+        float wearMin,
+        float wearMax,
+        float bonusChance,
+        int bonusMode,
+        int announceLevel,
+        long availableFromMs,
+        long availableUntilMs,
+        int openCost,
+        int negotiationRounds,
+        int negotiationTimeoutMinutes,
+        float priceBias,
+        Optional<UpgradeRule> upgrade,
         Optional<PityPolicy> pity
 ) {
 
@@ -51,6 +67,14 @@ public record BoxDefinition(
 
     /** Sentinel values: -1 = unlimited (stock / maxPerPlayer). */
     public static final int UNLIMITED = -1;
+
+    /** v2.x bonus modes (config "bonus.mode": "double" | "box"). */
+    public static final int BONUS_NONE = 0;
+    public static final int BONUS_DOUBLE = 1;
+    public static final int BONUS_BOX = 2;
+
+    /** Cap on configured extra keys (network sanity). */
+    public static final int MAX_KEYS = 8;
 
     /**
      * This record carries no CODEC: the network path uses the manual
@@ -78,6 +102,22 @@ public record BoxDefinition(
         icon = icon == null ? Optional.empty() : icon;
         discount = BoxGrades.clampDropRate(discount);
         permission = permission == null ? "" : permission;
+        extraKeys = extraKeys == null ? List.of() : List.copyOf(extraKeys);
+        wearMin = Math.min(Math.max(wearMin, 0.0F), 1.0F);
+        wearMax = Math.min(Math.max(wearMax, 0.0F), 1.0F);
+        if (wearMax < wearMin) {
+            wearMax = wearMin;
+        }
+        bonusChance = BoxGrades.clampDropRate(bonusChance);
+        negotiationRounds = Math.max(0, negotiationRounds);
+        negotiationTimeoutMinutes = Math.max(0, negotiationTimeoutMinutes);
+        priceBias = Math.min(Math.max(priceBias, -0.9F), 9.0F);
+        negotiationRounds = Math.max(0, negotiationRounds);
+        negotiationTimeoutMinutes = Math.max(0, negotiationTimeoutMinutes);
+        priceBias = Math.min(Math.max(priceBias, -0.9F), 9.0F);
+        negotiationRounds = Math.max(0, negotiationRounds);
+        negotiationTimeoutMinutes = Math.max(0, negotiationTimeoutMinutes);
+        priceBias = Math.min(Math.max(priceBias, -0.9F), 9.0F);
         pity = pity == null ? Optional.empty() : pity;
     }
 
@@ -110,11 +150,36 @@ public record BoxDefinition(
         buf.writeVarInt(def.maxPerPlayer());
         buf.writeVarInt(def.cooldownSeconds());
         ByteBufCodecs.STRING_UTF8.encode(buf, def.permission());
+        // v2.x gameplay fields.
+        buf.writeBoolean(def.hideOdds());
+        buf.writeBoolean(def.allowBulk());
+        int extraKeyCount = Math.min(def.extraKeys().size(), BoxDefinition.MAX_KEYS);
+        buf.writeVarInt(extraKeyCount);
+        for (int i = 0; i < extraKeyCount; i++) {
+            buf.writeUtf(def.extraKeys().get(i));
+        }
+        buf.writeFloat(def.wearMin());
+        buf.writeFloat(def.wearMax());
+        buf.writeFloat(def.bonusChance());
+        buf.writeByte(def.bonusMode());
+        buf.writeVarInt(def.announceLevel());
+        buf.writeLong(def.availableFromMs());
+        buf.writeLong(def.availableUntilMs());
+        buf.writeVarInt(def.openCost());
+        buf.writeVarInt(def.negotiationRounds());
+        buf.writeVarInt(def.negotiationTimeoutMinutes());
+        buf.writeFloat(def.priceBias());
+        buf.writeBoolean(def.upgrade().isPresent());
+        if (def.upgrade().isPresent()) {
+            buf.writeUtf(def.upgrade().get().target(), 256);
+            buf.writeVarInt(def.upgrade().get().consume());
+        }
         Optional<PityPolicy> pity = def.pity();
         buf.writeBoolean(pity.isPresent());
         if (pity.isPresent()) {
             ByteBufCodecs.INT.encode(buf, pity.get().targetLevel());
             ByteBufCodecs.INT.encode(buf, pity.get().every());
+            buf.writeBoolean(pity.get().firstOpen());
         }
     }
 
@@ -149,18 +214,49 @@ public record BoxDefinition(
         int cooldownSeconds = buf.readVarInt();
         String permission = ByteBufCodecs.STRING_UTF8.decode(buf);
 
+        // v2.x gameplay fields.
+        boolean hideOdds = buf.readBoolean();
+        boolean allowBulk = buf.readBoolean();
+        int extraKeysSize = Math.min(buf.readVarInt(), BoxDefinition.MAX_KEYS);
+        List<String> extraKeys = new ArrayList<>(extraKeysSize);
+        for (int i = 0; i < extraKeysSize; i++) {
+            extraKeys.add(buf.readUtf(256));
+        }
+        float wearMin = buf.readFloat();
+        float wearMax = buf.readFloat();
+        float bonusChance = buf.readFloat();
+        int bonusMode = buf.readUnsignedByte();
+        int announceLevel = buf.readVarInt();
+        long availableFromMs = buf.readLong();
+        long availableUntilMs = buf.readLong();
+        int openCost = buf.readVarInt();
+        // v2.x negotiation/upgrade fields (server-side only).
+        int negotiationRounds = buf.readVarInt();
+        int negotiationTimeoutMinutes = buf.readVarInt();
+        float priceBias = buf.readFloat();
+        boolean upgradePresent = buf.readBoolean();
+        String upgradeTarget = upgradePresent ? buf.readUtf(256) : "";
+        int upgradeConsume = upgradePresent ? buf.readVarInt() : 0;
+        java.util.Optional<UpgradeRule> upgrade = upgradePresent
+                ? java.util.Optional.of(new UpgradeRule(upgradeTarget, upgradeConsume))
+                : java.util.Optional.empty();
         Optional<PityPolicy> pity = Optional.empty();
         if (buf.readBoolean()) {
             int targetLevel = ByteBufCodecs.INT.decode(buf);
             int every = ByteBufCodecs.INT.decode(buf);
+            boolean firstOpen = buf.readBoolean();
             // Invalid combinations (unknown tier, every < 2) silently degrade
             // to no pity — the schema validator reports them at load time.
-            pity = Optional.ofNullable(PityPolicy.ofLevel(targetLevel, every));
+            pity = Optional.ofNullable(PityPolicy.ofLevel(targetLevel, every, firstOpen));
         }
 
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, grades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, maxPerPlayer, cooldownSeconds, permission, pity);
+                stock, maxPerPlayer, cooldownSeconds, permission,
+                hideOdds, allowBulk, extraKeys, wearMin, wearMax, bonusChance,
+                bonusMode, announceLevel, availableFromMs, availableUntilMs, openCost,
+                negotiationRounds, negotiationTimeoutMinutes, priceBias, upgrade,
+                pity);
     }
 
     /** Whether this definition is a terminal machine: the JSON {@code type}
@@ -185,13 +281,16 @@ public record BoxDefinition(
         return Math.min(entityRate != null ? entityRate : dropRate, 1.0F);
     }
 
+    /**
+     * Tier weights indexed by level-1. Tiers are positional: the list runs
+     * highest → lowest, so the tier at index i has level {@code size - i}
+     * (see {@link BoxGrades#levelAt}) — custom tier counts just work, and a
+     * legacy five-tier box maps to the same array as the old id lookup.
+     */
     public int[] getWeightArray() {
-        int[] weights = new int[BoxGrades.GRADE_COUNT];
-        for (GradeGroup grade : grades) {
-            int gradeLevel = BoxGrades.gradeLevel(grade.id());
-            if (gradeLevel > 0) {
-                weights[gradeLevel - 1] = Math.max(0, grade.weight());
-            }
+        int[] weights = new int[grades.size()];
+        for (int i = 0; i < grades.size(); i++) {
+            weights[grades.size() - 1 - i] = Math.max(0, grades.get(i).weight());
         }
         return weights;
     }
@@ -212,7 +311,102 @@ public record BoxDefinition(
         }
         return new BoxDefinition(id, name, type, keyItem, dropRate, dropEntities, newGrades,
                 texture, sound, entityDropRates, enabled, requires, icon, discount,
-                stock, maxPerPlayer, cooldownSeconds, permission, pity);
+                stock, maxPerPlayer, cooldownSeconds, permission,
+                hideOdds, allowBulk, extraKeys, wearMin, wearMax, bonusChance,
+                bonusMode, announceLevel, availableFromMs, availableUntilMs, openCost,
+                negotiationRounds, negotiationTimeoutMinutes, priceBias, upgrade,
+                pity);
+    }
+
+    /** Effective negotiation round count (0 = the model's built-in 5). */
+    public int effectiveRounds() {
+        return negotiationRounds > 0 ? Math.min(negotiationRounds, NegotiationModel.MAX_ROUNDS) : NegotiationModel.MAX_ROUNDS;
+    }
+
+    /** Effective countdown minutes (0 = the built-in 180). */
+    public long effectiveTimeoutMs() {
+        return negotiationTimeoutMinutes > 0 ? negotiationTimeoutMinutes * 60_000L
+                : NegotiationModel.COUNT_INITIAL_MS;
+    }
+
+    /** Price bias applied when sampling terminal offer prices
+     *  (1.0 = table price, <1 cheaper, >1 pricier; clamped [-0.9, 9]). */
+    public float biasedPrice(float basePrice) {
+        return Math.max(1, Math.round(basePrice * (1.0F + priceBias)));
+    }
+
+    /** v2.x upgrade rule (config "upgrade": {target, consume}); empty =
+     *  this box cannot be upgraded. */
+    public Optional<UpgradeRule> upgradeRule() {
+        return upgrade;
+    }
+
+    /** Upgrade rule: {@code consume} copies of this box grant one
+     *  {@code target} box (id + definition validated at command time). */
+    public record UpgradeRule(String target, int consume) {
+    }
+
+    /** Accepted key item ids: the primary key (when set) plus configured
+     *  extras, deduplicated, order preserved. */
+    public List<String> acceptedKeys() {
+        String primary = keyItem.toString();
+        List<String> keys = new ArrayList<>(1 + extraKeys.size());
+        if (!NO_KEY.toString().equals(primary)) {
+            keys.add(primary);
+        }
+        for (String extra : extraKeys) {
+            if (!keys.contains(extra)) {
+                keys.add(extra);
+            }
+        }
+        return keys;
+    }
+
+    /** Display name of the tier at the given 1-based level, or null. */
+    public String tierDisplayName(int level) {
+        for (int i = 0; i < grades.size(); i++) {
+            if (BoxGrades.levelAt(grades.size(), i) == level) {
+                return grades.get(i).displayName();
+            }
+        }
+        return null;
+    }
+
+    /** Wear fraction for one open of a damageable item (v2.x "wear" range). */
+    public float sampleWear(java.util.Random rng) {
+        float span = wearMax - wearMin;
+        return span <= 0.0F ? wearMin : wearMin + rng.nextFloat() * span;
+    }
+
+    /** True when the "bonus" mode grants an extra box (vs duplicating the item). */
+    public boolean bonusIsBox() {
+        return bonusMode == BONUS_BOX;
+    }
+
+    /** Whether the box may be opened at the given wall-clock millis
+     *  (v2.x availability window; 0 bounds = unbounded). */
+    public boolean isAvailableNow(long nowMillis) {
+        return (availableFromMs <= 0L || nowMillis >= availableFromMs)
+                && (availableUntilMs <= 0L || nowMillis <= availableUntilMs);
+    }
+
+    /** Formatted wall-clock text of the availability bounds (v2.x tooltip;
+     *  rendered in the server's default timezone). */
+    public String windowText() {
+        return formatWindow(availableFromMs);
+    }
+
+    public String windowTextUntil() {
+        return formatWindow(availableUntilMs);
+    }
+
+    private static String formatWindow(long epochMs) {
+        if (epochMs <= 0L) {
+            return "-";
+        }
+        return java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault())
+                .format(java.time.Instant.ofEpochMilli(epochMs));
     }
 
     /** Whether any of the {@code requires} mods is missing. */
@@ -264,6 +458,21 @@ public record BoxDefinition(
         private int maxPerPlayer = UNLIMITED;
         private int cooldownSeconds = 0;
         private String permission = "";
+        private boolean hideOdds = false;
+        private boolean allowBulk = true;
+        private final List<String> extraKeys = new ArrayList<>();
+        private float wearMin = 0.0F;
+        private float wearMax = 1.0F;
+        private float bonusChance = 0.0F;
+        private int bonusMode = BONUS_NONE;
+        private int announceLevel = 0;
+        private long availableFromMs = 0L;
+        private long availableUntilMs = 0L;
+        private int openCost = 0;
+        private int negotiationRounds = 0;
+        private int negotiationTimeoutMinutes = 0;
+        private float priceBias = 0.0F;
+        private Optional<UpgradeRule> upgrade = Optional.empty();
         private Optional<PityPolicy> pity = Optional.empty();
 
         public Builder(ResourceLocation id, String name) {
@@ -366,6 +575,63 @@ public record BoxDefinition(
             return this;
         }
 
+        public Builder hideOdds(boolean hideOdds) {
+            this.hideOdds = hideOdds;
+            return this;
+        }
+        public Builder allowBulk(boolean allowBulk) {
+            this.allowBulk = allowBulk;
+            return this;
+        }
+
+        public Builder extraKey(String keyId) {
+            if (keyId != null && !keyId.isBlank()) {
+                this.extraKeys.add(keyId.trim());
+            }
+            return this;
+        }
+        public Builder wearRange(float min, float max) {
+            this.wearMin = min;
+            this.wearMax = max;
+            return this;
+        }
+        public Builder bonus(float chance, String mode) {
+            this.bonusChance = chance;
+            this.bonusMode = "box".equalsIgnoreCase(mode) ? BONUS_BOX : BONUS_DOUBLE;
+            return this;
+        }
+        public Builder announceAbove(int level) {
+            this.announceLevel = Math.max(0, level);
+            return this;
+        }
+        public Builder availableFrom(long epochMs) {
+            this.availableFromMs = Math.max(0L, epochMs);
+            return this;
+        }
+        public Builder availableUntil(long epochMs) {
+            this.availableUntilMs = Math.max(0L, epochMs);
+            return this;
+        }
+        /** v2.x negotiation params: 0 = the built-in defaults. */
+        /** v2.x negotiation params: 0 = the built-in defaults. */
+        public Builder negotiation(int rounds, int timeoutMinutes, float bias) {
+            this.negotiationRounds = rounds;
+            this.negotiationTimeoutMinutes = timeoutMinutes;
+            this.priceBias = bias;
+            return this;
+        }
+
+        public Builder upgrade(UpgradeRule rule) {
+            this.upgrade = rule == null ? Optional.empty() : Optional.of(rule);
+            return this;
+        }
+
+        /** v2.x negotiation params: 0 = the built-in defaults. */
+        /** v2.x negotiation params: 0 = the built-in defaults. */
+        public Builder openCost(int cost) {
+            this.openCost = Math.max(0, cost);
+            return this;
+        }
         public Builder permission(String permission) {
             this.permission = permission == null ? "" : permission;
             return this;
@@ -388,7 +654,10 @@ public record BoxDefinition(
                     List.copyOf(dropEntities), List.copyOf(grades), texture, sound,
                     Map.copyOf(entityDropRates), enabled, List.copyOf(requires), icon,
                     discount, stock, maxPerPlayer, cooldownSeconds,
-                    permission, pity);
+                    permission, hideOdds, allowBulk, extraKeys, wearMin, wearMax,
+                    bonusChance, bonusMode, announceLevel, availableFromMs,
+                    availableUntilMs, openCost, negotiationRounds,
+                    negotiationTimeoutMinutes, priceBias, upgrade, pity);
         }
     }
 }

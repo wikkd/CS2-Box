@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_1_18_2.event;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import java.security.SecureRandom;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.forge_1_18_2.CsgoBox;
@@ -112,7 +113,7 @@ public final class ModEvents {
         }
         if (server.getTickCount() % 20 == 0) {
             com.reclizer.csgobox.forge_1_18_2.terminal.TerminalSessionManager.tickSessions(
-                    server, server.overworld().getGameTime() * 50L);
+                    server, WorldClock.now(server.overworld()));
         }
     }
 }

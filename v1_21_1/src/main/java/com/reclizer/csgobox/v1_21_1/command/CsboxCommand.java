@@ -127,6 +127,8 @@ public final class CsboxCommand {
                                         .executes(ctx -> giveBox(ctx, 1))
                                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 6400))
                                                 .executes(ctx -> giveBox(ctx, IntegerArgumentType.getInteger(ctx, "count")))))))
+                .then(Commands.literal("upgrade")
+                        .executes(CsboxCommand::upgradeBox))
                 .then(Commands.literal("nbt")
                         .then(Commands.literal("hand")
                                 .executes(CsboxCommand::showHandNbt)));
@@ -135,6 +137,71 @@ public final class CsboxCommand {
             csbox = csbox.then(taczSubtree());
         }
         dispatcher.register(csbox);
+    }
+
+
+    /**
+     * v2.x upgrade path: the HELD box must declare an "upgrade" rule
+     * (target + consume); consuming {@code consume} copies of the held box
+     * from the inventory grants one target box. All players (no OP).
+     */
+    private static int upgradeBox(com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer player = source.getPlayerOrException();
+        ItemStack held = player.getMainHandItem();
+        java.util.Optional<BoxDefinition> defOpt = ItemCsgoBox.getDefinition(held);
+        if (defOpt.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.upgrade.need_box"), false);
+            return 0;
+        }
+        BoxDefinition def = defOpt.get();
+        var rule = def.upgradeRule();
+        if (rule.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.upgrade.no_rule"), false);
+            return 0;
+        }
+        String targetId = rule.get().target();
+        int consume = rule.get().consume();
+        BoxDefinition targetDef = BoxRegistry.get(ResourceLocation.parse(targetId));
+        if (targetDef == null) {
+            source.sendSuccess(() -> Component.translatable("commands.csgobox.upgrade.target_missing", targetId), false);
+            return 0;
+        }
+        boolean creative = player.getAbilities().instabuild;
+        if (!creative) {
+            // Count consumable copies EXCLUDING the held stack.
+            int available = 0;
+            for (var stack : player.getInventory().items) {
+                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
+                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                    available += stack.getCount();
+                }
+            }
+            if (available < consume) {
+                int finalAvailable = available;
+                source.sendSuccess(() -> Component.translatable("commands.csgobox.upgrade.need_copies", consume, finalAvailable), false);
+                return 0;
+            }
+            int remaining = consume;
+            for (var stack : player.getInventory().items) {
+                if (remaining <= 0) break;
+                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
+                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                    int take = Math.min(remaining, stack.getCount());
+                    stack.shrink(take);
+                    remaining -= take;
+                }
+            }
+        }
+        Item item = ModItems.itemForBox(targetDef.id(), targetDef.isTerminal());
+        ItemStack grant = new ItemStack(item, 1);
+        ItemCsgoBox.setBoxId(targetDef.id(), grant);
+        if (!player.getInventory().add(grant)) {
+            player.drop(grant, false);
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.upgrade.done",
+                def.name(), consume, targetDef.name()), false);
+        return 1;
     }
 
     // --- Query handlers ---

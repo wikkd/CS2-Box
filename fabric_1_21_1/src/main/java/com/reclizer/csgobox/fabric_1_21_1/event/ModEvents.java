@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.fabric_1_21_1.event;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.logic.OpenBlockGuard;
 import com.reclizer.csgobox.fabric_1_21_1.CsgoBox;
 import com.reclizer.csgobox.fabric_1_21_1.box.BoxDefinition;
@@ -123,7 +124,7 @@ public final class ModEvents {
         // survives restarts exactly (game time is part of the world save).
         if (server.getTickCount() % 20 == 0) {
             com.reclizer.csgobox.fabric_1_21_1.terminal.TerminalSessionManager.tickSessions(
-                    server, server.overworld().getGameTime() * 50L);
+                    server, WorldClock.now(server.overworld()));
         }
     }
 }

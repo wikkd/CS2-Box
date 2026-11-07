@@ -165,11 +165,16 @@ public final class BoxOpenCategory implements DisplayCategory<BoxReiDisplay> {
         y += LINE_PITCH;
 
         int shown = 0;
-        for (GradeGroup grade : definition.grades()) {
+        java.util.List<GradeGroup> gradeTiers = definition.grades();
+        for (int gradeIndex = 0; gradeIndex < gradeTiers.size(); gradeIndex++) {
+            GradeGroup grade = gradeTiers.get(gradeIndex);
+            if (definition.hideOdds()) {
+                break;
+            }
             if (shown >= MAX_GRADE_LINES) {
                 break;
             }
-            double chance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+            double chance = BoxOdds.gradeChance(weights, BoxGrades.levelAt(gradeTiers.size(), gradeIndex));
             drawText(pose, font, bounds.x + TEXT_X, bounds.y + y, grade.color(),
                     new TranslatableComponent("rei.csgobox.recipe.grade_line", grade.displayName(), formatPercent(chance)));
             shown++;
@@ -220,7 +225,10 @@ public final class BoxOpenCategory implements DisplayCategory<BoxReiDisplay> {
         return entry.tooltip(stack -> {
             int[] weights = definition.getWeightArray();
             long totalWeight = BoxOdds.totalWeight(weights);
-            double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+            // Positional tier level: the list runs highest → lowest, so the
+            // grade's level is size - its list index.
+            int tierLevel = BoxGrades.levelAt(definition.grades().size(), definition.grades().indexOf(grade));
+            double gradeChance = BoxOdds.gradeChance(weights, tierLevel);
             int itemCount = grade.items().size();
             return List.of(
                     new TranslatableComponent("rei.csgobox.tooltip.grade_weight",

@@ -121,12 +121,11 @@ public class PacketCsgoProgress {
     static int resolveGrade(ItemStack item, ResourceLocation boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
-                for (ItemStack candidate : grade.items()) {
+            List<GradeGroup> tiers = def.grades();
+            for (int i = 0; i < tiers.size(); i++) {
+                for (ItemStack candidate : tiers.get(i).items()) {
                     if (ItemStack.isSameItemSameTags(item, candidate)) {
-                        return Mth.clamp(gradeLevel, 1, 5);
+                        return Mth.clamp(BoxGrades.levelAt(tiers.size(), i), 1, Math.max(1, tiers.size()));
                     }
                 }
             }

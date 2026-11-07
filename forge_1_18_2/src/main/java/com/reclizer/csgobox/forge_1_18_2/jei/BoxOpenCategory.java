@@ -2,6 +2,7 @@ package com.reclizer.csgobox.forge_1_18_2.jei;
 
 import com.reclizer.csgobox.box.BoxGrades;
 import com.reclizer.csgobox.box.BoxOdds;
+import com.reclizer.csgobox.box.PriceRange;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_18_2.box.GradeGroup;
 import com.reclizer.csgobox.forge_1_18_2.utils.RenderFontTool;
@@ -41,8 +42,10 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
             RecipeType.create("csgobox", "box_open", BoxJeiRecipe.class);
 
     private static final int WIDTH = 156;
-    private static final int HEIGHT = 110;
-    private static final int MAX_GRADE_LINES = 4;
+    private static final int HEIGHT = 130;
+    private static final int MAX_GRADE_LINES = 5;
+    /** Text column max width in scaled px (the column runs to the grid at x=76). */
+    private static final int NAME_MAX_WIDTH = 70;
     private static final int MAX_ITEM_SLOTS = 20;
     private static final int GRID_COLS = 4;
     private static final int GRID_ROWS = 5;
@@ -131,16 +134,27 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
         int[] weights = definition.getWeightArray();
         int y = TEXT_START_Y;
 
+        // Recipe self-identification: the box display name, clamped to the
+        // text column (styled names render via the box tooltip instead).
+        RenderFontTool.drawStringClamped(pose, font, definition.name(),
+                TEXT_X, y, 0, 0, TEXT_SCALE, NAME_MAX_WIDTH, COLOR_BODY);
+        y += LINE_PITCH;
+
         drawText(pose, font, TEXT_X, y, COLOR_BODY,
                 new TranslatableComponent("jei.csgobox.recipe.drop_rate", formatPercent(definition.dropRate())));
         y += LINE_PITCH;
 
         int shown = 0;
-        for (GradeGroup grade : definition.grades()) {
+        java.util.List<GradeGroup> gradeTiers = definition.grades();
+        for (int gradeIndex = 0; gradeIndex < gradeTiers.size(); gradeIndex++) {
+            GradeGroup grade = gradeTiers.get(gradeIndex);
+            if (definition.hideOdds()) {
+                break;
+            }
             if (shown >= MAX_GRADE_LINES) {
                 break;
             }
-            double chance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+            double chance = BoxOdds.gradeChance(weights, BoxGrades.levelAt(gradeTiers.size(), gradeIndex));
             drawText(pose, font, TEXT_X, y, grade.color(),
                     new TranslatableComponent("jei.csgobox.recipe.grade_line", grade.displayName(), formatPercent(chance)));
             shown++;
@@ -149,6 +163,18 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
         if (definition.grades().size() > MAX_GRADE_LINES) {
             drawText(pose, font, TEXT_X, y, COLOR_MUTED,
                     new TranslatableComponent("jei.csgobox.recipe.more_grades", definition.grades().size()));
+            y += LINE_PITCH;
+        }
+        // Terminal economy extras — drawn only when actually configured.
+        if (definition.discount() > 0F) {
+            drawText(pose, font, TEXT_X, y, COLOR_MUTED,
+                    new TranslatableComponent("jei.csgobox.recipe.discount", Math.round(definition.discount() * 100F)));
+            y += LINE_PITCH;
+        }
+        if (definition.pity().isPresent()) {
+            drawText(pose, font, TEXT_X, y, COLOR_MUTED,
+                    new TranslatableComponent("jei.csgobox.recipe.pity",
+                            definition.pity().get().every(), definition.pity().get().targetLevel()));
             y += LINE_PITCH;
         }
         for (Map.Entry<ResourceLocation, Float> entry : definition.entityDropRates().entrySet()) {
@@ -170,6 +196,7 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
     }
 
     private void addBoxTooltip(ITooltipBuilder tooltip, BoxDefinition definition) {
+        tooltip.add(definition.name());
         tooltip.add(new TranslatableComponent("jei.csgobox.recipe.drop_rate", formatPercent(definition.dropRate())));
         int lines = 0;
         for (Map.Entry<ResourceLocation, Float> entry : definition.entityDropRates().entrySet()) {
@@ -181,18 +208,33 @@ public final class BoxOpenCategory implements IRecipeCategory<BoxJeiRecipe> {
                     formatPercent(entry.getValue())));
             lines++;
         }
+        // v2.0.1 opening constraints — only when actually configured.
+        if (definition.maxPerPlayer() != BoxDefinition.UNLIMITED) {
+            tooltip.add(new TranslatableComponent("jei.csgobox.tooltip.max_per_player", definition.maxPerPlayer()));
+        }
+        if (definition.cooldownSeconds() > 0) {
+            tooltip.add(new TranslatableComponent("jei.csgobox.tooltip.cooldown", definition.cooldownSeconds()));
+        }
     }
 
     private void addItemTooltip(ITooltipBuilder tooltip, BoxDefinition definition, GradeGroup grade, int itemIndex) {
         int[] weights = definition.getWeightArray();
         long totalWeight = BoxOdds.totalWeight(weights);
-        double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+        // Positional tier level: the list runs highest → lowest, so the
+        // grade's level is size - its list index.
+        int tierLevel = BoxGrades.levelAt(definition.grades().size(), definition.grades().indexOf(grade));
+        double gradeChance = BoxOdds.gradeChance(weights, tierLevel);
         int itemCount = grade.items().size();
         tooltip.add(new TranslatableComponent("jei.csgobox.tooltip.grade_weight",
                 grade.displayName(), grade.weight(), totalWeight));
         tooltip.add(new TranslatableComponent("jei.csgobox.tooltip.item_chance",
                 formatPercent(BoxOdds.itemChance(gradeChance,
                         grade.itemWeightAt(itemIndex), itemCount, grade.positiveItemWeightSum()))));
+        PriceRange price = grade.priceForIndex(itemIndex);
+        if (!price.isUnpriced()) {
+            tooltip.add(new TranslatableComponent("jei.csgobox.tooltip.item_price",
+                    price.isFixed() ? "¥" + price.min() : "¥" + price.min() + "-" + price.max()));
+        }
     }
 
     private static void drawText(PoseStack pose, Font font, int x, int y, int color, Component text) {

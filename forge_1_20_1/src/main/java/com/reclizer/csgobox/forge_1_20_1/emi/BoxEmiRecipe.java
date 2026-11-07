@@ -79,8 +79,13 @@ public final class BoxEmiRecipe implements EmiRecipe {
         List<EmiStack> outputs = new ArrayList<>();
         outputs.add(EmiStack.of(boxStack).setChance(definition.dropRate()));
         int[] weights = definition.getWeightArray();
-        for (GradeGroup grade : definition.grades()) {
-            double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+        java.util.List<GradeGroup> gradeTiers3 = definition.grades();
+        for (int gradeIndex3 = 0; gradeIndex3 < gradeTiers3.size(); gradeIndex3++) {
+            GradeGroup grade = gradeTiers3.get(gradeIndex3);
+            if (definition.hideOdds()) {
+                break;
+            }
+            double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.levelAt(gradeTiers3.size(), gradeIndex3));
             int itemCount = grade.items().size();
             long itemWeightSum = grade.positiveItemWeightSum();
             for (int i = 0; i < grade.items().size(); i++) {
@@ -159,8 +164,13 @@ public final class BoxEmiRecipe implements EmiRecipe {
         int slotIndex = 0;
         int[] weights = definition.getWeightArray();
         long totalWeight = BoxOdds.totalWeight(weights);
-        for (GradeGroup grade : definition.grades()) {
-            double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+        java.util.List<GradeGroup> gradeTiers2 = definition.grades();
+        for (int gradeIndex2 = 0; gradeIndex2 < gradeTiers2.size(); gradeIndex2++) {
+            GradeGroup grade = gradeTiers2.get(gradeIndex2);
+            if (definition.hideOdds()) {
+                break;
+            }
+            double gradeChance = BoxOdds.gradeChance(weights, BoxGrades.levelAt(gradeTiers2.size(), gradeIndex2));
             int itemCount = grade.items().size();
             long itemWeightSum = grade.positiveItemWeightSum();
             for (int i = 0; i < grade.items().size(); i++) {
@@ -209,11 +219,16 @@ public final class BoxEmiRecipe implements EmiRecipe {
         y += LINE_PITCH;
 
         int shown = 0;
-        for (GradeGroup grade : definition.grades()) {
+        java.util.List<GradeGroup> gradeTiers1 = definition.grades();
+        for (int gradeIndex1 = 0; gradeIndex1 < gradeTiers1.size(); gradeIndex1++) {
+            GradeGroup grade = gradeTiers1.get(gradeIndex1);
+            if (definition.hideOdds()) {
+                break;
+            }
             if (shown >= MAX_GRADE_LINES) {
                 break;
             }
-            double chance = BoxOdds.gradeChance(weights, BoxGrades.gradeLevel(grade.id()));
+            double chance = BoxOdds.gradeChance(weights, BoxGrades.levelAt(gradeTiers1.size(), gradeIndex1));
             drawText(gui, font, TEXT_X, y, grade.color(),
                     Component.translatable("emi.csgobox.recipe.grade_line", grade.displayName(), formatPercent(chance)));
             shown++;

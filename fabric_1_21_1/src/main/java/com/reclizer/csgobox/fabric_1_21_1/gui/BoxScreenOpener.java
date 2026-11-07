@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.fabric_1_21_1.gui;
 
+import com.reclizer.csgobox.fabric_1_21_1.item.ItemCsgoBox;
+import com.reclizer.csgobox.fabric_1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.fabric_1_21_1.sounds.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -23,11 +25,17 @@ public final class BoxScreenOpener {
         }
         float vol = 1.0F;
         if (vol > 0) {
+            var defSoundOpt = ItemCsgoBox.getDefinition(stack).flatMap(BoxDefinition::sound)
+                    .flatMap(rl -> java.util.Optional.ofNullable(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(rl)));
+            if (defSoundOpt.isPresent()) {
+                mc.player.playSound(defSoundOpt.get(), vol * 10F, 1F);
+            } else {
             mc.player.playSound(ModSounds.CS_OPEN.get(), vol * 10F, 1F);
+            }
         }
         boolean shift = mc.options.keyShift.isDown() || Screen.hasShiftDown();
         mc.execute(() -> {
-            if (shift) {
+            if (shift && ItemCsgoBox.getDefinition(stack).map(d -> d.allowBulk()).orElse(true)) {
                 mc.setScreen(new CsboxBulkOverviewScreen());
             } else {
                 mc.setScreen(new CsboxScreen());

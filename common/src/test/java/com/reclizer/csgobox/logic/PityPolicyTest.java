@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.logic;
 
+
+import com.reclizer.csgobox.box.BoxGrades;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +35,7 @@ final class PityPolicyTest {
         assertNull(PityPolicy.of("classified", 1));
         assertNull(PityPolicy.of("classified", 0));
         assertNull(PityPolicy.ofLevel(0, 20));
-        assertNull(PityPolicy.ofLevel(6, 20));
+        assertNull(PityPolicy.ofLevel(BoxGrades.MAX_GRADES + 1, 20));
     }
 
     @Test

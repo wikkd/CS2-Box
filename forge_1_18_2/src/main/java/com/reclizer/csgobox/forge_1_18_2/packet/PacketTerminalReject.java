@@ -1,6 +1,8 @@
 package com.reclizer.csgobox.forge_1_18_2.packet;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.forge_1_18_2.CsgoBox;
+import com.reclizer.csgobox.forge_1_18_2.advancement.TerminalBrokeTrigger;
 import com.reclizer.csgobox.forge_1_18_2.item.ItemCsgoBox;
 import com.reclizer.csgobox.forge_1_18_2.item.ItemTerminal;
 import com.reclizer.csgobox.terminal.NegotiationModel;
@@ -54,7 +56,7 @@ public class PacketTerminalReject {
                 || session.model().round() != message.round) {
             return;
         }
-        long worldMs = sp.level.getGameTime() * 50L;
+        long worldMs = WorldClock.now(sp.level);
         if (worldMs >= session.model().countdownDeadlineMs()
                 || worldMs - session.model().roundStartMs() < NegotiationModel.TYPING_MS) {
             return;
@@ -65,6 +67,9 @@ public class PacketTerminalReject {
             TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
             held.setCount(0);
             sp.displayClientMessage(new TranslatableComponent("csgobox.terminal.sys.broke"), false);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                TerminalBrokeTrigger.INSTANCE.trigger(sp);
+            }
         } else {
             TerminalSessionManager.markDirty();
         }

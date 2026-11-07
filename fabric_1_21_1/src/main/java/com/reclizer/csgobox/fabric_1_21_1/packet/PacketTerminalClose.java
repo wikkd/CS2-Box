@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.fabric_1_21_1.packet;
 
+import com.reclizer.csgobox.mcshared.util.WorldClock;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.terminal.NegotiationModel;
 import com.reclizer.csgobox.fabric_1_21_1.CsgoBox;
@@ -88,7 +89,7 @@ public record PacketTerminalClose(
             int cap = PriceTableRegistry.isAllowedQuoteCap(message.cap())
                     ? message.cap() : session.model().cap();
             session.model().syncClose(message.round(), message.pending(), message.pendingAtMs(),
-                    cap, sp.level().getGameTime() * 50L);
+                    cap, WorldClock.now(sp.level()));
             TerminalSessionManager.markDirty();
             TerminalSessionManager.clearOpenIf(sp.getStringUUID(), message.terminalUid());
         });

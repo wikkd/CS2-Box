@@ -187,10 +187,10 @@ public class ItemCsgoBox extends Item {
     public static Map<ItemStack, Integer> getItemGroup(ItemStack stack) {
         Map<ItemStack, Integer> itemsMap = new LinkedHashMap<>();
         getDefinition(stack).ifPresent(def -> {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
-                for (ItemStack item : grade.items()) {
+            List<GradeGroup> tiers = def.grades();
+            for (int i = 0; i < tiers.size(); i++) {
+                int gradeLevel = BoxGrades.levelAt(tiers.size(), i);
+                for (ItemStack item : tiers.get(i).items()) {
                     if (!item.isEmpty()) {
                         itemsMap.put(item.copy(), gradeLevel);
                     }
@@ -208,9 +208,10 @@ public class ItemCsgoBox extends Item {
     public static GradeMap<ItemStack> buildGradeMap(ItemStack box) {
         Map<Integer, List<GradeMap.Weighted<ItemStack>>> raw = new LinkedHashMap<>();
         getDefinition(box).ifPresent(def -> {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
+            List<GradeGroup> tiers = def.grades();
+            for (int t = 0; t < tiers.size(); t++) {
+                int gradeLevel = BoxGrades.levelAt(tiers.size(), t);
+                GradeGroup grade = tiers.get(t);
                 for (int i = 0; i < grade.items().size(); i++) {
                     ItemStack item = grade.items().get(i);
                     if (item == null || item.isEmpty()) continue;
@@ -229,6 +230,12 @@ public class ItemCsgoBox extends Item {
         return getDefinition(stack)
                 .map(BoxDefinition::keyItem)
                 .orElse(null);
+    }
+
+    /** v2.x: every accepted key id (primary + extras); empty = keyless. */
+    public static java.util.List<String> getAcceptedKeys(ItemStack stack) {
+        return getDefinition(stack).map(BoxDefinition::acceptedKeys)
+                .orElseGet(java.util.List::of);
     }
 
     @Override
@@ -276,20 +283,37 @@ public class ItemCsgoBox extends Item {
     /** Builds the full grade/probability line list for one tooltip cache slot. */
     private static List<Component> buildTooltipLines(BoxDefinition def, boolean advanced) {
         List<Component> lines = new ArrayList<>();
+        if (def.openCost() > 0) {
+            lines.add(Component.translatable("tooltips.csgobox.item.open_cost",
+                    String.valueOf(def.openCost())).withStyle(ChatFormatting.GRAY));
+        }
+        if (def.availableFromMs() > 0L || def.availableUntilMs() > 0L) {
+            lines.add(Component.translatable("tooltips.csgobox.item.window",
+                    def.windowText(), def.windowTextUntil()).withStyle(ChatFormatting.GRAY));
+        }
         int[] weights = def.getWeightArray();
-        for (int i = 0; i < def.grades().size(); i++) {
+        boolean showChances = advanced && !def.hideOdds();
+        int tierCount = def.grades().size();
+        for (int i = 0; i < tierCount; i++) {
             GradeGroup grade = def.grades().get(i);
-            ChatFormatting color = i < TOOLTIP_GRADE_COLORS.length ? TOOLTIP_GRADE_COLORS[i] : ChatFormatting.WHITE;
-            if (i < weights.length && weights[i] > 0 && advanced) {
-                double gradeChance = BoxOdds.gradeChance(weights, i + 1);
+            // Positional tiers: the list runs highest → lowest, so the level
+            // of index i is tierCount - i and its weight slot is level - 1.
+            // (The old code indexed the low→high weights array with the
+            // high→low list index, which scrambled advanced tooltips.)
+            int level = BoxGrades.levelAt(tierCount, i);
+            ChatFormatting color = level - 1 < TOOLTIP_GRADE_COLORS.length
+                    ? TOOLTIP_GRADE_COLORS[level - 1] : ChatFormatting.WHITE;
+            if (level - 1 < weights.length && weights[level - 1] > 0 && showChances) {
+                double gradeChance = BoxOdds.gradeChance(weights, level);
                 lines.add(Component.translatable("tooltips.csgobox.item.grade_chance",
-                        String.valueOf(i + 1), BoxOdds.percent(gradeChance)).withStyle(color));
+                        String.valueOf(level), BoxOdds.percent(gradeChance)).withStyle(color));
                 appendGradeItems(grade, color, lines, true, gradeChance);
             } else {
                 appendGradeItems(grade, color, lines, false, 0.0D);
             }
         }
-        if (def.grades().size() >= BoxGrades.GRADE_COUNT) {
+        // "Gold" hint is legacy-tier vocabulary; custom tier sets skip it.
+        if (tierCount >= BoxGrades.GRADE_COUNT && def.grades().stream().allMatch(g -> BoxGrades.gradeLevel(g.id()) > 0)) {
             lines.add(Component.translatable("gui.csgobox.csgo_box.label_gold").withStyle(ChatFormatting.YELLOW));
         }
         return List.copyOf(lines);

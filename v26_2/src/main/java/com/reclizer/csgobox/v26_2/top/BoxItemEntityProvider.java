@@ -54,11 +54,16 @@ public final class BoxItemEntityProvider implements IProbeInfoEntityProvider {
                 formatPercent(definition.dropRate())));
         int[] weights = definition.getWeightArray();
         int shown = 0;
-        for (GradeGroup grade : definition.grades()) {
+        java.util.List<GradeGroup> gradeTiers = definition.grades();
+        for (int gradeIndex = 0; gradeIndex < gradeTiers.size(); gradeIndex++) {
+            GradeGroup grade = gradeTiers.get(gradeIndex);
+            if (definition.hideOdds()) {
+                break;
+            }
             if (shown >= MAX_GRADE_LINES) {
                 break;
             }
-            double chance = BoxOdds.gradeChance(weights, com.reclizer.csgobox.box.BoxGrades.gradeLevel(grade.id()));
+            double chance = BoxOdds.gradeChance(weights, com.reclizer.csgobox.box.BoxGrades.levelAt(gradeTiers.size(), gradeIndex));
             probeInfo.text(Component.translatable("top.csgobox.box.grade_line",
                             grade.displayName(), formatPercent(chance))
                     .withStyle(style -> style.withColor(grade.color())));

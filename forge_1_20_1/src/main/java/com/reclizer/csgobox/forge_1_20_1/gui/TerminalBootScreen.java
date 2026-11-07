@@ -61,12 +61,10 @@ public class TerminalBootScreen extends Screen {
             this.boxName = def.name();
             List<ItemStack> items = new ArrayList<>();
             List<Integer> grades = new ArrayList<>();
-            for (GradeGroup grade : def.grades()) {
-                int lvl = BoxGrades.gradeLevel(grade.id());
-                if (lvl <= 0) {
-                    continue;
-                }
-                for (ItemStack stack : grade.items()) {
+            List<GradeGroup> tiers = def.grades();
+            for (int i = 0; i < tiers.size(); i++) {
+                int lvl = BoxGrades.levelAt(tiers.size(), i);
+                for (ItemStack stack : tiers.get(i).items()) {
                     items.add(stack);
                     grades.add(lvl);
                 }

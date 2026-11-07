@@ -30,6 +30,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -82,219 +83,274 @@ public final class OpenService {
             if (!(box.getItem() instanceof ItemCsgoBox)) {
                 return;
             }
-            // Terminals are only buyable via the negotiation protocol; the
-            // classic crate pipeline would open them for free. Refuse crafted packets.
-            if (box.getItem() instanceof ItemTerminal) {
+            var outcome = openSingle(sp, box);
+            if (outcome == null) {
                 sendRejected(context, requestId);
-                return;
+            } else {
+                context.reply(new PacketBoxOpenResult(
+                        outcome.finalGrade(),
+                        outcome.winningIndex(),
+                        requestId,
+                        outcome.items(),
+                        outcome.grades()
+                ));
             }
-
-            if (sp.isRemoved() || !sp.isAlive()) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            if (OpenBlockGuard.isBlocked(sp.getUUID(), sp.level().getGameTime())) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            var boxId = ItemCsgoBox.getBoxId(box);
-            if (boxId == null) {
-                sendRejected(context, requestId);
-                return;
-            }
-            // Same guard for a box_id pointing at a terminal from a plain box stack.
-            BoxDefinition def = BoxRegistry.get(boxId);
-            if (def != null && def.isTerminal()) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            // Mods may veto the open before any roll or consumption.
-            BoxOpeningEvent opening = new BoxOpeningEvent(sp, boxId, false, 1);
-            NeoForge.EVENT_BUS.post(opening);
-            if (opening.isCanceled()) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            int[] weights = ItemCsgoBox.getRandom(box);
-            if (weights.length == 0 || !BoxOdds.hasOpenableWeights(weights)) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            long serverSeed = SECURE_RANDOM.nextLong();
-            var rng = new Random(serverSeed);
-
-            // Grade pool is immutable per box id (shared cache with the bulk
-            // path, invalidated on reload). v2.0.1 builds the pool with
-            // per-item weights. pickRandom returns copies, so callers may
-            // mutate freely.
-            var gradeMap = GradeMapCache.get(boxId.toString(),
-                    () -> ItemCsgoBox.buildGradeMap(box));
-            if (gradeMap.isEmpty()) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            // v2.0.2-fix: explicit null guard — this used to lean on the
-            // gradeMap check above happening to reject unbound boxes first
-            // (fragile order). An unbound box is refused outright, no
-            // def-dependent message.
-            if (def == null) {
-                sendRejected(context, requestId);
-                return;
-            }
-            // v2.0.1 constraints (in-memory, server-authoritative): per-player
-            // open cap and per-box cooldown are checked before the roll so a
-            // capped player never wastes a key.
-            if (!BoxConstraintTracker.underPerPlayerCap(sp.getStringUUID(), boxId.toString(), def.maxPerPlayer())) {
-                sp.sendSystemMessage(Component.translatable(
-                        "commands.csgobox.constraint.capped", def.name(), def.maxPerPlayer()));
-                sendRejected(context, requestId);
-                return;
-            }
-            if (!BoxConstraintTracker.cooldownElapsed(
-                    sp.getStringUUID(), boxId.toString(), def.cooldownSeconds(), sp.level().getGameTime())) {
-                sp.sendSystemMessage(Component.translatable(
-                        "commands.csgobox.constraint.cooldown", def.name()));
-                sendRejected(context, requestId);
-                return;
-            }
-            if (!def.permission().isBlank() && !CsgoBox.PERMISSION_GATE.test(sp, def.permission())) {
-                sp.sendSystemMessage(Component.translatable(
-                        "commands.csgobox.constraint.permission", def.name()));
-                sendRejected(context, requestId);
-                return;
-            }
-
-            // v2.0.1 pity (保底): snapshot the per-player miss streak before
-            // the roll; a forced roll replaces the winning slot below.
-            PityPolicy pity = def != null ? def.pity().orElse(null) : null;
-            int pityStreak = pity != null
-                    ? PityTracker.missStreak(sp.getStringUUID(), boxId.toString())
-                    : 0;
-
-            var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
-            int winningIndex = strip.winningIndex();
-            if (winningIndex < 0) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            ItemStack giveItem = strip.items().get(winningIndex);
-            int finalGrade = strip.grades().get(winningIndex);
-            // v2.0.1-fix(B): pity counts the ROLLED grade, never the resolved
-            // (post-fallback) one — a forced roll that lands on the target
-            // grade must reset the streak even when the item pool falls back
-            // to a lower-tier item.
-            int pityRollGrade = finalGrade;
-
-            // v2.0.1 pity: replace the winning slot with a forced roll from
-            // [targetLevel..5] when the miss streak reached the threshold.
-            // pickGradeWithPity returns forced=false when the pity slice has
-            // no positive weight (misconfigured) — the plain roll stands.
-            if (pity != null && pity.shouldForce(pityStreak)) {
-                OddsCalculator.PityResult pityRoll =
-                        OddsCalculator.pickGradeWithPity(rng, weights, pity, pityStreak);
-                if (pityRoll.forced()) {
-                    ItemStack pityItem = gradeMap.pickRandom(rng, pityRoll.grade());
-                    if (pityItem == null) {
-                        pityItem = gradeMap.findFallback(pityRoll.grade());
-                    }
-                    if (pityItem != null) {
-                        giveItem = pityItem;
-                        pityRollGrade = Math.min(Math.max(pityRoll.grade(), 1), 5);
-                        finalGrade = resolveGrade(giveItem, boxId, pityRoll.grade());
-                        strip.items().set(winningIndex, giveItem.copy());
-                        strip.grades().set(winningIndex, finalGrade);
-                    }
-                }
-            }
-
-            if (giveItem.isEmpty()) {
-                giveItem = gradeMap.findFallback(1);
-                if (giveItem == null) giveItem = ItemStack.EMPTY;
-                if (giveItem.isEmpty()) {
-                    sendRejected(context, requestId);
-                    return;
-                }
-                finalGrade = resolveGrade(giveItem, boxId, 1);
-                strip.items().set(winningIndex, giveItem.copy());
-                strip.grades().set(winningIndex, finalGrade);
-            }
-
-            // v2.0.1: resolve count-range / random-enchant / loot-table specs
-            // on the winning item BEFORE keys are consumed (a broken loot
-            // table must never eat a key).
-            giveItem = BoxItemResolver.resolve(giveItem, sp.level(), rng);
-            if (giveItem.isEmpty()) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            // Consume keys only after the whole roll is validated — a broken
-            // definition must never eat a key.
-            if (!tryConsumeKeys(sp, box, 1)) {
-                sendRejected(context, requestId);
-                return;
-            }
-
-            float wear = 0F;
-            if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
-                wear = rng.nextFloat();
-                applyWearDamage(giveItem, wear);
-            }
-
-            OpenBlockGuard.block(sp.getUUID(), sp.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
-
-            // v2.2.0-fix: sync the resolved (and wear-damaged) winner back into
-            // the animation strip so the client reveal always matches the
-            // granted item (count-range / random-enchant / loot-table / wear).
-            // The plain roll shares the strip reference, but pity/fallback
-            // branches replace the winner with a fresh copy — mirror the bulk
-            // path (finalizeBulkOpen) and make it unconditional.
-            strip.items().set(winningIndex, giveItem.copy());
-
-            context.reply(new PacketBoxOpenResult(
-                    finalGrade,
-                    winningIndex,
-                    requestId,
-                    strip.items(),
-                    strip.grades()
-            ));
-
-            ItemStack toGive = giveItem.copy();
-            toGive.set(ItemCsgoBox.GRADE.get(), finalGrade);
-            boolean added = sp.getInventory().add(toGive);
-            if (!added && !toGive.isEmpty()) {
-                sp.drop(toGive, false);
-            }
-            // Creative mode is fully free (parity with tryConsumeKeys).
-            if (!sp.getAbilities().instabuild) {
-                box.shrink(1);
-            }
-
-            // Record the successful open for max_per_player / cooldown.
-            BoxConstraintTracker.recordOpen(sp.getStringUUID(), boxId.toString(), sp.level().getGameTime());
-
-            // v2.0.1 pity: advance the miss streak only after the item was
-            // actually given (rejected/aborted opens never count). Uses the
-            // ROLLED grade (pityRollGrade), not the resolved/final one.
-            if (pity != null) {
-                PityTracker.recordOpen(sp.getStringUUID(), boxId.toString(),
-                        pityRollGrade, pity.targetLevel());
-            }
-
-            sp.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
-            if (CsgoBox.CONFIG.enableAchievements()) {
-                OpenedBoxTrigger.INSTANCE.trigger(sp, finalGrade);
-            }
-
-            NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, boxId, giveItem.copy(), finalGrade, false));
         });
+    }
+
+    /**
+     * Successful single-open reply data (the client animation strip).
+     */
+    public record SingleOpenOutcome(int finalGrade, int winningIndex, List<ItemStack> items, List<Integer> grades) {
+    }
+
+    /**
+     * Full single-open pipeline for the given player and box stack — the
+     * same server-authoritative path {@link #handleSingleOpen} runs for
+     * {@code PacketCsgoProgress}. Returns the reply outcome on success, or
+     * {@code null} when the open was refused (the packet caller replies a
+     * rejected {@code PacketBoxOpenResult}).
+     *
+     * <p>Package-visible seam for the GameTest suite (the packet family
+     * platforms expose the same shape as {@code BoxOpenExecutor.execute}).
+     * ServerPlayer-only branches (permission gate, stats, achievement
+     * trigger) are skipped for non-{@code ServerPlayer} callers — in
+     * production the player is always a ServerPlayer, so behavior is
+     * unchanged.</p>
+     */
+    public static SingleOpenOutcome openSingle(final Player sp, final ItemStack box) {
+        // Terminals are only buyable via the negotiation protocol; the
+        // classic crate pipeline would open them for free. Refuse crafted packets.
+        if (box.getItem() instanceof ItemTerminal) {
+            return null;
+        }
+
+        if (sp.isRemoved() || !sp.isAlive()) {
+            return null;
+        }
+
+        if (OpenBlockGuard.isBlocked(sp.getUUID(), sp.level().getGameTime())) {
+            return null;
+        }
+
+        var boxId = ItemCsgoBox.getBoxId(box);
+        if (boxId == null) {
+            return null;
+        }
+        // Same guard for a box_id pointing at a terminal from a plain box stack.
+        BoxDefinition def = BoxRegistry.get(boxId);
+        if (def != null && def.isTerminal()) {
+            return null;
+        }
+
+        // Mods may veto the open before any roll or consumption.
+        BoxOpeningEvent opening = new BoxOpeningEvent(sp, boxId, false, 1);
+        NeoForge.EVENT_BUS.post(opening);
+        if (opening.isCanceled()) {
+            return null;
+        }
+
+        int[] weights = ItemCsgoBox.getRandom(box);
+        if (weights.length == 0 || !BoxOdds.hasOpenableWeights(weights)) {
+            return null;
+        }
+
+        long serverSeed = SECURE_RANDOM.nextLong();
+        var rng = new Random(serverSeed);
+
+        // Grade pool is immutable per box id (shared cache with the bulk
+        // path, invalidated on reload). v2.0.1 builds the pool with
+        // per-item weights. pickRandom returns copies, so callers may
+        // mutate freely.
+        var gradeMap = GradeMapCache.get(boxId.toString(),
+                () -> ItemCsgoBox.buildGradeMap(box));
+        if (gradeMap.isEmpty()) {
+            return null;
+        }
+
+        // v2.0.2-fix: explicit null guard — this used to lean on the
+        // gradeMap check above happening to reject unbound boxes first
+        // (fragile order). An unbound box is refused outright, no
+        // def-dependent message.
+        if (def == null) {
+            return null;
+        }
+        // v2.0.1 constraints (in-memory, server-authoritative): per-player
+        // open cap and per-box cooldown are checked before the roll so a
+        // capped player never wastes a key.
+        if (!BoxConstraintTracker.underPerPlayerCap(sp.getStringUUID(), boxId.toString(), def.maxPerPlayer())) {
+            sp.sendSystemMessage(Component.translatable(
+                    "commands.csgobox.constraint.capped", def.name(), def.maxPerPlayer()));
+            return null;
+        }
+        if (!BoxConstraintTracker.cooldownElapsed(
+                sp.getStringUUID(), boxId.toString(), def.cooldownSeconds(), sp.level().getGameTime())) {
+            sp.sendSystemMessage(Component.translatable(
+                    "commands.csgobox.constraint.cooldown", def.name()));
+            return null;
+        }
+        if (!def.permission().isBlank()
+                && sp instanceof ServerPlayer srv
+                && !CsgoBox.PERMISSION_GATE.test(srv, def.permission())) {
+            sp.sendSystemMessage(Component.translatable(
+                    "commands.csgobox.constraint.permission", def.name()));
+            return null;
+        }
+
+        // v2.0.1 pity (保底): snapshot the per-player miss streak before
+        // the roll; a forced roll replaces the winning slot below.
+        PityPolicy pity = def != null ? def.pity().orElse(null) : null;
+        int pityStreak = pity != null
+                ? PityTracker.missStreak(sp.getStringUUID(), boxId.toString())
+                : 0;
+
+        var strip = BoxStripGenerator.generate(gradeMap, weights, rng, ItemStack.EMPTY);
+        int winningIndex = strip.winningIndex();
+        if (winningIndex < 0) {
+            return null;
+        }
+
+        ItemStack giveItem = strip.items().get(winningIndex);
+        int finalGrade = strip.grades().get(winningIndex);
+        // v2.0.1-fix(B): pity counts the ROLLED grade, never the resolved
+        // (post-fallback) one — a forced roll that lands on the target
+        // grade must reset the streak even when the item pool falls back
+        // to a lower-tier item.
+        int pityRollGrade = finalGrade;
+
+        // v2.0.1 pity: replace the winning slot with a forced roll from
+        // [targetLevel..5] when the miss streak reached the threshold.
+        // pickGradeWithPity returns forced=false when the pity slice has
+        // no positive weight (misconfigured) — the plain roll stands.
+        if (pity != null && (pity.shouldForce(pityStreak)
+            || (pity.firstOpen() && !PityTracker.hasRecord(sp.getStringUUID(), boxId.toString())))) {
+            OddsCalculator.PityResult pityRoll =
+                    OddsCalculator.pickGradeWithPity(rng, weights, pity,
+                            // Effective streak: first_open alone must force too (pickGradeWithPity
+                            // re-checks shouldForce(streak) internally — pass the armed value).
+                            Math.max(pityStreak, pity.every() - 1));
+            if (pityRoll.forced()) {
+                ItemStack pityItem = gradeMap.pickRandom(rng, pityRoll.grade());
+                if (pityItem == null) {
+                    pityItem = gradeMap.findFallback(pityRoll.grade());
+                }
+                if (pityItem != null) {
+                    giveItem = pityItem;
+                    pityRollGrade = Math.min(Math.max(pityRoll.grade(), 1), 5);
+                    finalGrade = resolveGrade(giveItem, boxId, pityRoll.grade());
+                    strip.items().set(winningIndex, giveItem.copy());
+                    strip.grades().set(winningIndex, finalGrade);
+                }
+            }
+        }
+
+        if (giveItem.isEmpty()) {
+            giveItem = gradeMap.findFallback(1);
+            if (giveItem == null) giveItem = ItemStack.EMPTY;
+            if (giveItem.isEmpty()) {
+                return null;
+            }
+            finalGrade = resolveGrade(giveItem, boxId, 1);
+            strip.items().set(winningIndex, giveItem.copy());
+            strip.grades().set(winningIndex, finalGrade);
+        }
+
+        // v2.0.1: resolve count-range / random-enchant / loot-table specs
+        // on the winning item BEFORE keys are consumed (a broken loot
+        // table must never eat a key).
+        // openSingle takes a Player (GameTest mock seam) whose level() is
+        // typed Level; real players and the gametest mock both live on a
+        // ServerLevel, so the cast mirrors the old ServerPlayer-typed code.
+        giveItem = BoxItemResolver.resolve(giveItem, (ServerLevel) sp.level(), rng);
+        if (giveItem.isEmpty()) {
+            return null;
+        }
+
+        // v2.x gates: availability window, then open cost (server-authoritative).
+        if (!def.isAvailableNow(System.currentTimeMillis())) {
+            sp.sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
+            return null;
+        }
+        if (def.openCost() > 0 && !sp.getAbilities().instabuild) {
+            if (TerminalBuyService.countArmoryPoints(sp) < def.openCost()) {
+                sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", def.openCost()));
+                return null;
+            }
+            TerminalBuyService.consumeArmoryPoints(sp, def.openCost());
+        }
+        // Consume keys only after the whole roll is validated — a broken
+        // definition must never eat a key.
+        if (!tryConsumeKeys(sp, box, 1)) {
+            return null;
+        }
+
+        float wear = 0F;
+        if (CsgoBox.CONFIG.damageItemByWear() && giveItem.getMaxDamage() > 0) {
+            wear = def.sampleWear(rng);
+            applyWearDamage(giveItem, wear);
+        }
+
+        OpenBlockGuard.block(sp.getUUID(), sp.level().getGameTime(), OpenBlockGuard.DEFAULT_COOLDOWN_TICKS);
+
+        if (def.announceLevel() > 0 && finalGrade >= def.announceLevel()) {
+            String tierName = def.tierDisplayName(finalGrade);
+            Component announceMsg = Component.translatable("messages.csgobox.announce.rare",
+                    sp.getDisplayName(), giveItem.getHoverName(),
+                    tierName == null ? Component.translatable("gui.csgobox.csgo_box.grade_n", finalGrade)
+                            : Component.literal(tierName),
+                    def.name());
+            sp.level().getServer().getPlayerList().broadcastSystemMessage(announceMsg, false);
+        }
+        if (def.bonusChance() > 0F && rng.nextFloat() < def.bonusChance()) {
+            ItemStack bonusStack = def.bonusIsBox()
+                    ? ItemCsgoBox.setBoxId(boxId, new ItemStack(ModItems.itemForBox(boxId, def.isTerminal())))
+                    : giveItem.copy();
+            if (bonusStack != null && !bonusStack.isEmpty()) {
+                if (!sp.getInventory().add(bonusStack)) {
+                    sp.drop(bonusStack, false);
+                }
+                sp.sendSystemMessage(Component.translatable("messages.csgobox.bonus", bonusStack.getCount(), bonusStack.getHoverName()));
+            }
+        }
+        // v2.2.0-fix: sync the resolved (and wear-damaged) winner back into
+        // the animation strip so the client reveal always matches the
+        // granted item (count-range / random-enchant / loot-table / wear).
+        // The plain roll shares the strip reference, but pity/fallback
+        // branches replace the winner with a fresh copy — mirror the bulk
+        // path (finalizeBulkOpen) and make it unconditional.
+        strip.items().set(winningIndex, giveItem.copy());
+
+        ItemStack toGive = giveItem.copy();
+        toGive.set(ItemCsgoBox.GRADE.get(), finalGrade);
+        boolean added = sp.getInventory().add(toGive);
+        if (!added && !toGive.isEmpty()) {
+            sp.drop(toGive, false);
+        }
+        // Creative mode is fully free (parity with tryConsumeKeys).
+        if (!sp.getAbilities().instabuild) {
+            box.shrink(1);
+        }
+
+        // Record the successful open for max_per_player / cooldown.
+        BoxConstraintTracker.recordOpen(sp.getStringUUID(), boxId.toString(), sp.level().getGameTime());
+
+        // v2.0.1 pity: advance the miss streak only after the item was
+        // actually given (rejected/aborted opens never count). Uses the
+        // ROLLED grade (pityRollGrade), not the resolved/final one.
+        if (pity != null) {
+            PityTracker.recordOpen(sp.getStringUUID(), boxId.toString(),
+                    pityRollGrade, pity.targetLevel());
+        }
+
+        if (sp instanceof ServerPlayer srv) {
+            srv.awardStat(CsgoBox.OPENED_BOXES_STAT, 1);
+            if (CsgoBox.CONFIG.enableAchievements()) {
+                OpenedBoxTrigger.INSTANCE.trigger(srv, finalGrade);
+            }
+        }
+
+        NeoForge.EVENT_BUS.post(new BoxOpenedEvent(sp, boxId, giveItem.copy(), finalGrade, false));
+        return new SingleOpenOutcome(finalGrade, winningIndex, List.copyOf(strip.items()), strip.grades());
     }
 
     /** Replies an empty animation result; the client treats it as a rejected open. */
@@ -370,6 +426,13 @@ public final class OpenService {
             // v2.0.1 constraints (batch-level): a batch may never exceed the
             // player's remaining per-player allowance, and the per-box
             // cooldown is checked once for the whole batch.
+            if (def != null && !def.isAvailableNow(System.currentTimeMillis())) {
+                if (player instanceof ServerPlayer sp) {
+                    sp.sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
+                }
+                sendRejected(context, message.requestId());
+                return;
+            }
             if (def != null && !BoxConstraintTracker.underPerPlayerCap(
                     player.getStringUUID(), boxId.toString(), def.maxPerPlayer())) {
                 if (player instanceof ServerPlayer sp) {
@@ -398,7 +461,7 @@ public final class OpenService {
                 return;
             }
 
-            Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getKey(templateBox));
+            Availability avail = countAvailability(player, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
             int availableBoxes = avail.boxes();
             int availableKeys = avail.keys();
             int K = Math.min(availableBoxes, availableKeys);
@@ -416,6 +479,20 @@ public final class OpenService {
             // v2.0.1-fix(max_per_player): the batch is clamped to the player's
             // remaining per-player allowance, not merely boolean-checked — a
             // hoarded stack could otherwise drain the whole quota in one ask.
+            // v2.x open_cost: clamp the batch to what the player can afford
+            // (creative exempt), mirroring the single-open charge.
+            if (def != null && def.openCost() > 0 && !player.getAbilities().instabuild) {
+                int affordable = TerminalBuyService.countArmoryPoints(player) / def.openCost();
+                if (affordable <= 0) {
+                    if (player instanceof ServerPlayer sp) {
+                        sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points",
+                         def.openCost()));
+                    }
+                    sendRejected(context, message.requestId());
+                    return;
+                }
+                K = Math.min(K, affordable);
+            }
             if (def != null && def.maxPerPlayer() > 0) {
                 int allowance = def.maxPerPlayer()
                         - BoxConstraintTracker.openCount(player.getStringUUID(), boxId.toString());
@@ -449,13 +526,17 @@ public final class OpenService {
             final int pityStreak = pity != null
                     ? PityTracker.startStreak(player.getStringUUID(), boxId.toString())
                     : 0;
+            // v2.x first_open: a player who never opened this box forces
+            // the first box of the batch (single-open parity).
+            final boolean firstOpenForce = pity != null && pity.firstOpen()
+                    && !PityTracker.hasRecord(player.getStringUUID(), boxId.toString());
 
             final Player playerFinal = player;
             try {
                 CompletableFuture
                         .supplyAsync(() -> {
                             try {
-                                return computeKResults(snapshot, requestedK, pityStreak, pity);
+                                return computeKResults(snapshot, requestedK, pityStreak, pity, firstOpenForce);
                             } catch (Throwable t) {
                                 CsgoBox.LOGGER.error("[csgo-bulk] computeKResults failed: K={} box={}", requestedK, boxId, t);
                                 return List.<BulkOpenResult>of();
@@ -489,8 +570,9 @@ public final class OpenService {
     private record Availability(int boxes, int keys) {
     }
 
-    private static Availability countAvailability(Player player, ItemStack box, Identifier keyId) {
-        boolean noKey = keyId == null || keyId.equals(AIR_ID);
+    private static Availability countAvailability(Player player, ItemStack box, java.util.List<String> keyIds) {
+        java.util.Set<String> keySet = new java.util.HashSet<>(keyIds);
+        boolean noKey = keySet.isEmpty();
         boolean countKeys = !noKey && !player.getAbilities().instabuild;
         int boxes = 0;
         int keys = countKeys ? 0 : Integer.MAX_VALUE;
@@ -499,7 +581,7 @@ public final class OpenService {
                 if (ItemStack.isSameItemSameComponents(stack, box)) {
                     boxes += stack.getCount();
                 }
-            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            } else if (countKeys && keySet.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) {
                 keys += stack.getCount();
             }
         }
@@ -513,7 +595,7 @@ public final class OpenService {
                 if (ItemStack.isSameItemSameComponents(stack, box)) {
                     boxes += stack.getCount();
                 }
-            } else if (countKeys && keyId.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            } else if (countKeys && keySet.contains(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) {
                 keys += stack.getCount();
             }
         }
@@ -527,7 +609,12 @@ public final class OpenService {
      * roll at/above the target when the streak reached the threshold).
      */
     private static List<BulkOpenResult> computeKResults(BulkBoxContext snapshot, int K,
-                                                        int initialStreak, PityPolicy pity) {
+                                                        int initialStreak, PityPolicy pity, boolean firstOpenForce) {
+        // v2.x: per-box bulk gate (server-authoritative).
+        var bulkGateDef = BoxRegistry.get(snapshot.boxId());
+        if (bulkGateDef != null && !bulkGateDef.allowBulk()) {
+            return new ArrayList<>();
+        }
         List<BulkOpenResult> out = new ArrayList<>(K);
         // Precompute the weight table once for the whole batch so the K-1
         // follow-up rolls don't each rebuild it (pickGrade(int[]) re-scans).
@@ -549,9 +636,12 @@ public final class OpenService {
                 int pityRollGrade = finalGrade;
                 boolean fallback = giveItem.isEmpty();
                 // v2.0.1 pity: patch the winning slot when the threshold is met.
-                if (pity != null && pity.shouldForce(streak)) {
+                // v2.x first_open: a never-opened player's very first box is
+                // forced too (only item 0 of the batch; later items roll plain).
+                if (pity != null && (pity.shouldForce(streak) || firstOpenForce)) {
                     OddsCalculator.PityResult pr = OddsCalculator.pickGradeWithPity(
-                            rng, snapshot.weights(), pity, streak);
+                            rng, snapshot.weights(), pity,
+                            firstOpenForce ? Math.max(streak, pity.every() - 1) : streak);
                     if (pr.forced()) {
                         ItemStack pityItem = snapshot.gradeMap().pickRandom(rng, pr.grade());
                         if (pityItem == null) {
@@ -576,7 +666,7 @@ public final class OpenService {
                         strip.grades().set(winningIndex, finalGrade);
                     }
                 }
-                float wear = rng.nextFloat();
+                float wear = bulkGateDef != null ? bulkGateDef.sampleWear(rng) : rng.nextFloat();
                 out.add(new BulkOpenResult(giveItem, finalGrade, seed, winningIndex, strip.items(), strip.grades(), wear, fallback, pityRollGrade));
                 // v2.0.1-fix(D): only granted (non-empty) results advance the
                 // batch-local streak, matching finalizeBulkOpen's write-back.
@@ -605,7 +695,7 @@ public final class OpenService {
                 // loot-table) in finalizeBulkOpen deterministic and identical
                 // for every non-first item across players and batches.
                 int rolledGrade = Mth.clamp(g, 1, 5);
-                out.add(new BulkOpenResult(s, rolledGrade, SECURE_RANDOM.nextLong(), -1, List.of(), List.of(), rng.nextFloat(), fallback, rolledGrade));
+                out.add(new BulkOpenResult(s, rolledGrade, SECURE_RANDOM.nextLong(), -1, List.of(), List.of(), bulkGateDef != null ? bulkGateDef.sampleWear(rng) : rng.nextFloat(), fallback, rolledGrade));
                 // v2.0.1-fix(D): empty results never advance the streak.
                 if (pity != null && !s.isEmpty()) {
                     streak = pity.nextStreak(streak, rolledGrade);
@@ -632,7 +722,7 @@ public final class OpenService {
 
         // Re-validate after async compute; inventory might have changed.
         Identifier keyId = ItemCsgoBox.getKey(templateBox);
-        Availability avail = countAvailability(sp, templateBox, keyId);
+        Availability avail = countAvailability(sp, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
         int recheckBoxes = avail.boxes();
         int recheckKeys = avail.keys();
         int actualK = Math.min(recheckBoxes, recheckKeys);
@@ -650,6 +740,25 @@ public final class OpenService {
         }
 
         // Truncate results to actualK (we can't give items for boxes the player no longer has).
+        // v2.x open_cost: clamp the granted batch to what the player can still
+        // afford (points may have changed during the async compute), then
+        // charge after consumption succeeds — never for boxes not granted.
+        BoxDefinition costDef = BoxRegistry.get(snapshot.boxId());
+        int openCost = costDef != null && costDef.openCost() > 0 && !sp.getAbilities().instabuild
+                ? costDef.openCost() : 0;
+        if (openCost > 0) {
+            int affordable = TerminalBuyService.countArmoryPoints(sp) / openCost;
+            if (affordable < actualK) {
+                CsgoBox.LOGGER.warn("[csgo-bulk] player {} points changed during compute: affordable={}",
+                        sp.getName().getString(), affordable);
+                actualK = Math.max(0, affordable);
+            }
+            if (actualK <= 0) {
+                sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", openCost));
+                return;
+            }
+        }
+
         List<BulkOpenResult> truncated = results.subList(0, actualK);
 
         // A fully-broken definition (every grade pool empty even after
@@ -733,6 +842,29 @@ public final class OpenService {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeKeys failed for player={} want={}; refunding boxes", sp.getName().getString(), actualK);
             refundBoxes(sp, snapshot.boxId(), templateBox, actualK);
             return;
+        }
+
+        // v2.x open_cost: charge for the actually granted batch (creative
+        // exempt players never reach this with openCost > 0).
+        if (openCost > 0) {
+            TerminalBuyService.consumeArmoryPoints(sp, openCost * actualK);
+        }
+        // v2.x: the batch counts as "opened" for the first-open guarantee.
+        PityTracker.markOpened(sp.getStringUUID(), snapshot.boxId().toString());
+        // v2.x announce_above: bulk winners at/above the level broadcast too.
+        if (costDef != null && costDef.announceLevel() > 0) {
+            for (BulkOpenResult r : truncated) {
+                if (r.resultItem().isEmpty() || r.resultGrade() < costDef.announceLevel()) {
+                    continue;
+                }
+                String tierName = costDef.tierDisplayName(r.resultGrade());
+                Component announceMsg = Component.translatable("messages.csgobox.announce.rare",
+                        sp.getDisplayName(), r.resultItem().getHoverName(),
+                        tierName == null ? Component.translatable("gui.csgobox.csgo_box.grade_n", r.resultGrade())
+                                : Component.literal(tierName),
+                        costDef.name());
+                sp.level().getServer().getPlayerList().broadcastSystemMessage(announceMsg, false);
+            }
         }
 
         BulkOpenResult box1 = truncated.get(0);
@@ -870,16 +1002,15 @@ public final class OpenService {
         stack.set(DataComponents.DAMAGE, damage);
     }
 
-    /** Resolves the grade (1..5) of a fallback item against the box definition. */
+    /** Resolves the fallback item's tier level (1..tier count) against the box definition. */
     private static int resolveGrade(ItemStack item, Identifier boxId, int fallback) {
         BoxDefinition def = BoxRegistry.get(boxId);
         if (def != null) {
-            for (GradeGroup grade : def.grades()) {
-                int gradeLevel = BoxGrades.gradeLevel(grade.id());
-                if (gradeLevel == 0) continue;
-                for (ItemStack candidate : grade.items()) {
+            List<GradeGroup> tiers = def.grades();
+            for (int i = 0; i < tiers.size(); i++) {
+                for (ItemStack candidate : tiers.get(i).items()) {
                     if (ItemStack.isSameItemSameComponents(item, candidate)) {
-                        return Mth.clamp(gradeLevel, 1, 5);
+                        return Mth.clamp(BoxGrades.levelAt(tiers.size(), i), 1, Math.max(1, tiers.size()));
                     }
                 }
             }

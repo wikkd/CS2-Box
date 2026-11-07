@@ -29,7 +29,7 @@
       "minItems": 5,
       "maxItems": 5,
       "items": { "type": "integer", "minimum": 0, "maximum": 10000 },
-      "description": "Five grade weights ordered grade1(common)..grade5(rare). Non-positive uses defaults; >10000 clamps."
+      "description": "Five grade weights ordered grade1(common)..grade5(rare). An explicit 0 keeps that tier out of the roll; absent slots use the default weight; negative values fall back to the default with an error; >10000 clamps."
     },
     "entity": {
       "type": "array",
@@ -76,6 +76,11 @@
       "minimum": 1,
       "description": "v2.0.2: config schema version marker. Optional today (absent = legacy); write 2 for current files. Unknown top-level/item fields are reported by the runtime validator, so version bumps should add themselves here."
     },
+    "restock_minutes": {
+      "type": "integer",
+      "deprecated": true,
+      "description": "Removed in 2.0.2 — accepted silently for legacy files (the runtime validator whitelists it without a warning), but it has no effect."
+    },
     "max_per_player": {
       "type": "integer",
       "minimum": -1,
@@ -97,13 +102,17 @@
       "properties": {
         "grade": {
           "type": "string",
-          "enum": ["consumer", "industrial", "mil_spec", "restricted", "classified"],
-          "description": "v2.0.1: the grade that must eventually drop; forces a roll at/above it."
+          "description": "v2.0.1: the tier that must eventually drop; forces a roll at/above it. A legacy box uses one of consumer/industrial/mil_spec/restricted/classified; a custom \"grades\" box uses one of its configured tier ids."
         },
         "every": {
           "type": "integer",
           "minimum": 2,
           "description": "v2.0.1: after every-1 consecutive opens below the target grade, the next open is forced to roll the target grade or higher. In-memory per player+box, resets on restart."
+        },
+        "first_open": {
+          "type": "boolean",
+          "default": false,
+          "description": "v2.x: also force the target grade on the player's first-ever open of this box (never-opened players count; in-memory, resets on restart)."
         }
       },
       "required": ["grade", "every"],
@@ -114,13 +123,92 @@
     "grade2": { "$ref": "#/$defs/grade" },
     "grade3": { "$ref": "#/$defs/grade" },
     "grade4": { "$ref": "#/$defs/grade" },
-    "grade5": { "$ref": "#/$defs/grade" }
+    "grade5": { "$ref": "#/$defs/grade" },
+    "sound": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+      "description": "v2.x: custom open sound event id (e.g. minecraft:block.note_block.pling) played instead of the default open sound; unknown ids fall back to the default at play time."
+    },
+    "hide_odds": { "type": "boolean", "default": false, "description": "v2.x: hide all probability lines (tooltips/JEI/REI/EMI) — mystery box." },
+    "allow_bulk": { "type": "boolean", "default": true, "description": "v2.x: false disables Shift+right-click bulk opening for this box." },
+    "keys": { "type": "array", "items": { "type": "string" }, "description": "v2.x: additional accepted key item ids (any-of together with 'key'). Max 8." },
+    "wear": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number", "minimum": 0, "maximum": 1 }, "description": "v2.x: [min, max] wear fraction for damageable items (default [0,1])." },
+    "bonus": { "type": "object", "properties": { "chance": { "type": "number", "minimum": 0, "maximum": 1 }, "mode": { "type": "string", "enum": ["double", "box"] } }, "description": "v2.x: chance-gated extra grant on single opens — duplicate the winner or an extra box of the same id." },
+    "announce_above": { "type": "string", "description": "v2.x: tier id or 1-based level; opens at/above it are broadcast server-wide." },
+    "available_from": { "type": "string", "description": "v2.x: ISO-8601 date-time; opens before it are rejected." },
+    "available_until": { "type": "string", "description": "v2.x: ISO-8601 date-time; opens after it are rejected." },
+    "open_cost": { "type": "integer", "minimum": 0, "default": 0, "description": "v2.x: Armory Points charged per open (creative exempt)." },
+    "negotiation": {
+      "type": "object",
+      "properties": {
+        "rounds": { "type": "integer", "minimum": 1, "maximum": 5, "description": "v2.x: terminal negotiation rounds (1..5, default 5)." },
+        "timeout_minutes": { "type": "integer", "minimum": 1, "description": "v2.x: negotiation countdown in minutes (default 180)." },
+        "price_bias": { "type": "number", "minimum": -0.9, "maximum": 9.0, "description": "v2.x: terminal offer price multiplier offset (0 = table price; -0.5 = half price; 1 = double)." }
+      },
+      "additionalProperties": false,
+      "description": "v2.x: terminal negotiation tuning; absent = built-in defaults. Server-side only."
+    },
+    "upgrade": {
+      "type": "object",
+      "properties": {
+        "target": { "type": "string", "description": "v2.x: box id this box upgrades into (must be a loaded definition at command time)." },
+        "consume": { "type": "integer", "minimum": 1, "default": 1, "description": "v2.x: copies of this box consumed per upgrade." }
+      },
+      "required": ["target", "consume"],
+      "additionalProperties": false,
+      "description": "v2.x: enables /csbox upgrade with the held box (all players, no OP)."
+    },
+    "grades": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/tier" },
+      "description": "v2.x: custom tier list, LOWEST tier first (position 1 = most common). Replaces random/grade1..5 entirely when present (those keys are then ignored and reported); absent = the default 5 legacy tiers. Each tier: id (unique, referenced by pity.grade), optional name (defaults to id) and color (#RRGGBB, defaults to white), optional weight (default 1, 0 = tier never rolls), items."
+    }
   },
   "$defs": {
     "grade": {
       "type": "array",
       "items": { "$ref": "#/$defs/item" },
       "description": "Items in this grade tier (grade1 lowest rarity .. grade5 highest)."
+    },
+    "tier": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique tier id; pity.grade references it and /csbox info prints it."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name shown in tooltips/JEI/the terminal; defaults to the id."
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Tier color #RRGGBB; defaults to white."
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "default": 1,
+          "description": "Relative drop weight vs the other tiers; 0 = tier never rolls (stays listed at 0%)."
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" },
+          "description": "Items in this tier. An empty tier falls back to lower tiers when rolled."
+        },
+        "stock": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "v2.x: per-tier terminal stock (custom grades only); -1/absent = unlimited. In-memory, resets on restart."
+        }
+      },
+      "required": ["id", "items"],
+      "additionalProperties": false
     },
     "item": {
       "type": "object",
