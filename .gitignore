@@ -161,10 +161,15 @@ __pycache__/
 
 # Local dependency probe artifacts (Modrinth API responses / downloaded jars)
 /local-repo/_probe/
-# Local-repo mirrors track pom/module metadata only (jars fall under the
-# global *.jar rule); checksums and zips are disposable artifacts
-/local-repo/**/*.sha1
-/local-repo/**/*.zip
+# local-repo is a fully local, fully regenerable artifact cache: jars fall
+# under the global *.jar rule, and committing the pom/module metadata POISONED
+# CI cold-cache resolution (Gradle resolves each module from the first repo
+# that has its metadata — a metadata-only local-repo pins every such module
+# and its artifact is then fetched ONLY there, where the jar does not exist;
+# see Build Matrix red runs 42053578735 / 42389546455, fixed 2026-11-08).
+# The download scripts (scripts/download-*.sh / bootstrap-dev.sh) write the
+# minimal poms they need at fetch time.
+/local-repo/
 
 # Local tool state (never commit)
 .reasonix/
