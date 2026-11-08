@@ -34,6 +34,10 @@ jobs:
             module: fabric_1_21_1
             java: 21
             run_tests: true
+            # Loom: plain `jar` emits the dev (mojmap) jar into build/devlibs;
+            # the distributable intermediary-remapped jar comes from remapJar
+            # (build/libs), matching RELEASE.md's `:fabric_1_21_1:build` gate.
+            assemble_task: remapJar
           - mc: forge-1.18.2
             version_key: forge-1.18.2
             module: forge_1_18_2
@@ -108,7 +112,7 @@ jobs:
         run: ./gradlew :${{ matrix.module }}:test -Pactive_versions=${{ matrix.version_key }} --console=plain
 
       - name: Assemble jar
-        run: ./gradlew :${{ matrix.module }}:jar -Pactive_versions=${{ matrix.version_key }} --console=plain
+        run: ./gradlew :${{ matrix.module }}:${{ matrix.assemble_task || 'jar' }} -Pactive_versions=${{ matrix.version_key }} --console=plain
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
