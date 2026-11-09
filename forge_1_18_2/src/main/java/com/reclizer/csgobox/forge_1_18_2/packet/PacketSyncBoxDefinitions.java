@@ -78,12 +78,22 @@ public class PacketSyncBoxDefinitions {
                 com.reclizer.csgobox.forge_1_18_2.CsgoBox.LOGGER.error(
                         "[csbox-sync] definition '{}' is {} bytes, above the {} byte per-box cap — NOT synced (trim its item list / NBT)",
                         definition.id(), size, MAX_DEFINITION_BYTES);
+                // Roll the scratch write pointer back: the oversized bytes must
+                // not stay in the buffer — a skipped definition left mid-stream
+                // would misalign every subsequent decode on the client, and the
+                // byte budget would silently exclude it.
+                scratch.writerIndex(start);
                 continue;
             }
             if (total + size > TOTAL_SYNC_BUDGET) {
                 com.reclizer.csgobox.forge_1_18_2.CsgoBox.LOGGER.error(
                         "[csbox-sync] box registry too large for one sync packet: sent {} of {} definitions ({} KiB budget) — trim or split the largest boxes",
                         sent, definitions.size(), TOTAL_SYNC_BUDGET / 1024);
+                // Roll the scratch write pointer back: the oversized bytes must
+                // not stay in the buffer — a skipped definition left mid-stream
+                // would misalign every subsequent decode on the client, and the
+                // byte budget would silently exclude it.
+                scratch.writerIndex(start);
                 break;
             }
             total += size;

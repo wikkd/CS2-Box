@@ -6,6 +6,7 @@ import com.reclizer.csgobox.v1_21_1.box.BoxDefinition;
 import com.reclizer.csgobox.v1_21_1.box.BoxRegistry;
 import com.reclizer.csgobox.v1_21_1.jei.BoxJeiSync;
 import com.reclizer.csgobox.v1_21_1.emi.BoxEmiReload;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -49,6 +50,11 @@ public record PacketSyncBoxDefinitions(List<BoxDefinition> definitions, int[] qu
      *  custom-payload limit (breaching it disconnects the client). */
     private static final int TOTAL_SYNC_BUDGET = 896 * 1024;
 
+    /** Decode-side count caps (mirrors the Forge legacy packets' 512/256
+     *  guards): a crafted count must never drive a huge preallocation on
+     *  the client before the payload itself is even validated. */
+    private static final int MAX_SYNC_DEFINITIONS = 512;
+
     private static void write(RegistryFriendlyByteBuf buf, PacketSyncBoxDefinitions packet) {
         int[] caps = packet.quoteCaps != null ? packet.quoteCaps : new int[0];
         // v2.0.2 capacity guard: a too-large registry would breach the
@@ -68,12 +74,22 @@ public record PacketSyncBoxDefinitions(List<BoxDefinition> definitions, int[] qu
                 CsgoBox.LOGGER.error(
                         "[csbox-sync] definition '{}' is {} bytes, above the {} byte per-box cap - NOT synced (trim its item list / components)",
                         definition.id(), size, MAX_DEFINITION_BYTES);
+                // Roll the scratch write pointer back: the oversized bytes must
+                // not stay in the buffer — a skipped definition left mid-stream
+                // would misalign every subsequent decode on the client, and the
+                // byte budget would silently exclude it.
+                scratch.writerIndex(start);
                 continue;
             }
             if (total + size > TOTAL_SYNC_BUDGET) {
                 CsgoBox.LOGGER.error(
                         "[csbox-sync] box registry too large for one sync packet: sent {} of {} definitions ({} KiB budget) - trim or split the largest boxes",
                         sent, packet.definitions.size(), TOTAL_SYNC_BUDGET / 1024);
+                // Roll the scratch write pointer back: the oversized bytes must
+                // not stay in the buffer — a skipped definition left mid-stream
+                // would misalign every subsequent decode on the client, and the
+                // byte budget would silently exclude it.
+                scratch.writerIndex(start);
                 break;
             }
             total += size;
@@ -90,11 +106,17 @@ public record PacketSyncBoxDefinitions(List<BoxDefinition> definitions, int[] qu
 
     private static PacketSyncBoxDefinitions read(RegistryFriendlyByteBuf buf) {
         int count = buf.readVarInt();
+        if (count < 0 || count > MAX_SYNC_DEFINITIONS) {
+            throw new DecoderException("Invalid synced box-definition count: " + count);
+        }
         List<BoxDefinition> definitions = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             definitions.add(BoxDefinition.STREAM_CODEC.decode(buf));
         }
         int capCount = buf.readVarInt();
+        if (capCount < 0 || capCount > 256) {
+            throw new DecoderException("Invalid synced quote-cap count: " + capCount);
+        }
         int[] caps = new int[capCount];
         for (int i = 0; i < capCount; i++) {
             caps[i] = buf.readVarInt();
