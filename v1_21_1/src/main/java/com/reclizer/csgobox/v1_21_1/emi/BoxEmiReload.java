@@ -26,8 +26,24 @@ public final class BoxEmiReload {
         BoxEmiReload.refresher = refresher;
     }
 
-    /** Must be called on the client thread after the box registry changed. */
+    /**
+     * Called on the client thread after the box registry changed. A content
+     * fingerprint skips the (expensive) EMI reload when a sync carried an
+     * unchanged registry — the packet fires on every player join, and EMI's
+     * only reload path is a full resource reload. The first sync and any
+     * real content change always reload.
+     */
+    /** Content fingerprint at the last reload trigger (0 hash = never fired). */
+    private static int lastFingerprint;
+    private static boolean fingerprintValid;
+
     public static void onBoxRegistryChanged() {
+        int fingerprint = com.reclizer.csgobox.v1_21_1.box.BoxRegistry.getAll().hashCode();
+        if (fingerprintValid && fingerprint == lastFingerprint) {
+            return;
+        }
+        lastFingerprint = fingerprint;
+        fingerprintValid = true;
         Runnable runnable = refresher;
         if (runnable != null) {
             runnable.run();
