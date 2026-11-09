@@ -20,7 +20,7 @@ public final class EditorCommand {
     private EditorCommand() {
     }
 
-    /** Web box editor entry. Keep in sync across the six platform modules. */
+    /** Web box editor entry. Keep in sync across the eight platform modules. */
     public static final String EDITOR_URL = "https://wikkd.github.io/CS2-Box/";
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {

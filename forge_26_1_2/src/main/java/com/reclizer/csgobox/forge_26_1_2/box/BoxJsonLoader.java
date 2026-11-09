@@ -13,7 +13,6 @@ import com.reclizer.csgobox.box.PriceRange;
 import com.reclizer.csgobox.box.PriceTable;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.box.LegacyPriceMigration;
-import com.reclizer.csgobox.box.LegacyPriceMigration;
 import com.reclizer.csgobox.logic.PityPolicy;
 import com.reclizer.csgobox.forge_26_1_2.CsgoBox;
 import net.minecraft.resources.Identifier;

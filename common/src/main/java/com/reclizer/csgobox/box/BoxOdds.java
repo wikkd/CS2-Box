@@ -129,7 +129,7 @@ public final class BoxOdds {
     /**
      * Formats a [0, 1] chance as a percent string with one decimal place,
      * e.g. {@code 0.7961 → "79.6%"}. Locale-independent (uses {@code Locale.ROOT})
-     * so the six platform tooltips render identically everywhere.
+     * so the eight platform tooltips render identically everywhere.
      */
     public static String percent(double chance) {
         return String.format(java.util.Locale.ROOT, "%.1f%%", chance * 100.0);

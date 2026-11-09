@@ -18,7 +18,7 @@ import java.util.stream.Stream;
  * how many referenced ids lack a price-table entry.
  *
  * <p>Pure Java + Gson — no Minecraft imports — so the identical source serves
- * all six platform commands (CONSTRAINT-001). Parsing is tolerant: unreadable
+ * all eight platform commands (CONSTRAINT-001). Parsing is tolerant: unreadable
  * or broken files are skipped rather than failing the whole summary, because
  * this only feeds an informational chat line (the loaders do the strict
  * validation elsewhere).</p>

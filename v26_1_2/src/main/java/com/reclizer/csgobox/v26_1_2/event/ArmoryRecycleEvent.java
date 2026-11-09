@@ -70,6 +70,6 @@ public class ArmoryRecycleEvent extends Event implements ICancellableEvent {
     }
 
     // setCanceled(boolean) / isCanceled() come from ICancellableEvent's
-    // default methods (v2.0.2 API unification: all six platforms expose the
+    // default methods (v2.0.2 API unification: all eight platforms expose the
     // same cancel surface without per-platform manual state).
 }

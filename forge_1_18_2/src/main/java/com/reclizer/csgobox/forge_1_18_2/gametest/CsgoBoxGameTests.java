@@ -29,7 +29,7 @@ import java.nio.file.Path;
 
 /**
  * Headless server-side GameTest suite (run via
- * {@code ./gradlew :forge_1_18_2:gameTestServer -Pactive_versions=forge-1.20.1}
+ * {@code ./gradlew :forge_1_18_2:gameTestServer -Pactive_versions=forge-1.18.2}
  * and the "GameTest Integration" CI job). Exercises the server-authoritative
  * open pipeline ({@link BoxOpenExecutor#execute}) end to end against fixture
  * box configs written to {@code config/csbox/} at test time — the same

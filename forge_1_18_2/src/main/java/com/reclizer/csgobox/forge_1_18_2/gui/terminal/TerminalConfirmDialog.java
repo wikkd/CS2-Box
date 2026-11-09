@@ -7,7 +7,6 @@ import com.reclizer.csgobox.forge_1_18_2.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_18_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
