@@ -244,10 +244,21 @@ public final class OpenService {
                 return;
             }
 
-            // v2.x gates: availability window, then open cost (server-authoritative).
+            // v2.x gates: availability window, then keys, then open cost. Every
+            // consumption here is refund-free, so keys (which can fail on a
+            // hotbar swap mid-request) must not be charged after points — an
+            // open that loses its key race would otherwise eat the points too.
             if (!def.isAvailableNow(System.currentTimeMillis())) {
                 ((ServerPlayer) player).sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
                 sendRejected(context, message.requestId());
+                return;
+            }
+            // Consume keys only after the whole roll is validated — a broken
+            // definition must never eat a key.
+            if (!tryConsumeKeys(player, box, 1)) {
+                if (player instanceof ServerPlayer sp) {
+                    sendRejected(context, message.requestId());
+                }
                 return;
             }
             if (def.openCost() > 0 && player.getAbilities().instabuild == false) {
@@ -257,14 +268,6 @@ public final class OpenService {
                     return;
                 }
                 TerminalBuyService.consumeArmoryPoints((ServerPlayer) player, def.openCost());
-            }
-            // Consume keys only after the whole roll is validated — a broken
-            // definition must never eat a key.
-            if (!tryConsumeKeys(player, box, 1)) {
-                if (player instanceof ServerPlayer sp) {
-                    sendRejected(context, message.requestId());
-                }
-                return;
             }
 
             float wear = 0F;
@@ -836,7 +839,7 @@ public final class OpenService {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeBoxes failed for player={} want={}; aborting", sp.getName().getString(), actualK);
             return;
         }
-        if (!tryConsumeKeys(sp, templateBox, actualK)) {
+        if (!tryConsumeKeysExact(sp, ItemCsgoBox.getAcceptedKeys(templateBox), actualK)) {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeKeys failed for player={} want={}; refunding boxes", sp.getName().getString(), actualK);
             refundBoxes(sp, snapshot.boxId(), templateBox, actualK);
             return;
@@ -976,7 +979,12 @@ public final class OpenService {
 
     /** Add boxes back to a player if consumption partially failed. */
     private static void refundBoxes(ServerPlayer sp, Identifier boxId, ItemStack templateBox, int count) {
-        ItemStack refund = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+        // Refund the template stack itself (not a freshly built generic box):
+        // the consumed stacks may carry stack-level components (renames,
+        // model overrides) that a box_id-stamped generic item would drop.
+        ItemStack refund = templateBox.isEmpty()
+                ? new ItemStack(ModItems.ITEM_CSGOBOX.get())
+                : templateBox.copy();
         ItemCsgoBox.setBoxId(boxId, refund);
         for (int i = 0; i < count; i++) {
             ItemStack one = refund.copy();
@@ -1074,6 +1082,70 @@ public final class OpenService {
     }
 
     /** Shrinks matching stacks until the count is satisfied or the slice exhausted; returns what's left. */
+    /**
+     * Count-first, all-or-nothing key consumption across the box's full
+     * accepted-keys list (mirrors {@code countAvailability}'s union count).
+     * The any-of/single-id overloads consumed as they scanned, so a partial
+     * match (e.g. 1 primary + 3 extra keys against a 4-box batch) destroyed
+     * the keys it found and THEN failed — the bulk finalizer refunded boxes,
+     * but those keys were gone for good. This variant counts availability
+     * across ALL accepted ids first and consumes nothing unless the total
+     * covers {@code count}; both passes run back-to-back on the server
+     * thread, so nothing can interleave between them.
+     */
+    private static boolean tryConsumeKeysExact(Player entity, java.util.List<String> acceptedKeys, int count) {
+        if (acceptedKeys == null || acceptedKeys.isEmpty() || count <= 0
+                || entity.getAbilities().instabuild) {
+            return true;
+        }
+        java.util.List<Identifier> ids = new java.util.ArrayList<>(acceptedKeys.size());
+        int total = 0;
+        for (String acceptedKey : acceptedKeys) {
+            Identifier id = Identifier.parse(acceptedKey);
+            if (id.equals(Identifier.parse("minecraft:air"))) {
+                return true;
+            }
+            ids.add(id);
+            total += countKeys(entity, id);
+        }
+        if (total < count) {
+            return false;
+        }
+        int remaining = count;
+        for (Identifier id : ids) {
+            if (remaining <= 0) {
+                break;
+            }
+            remaining = consumeFromList(entity.getInventory().getNonEquipmentItems(), id, null, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.HEAD, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.CHEST, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.LEGS, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.FEET, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.OFFHAND, id, remaining);
+        }
+        return remaining == 0;
+    }
+
+    /** Availability count of one key id across main inventory + equipment slots (box stacks excluded). */
+    private static int countKeys(Player entity, Identifier keyId) {
+        int n = 0;
+        for (ItemStack stack : entity.getInventory().getNonEquipmentItems()) {
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+                EquipmentSlot.LEGS, EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
+            ItemStack stack = entity.getItemBySlot(slot);
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        return n;
+    }
+
     private static int consumeFromList(java.util.List<ItemStack> stacks,
                                        Identifier keyId,
                                        ItemStack boxTemplate,

@@ -134,7 +134,20 @@ public class PacketCsgoProgress {
     }
 
     public static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
-        ResourceLocation keyId = ItemCsgoBox.getKey(box);
+        java.util.List<String> acceptedKeys = ItemCsgoBox.getAcceptedKeys(box);
+        if (acceptedKeys.isEmpty()) {
+            return true;
+        }
+        for (String acceptedKey : acceptedKeys) {
+            if (tryConsumeKeys(entity, new ResourceLocation(acceptedKey), count)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Consume up to {@code count} keys of one id; true only when fully consumed (or no key required). */
+    public static boolean tryConsumeKeys(Player entity, ResourceLocation keyId, int count) {
         if (keyId == null || keyId.equals(new ResourceLocation("minecraft", "air"))) {
             return true;
         }
@@ -169,6 +182,70 @@ public class PacketCsgoProgress {
         if (remaining > 0) remaining = consumeBoxFromSlot(entity, EquipmentSlot.FEET, box, remaining);
         if (remaining > 0) remaining = consumeBoxFromSlot(entity, EquipmentSlot.OFFHAND, box, remaining);
         return remaining == 0;
+    }
+
+    /**
+     * Count-first, all-or-nothing key consumption across the box's full
+     * accepted-keys list (mirrors {@code BoxOpenExecutor.countAvailability}'s
+     * union count). The any-of/single-id overloads consumed as they scanned,
+     * so a partial match (e.g. 1 primary + 3 extra keys against a 4-box batch)
+     * destroyed the keys it found and THEN failed — the bulk finalizer
+     * refunded boxes, but those keys were gone for good. This variant counts
+     * availability across ALL accepted ids first and consumes nothing unless
+     * the total covers {@code count}; both passes run back-to-back on the
+     * server thread, so nothing can interleave between them.
+     */
+    public static boolean tryConsumeKeysExact(Player entity, java.util.List<String> acceptedKeys, int count) {
+        if (acceptedKeys == null || acceptedKeys.isEmpty() || count <= 0
+                || entity.getAbilities().instabuild) {
+            return true;
+        }
+        java.util.List<ResourceLocation> ids = new java.util.ArrayList<>(acceptedKeys.size());
+        int total = 0;
+        for (String acceptedKey : acceptedKeys) {
+            ResourceLocation id = new ResourceLocation(acceptedKey);
+            if (id.equals(new ResourceLocation("minecraft", "air"))) {
+                return true;
+            }
+            ids.add(id);
+            total += countKeys(entity, id);
+        }
+        if (total < count) {
+            return false;
+        }
+        int remaining = count;
+        for (ResourceLocation id : ids) {
+            if (remaining <= 0) {
+                break;
+            }
+            remaining = consumeFromList(entity.getInventory().items, id, null, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.HEAD, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.CHEST, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.LEGS, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.FEET, id, remaining);
+            if (remaining > 0) remaining = consumeKeyFromSlot(entity, EquipmentSlot.OFFHAND, id, remaining);
+        }
+        return remaining == 0;
+    }
+
+    /** Availability count of one key id across main inventory + equipment slots (box stacks excluded). */
+    private static int countKeys(Player entity, ResourceLocation keyId) {
+        int n = 0;
+        for (ItemStack stack : entity.getInventory().items) {
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+                EquipmentSlot.LEGS, EquipmentSlot.FEET, EquipmentSlot.OFFHAND}) {
+            ItemStack stack = entity.getItemBySlot(slot);
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        return n;
     }
 
     private static int consumeFromList(java.util.List<ItemStack> stacks,

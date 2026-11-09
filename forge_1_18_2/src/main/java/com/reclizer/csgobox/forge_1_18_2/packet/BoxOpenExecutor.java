@@ -255,10 +255,16 @@ public final class BoxOpenExecutor {
 
         // Consume keys (from anywhere: items, armor, offhand) only after the
         // whole roll is validated — a broken definition must never eat a key.
-        // v2.x gates: availability window, then open cost (server-authoritative).
+        // v2.x gates: availability window, then keys, then open cost. Every
+        // consumption here is refund-free, so keys (which can fail on a
+        // hotbar swap mid-request) must not be charged after points — an
+        // open that loses its key race would otherwise eat the points too.
         BoxDefinition gateDef = BoxRegistry.get(boxId);
         if (gateDef != null && !gateDef.isAvailableNow(System.currentTimeMillis())) {
             player.sendMessage(new TranslatableComponent("messages.csgobox.open.window"), Util.NIL_UUID);
+            return null;
+        }
+        if (consumeKey && !PacketCsgoProgress.tryConsumeKeys(player, box, 1)) {
             return null;
         }
         if (gateDef != null && gateDef.openCost() > 0 && !player.getAbilities().instabuild) {
@@ -267,9 +273,6 @@ public final class BoxOpenExecutor {
                 return null;
             }
             PacketTerminalBuy.consumeArmoryPoints(player, gateDef.openCost());
-        }
-        if (consumeKey && !PacketCsgoProgress.tryConsumeKeys(player, box, 1)) {
-            return null;
         }
 
         float wear = 0F;
@@ -500,7 +503,9 @@ public final class BoxOpenExecutor {
             return;
         }
 
-        ResourceLocation keyId = ItemCsgoBox.getKey(templateBox);
+        // Resolve the accepted-keys list ONCE from templateBox to avoid race
+        // conditions if the player's hand changes mid-finalize.
+        java.util.List<String> acceptedKeys = ItemCsgoBox.getAcceptedKeys(templateBox);
         Availability avail = countAvailability(sp, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
         int recheckBoxes = avail.boxes;
         int recheckKeys = avail.keys;
@@ -601,7 +606,7 @@ public final class BoxOpenExecutor {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeBoxes failed for player={} want={}; aborting", sp.getName().getString(), actualK);
             return;
         }
-        if (!PacketCsgoProgress.tryConsumeKeys(sp, templateBox, actualK)) {
+        if (!PacketCsgoProgress.tryConsumeKeysExact(sp, acceptedKeys, actualK)) {
             CsgoBox.LOGGER.error("[csgo-bulk] tryConsumeKeys failed for player={} want={}; refunding boxes", sp.getName().getString(), actualK);
             refundBoxes(sp, snapshot.boxId(), templateBox, actualK);
             return;
@@ -726,7 +731,12 @@ public final class BoxOpenExecutor {
     }
 
     private static void refundBoxes(ServerPlayer sp, ResourceLocation boxId, ItemStack templateBox, int count) {
-        ItemStack refund = new ItemStack(ModItems.ITEM_CSGOBOX.get());
+        // Refund the template stack itself (not a freshly built generic box):
+        // the consumed stacks may carry stack-level components (renames,
+        // model overrides) that a box_id-stamped generic item would drop.
+        ItemStack refund = templateBox.isEmpty()
+                ? new ItemStack(ModItems.ITEM_CSGOBOX.get())
+                : templateBox.copy();
         ItemCsgoBox.setBoxId(boxId, refund);
         for (int i = 0; i < count; i++) {
             ItemStack one = refund.copy();

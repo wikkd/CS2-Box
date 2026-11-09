@@ -189,6 +189,71 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
         return remaining == 0;
     }
 
+    /**
+     * Count-first, all-or-nothing key consumption across the box's full
+     * accepted-keys list (mirrors {@code BoxOpenExecutor.countAvailability}'s
+     * union count). The any-of/single-id overloads consumed as they scanned,
+     * so a partial match (e.g. 1 primary + 3 extra keys against a 4-box batch)
+     * destroyed the keys it found and THEN failed — the bulk finalizer
+     * refunded boxes, but those keys were gone for good. This variant counts
+     * availability across ALL accepted ids first and consumes nothing unless
+     * the total covers {@code count}; both passes run back-to-back on the
+     * server thread, so nothing can interleave between them.
+     */
+    static boolean tryConsumeKeysExact(Player entity, java.util.List<String> acceptedKeys, int count) {
+        if (acceptedKeys == null || acceptedKeys.isEmpty() || count <= 0
+                || entity.getAbilities().instabuild) {
+            return true;
+        }
+        java.util.List<ResourceLocation> ids = new java.util.ArrayList<>(acceptedKeys.size());
+        int total = 0;
+        for (String acceptedKey : acceptedKeys) {
+            ResourceLocation id = ResourceLocation.parse(acceptedKey);
+            if (id.toString().equals("minecraft:air")) {
+                return true;
+            }
+            ids.add(id);
+            total += countKeys(entity, id);
+        }
+        if (total < count) {
+            return false;
+        }
+        int remaining = count;
+        for (ResourceLocation id : ids) {
+            if (remaining <= 0) {
+                break;
+            }
+            remaining = consumeFromList(entity.getInventory().items, id, null, remaining);
+            if (remaining > 0) remaining = consumeFromList(entity.getInventory().armor, id, null, remaining);
+            if (remaining > 0) remaining = consumeFromList(entity.getInventory().offhand, id, null, remaining);
+        }
+        return remaining == 0;
+    }
+
+    /** Availability count of one key id across items + armor + offhand (box stacks excluded). */
+    private static int countKeys(Player entity, ResourceLocation keyId) {
+        int n = 0;
+        for (ItemStack stack : entity.getInventory().items) {
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        for (ItemStack stack : entity.getInventory().armor) {
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        for (ItemStack stack : entity.getInventory().offhand) {
+            if (!stack.isEmpty() && !(stack.getItem() instanceof ItemCsgoBox)
+                    && keyId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+                n += stack.getCount();
+            }
+        }
+        return n;
+    }
+
     /** Shrinks matching stacks until the count is satisfied or the slice exhausted;
      *  returns what's left. Keys match by id, boxes by item + components. */
     private static int consumeFromList(java.util.List<ItemStack> stacks,
