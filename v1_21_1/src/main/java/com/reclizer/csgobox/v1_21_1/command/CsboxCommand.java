@@ -42,7 +42,6 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -64,32 +63,9 @@ public final class CsboxCommand {
     // --- Constants & suggestions ---
 
     private static final int MAX_NBT_CHARS = 20000;
-    private static final int TACZ_JSON_CHARS = 20000;
-    private static final int TACZ_PAGE_SIZE = 24;
 
     private static final SuggestionProvider<CommandSourceStack> BOX_SUGGESTIONS = (context, builder) -> {
         SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
-        return builder.buildFuture();
-    };
-
-    private static final SuggestionProvider<CommandSourceStack> TACZ_SLOT_SUGGESTIONS = (context, builder) -> {
-        for (String slot : TaczList.SLOT_NAMES) {
-            builder.suggest(slot);
-        }
-        return builder.buildFuture();
-    };
-
-    private static final SuggestionProvider<CommandSourceStack> TACZ_AMMO_SUGGESTIONS = (context, builder) -> {
-        for (String id : TaczList.collectAmmoIds()) {
-            builder.suggest(id);
-        }
-        return builder.buildFuture();
-    };
-
-    private static final SuggestionProvider<CommandSourceStack> TACZ_GUN_SUGGESTIONS = (context, builder) -> {
-        for (String id : TaczList.collectGunIds()) {
-            builder.suggest(id);
-        }
         return builder.buildFuture();
     };
 
@@ -132,10 +108,6 @@ public final class CsboxCommand {
                 .then(Commands.literal("nbt")
                         .then(Commands.literal("hand")
                                 .executes(CsboxCommand::showHandNbt)));
-        // TACZ registry browser: only exists when TACZ is installed.
-        if (ModList.get() != null && ModList.get().isLoaded("tacz")) {
-            csbox = csbox.then(taczSubtree());
-        }
         dispatcher.register(csbox);
     }
 
@@ -169,11 +141,11 @@ public final class CsboxCommand {
         }
         boolean creative = player.getAbilities().instabuild;
         if (!creative) {
-            // Count consumable copies EXCLUDING the held stack.
+            // Count consumable copies of the HELD box's own type; the held stack itself does not count.
             int available = 0;
             for (var stack : player.getInventory().items) {
-                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
-                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                if (stack != null && !stack.isEmpty() && stack != held
+                        && (stack.getItem() instanceof ItemCsgoBox && def.id().equals(ItemCsgoBox.getBoxId(stack)))) {
                     available += stack.getCount();
                 }
             }
@@ -185,8 +157,8 @@ public final class CsboxCommand {
             int remaining = consume;
             for (var stack : player.getInventory().items) {
                 if (remaining <= 0) break;
-                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
-                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                if (stack != null && !stack.isEmpty() && stack != held
+                        && (stack.getItem() instanceof ItemCsgoBox && def.id().equals(ItemCsgoBox.getBoxId(stack)))) {
                     int take = Math.min(remaining, stack.getCount());
                     stack.shrink(take);
                     remaining -= take;
@@ -254,10 +226,11 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.title"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.info"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.validate"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.upgrade"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.nbt"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.tacz"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.editor")
                 .append(editorLink()), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.tutorial")
@@ -528,216 +501,6 @@ public final class CsboxCommand {
         com.reclizer.csgobox.v1_21_1.CsgoBox.broadcastBoxDefinitions();
         source.sendSuccess(() -> Component.translatable("commands.csgobox.reload.success", BoxRegistry.size()), false);
         return BoxRegistry.size();
-    }
-
-    // --- TACZ registry browser (/csbox tacz list) ---
-
-    private record TaczQuery(TaczList.Kind kind, String ns, String filterKey, String filterValue,
-                             int page, boolean json) {
-    }
-
-    private static LiteralArgumentBuilder<CommandSourceStack> taczSubtree() {
-        return Commands.literal("tacz")
-                .requires(CsboxCommand::isGameMaster)
-                .then(Commands.literal("list")
-                        .executes(CsboxCommand::taczOverview)
-                        .then(taczCategoryNode(TaczList.Kind.GUNS))
-                        .then(taczCategoryNode(TaczList.Kind.AMMO))
-                        .then(taczCategoryNode(TaczList.Kind.ATTACHMENTS)));
-    }
-
-    private static LiteralArgumentBuilder<CommandSourceStack> taczCategoryNode(TaczList.Kind kind) {
-        String category = taczCategoryLiteral(kind);
-        LiteralArgumentBuilder<CommandSourceStack> flag = switch (kind) {
-            case GUNS -> Commands.literal("--ammo")
-                    .then(buildTaczFilterArg(Commands.argument("ammo", ResourceLocationArgument.id())
-                            .suggests(TACZ_AMMO_SUGGESTIONS), kind, "ammo", true));
-            case AMMO -> Commands.literal("--gun")
-                    .then(buildTaczFilterArg(Commands.argument("gun", ResourceLocationArgument.id())
-                            .suggests(TACZ_GUN_SUGGESTIONS), kind, "gun", true));
-            case ATTACHMENTS -> Commands.literal("--slot")
-                    .then(buildTaczFilterArg(Commands.argument("slot", StringArgumentType.word())
-                            .suggests(TACZ_SLOT_SUGGESTIONS), kind, "slot", false));
-        };
-        return Commands.literal(category)
-                .executes(ctx -> taczRun(ctx.getSource(),
-                        new TaczQuery(kind, null, null, null, 1, false)))
-                .then(Commands.literal("json")
-                        .executes(ctx -> taczRun(ctx.getSource(),
-                                new TaczQuery(kind, null, null, null, 1, true)))
-                        .then(Commands.argument("ns", StringArgumentType.word())
-                                .executes(ctx -> taczRun(ctx.getSource(),
-                                        new TaczQuery(kind, getWord(ctx, "ns"), null, null, 1, true)))))
-                .then(Commands.argument("ns", StringArgumentType.word())
-                        .executes(ctx -> taczRun(ctx.getSource(),
-                                new TaczQuery(kind, getWord(ctx, "ns"), null, null, 1, false))))
-                .then(Commands.literal("page")
-                        .then(Commands.argument("page", IntegerArgumentType.integer(1))
-                                .executes(ctx -> taczRun(ctx.getSource(),
-                                        new TaczQuery(kind, null, null, null,
-                                                IntegerArgumentType.getInteger(ctx, "page"), false)))))
-                .then(flag);
-    }
-
-    private static ArgumentBuilder<CommandSourceStack, ?> buildTaczFilterArg(
-            ArgumentBuilder<CommandSourceStack, ?> arg, TaczList.Kind kind, String key, boolean resource) {
-        return arg.executes(ctx -> taczRun(ctx.getSource(),
-                        new TaczQuery(kind, null, key, filterValue(ctx, key, resource), 1, false)))
-                .then(Commands.literal("json")
-                        .executes(ctx -> taczRun(ctx.getSource(),
-                                new TaczQuery(kind, null, key, filterValue(ctx, key, resource), 1, true)))
-                        .then(Commands.argument("ns", StringArgumentType.word())
-                                .executes(ctx -> taczRun(ctx.getSource(),
-                                        new TaczQuery(kind, getWord(ctx, "ns"), key,
-                                                filterValue(ctx, key, resource), 1, true)))))
-                .then(Commands.argument("ns", StringArgumentType.word())
-                        .executes(ctx -> taczRun(ctx.getSource(),
-                                new TaczQuery(kind, getWord(ctx, "ns"), key,
-                                        filterValue(ctx, key, resource), 1, false))))
-                .then(Commands.literal("page")
-                        .then(Commands.argument("page", IntegerArgumentType.integer(1))
-                                .executes(ctx -> taczRun(ctx.getSource(),
-                                        new TaczQuery(kind, null, key, filterValue(ctx, key, resource),
-                                                IntegerArgumentType.getInteger(ctx, "page"), false)))));
-    }
-
-    private static String filterValue(CommandContext<CommandSourceStack> ctx, String key, boolean resource) {
-        return resource
-                ? ResourceLocationArgument.getId(ctx, key).toString()
-                : StringArgumentType.getString(ctx, key);
-    }
-
-    private static String getWord(CommandContext<CommandSourceStack> ctx, String name) {
-        return StringArgumentType.getString(ctx, name);
-    }
-
-    private static String taczCategoryLiteral(TaczList.Kind kind) {
-        return kind.name().toLowerCase(Locale.ROOT);
-    }
-
-    private static int taczOverview(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack source = ctx.getSource();
-        if (!TaczList.isTaczLoaded()) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.not_loaded"), false);
-            return 0;
-        }
-        TaczList.TaczData data = TaczList.collect();
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.header"), false);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.stats",
-                String.valueOf(data.gunCount()), String.valueOf(data.ammoCount()),
-                String.valueOf(data.attachmentCount()), String.valueOf(data.packCount())), false);
-        taczPreview(source, TaczList.Kind.GUNS, data.guns(), 3);
-        taczPreview(source, TaczList.Kind.AMMO, data.ammo(), 3);
-        taczPreview(source, TaczList.Kind.ATTACHMENTS, data.attachments(), 3);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.usage"), false);
-        return 1;
-    }
-
-    private static void taczPreview(CommandSourceStack source, TaczList.Kind kind,
-                                    List<TaczList.Row> rows, int max) {
-        if (rows.isEmpty()) {
-            return;
-        }
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.preview_header",
-                taczKindLabel(kind), String.valueOf(rows.size())), false);
-        int shown = Math.min(rows.size(), max);
-        for (int i = 0; i < shown; i++) {
-            final TaczList.Row row = rows.get(i);
-            source.sendSuccess(() -> taczEntryLine(kind, row), false);
-        }
-    }
-
-    private static int taczRun(CommandSourceStack source, TaczQuery q) {
-        if (!TaczList.isTaczLoaded()) {
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.not_loaded"), false);
-            return 0;
-        }
-        TaczList.TaczData data = TaczList.collect();
-        List<TaczList.Row> rows = taczRows(data, q.kind());
-        rows = TaczList.filterNs(rows, q.ns());
-        if (q.filterKey() != null) {
-            String value = q.filterValue();
-            if (q.kind() == TaczList.Kind.ATTACHMENTS) {
-                String upper = value.trim().toUpperCase(Locale.ROOT);
-                if (!TaczList.SLOT_NAMES.contains(upper)) {
-                    source.sendSuccess(() -> Component.translatable(
-                            "commands.csgobox.tacz.list.filter.invalid_slot", upper), false);
-                    return 0;
-                }
-                rows = TaczList.filterField(rows, "slot", upper);
-            } else if (q.kind() == TaczList.Kind.GUNS) {
-                rows = TaczList.filterField(rows, "ammo", value);
-            } else {
-                rows = TaczList.filterContains(rows, "guns", value);
-            }
-        }
-        if (rows.isEmpty()) {
-            final TaczList.Kind kindFinal = q.kind();
-            source.sendSuccess(() -> Component.translatable(
-                    "commands.csgobox.tacz.list.empty", taczKindLabel(kindFinal)), false);
-            return 0;
-        }
-        if (q.json()) {
-            String json = TaczList.toJson(rows);
-            if (json.length() > TACZ_JSON_CHARS) {
-                String truncated = json.substring(0, TACZ_JSON_CHARS);
-                source.sendSuccess(() -> copyable(Component.literal(truncated), json), false);
-                source.sendSuccess(() -> copyable(Component.translatable(
-                        "commands.csgobox.tacz.list.json.truncated", String.valueOf(json.length())), json), false);
-            } else {
-                source.sendSuccess(() -> copyable(Component.literal(json), json), false);
-            }
-            source.sendSuccess(() -> copyable(Component.translatable(
-                                    "commands.csgobox.tacz.list.json.copy")
-                            .withStyle(net.minecraft.ChatFormatting.GREEN, net.minecraft.ChatFormatting.UNDERLINE),
-                    json), false);
-            return rows.size();
-        }
-        int totalPages = TaczList.pageCount(rows.size(), TACZ_PAGE_SIZE);
-        int page = TaczList.clampPage(rows.size(), q.page(), TACZ_PAGE_SIZE);
-        List<TaczList.Row> pageRows = TaczList.pageRows(rows, page, TACZ_PAGE_SIZE);
-        final TaczList.Kind kindFinal = q.kind();
-        final int matchCount = rows.size();
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.category.header",
-                taczKindLabel(kindFinal), String.valueOf(matchCount),
-                String.valueOf(page), String.valueOf(totalPages)), false);
-        for (TaczList.Row row : pageRows) {
-            final TaczList.Row rowFinal = row;
-            source.sendSuccess(() -> taczEntryLine(kindFinal, rowFinal), false);
-        }
-        if (totalPages > 1) {
-            final int next = page >= totalPages ? 1 : page + 1;
-            source.sendSuccess(() -> Component.translatable("commands.csgobox.tacz.list.next",
-                    taczCategoryLiteral(kindFinal), String.valueOf(next)), false);
-        }
-        return rows.size();
-    }
-
-    private static List<TaczList.Row> taczRows(TaczList.TaczData data, TaczList.Kind kind) {
-        return switch (kind) {
-            case GUNS -> data.guns();
-            case AMMO -> data.ammo();
-            case ATTACHMENTS -> data.attachments();
-        };
-    }
-
-    private static Component taczKindLabel(TaczList.Kind kind) {
-        return Component.translatable("commands.csgobox.tacz.list.category."
-                + taczCategoryLiteral(kind));
-    }
-
-    private static Component taczEntryLine(TaczList.Kind kind, TaczList.Row row) {
-        return switch (kind) {
-            case GUNS -> Component.translatable("commands.csgobox.tacz.list.entry.gun",
-                    row.id(), row.fields().getOrDefault("type", ""),
-                    row.fields().getOrDefault("ammo", ""),
-                    row.fields().getOrDefault("magazine", "0"));
-            case AMMO -> Component.translatable("commands.csgobox.tacz.list.entry.ammo",
-                    row.id(), row.fields().getOrDefault("stack", "0"),
-                    row.fields().getOrDefault("guns", ""));
-            case ATTACHMENTS -> Component.translatable("commands.csgobox.tacz.list.entry.attachment",
-                    row.id(), row.fields().getOrDefault("slot", ""));
-        };
     }
 
     // --- Item tool ---
