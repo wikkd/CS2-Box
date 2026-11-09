@@ -31,7 +31,8 @@ public record PacketSyncBoxItems(
         int pityRemaining
 ) implements CustomPacketPayload {
 
-    private static final int MAX_ITEMS = 256;
+    /** Preview cap (shared with the PacketRequestBoxItems truncation guard). */
+    public static final int MAX_ITEMS = 256;
     private static final int MAX_WEIGHTS = 5;
     private static final int MAX_PENDING_RESPONSES = 8;
 
