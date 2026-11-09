@@ -41,7 +41,7 @@ public record PacketSyncBoxDefinitions(List<BoxDefinition> definitions, int[] qu
     /** Decode-side count caps (mirrors the Forge legacy packets' 512/256
      *  guards): a crafted count must never drive a huge preallocation on
      *  the client before the payload itself is even validated. */
-    private static final int MAX_SYNC_DEFINITIONS = 512;
+    private static final int MAX_SYNC_DEFINITIONS = 16384;
 
     private static void write(RegistryFriendlyByteBuf buf, PacketSyncBoxDefinitions packet) {
         int[] caps = packet.quoteCaps != null ? packet.quoteCaps : new int[0];

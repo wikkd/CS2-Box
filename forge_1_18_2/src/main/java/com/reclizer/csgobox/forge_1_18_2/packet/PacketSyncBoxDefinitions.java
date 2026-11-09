@@ -22,7 +22,7 @@ import java.util.function.Supplier;
  */
 public class PacketSyncBoxDefinitions {
 
-    private static final int MAX_BOXES = 512;
+    private static final int MAX_BOXES = 16384;
 
     private final List<BoxDefinition> definitions;
     private final int[] quoteCaps;
