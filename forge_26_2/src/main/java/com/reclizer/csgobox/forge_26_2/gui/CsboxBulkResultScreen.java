@@ -459,7 +459,8 @@ public class CsboxBulkResultScreen extends Screen {
             int btnH = this.height * 5 / 100;
 
             if (showAllItems) {
-                int btnY = this.height * 92 / 100;
+                        // Must match renderAllItemsGrid's collect button row (84).
+                int btnY = this.height * 84 / 100;
                 int btnX = (this.width - btnW) / 2;
                 if (isInside(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
                     this.onClose();

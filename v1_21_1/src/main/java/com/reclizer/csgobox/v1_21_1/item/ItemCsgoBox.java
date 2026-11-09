@@ -309,7 +309,7 @@ public class ItemCsgoBox extends Item {
         tooltipComponents.add(Component.translatable("tooltips.csgobox.item.cs_box").withStyle(ChatFormatting.GRAY));
         getDefinition(stack).ifPresent(def -> {
             TooltipKey key = new TooltipKey(def, tooltipFlag.isAdvanced());
-            if (key != sTooltipKey) {
+            if (!key.equals(sTooltipKey)) {
                 sTooltipKey = key;
                 sTooltipLines = buildTooltipLines(def, key.advanced());
             }
