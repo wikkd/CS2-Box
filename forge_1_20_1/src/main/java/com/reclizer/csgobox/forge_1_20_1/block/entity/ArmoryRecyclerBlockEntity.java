@@ -337,7 +337,9 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
             }
             if (!simulate) {
                 if (cur.isEmpty()) {
-                    be.setItem(INPUT_SLOT, stack.copy());
+                    ItemStack inserted = stack.copy();
+                    inserted.setCount(move);
+                    be.setItem(INPUT_SLOT, inserted);
                 } else {
                     cur.grow(move);
                 }
