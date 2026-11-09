@@ -266,12 +266,19 @@ public final class OpenService {
             return null;
         }
 
-        // v2.x gates: availability window, then keys, then open cost. Every
-        // consumption here is refund-free, so keys (which can fail on a
-        // hotbar swap mid-request) must not be charged after points — an
-        // open that loses its key race would otherwise eat the points too.
+        // v2.x gates: availability window, then an open_cost PRE-CHECK (no
+        // consume), then keys, then the point charge. Key consumption is
+        // refund-free, so an insufficient balance must refuse the open
+        // before any resource moves; points cannot change between the
+        // pre-check and the charge (same main-thread task).
         if (!def.isAvailableNow(System.currentTimeMillis())) {
             sp.sendSystemMessage(Component.translatable("messages.csgobox.open.window"));
+            return null;
+        }
+        int openCost = def.openCost() > 0 && !sp.getAbilities().instabuild
+                ? def.openCost() : 0;
+        if (openCost > 0 && TerminalBuyService.countArmoryPoints(sp) < openCost) {
+            sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", def.openCost()));
             return null;
         }
         // Consume keys only after the whole roll is validated — a broken
@@ -279,12 +286,8 @@ public final class OpenService {
         if (!tryConsumeKeys(sp, box, 1)) {
             return null;
         }
-        if (def.openCost() > 0 && !sp.getAbilities().instabuild) {
-            if (TerminalBuyService.countArmoryPoints(sp) < def.openCost()) {
-                sp.sendSystemMessage(Component.translatable("messages.csgobox.open.no_points", def.openCost()));
-                return null;
-            }
-            TerminalBuyService.consumeArmoryPoints(sp, def.openCost());
+        if (openCost > 0) {
+            TerminalBuyService.consumeArmoryPoints(sp, openCost);
         }
 
         float wear = 0F;
