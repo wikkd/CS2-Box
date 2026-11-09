@@ -141,11 +141,11 @@ public final class CsboxCommand {
         }
         boolean creative = player.getAbilities().instabuild;
         if (!creative) {
-            // Count consumable copies EXCLUDING the held stack.
+            // Count consumable copies of the HELD box's own type; the held stack itself does not count.
             int available = 0;
             for (var stack : player.getInventory().getNonEquipmentItems()) {
-                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
-                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                if (stack != null && !stack.isEmpty() && stack != held
+                        && (stack.getItem() instanceof ItemCsgoBox && def.id().equals(ItemCsgoBox.getBoxId(stack)))) {
                     available += stack.getCount();
                 }
             }
@@ -157,8 +157,8 @@ public final class CsboxCommand {
             int remaining = consume;
             for (var stack : player.getInventory().getNonEquipmentItems()) {
                 if (remaining <= 0) break;
-                if (stack != null && !stack.isEmpty() && !ItemStack.isSameItemSameComponents(stack, held)
-                        && (stack.getItem() instanceof ItemCsgoBox && targetId.equals(String.valueOf(ItemCsgoBox.getBoxId(stack))))) {
+                if (stack != null && !stack.isEmpty() && stack != held
+                        && (stack.getItem() instanceof ItemCsgoBox && def.id().equals(ItemCsgoBox.getBoxId(stack)))) {
                     int take = Math.min(remaining, stack.getCount());
                     stack.shrink(take);
                     remaining -= take;
@@ -188,8 +188,10 @@ public final class CsboxCommand {
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.title"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.info"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.reload"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.validate"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give_vanilla"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.give"), false);
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.upgrade"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.nbt"), false);
         source.sendSuccess(() -> Component.translatable("commands.csgobox.help.line.editor")
                 .append(editorLink()), false);
