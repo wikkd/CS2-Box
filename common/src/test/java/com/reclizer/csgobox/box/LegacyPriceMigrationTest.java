@@ -131,7 +131,8 @@ final class LegacyPriceMigrationTest {
                             {"tag": "#minecraft:swords", "price": 7},
                             {"loot_table": "minecraft:chests/simple_dungeon", "price": 9},
                             {"id": "minecraft:iron_ingot", "price": -3},
-                            {"id": "minecraft:gold_ingot", "price": 2.5}]}
+                            {"id": "minecraft:gold_ingot", "price": 2.5},
+                            {"id": "minecraft:emerald", "price": 3000000000}]}
                 """);
 
         LegacyPriceMigration.Result r = LegacyPriceMigration.migrateLegacyPrices(tmp);
@@ -146,8 +147,12 @@ final class LegacyPriceMigrationTest {
         assertTrue(items.get(2).getAsJsonObject().has("price"), "loot_table entry kept");
         assertTrue(items.get(3).getAsJsonObject().has("price"), "negative price kept");
         assertTrue(items.get(4).getAsJsonObject().has("price"), "fractional price kept");
+        // Above int range: a raw (int) cast would wrap 3e9 negative — left in
+        // place with its warning, never migrated into the table.
+        assertTrue(items.get(5).getAsJsonObject().has("price"), "over-int-max price kept");
         assertFalse(priceInTable(readTable(), "minecraft:iron_ingot") != null);
         assertFalse(priceInTable(readTable(), "minecraft:gold_ingot") != null);
+        assertFalse(priceInTable(readTable(), "minecraft:emerald") != null);
     }
 
     @Test

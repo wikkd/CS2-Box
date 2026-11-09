@@ -99,6 +99,28 @@ final class PriceTableTest {
     }
 
     @Test
+    @DisplayName("prices above Integer.MAX_VALUE are rejected, not wrapped negative")
+    void overIntMaxRejected() {
+        List<String> issues = new ArrayList<>();
+        PriceTable t = parse("""
+                {
+                  "minecraft:diamond": 3000000000,
+                  "minecraft:iron": [100, 3000000000],
+                  "minecraft:gold": 50
+                }
+                """, issues);
+        // Fixed price AND the range (reported once per range entry — the
+        // bounds loop aborts on the first bad bound) must be rejected: a raw
+        // (int) cast would wrap 3e9 into a negative price and poison the
+        // economy.
+        assertEquals(2, issues.size(), issues.toString());
+        assertEquals(1, t.size());
+        assertEquals(50, t.lookup("minecraft:gold"));
+        assertEquals(PriceTable.UNPRICED, t.lookup("minecraft:diamond"));
+        assertEquals(PriceTable.UNPRICED, t.lookup("minecraft:iron"));
+    }
+
+    @Test
     @DisplayName("null root is an error and yields the empty table")
     void nullRoot() {
         List<String> issues = new ArrayList<>();
