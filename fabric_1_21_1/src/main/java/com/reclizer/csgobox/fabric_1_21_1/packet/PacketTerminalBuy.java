@@ -29,7 +29,6 @@ import com.reclizer.csgobox.fabric_1_21_1.event.CsgoBus;
 import com.reclizer.csgobox.fabric_1_21_1.net.FabricPayloadContext;
 
 import java.util.concurrent.ThreadLocalRandom;
-import com.reclizer.csgobox.fabric_1_21_1.event.CsgoBus;
 
 /**
  * Client-to-server request to buy the current terminal offer after the
@@ -208,8 +207,11 @@ public record PacketTerminalBuy(
                     PacketTerminalBuyResult.RESULT_INSUFFICIENT, ItemStack.EMPTY, grade);
         }
         // v2.x tier stock: consume one unit of the bought item's tier.
+        // def can be null here (the terminal's definition was removed by a
+        // reload while the session stayed live) — a null def simply has no
+        // tier stock to consume; never dereference it for the lookup.
         String boughtTierId = null;
-        for (GradeGroup tierGroup : def.grades()) {
+        for (GradeGroup tierGroup : def != null ? def.grades() : java.util.List.<GradeGroup>of()) {
             for (ItemStack candidate : tierGroup.items()) {
                 if (ItemStack.isSameItemSameComponents(offerItem, candidate)) {
                     boughtTierId = tierGroup.id();
@@ -247,7 +249,7 @@ public record PacketTerminalBuy(
         TerminalSessionManager.removeByUid(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         TerminalSessionManager.clearOpenIf(sp.getStringUUID(), ItemCsgoBox.getTerminalUid(held));
         held.setCount(0);
-        CsgoBus.post(new TerminalBuyEvent(sp, grade, price, roundData.offer().wearVal(), toGive, message.offerRound()));
+        CsgoBus.post(new TerminalBuyEvent(sp, grade, price, roundData.offer().wearVal(), toGive.copy(), message.offerRound()));
         return new PacketTerminalBuyResult(message.requestId(),
                 PacketTerminalBuyResult.RESULT_SUCCESS, toGive, grade);
     }
