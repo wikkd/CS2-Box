@@ -116,7 +116,7 @@ public final class PriceTable {
                                          List<String> issues) {
         if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()) {
             double v = value.getAsDouble();
-            if (v < 0 || v != Math.floor(v)) {
+            if (v < 0 || v > (double) Integer.MAX_VALUE || v != Math.floor(v)) {
                 issues.add(where + " must be a non-negative integer or a "
                         + "[min, max] range (Armory Points), got " + v);
                 return null;
@@ -139,7 +139,7 @@ public final class PriceTable {
                     return null;
                 }
                 double v = b.getAsDouble();
-                if (v < 0 || v != Math.floor(v)) {
+                if (v < 0 || v > (double) Integer.MAX_VALUE || v != Math.floor(v)) {
                     issues.add(where + " range bounds must be non-negative "
                             + "integers, got " + v);
                     return null;

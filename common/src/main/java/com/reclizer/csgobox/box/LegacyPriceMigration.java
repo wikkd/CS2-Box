@@ -250,7 +250,7 @@ public final class LegacyPriceMigration {
             return null;
         }
         double v = price.getAsDouble();
-        if (v < 0 || v != Math.floor(v)) {
+        if (v < 0 || v > (double) Integer.MAX_VALUE || v != Math.floor(v)) {
             warnings.add(file + ": " + gradeKey + "[" + index + "].price=" + v
                     + " 非法（需非负整数），无法自动迁移（保留原位）");
             return null;
