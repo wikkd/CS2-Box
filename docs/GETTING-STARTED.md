@@ -50,7 +50,7 @@ active_versions=1.21.1  # 可选:1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-2
 ./gradlew build
 ```
 
-成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-2.0.3.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar`（Forge 平台为 `csgobox-forge-<mc>-2.0.3.jar`,1.20.1 / 1.18.2 发布产物为 `-srg.jar` 重映射版;Fabric 平台为 `csgobox-fabric-1.21.1-2.0.3.jar`,见 [DEVELOPMENT.md](./DEVELOPMENT.md)）。
+成功构建后,JAR 位于 `v1_21_1/build/libs/csgobox-1.21.1-2.0.4.jar` 或 `v26_1_2/build/libs/csgobox-26.1.2-2.0.4.jar`（Forge 平台为 `csgobox-forge-<mc>-2.0.4.jar`,1.20.1 / 1.18.2 发布产物为 `-srg.jar` 重映射版;Fabric 平台为 `csgobox-fabric-1.21.1-2.0.4.jar`,见 [DEVELOPMENT.md](./DEVELOPMENT.md)）。
 
 ## 首次运行
 

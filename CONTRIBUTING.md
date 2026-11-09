@@ -39,7 +39,7 @@ CS2-Box/
 │       ├── java/com/reclizer/csgobox/
 │       │   ├── box/                  # BoxDefaults / BoxGrades / BoxRegistryStore / BoxStripGenerator / schema 校验
 │       │   ├── logic/                # GradeMap / OddsCalculator / OpenBlockGuard
-│       │   ├── config/               # CsboxConfigDefaults(六平台配置默认值唯一来源)
+│       │   ├── config/               # CsboxConfigDefaults(八平台配置默认值唯一来源)
 │       │   ├── terminal/             # NegotiationModel / TerminalAnims / WearBands / WearPenalty(平台无关)
 │       │   └── utils/                # ColorTools / OverlayColor / GuiRegion / EntityChineseMap / Easing 等
 │       └── resources/                # 共享资源(纹理、音效、配方、advancement)

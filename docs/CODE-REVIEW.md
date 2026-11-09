@@ -54,7 +54,7 @@
 - 自动化：Gradle task `:common:checkCommonArchitecture`（`common/build.gradle` 定义，非 scripts/ 目录脚本）已挂载在 `compileJava`。若 CI 的 `common-test` 过了，该项基本可信，但 Review 时仍需**肉眼确认**有没有"为了编译通过把逻辑硬塞进平台、common 却留下隐式依赖"的取巧。
 
 ### 4.2 多平台镜像纪律 🔴/🟡
-六个平台**不是纯拷贝**，各有 API 适配：NeoForge 侧 `v26_2` 有 decoupled API 适配（`BuiltInRegistries.ITEM.get()` 返回 `Optional`、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent`、`setScreenAndShow`、PIP 渲染器等）；Forge 侧三平台与 NeoForge 分属不同 loader（`SimpleChannel` vs `CustomPayload`），`forge_1_20_1` 更有 Networking / Capability / 渲染三大重写区。
+八个平台**不是纯拷贝**，各有 API 适配：NeoForge 侧 `v26_2` 有 decoupled API 适配（`BuiltInRegistries.ITEM.get()` 返回 `Optional`、`spawnAtLocation(ServerLevel,...)`、`lookup()`、`MouseButtonEvent`、`setScreenAndShow`、PIP 渲染器等）；Forge 侧三平台与 NeoForge 分属不同 loader（`SimpleChannel` vs `CustomPayload`），`forge_1_20_1` 更有 Networking / Capability / 渲染三大重写区；`forge_1_18_2` 无 GuiGraphics（GUI 全 PoseStack 重写），`fabric_1_21_1` 走 Loom intermediary 重映射（`modCompileOnly` 需重映射）。
 
 - 审查点：
   - 是否用 `v26_1_2` 整文件覆盖了 `v26_2`？→ **Blocker**（`v26_2` 适配会被破坏，历史教训）。

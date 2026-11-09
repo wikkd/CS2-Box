@@ -20,12 +20,12 @@
 
 CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预览，放入钥匙点「开启」，**服务端权威 RNG** 决定结果，客户端只播放滚动动画，最后揭晓稀有度分级物品。不花真钱，一切都在游戏里。
 
-- **五档稀有度** + 服务端真随机 + 批量开箱 + 开箱保底
+- **五档稀有度（v2.0.4 起档位可自定义）** + 服务端真随机 + 批量开箱 + 开箱保底
 - **JSON 配置驱动**：改文件就上新箱子，无需重新编译
 - **一套代码，八端同步**：覆盖 NeoForge / Forge / Fabric 共 8 个平台
 - **在线配置编辑器**：[wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) —— 浏览器里可视化编辑箱子，也可游戏内输入 `/csbox editor` 获取链接
 
-当前版本 **`2.0.3`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
+当前版本 **`2.0.4`**，License MIT。这是 Reclizer 原版 CsgoBox 的重制维护版：重做了界面、修复了已知漏洞、重写了 NBT 处理，不再依赖 CraftTweaker。
 
 ## 快速开始
 
@@ -55,6 +55,8 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 
 ### 配置表达力（v2.0.1）
 
+- **可配置档位（v2.0.4）**：可选顶层 `grades` 数组整体替代 `random` + `grade1..5`（缺省 = 默认 5 档），每档 `id` / `name` / `color` / `weight` / `stock` 自定义
+- **玩法字段（v2.0.4，全部可选、缺省 = 旧行为）**：`hide_odds` / `allow_bulk` / `keys` 多钥匙 / `wear` 磨损区间 / `bonus` 单开奖励 / `announce_above` 全服播报 / `available_from`+`until` 时间窗 / `open_cost` 开箱扣点 / `pity.first_open` 首开保底 / `negotiation` 终端谈判参数 / `upgrade` 箱子升档（`/csbox upgrade`）/ `sound` 自定义音效
 - **JSON 配置箱数据**：`config/csbox/*.json` 即可新增箱子类型，`/csbox reload` 或自动热重载生效，无需重编译
 - **档内物品加权**：每件物品独立 `weight`
 - **`count:[min,max]` 区间**：掉落量随机区间
@@ -94,8 +96,8 @@ CS2-Box 把 CS:GO 的开箱逻辑搬到 Minecraft：手持箱子右键打开预�
 | `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | 正式发布：随 v26_1_2 同步开发 |
 | `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | 正式发布：2.0.0 线已追平 |
 | `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | 正式发布：1.20.1 回移（ForgeGradle 7.x） |
-| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14（Loom 1.17.21） | 21 | 新平台：2.0.3 后入树，随下版发布 |
-| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | 新平台：2.0.3 后入树，随下版发布 |
+| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14（Loom 1.17.21） | 21 | 新平台：2.0.4 首发 |
+| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | 新平台：2.0.4 首发 |
 
 <details>
 <summary><strong>已归档（EOL）平台</strong></summary>
@@ -118,8 +120,10 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
    | 26.1.2 | NeoForge **26.1.2.95**（loader 11+） |
    | 26.2 | NeoForge **26.2.0.59** |
    | 1.20.1（Forge） | MinecraftForge **47.4.22** |
+   | 1.18.2（Forge） | MinecraftForge **40.3.0** |
    | 26.1.2（Forge） | MinecraftForge **26.1.2-64.1.0** |
    | 26.2（Forge） | MinecraftForge **26.2-65.1.1** |
+   | 1.21.1（Fabric） | Fabric Loader **0.16.0+** + Fabric API |
 
 2. 从 [Releases](https://github.com/wikkd/CS2-Box/releases) 下载对应版本的 jar
 3. 将 jar 放入 `mods/` 文件夹
@@ -130,9 +134,10 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 已于 202
 
 全部平台共享同一 `mod_version`：
 
-- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.3.jar`）
+- NeoForge：`csgobox-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.4.jar`）
 - Forge：`csgobox-forge-<mc>-<mod_version>.jar`
-- **唯一例外**：Forge 1.20.1 发布物为 `csgobox-forge-1.20.1-<mod_version>-srg.jar`（SRG 重映射版，1.20.1 生产必需）
+- Fabric：`csgobox-fabric-<mc>-<mod_version>.jar`
+- **例外**：Forge 1.20.1 / 1.18.2 发布物为 `csgobox-forge-<mc>-<mod_version>-srg.jar`（SRG 重映射版，两平台生产必需）
 
 已归档（EOL）的 1.21.0/3/4/5/8/10/11 旧版玩家可继续使用既有发布产物。
 
@@ -164,7 +169,7 @@ cd CS2-Box
 #    可选值：1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 
 # 3. 构建当前平台的 jar
-./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar
+./gradlew :v26_1_2:jar        # 产物：v26_1_2/build/libs/csgobox-26.1.2-2.0.4.jar
 
 # 4. 启动开发客户端（自动下载并注入 NeoForge 到 run/ 目录）
 ./gradlew :v26_1_2:runClient
@@ -280,6 +285,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 | 文档 | 内容 |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | 面向玩家的模组介绍与玩法说明 |
+| [docs/PLAYER-CHANGELOG-2.0.4.md](./docs/PLAYER-CHANGELOG-2.0.4.md) | 玩家向 2.0.4 更新说明 |
 | [docs/PLAYER-CHANGELOG-2.0.3.md](./docs/PLAYER-CHANGELOG-2.0.3.md) | 玩家向 2.0.3 更新说明 |
 | [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | 玩家向 2.0.2 更新说明 |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | 完整安装与首次运行步骤 |
@@ -327,7 +333,7 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 1. 从目标分支（通常是 `main`）切出功能分支
 2. 改动涉及的模块运行 `./gradlew :<module>:build` 确保编译通过
 3. 用 `./gradlew :<module>:runClient` 在游戏内手动验证
-4. 若改动 `common/`，**必须各平台模块都验证**（CI 仅覆盖 3 个 NeoForge 平台，Forge 模块另有各自门禁，详见 [docs/CODE-REVIEW.md](./docs/CODE-REVIEW.md)；默认 `active_versions` 只构建一个，增量缓存可能造假象，必要时 `clean` 编译确认）
+4. 若改动 `common/`，**必须各平台模块都验证**（CI 已覆盖八平台编译 + 冒烟 + 五平台 GameTest 门禁，Forge 模块另有发布门禁脚本，详见 [docs/CODE-REVIEW.md](./docs/CODE-REVIEW.md)；默认 `active_versions` 只构建一个，增量缓存可能造假象，必要时 `clean` 编译确认）
 5. 同步更新文档（`docs/*.md`、`README.md`）与 `CHANGELOG.md`
 6. 提交 PR，附改动说明、测试方式、影响的 MC 版本
 
@@ -353,14 +359,16 @@ java -version   # v1_21_1 应显示 21.x；v26_1_2 / v26_2 应显示 25.x
 
 ## 项目状态
 
-- **当前发布版本**：`2.0.3`（正式版；NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.20.1 / 26.1.2 / 26.2 六平台同步发行，共享同一 `mod_version`）
-- **开发中版本**：平台扩张批次（新增 `fabric_1_21_1` / `forge_1_18_2` 两个平台 + Superb Warfare 零依赖 3D 预览联动，已入树并接入八平台 CI，随下一版本首发；详见 [CHANGELOG.md](./CHANGELOG.md) `[Unreleased]`）
+- **当前发布版本**：`2.0.4`（正式版；NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.18.2 / 1.20.1 / 26.1.2 / 26.2 + Fabric 1.21.1 八平台同步发行，共享同一 `mod_version`）
+- **开发中版本**：暂无进行中的未发布批次；后续方向见 [docs/ROADMAP.md](./docs/ROADMAP.md)
 
 <details>
 <summary><strong>近期进度</strong>（详见 <a href="./CHANGELOG.md">CHANGELOG.md</a>）</summary>
 
-- **平台扩张（未发布）**：`fabric_1_21_1`（Loom + TaCZ: Refabricated 检视/3D 枪械渲染，JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu 全接入）与 `forge_1_18_2`（无 GuiGraphics、GUI 全 PoseStack 重写，TACZ 数据级联动）入树，八平台 CI 全量编译 + 冒烟测试
-- **Superb Warfare 联动（未发布）**：零依赖命名空间门控，`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 对 SBW 枪械改用 FIXED 透视渲染真实 3D 模型，配套 `compat-packs/superb-warfare-pack/`
+- **平台扩张（2.0.4 首发）**：`fabric_1_21_1`（Loom + TaCZ: Refabricated 检视/3D 枪械渲染，JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu 全接入）与 `forge_1_18_2`（无 GuiGraphics、GUI 全 PoseStack 重写，TACZ 数据级联动）入树，八平台 CI 全量编译 + 冒烟测试
+- **Superb Warfare 联动（2.0.4）**：零依赖命名空间门控，`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 对 SBW 枪械改用 FIXED 透视渲染真实 3D 模型，配套 `compat-packs/superb-warfare-pack/`
+- **可配置档位 + 玩法字段（2.0.4）**：顶层 `grades` 数组自定义档位（id/name/color/weight/stock，缺省 = 默认 5 档），`keys` 多钥匙 / `wear` 磨损 / `bonus` 单开奖励 / `announce_above` 播报 / 时间窗 / `open_cost` / `pity.first_open` 首开保底 / `negotiation` 谈判参数 / `/csbox upgrade` 箱子升档 / `sound` 自定义音效；五平台 GameTest 套件接入 CI 门禁（`gametest.yml`）
+- **2.0.4**：八端首发（`fabric_1_21_1` / `forge_1_18_2`）、Superb Warfare 3D 预览联动、可配置档位与玩法字段一批、五平台 GameTest CI 门禁、1.18.2/1.20.1 时代资源映射修复（共享配方/成就/小屋结构恢复生效）、军火商经济防套利（铁收购锚定 key0 / key1 双输入报价 / 表价对齐）
 - **2.0.3**：跨平台一致性收口（批量开箱分片容量与单包物品护栏统一）、`/csbox editor` 内嵌 `config/csbox` 一键导入（`#pack=`）、box-editor 工作区分享 / EV 面板 / 应用到游戏、Cloth Config lambda 专用服务器崩溃修复（issue #2）+ `checkDistSafety` 门禁
 - **2.0.2**：终端 `restock_minutes` 移除、批量开箱按剩余额度裁剪、同步包容量护栏、保底进度 UI 可见化、配置未知字段警告 + `format_version`、tooltip 缓存与行数上限
 - **2.0.1**：开箱概率进 tooltip、武库商小屋群系接入、`/csbox info` 来源模组统计、compat-packs 官方联动示例、物品注册表与配置解耦（联机修复）、档内物品权重 / count 区间 / `#tag` / 战利品表 / 随机附魔、终端价格表、每箱 icon、库存/折扣、开箱约束（每人上限/冷却/权限）、`/csbox validate` 干跑、schema 校验、boxgen/check-ids 工具脚本、开箱保底（pity）、帮助与教程入口

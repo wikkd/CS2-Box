@@ -14,7 +14,7 @@
 
 ## 2. 配置项总览
 
-`CsboxConfig.java` 在六个平台 loader 中定义一致(7 个字段,2 个 TOML 分组)。
+`CsboxConfig.java` 在八个平台 loader 中定义一致(7 个字段,2 个 TOML 分组)。
 自 2.0.0 起仅保留服务端/服主向配置项——音效音量、动画时长/速度、物品名显示、背景样式与模糊半径、调试日志等玩家向/开发向选项已从配置中移除并硬编码为固定默认值(不允许配置)。
 
 ### 2.0 GUI 编辑（可选，Cloth Config）
@@ -64,8 +64,9 @@
 | `max_per_player` | 整数 | 否 | v2.0.1：每人开箱上限（-1 = 无限，默认）。内存态，重启清零；单次/批量均生效，验证通过后才消耗钥匙 |
 | `cooldown_seconds` | 整数 | 否 | v2.0.1：每箱开箱冷却（0 = 无，默认） |
 | `permission` | 字符串 | 否 | v2.0.1：权限节点。默认放行；整合包通过 `CsgoBox.PERMISSION_GATE` 钩子接入权限后端（如 LuckPerms） |
-| `pity` | 对象 | 否 | v2.0.1：保底策略 `{"grade": "classified", "every": 20}`——连续 `every-1` 次未开出目标档（或更高）后，下一次强制从目标档及以上按权重抽取。内存态按「玩家×箱子」计数，重启清零；单开/批量均生效，只有实际发放才推进计数。`grade` 必须是 5 档 id 之一、`every ≥ 2`，否则静默不生效（校验器会提示）。开箱预览屏会显示「保底：还差 N 次」（v2.0.2 起） |
+| `pity` | 对象 | 否 | v2.0.1：保底策略 `{"grade": "classified", "every": 20}`——连续 `every-1` 次未开出目标档（或更高）后，下一次强制从目标档及以上按权重抽取。内存态按「玩家×箱子」计数，重启清零；单开/批量均生效，只有实际发放才推进计数。`grade` 必须是档位 id 之一（legacy 五档 id 或自定义 `grades` 的 id，见 3.7）、`every ≥ 2`，否则静默不生效（校验器会提示）。开箱预览屏会显示「保底：还差 N 次」（v2.0.2 起）。**v2.0.4 新增 `"first_open": true`**：该玩家对本箱的**首次开箱**也强制目标档及以上（内存态，重启清零；单开与批量路径均已覆盖） |
 | `format_version` | 整数 | 否 | v2.0.2：配置格式版本标记，可选（缺省视为旧版）；新文件建议写 `2`。运行时校验类型（正整数） |
+| `grades` 等玩法字段 | 见 3.7 | 否 | **v2.0.4 一批可选玩法字段与自定义档位**：`sound` / `hide_odds` / `allow_bulk` / `keys` / `wear` / `bonus` / `announce_above` / `available_from` / `available_until` / `open_cost` / `negotiation` / `upgrade` / `grades`（自定义档位，整体替代 `random`+`grade1..5`）——全部不写 = 旧行为，详见 [3.7](#37-玩法字段与自定义档位v204) |
 
 > **文件名校验（v2.0.1）**：文件名（不含 `.json`）即箱子 id，只允许小写字母、数字、
 > `_`、`.`、`/`、`-`。非法文件名（空格、大写、中文、`#` 等）直接拒绝加载并提示合法示例。
@@ -251,6 +252,50 @@
 | `mil_spec` | 军规级(蓝) |
 | `restricted` | 受限级(紫) |
 | `classified` | 保密级(粉/红) |
+
+> **自定义档位（v2.0.4）**：上表是**缺省**五档的 id 与显示名。配置顶层 `grades` 数组后档位整体自定义（id / 名称 / 颜色 / 权重 / 限量，最多 64 档），`pity.grade` 与 `announce_above` 引用自定义档位 id——详见 [3.7](#37-玩法字段与自定义档位v204)。
+
+### 3.7 玩法字段与自定义档位(v2.0.4)
+
+> 本节字段**全部可选**：不写 = 旧行为。字段定义以 `docs/box-schema/box.schema.json` 为权威（IDE 补全同源）；运行时以 Java 校验器为准。
+
+**自定义档位 `grades`**（顶层字段，低→高排列）：
+
+```json
+{
+  "grades": [
+    { "id": "scrap",   "name": "废料", "color": "#888888", "weight": 100,
+      "items": [ { "id": "minecraft:iron_nugget", "count": [2, 5] } ] },
+    { "id": "standard", "name": "制式", "weight": 20,
+      "items": [ { "id": "minecraft:iron_ingot" } ] },
+    { "id": "premium",  "name": "旗舰", "color": "#FF5555", "weight": 1, "stock": 5,
+      "items": [ { "id": "minecraft:netherite_ingot", "count": [1, 2] } ] }
+  ]
+}
+```
+
+- 出现 `grades` 时**整体替代** `random` + `grade1..5`（这两组键被忽略，校验器会点名残留）；缺省 `grades` = 默认 5 档，legacy 行为完全不变
+- 1..64 档。每档 `id`（必填、唯一，`pity.grade` 与 `announce_above` 引用它）+ 可选 `name`（默认 = id）/ `color`（`#RRGGBB`，默认白色）/ `weight`（默认 1；**显式 0 = 该档永不出现**，占位显示 0%）/ `stock`（该档限量，内存态，重启回满）
+- 等级按位置推导（排最后的为最高档），协议零改动——tooltip 概率行、开箱动画档位色与 JEI/REI/EMI 概率分类自动跟随自定义档位
+- `weight` 显式 0 语义修复（v2.0.4）：旧版会把显式 0 静默回填默认权重（`[100,0,0,0,0]` 实际按 `[100,125,25,6,4]` 滚动），现在写 0 就真的不出
+
+**玩法字段**（普通箱除注明外均生效）：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `sound` | 字符串 | 自定义开箱音效事件 id（如 `minecraft:block.note_block.pling`），替代默认开箱音；未知 id 播放时回退默认音 |
+| `hide_odds` | 布尔 | `true` 隐藏全部概率行（tooltip / JEI / REI / EMI）——盲盒模式 |
+| `allow_bulk` | 布尔 | `false` 禁用本箱批量开箱（Shift+右键） |
+| `keys` | 字符串数组 | **附加**可接受钥匙 id（与 `key` 并列 any-of，列表内任一匹配即可开；最多 8 个） |
+| `wear` | 数组[2] | `[min, max]` 磨损区间（0..1，默认 [0,1]）——掉落耐久物品按区间扣损 |
+| `bonus` | 对象 | `{ "chance": 0.1, "mode": "double" }`：单开按几率触发奖励——`double` = 奖品双倍发放，`box` = 额外发放一个同 id 箱子 |
+| `announce_above` | 字符串 | 档位 id 或 1-based 等级号；开出达到该档的物品时**全服播报** |
+| `available_from` / `available_until` | 字符串 | ISO-8601 时间窗（如 `"2026-12-24T00:00:00Z"`）；窗外拒绝开箱——活动箱 / 限时上架 |
+| `open_cost` | 整数 | 每次开箱额外消耗的武库点数（创造模式豁免） |
+| `negotiation` | 对象 | **仅终端机**：`rounds`（1..5，默认 5）/ `timeout_minutes`（默认 180）/ `price_bias`（报价偏置 -0.9..9.0：0 = 表价，-0.5 = 半价，1 = 双倍）。服务端权威，零网络改动 |
+| `upgrade` | 对象 | `{ "target": "csgobox:premium_box", "consume": 3 }`：启用 `/csbox upgrade`——手持本箱消耗 `consume` 个升档为 `target` 箱（`target` 必须是已加载定义；**全员可用，无需 OP**） |
+
+`pity` 与自定义档位组合示例：`"pity": { "grade": "premium", "every": 20, "first_open": true }`——`grade` 引用 `grades` 中的 id，`first_open` 让该玩家的首次开箱同样保底。
 
 ## 4. 配置重载行为
 

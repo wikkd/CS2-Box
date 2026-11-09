@@ -2,6 +2,8 @@
 # CS2-Box 测试指南
 
 > CS2-Box 使用 NeoForge 内置的 GameTest 框架进行集成测试,加上手动测试覆盖 GUI 与运行时行为。
+>
+> 分层测试流程（L1 单测 → L5 渠道 soak）、三代注册机制（NeoForge 21.1 / NeoForge 26.x / Forge legacy / fabric）与分平台编写须知见 `docs/TESTING-PIPELINE.md`——本文以 v1_21_1 的 `@GameTestHolder` 路线为例。
 
 ## 测试框架与配置
 
@@ -20,10 +22,10 @@ GameTest 框架随 NeoForged 提供,无需额外依赖。
 ### GameTest 服务器(主要方式)
 
 ```bash
-./gradlew gameTestServer
+./gradlew :v1_21_1:gameTestServer -Pactive_versions=1.21.1
 ```
 
-启动专用测试服务器,在无头环境中运行所有已注册的 GameTest。
+启动专用测试服务器,在无头环境中运行所有已注册的 GameTest（其余平台同理，forge 两平台为 `runGameTestServer` 的别名；exit 码 = 失败用例数）。
 
 ### 客户端 GameTest
 

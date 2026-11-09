@@ -1,6 +1,6 @@
 # CS2-Box Configuration Reference
 
-> Auto-generated reference for the box JSON files in `config/csbox/`. The companion Simplified Chinese version is copied alongside it (file name stamped with the current mod version, e.g. `_tutorial_v2.0.0_zh_cn.md`).
+> Online reference for the box JSON files in `config/csbox/` (Gitee `docs/tutorials/`, opened via the `/csbox help` link). Since v2.0.4 the mod no longer bundles tutorials and copies nothing into `config/csbox/`. The Simplified Chinese version lives alongside this file.
 
 ## Overview
 

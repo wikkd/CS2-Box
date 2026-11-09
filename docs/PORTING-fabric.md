@@ -76,8 +76,8 @@ JAVA_HOME="C:/Users/FrostStarInquire/.jdks/ms-25.0.4.1" \
 | The One Probe | 不接入 | TOP 仅发布 Neo 构建（Modrinth `1.21_neo-*`）；悬停信息由 Jade + WTHIT 覆盖 |
 | 动态箱模型兜底重映射 | 不移植 | 1.21.1 的 `ModelResourceLocation` 是 record（不继承 ResourceLocation），Fabric `resolveModel` 的 id 流无法表达 MRL；该路径只为「物品模型文件缺失」的病态安装兜底，正常安装所有箱子物品均带模型文件。代价仅是损坏安装时显示紫黑棋盘格 |
 
-（TACZ 检视视口 / `/csbox tacz` 曾在此表——2026-10-25 起已完整适配 TaCZ:
-Refabricated，见文末「TACZ 适配」节。）
+（TACZ 检视视口曾在此表——2026-10-25 起已完整适配 TaCZ:
+Refabricated，见文末「TACZ 适配」节；`/csbox tacz` 子树随 2.0.4 命令树简化移除。）
 
 ## 完整保留的适配（Fabric 1.21.1 均有构建，版本已核实）
 
@@ -178,8 +178,7 @@ mod id 仍为 `tacz`，1.21.1 线追踪上游 TACZ 1.1.8），本模块的 TACZ 
 解桩/移植清单：`TaczInspectViewportImpl`（新建，检视视口全套：enter/display/
 trigger/render/exit + 第一人称检视会话）、`AnimRenderOps`（renderItem2D 的
 无显示实例守卫、renderItem3D 的枪械分支、`renderGunModel3D` 与包围盒遍历
-`gunBounds/collectPartBounds`）、`TaczList` 收集器（`/csbox tacz` 子树随
-`isTaczLoaded()` 自动恢复注册）、`BoxItemCodec.validateTacz`（IGun 门 +
+`gunBounds/collectPartBounds`）、`BoxItemCodec.validateTacz`（IGun 门 +
 checkTaczNbt/normalizeTaczNbt + gun pack 缺失警告——这两个纯 NBT 助手此前
 就保留着，本次接上）。`TaczInspectViewport` 门面与全部调用点
 （CsLookItemScreen / FirstPersonInspectHandler）在移植时就已按门面模式写好，

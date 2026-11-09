@@ -1,6 +1,6 @@
 # Release Process
 
-> 适用于 2.0.3+ 的八平台发布流程（NeoForge 3 + Forge 4 + Fabric 1，共享同一 `mod_version`；`fabric_1_21_1` / `forge_1_18_2` 随下一版本首发）。版本矩阵见 `gradle.properties` 的 `active_versions`。
+> 适用于 2.0.3+ 的八平台发布流程（NeoForge 3 + Forge 4 + Fabric 1，共享同一 `mod_version`；`fabric_1_21_1` / `forge_1_18_2` 已随 2.0.4 首发）。版本矩阵见 `gradle.properties` 的 `active_versions`。
 
 ## 1. 版本号同步（四处在升级时必须一致）
 
@@ -39,10 +39,10 @@ done
 > **正式发布**（与对应 NeoForge 平台保持特性同步，同步纪律见 AGENTS.md「forge_26_1_2 同步」）；
 > 发布门禁独立运行 `scripts/test-forge-2612.sh` /
 > `scripts/test-forge-262.sh` / `docs/TESTING-FORGE-1201.md` 对应的门禁脚本（L0-L3）
-> + L4 运行时 E2E；`forge_1_18_2` / `fabric_1_21_1` 随下一版本首发，发布前按各自
+> + L4 运行时 E2E；`forge_1_18_2` / `fabric_1_21_1` 已随 2.0.4 首发，运行时回归按各自
 > `docs/PORTING-forge-1182.md` / `docs/PORTING-fabric.md` 的限制说明做运行时回归。
 
-产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`、Fabric `fabric_1_21_1/build/libs/csgobox-fabric-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.3.jar` / `csgobox-forge-26.1.2-2.0.3.jar`）。**例外：`forge_1_20_1` / `forge_1_18_2` 的发布产物是 `build/libs/csgobox-forge-<mc>-<mod_version>-srg.jar`**（SRG 重映射版，`renameJar` 任务产出）；`jar` 直出产物只用于 dev/内部，进生产会因 SRG 命名域不匹配而崩溃（如 2.0.0-beta 的 `NoSuchMethodError: CriteriaTriggers.register`）。
+产物命名：NeoForge `<module>/build/libs/csgobox-<mc>-<mod_version>.jar`、Forge `<module>/build/libs/csgobox-forge-<mc>-<mod_version>.jar`、Fabric `fabric_1_21_1/build/libs/csgobox-fabric-<mc>-<mod_version>.jar`（如 `csgobox-26.1.2-2.0.4.jar` / `csgobox-forge-26.1.2-2.0.4.jar`）。**例外：`forge_1_20_1` / `forge_1_18_2` 的发布产物是 `build/libs/csgobox-forge-<mc>-<mod_version>-srg.jar`**（SRG 重映射版，`renameJar` 任务产出）；`jar` 直出产物只用于 dev/内部，进生产会因 SRG 命名域不匹配而崩溃（如 2.0.0-beta 的 `NoSuchMethodError: CriteriaTriggers.register`）。
 
 ## 3. 质量门（发布前必须全绿）
 

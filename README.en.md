@@ -20,12 +20,12 @@
 
 CS2-Box brings CS:GO's crate-opening loop into Minecraft: right-click while holding a crate to preview it, drop in a key and hit **Open**, and a **server-authoritative RNG** decides the result while the client plays the rolling animation before revealing rarity-tiered loot. No real money involved — it all happens in-game.
 
-- **Five rarity tiers** + true server-side randomness + bulk opening + pity system
+- **Five rarity tiers (customizable since v2.0.4)** + true server-side randomness + bulk opening + pity system
 - **JSON-driven**: add new crates by editing files — no recompiling
 - **One codebase, eight platforms**: NeoForge, Forge and Fabric, all in sync
 - **Online box editor**: [wikkd.github.io/CS2-Box](https://wikkd.github.io/CS2-Box/) — visually design crates in your browser, or type `/csbox editor` in-game for the link
 
-Current version: **`2.0.3`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
+Current version: **`2.0.4`**. This is a cleaned-up, maintained fork of Reclizer's original CsgoBox: the UI is reworked, a known exploit is fixed, NBT handling is rewritten, and CraftTweaker is no longer needed.
 
 ## Quick Start
 
@@ -55,6 +55,8 @@ For installation details and per-platform requirements, see [Installation](#inst
 
 ### Configuration Power (v2.0.1)
 
+- **Configurable tiers (v2.0.4)**: an optional top-level `grades` array replaces `random` + `grade1..5` (omitted = default 5 tiers); each tier takes `id` / `name` / `color` / `weight` / `stock`
+- **Gameplay fields (v2.0.4, all opt-in, default = old behavior)**: `hide_odds` / `allow_bulk` / multi-key `keys` / `wear` range / `bonus` open bonus / `announce_above` broadcast / `available_from`+`until` window / `open_cost` / `pity.first_open` first-open guarantee / `negotiation` terminal params / `upgrade` crate upgrade (`/csbox upgrade`) / `sound`
 - **JSON crate data**: add crate types via `config/csbox/*.json`, applied by `/csbox reload` or automatic hot reload — no recompiling
 - **In-tier item weights**: per-item `weight`
 - **`count:[min,max]` ranges**: random drop counts
@@ -94,8 +96,8 @@ The repo is a multiloader workspace; switch the active build target via `active_
 | `forge_26_1_2/` | 26.1.2 | MinecraftForge 26.1.2-64.1.0 | 25 `--enable-preview` | Released: developed in sync with v26_1_2 |
 | `forge_26_2/` | 26.2 | MinecraftForge 26.2-65.1.1 | 25 `--enable-preview` | Released: parity with the 2.0.0 line |
 | `forge_1_20_1/` | 1.20.1 | MinecraftForge 47.4.22 | 17 | Released: 1.20.1 backport (ForgeGradle 7.x) |
-| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14 (Loom 1.17.21) | 21 | New platform: landed after 2.0.3, ships with the next release |
-| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | New platform: landed after 2.0.3, ships with the next release |
+| `fabric_1_21_1/` | 1.21.1 | Fabric Loader 0.16.14 (Loom 1.17.21) | 21 | New platform: first released in 2.0.4 |
+| `forge_1_18_2/` | 1.18.2 | MinecraftForge 40.3.0 | 17 | New platform: first released in 2.0.4 |
 
 <details>
 <summary><strong>Archived (EOL) platforms</strong></summary>
@@ -118,8 +120,10 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 were remov
    | 26.1.2 | NeoForge **26.1.2.95** (loader 11+) |
    | 26.2 | NeoForge **26.2.0.59** |
    | 1.20.1 (Forge) | MinecraftForge **47.4.22** |
+   | 1.18.2 (Forge) | MinecraftForge **40.3.0** |
    | 26.1.2 (Forge) | MinecraftForge **26.1.2-64.1.0** |
    | 26.2 (Forge) | MinecraftForge **26.2-65.1.1** |
+   | 1.21.1 (Fabric) | Fabric Loader **0.16.0+** + Fabric API |
 
 2. Download the jar for your platform from [Releases](https://github.com/wikkd/CS2-Box/releases)
 3. Drop it into your `mods/` folder
@@ -130,9 +134,10 @@ v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 were remov
 
 All platforms share one `mod_version`:
 
-- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.3.jar`)
+- NeoForge: `csgobox-<mc>-<mod_version>.jar` (e.g. `csgobox-26.1.2-2.0.4.jar`)
 - Forge: `csgobox-forge-<mc>-<mod_version>.jar`
-- **Sole exception**: Forge 1.20.1 ships as `csgobox-forge-1.20.1-<mod_version>-srg.jar` (SRG-remapped; required for 1.20.1 production)
+- Fabric: `csgobox-fabric-<mc>-<mod_version>.jar`
+- **Exception**: Forge 1.20.1 and 1.18.2 ship as `csgobox-forge-<mc>-<mod_version>-srg.jar` (SRG-remapped; required for production on both)
 
 Archived EOL versions (1.21.0/3/4/5/8/10/11) keep using their existing release jars.
 
@@ -164,7 +169,7 @@ cd CS2-Box
 #    options: 1.21.1 / 26.1.2 / 26.2 / forge-26.1.2 / forge-26.2 / forge-1.20.1 / fabric-1.21.1 / forge-1.18.2
 
 # 3. Build the jar for the active platform
-./gradlew :v26_1_2:jar        # output: v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar
+./gradlew :v26_1_2:jar        # output: v26_1_2/build/libs/csgobox-26.1.2-2.0.4.jar
 
 # 4. Launch the dev client (downloads and injects NeoForge into run/)
 ./gradlew :v26_1_2:runClient
@@ -280,6 +285,7 @@ Crate data lives in `config/csbox/<boxId>.json` — **the file name is the box I
 | Document | Contents |
 |---|---|
 | [docs/PLAYER-INTRO.md](./docs/PLAYER-INTRO.md) | Player-facing introduction and gameplay guide |
+| [docs/PLAYER-CHANGELOG-2.0.4.md](./docs/PLAYER-CHANGELOG-2.0.4.md) | Player-facing 2.0.4 release notes |
 | [docs/PLAYER-CHANGELOG-2.0.3.md](./docs/PLAYER-CHANGELOG-2.0.3.md) | Player-facing 2.0.3 release notes |
 | [docs/PLAYER-CHANGELOG-2.0.2.md](./docs/PLAYER-CHANGELOG-2.0.2.md) | Player-facing 2.0.2 release notes |
 | [docs/GETTING-STARTED.md](./docs/GETTING-STARTED.md) | Full installation and first-run steps |
@@ -327,7 +333,7 @@ Issues and PRs are welcome — full workflow in [CONTRIBUTING.md](./CONTRIBUTING
 1. Branch off the target branch (usually `main`)
 2. Run `./gradlew :<module>:build` for every module you touched
 3. Verify in-game with `./gradlew :<module>:runClient`
-4. If `common/` changed, **verify every platform module** (CI only covers the 3 NeoForge platforms; the Forge modules have their own gates, see [docs/CODE-REVIEW.md](./docs/CODE-REVIEW.md); the default `active_versions` builds only one platform and incremental caches can lie — use `clean` when in doubt)
+4. If `common/` changed, **verify every platform module** (CI covers all 8 platforms — compile + smoke tests + the five-platform GameTest gate; the Forge modules have their own release gate scripts, see [docs/CODE-REVIEW.md](./docs/CODE-REVIEW.md); the default `active_versions` builds only one platform and incremental caches can lie — use `clean` when in doubt)
 5. Update docs (`docs/*.md`, `README.md`) and `CHANGELOG.md`
 6. Open the PR with a change description, how you tested it, and affected MC versions
 
@@ -353,14 +359,16 @@ Open them on [GitHub Issues](https://github.com/wikkd/CS2-Box/issues). Bug repor
 
 ## Project Status
 
-- **Current release**: `2.0.3` (published in sync across the six released platforms — NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.20.1 / 26.1.2 / 26.2 — with a shared `mod_version`)
-- **In development**: platform expansion batch (new `fabric_1_21_1` and `forge_1_18_2` modules plus Superb Warfare zero-dependency 3D preview, already in-tree and wired into the 8-platform CI; ships with the next release — see [CHANGELOG.md](./CHANGELOG.md) `[Unreleased]`)
+- **Current release**: `2.0.4` (published in sync across the eight released platforms — NeoForge 1.21.1 / 26.1.2 / 26.2 + Forge 1.18.2 / 1.20.1 / 26.1.2 / 26.2 + Fabric 1.21.1 — with a shared `mod_version`)
+- **In development**: nothing in flight; candidate directions in [docs/ROADMAP.md](./docs/ROADMAP.md)
 
 <details>
 <summary><strong>Recent progress</strong> (see <a href="./CHANGELOG.md">CHANGELOG.md</a>)</summary>
 
-- **Platform expansion (unreleased)**: `fabric_1_21_1` (Loom + TaCZ: Refabricated inspect/3D gun rendering, JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu all wired) and `forge_1_18_2` (no GuiGraphics, all GUI rewritten on PoseStack, data-level TACZ integration) in-tree, 8-platform CI compile + smoke tests
-- **Superb Warfare compat (unreleased)**: zero-dependency namespace gating; `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` render SBW guns as real 3D models via FIXED display context, plus `compat-packs/superb-warfare-pack/`
+- **Platform expansion (first released in 2.0.4)**: `fabric_1_21_1` (Loom + TaCZ: Refabricated inspect/3D gun rendering, JEI/REI/EMI/Jade/WTHIT/Cloth/Mod Menu all wired) and `forge_1_18_2` (no GuiGraphics, all GUI rewritten on PoseStack, data-level TACZ integration) in-tree, 8-platform CI compile + smoke tests
+- **Superb Warfare compat (2.0.4)**: zero-dependency namespace gating; `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` render SBW guns as real 3D models via FIXED display context, plus `compat-packs/superb-warfare-pack/`
+- **Configurable tiers + gameplay fields (2.0.4)**: top-level `grades` array (id/name/color/weight/stock per tier, omitted = default 5), multi-key `keys` / `wear` / `bonus` / `announce_above` / time window / `open_cost` / `pity.first_open` / `negotiation` params / `/csbox upgrade` / `sound`; five-platform GameTest suites wired into CI (`gametest.yml`)
+- **2.0.4**: eight-platform first release (`fabric_1_21_1` / `forge_1_18_2`), Superb Warfare 3D preview compat, configurable tiers + a batch of gameplay fields, five-platform GameTest CI gate, 1.18.2/1.20.1 era-mapped datapack resource fix (shared recipes/advancements/cabin structures live again), arms-dealer economy anti-arbitrage fixes (iron buy price anchored to key0 / key1 dual-input quote / table alignment)
 - **2.0.3**: cross-platform consistency pass (bulk result shard capacity and per-packet guards unified), `/csbox editor` embedded `config/csbox` import (`#pack=`), box-editor workspace sharing / EV panel / apply-to-game, Cloth Config lambda dedicated-server crash fix (issue #2) + `checkDistSafety` gate
 - **2.0.2**: terminal `restock_minutes` removed, bulk opening trimmed by remaining quota, sync packet capacity guards, pity progress made visible in UI, unknown-config-field warnings + `format_version`, tooltip caching and line caps
 - **2.0.1**: odds in tooltips, arms-dealer cabin biome integration, `/csbox info` source-mod stats, official compat-packs, registry/config decoupling (multiplayer fix), in-tier weights / count ranges / `#tag` / loot tables / random enchants, terminal price table, per-crate icon, stock/discount, opening constraints (per-player cap / cooldown / permission), `/csbox validate` dry-run, schema validation, boxgen/check-ids tooling, pity system, help & tutorial entry points

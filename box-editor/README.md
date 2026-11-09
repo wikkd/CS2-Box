@@ -182,13 +182,15 @@ npm start       # 本地部署：http://127.0.0.1:4173/
 
 ### 版本切换说明
 
-JSON 结构在六个平台间当前完全一致；版本切换主要影响：
+JSON 结构在八个平台间当前完全一致；版本切换主要影响：
 
 | 版本 | Data Components | TACZ `id#变体` | item-model 图标 |
 |---|---|---|---|
 | 1.21.1 (NeoForge) | ✅ | ✅ | ❌（只支持整数 CustomModelData） |
 | 26.1.2 / 26.2 / Forge 26.x | ✅ | ❌（`#变体` 键会回退纯 id 价并提示） | ✅ |
 | Forge 1.20.1 | ❌（用 legacy NBT `tag`） | ✅ | ❌（只支持整数 CustomModelData） |
+| 1.21.1 (Fabric) | ✅ | ✅ | ❌（只支持整数 CustomModelData） |
+| Forge 1.18.2 | ❌（用 legacy NBT `tag`） | ✅ | ❌（只支持整数 CustomModelData） |
 
 > 上表是「自动」模式的行为。表单里的 **TACZ 专属字段** 开关可强制启用 / 禁用
 > 变体输入与 `id#变体` 键提示：强制启用后即使选了 26.x 也能配置 TACZ 变体并生成

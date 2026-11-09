@@ -13,6 +13,16 @@
 - **确认可以编译时**：优先用 `--no-build-cache` / `--rerun-tasks` 或先删除编译输出再执行，避免把陈旧的 `UP-TO-DATE` / `FROM-CACHE` 快照误报为真实编译结果；报告结果时注明采用的重编译方式与平台清单。
 - 单次 Gradle 调用只能构建一个 MC 版本（`-Pactive_versions=<v>`）；八平台全量验证需串行执行。
 
+### ⚠️ 编译资源占用铁律（2026-11-10 新增，与上述守则叠加执行）
+
+维护者的机器同时是日常用机，任何编译都不得占满性能：
+
+- **每次本地 Gradle 调用必须带 `--max-workers=2`**（默认 worker 数 = CPU 核数，会吃满全核；CI 不受此限）。
+- **多条 Gradle 调用严禁并行**：即使分属不同平台/任务也一律串行（与「单次调用只构建一个 MC 版本」叠加执行）；全平台长跑放入后台任务执行、不阻塞对话，但后台内部仍串行。
+- **禁止上调内存参数**：`gradle.properties` 的 `-Xmx3G` + `org.gradle.daemon=false` 是基准，不得为提速改大堆或打开 daemon；NeoForm / ForgeGradle 反编译等 fork 进程的内存保持管线默认值。
+- **重管线是占用大头**：`clean` / `--rerun-tasks` 触发的 NeoForm 全管线（反编译/重映射/重编译）单平台即可满核数分钟。「改动涉及平台必须 clean 确认」纪律不变，但全平台 clean 矩阵必须：带 `--max-workers=2`、后台串行执行，且启动前确认维护者不在重度使用机器。
+- 编译启动前做两道门：**并发协作探测**（上文四信号）+ **机器负载确认**（前台重负载/游戏/渲染进行中不得启动，先征得同意或等空闲时段），都过才允许执行。
+
 ## 构建
 
 ```bash
@@ -84,8 +94,8 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - `CsgoBox.java` — 平台入口；`CONFIG` 为 `public static final`（static 块初始化，勿改顺序）；`registerDynamicBoxItems` 注册 `config/csbox/*.json` 动态 item（用 `RegisterEvent` deferred supplier，**不要**用 `FMLCommonSetupEvent.enqueueWork`——registry 已 freeze）
 - `CsboxConfig.java` — NeoForge `ModConfigSpec` / Forge `ForgeConfigSpec`，builder 每个 `define*` 用 `.get()`；`bulkOpenCount`（0=无上限）服务端权威。v2.0.x 起带公开 `set*` 写方法（供 Cloth Config GUI 用）
 - `config/CsboxClothConfigScreen.java`（八平台各一份）— **可选** Cloth Config 配置屏：套在既有 `ConfigValue` 上（读 getter、写 setter、保存统一 `CsgoBox.CONFIG_SPEC.save()`），**不迁移配置存储**（TOML 仍是唯一来源）；注册点在各平台 `CsgoBox` 构造器内 `Dist.CLIENT && ModList.isLoaded("cloth_config")` 分支，Cloth 未装时无 Configure 按钮、功能不变；八平台同文（仅 package/loader 注册差异）
-- `packet/PacketCsgoProgress.java` — 服务端权威 RNG + `OPEN_BLOCKED_UNTIL_TICK`（ConcurrentHashMap，`tickOpenBlockMap` 每 100 tick 清理）
-- `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize）
+- `packet/PacketCsgoProgress.java` — 开箱/钥匙/箱子扣减助手（服务端权威 RNG 与 10-tick 防连点已上移 `OpenService` / common `OpenBlockGuard`）。**钥匙消费铁律（2026-11-10）**：多钥匙（`keys` any-of）的**批量**消费必须走 `tryConsumeKeysExact`（对全部 accepted ids 先计数、总量不足分毫不动、再统一扣减）——any-of/单 id 重载是边扫边扣语义，count > 1 时部分匹配会销毁已扫钥匙后失败（2026-11-10 修复的丢钥匙 bug）；单开 count=1 可继续用 any-of 重载
+- `packet/PacketCsgoBulkProgress.java` — 批量开箱（异步线程池 `BULK_COMPUTE_POOL` + 主线程 finalize；finalize 扣减顺序：时间窗 → 钥匙 → 点数 → 箱子已在更早阶段扣减，任一失败不产生白扣）
 - `gui/CsboxBulkOverviewScreen.java` — 批量开箱总览屏（Shift+右键进入；点「开启」直接发包 `PacketCsgoBulkProgress` 并进 `CsboxProgressScreen`，无二次确认屏；服务端权威复核库存与扣减）
 - `common/box/BoxDefaults.java` — 默认 `_villager_prices.json` 写入 + 遗留 `terminal.json` 一次性迁移（空文件视为合法未配置；损坏保留原位 + `terminal.json.corrupt-<时间戳>` 备份；不生成任何默认箱子/终端配置）。原教程安装器（`writeTutorialIfMissing` / `refreshTutorials`）已随本地教程功能整体移除
 - `common/box/BoxGrades.java` / `BoxRegistryStore.java` / `BoxStripGenerator.java` — 等级常量与纯函数（v2.x 起档位等级**按位置推导** `levelAt`：内部列表高→低，level = size - index；`gradeLevel(id)` 仅映射 legacy 五档 id）/ 泛型注册表容器（回调契约固化）/ 泛型开箱滚动条（2026-08 重构下沉，平台 `BoxDefinition`/`BoxRegistry`/packet 引用指向 common）
@@ -171,7 +181,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 
 | 项目 | fabric_1_21_1 | forge_1_18_2 |
 |---|---|---|
-| TACZ compat | ✅ 2 文件（`compat/TaczInspectViewport(Impl)`，TaCZ: Refabricated，检视 + 3D 枪械渲染） | ✅ 1 文件（门面恒不可用，数据级联动：物品校验 + `/csbox tacz`，编译对**包内签名桩**——`scripts/tacz-stub-1182-src/` 由 Gradle `taczStubJar` 任务在构建内编译，fresh clone 零准备） |
+| TACZ compat | ✅ 2 文件（`compat/TaczInspectViewport(Impl)`，TaCZ: Refabricated，检视 + 3D 枪械渲染） | ✅ 1 文件（门面恒不可用，数据级联动：物品校验，编译对**包内签名桩**——`scripts/tacz-stub-1182-src/` 由 Gradle `taczStubJar` 任务在构建内编译，fresh clone 零准备） |
 | JEI / REI / EMI | ✅ 4 / ✅ 3 / ✅ 3 | ✅ 4 / ✅ 3 / ⚠️ 1（`emi/BoxEmiReload` 守卫桩，1.18.2 无 EMI 构建） |
 | Jade / TOP / WTHIT | ✅ 3 / ❌ / ✅ 2（+mcshared 1） | ✅ 3 / ❌ / ❌（1.18.2 无 WTHIT 构建，mcshared/wthit 排除编译） |
 | Create | ⚠️ 1（`create/CreatePlatformItems` 反射降级，无 Fabric 构建） | ⚠️ 1（同左，1.18.2 API 差异未移植 deployer） |

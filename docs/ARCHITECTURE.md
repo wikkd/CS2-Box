@@ -2,7 +2,7 @@
 # CS2-Box 架构
 
 > 八平台 CS:GO 风格开箱模组的模块拓扑、核心抽象、数据流、渲染管线与工程门禁。
-> 当前版本 **`2.0.3`**；`fabric_1_21_1` / `forge_1_18_2` 两个新平台已入树并接入八平台 CI，随下一版本首发。
+> 当前版本 **`2.0.4`**；`fabric_1_21_1` / `forge_1_18_2` 已随 2.0.4 首发（八平台同步发行）。
 
 ## 1. 项目概览
 
@@ -12,7 +12,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 
 **关键事实**：
 
-- 模组 ID：`csgobox`；当前版本 `2.0.3`；License MIT
+- 模组 ID：`csgobox`；当前版本 `2.0.4`；License MIT
 - **八平台矩阵**：NeoForge `1.21.1` / `26.1.2` / `26.2` + Forge `1.20.1` / `26.1.2` / `26.2` / `1.18.2` + Fabric `1.21.1`，共享同一 `mod_version`
 - Java toolchain：`v1_21_1` / `fabric_1_21_1` 用 21；`v26_1_2` / `v26_2` / `forge_26_1_2` / `forge_26_2` 用 25 + `--enable-preview`；
   `forge_1_20_1` / `forge_1_18_2` 用 17
@@ -128,7 +128,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 ### 3.2 开箱服务端逻辑（`common/logic/`）
 
 - **`OpenBlockGuard`** — 服务端权威开箱冷却（10 tick）：`isBlocked(UUID, now)` 惰性过期移除、
-  `block(UUID, now, cooldown)` 后写覆盖、`tick(now)` 周期清理。**六个平台**的 packet 与
+  `block(UUID, now, cooldown)` 后写覆盖、`tick(now)` 周期清理。**八平台**的 packet 与
   `ModEvents#serverTick` 共用。过期移除用条件式 `remove(key, value)`：若期间有并发 `block` 写入新期限，
   不会误删（规避 ABA 竞态导致冷却失效）
 - **`GradeMap` / `GradeMapCache`** — 每箱的不可变等级池 + 按 box id 缓存（reload 时失效）。
@@ -143,7 +143,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 
 ### 3.3 配置（`common/config/`）
 
-- **`CsboxConfigDefaults`** — **六个平台 `CsboxConfig` 默认值与取值范围的唯一来源**；
+- **`CsboxConfigDefaults`** — **八平台 `CsboxConfig` 默认值与取值范围的唯一来源**；
   枚举默认以常量名字符串存储，平台侧 `valueOf` 解析
 - **`CsboxConfig`**（平台）— NeoForge `ModConfigSpec` / Forge `ForgeConfigSpec`，
   **2.0.0 起由 17 字段收窄为 7 个服务端 / 服主向字段**，2 个 TOML 分组：
@@ -545,7 +545,7 @@ Forge 模块另有独立门禁脚本；box-editor 有 GitHub Pages 自动发布�
 | `pack_format` | 34 | 80 | 81 | 80 | 81 | 15 | 34 | 9 |
 | rendering era | legacy | decoupled | decoupled | decoupled | decoupled | legacy | legacy | legacy |
 | 包名 | `...csgobox.v1_21_1.*` | `...csgobox.v26_1_2.*` | `...csgobox.v26_2.*` | `...csgobox.forge_26_1_2.*` | `...csgobox.forge_26_2.*` | `...csgobox.forge_1_20_1.*` | `...csgobox.fabric_1_21_1.*` | `...csgobox.forge_1_18_2.*` |
-| `mod_version` | `2.0.3` | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 |
+| `mod_version` | `2.0.4` | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 | 同左 |
 | CI 矩阵 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **jar 命名**：NeoForge `csgobox-<mc>-<mod_version>.jar`，Forge `csgobox-forge-<mc>-<mod_version>.jar`，

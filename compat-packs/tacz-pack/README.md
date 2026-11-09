@@ -64,7 +64,6 @@ cp compat-packs/tacz-pack/*.json config/csbox/
 - 开出的枪在 `v1_21_1` / `forge_1_20_1` 可进检视视口（`CsLookItemScreen` 内 3D 检视；
   终端机报价面板「检视」胶囊对 TACZ 枪同样触发第一人称检视）。
 
-- **查已加载 ID（推荐工作流）**：装好 TACZ 后进游戏跑
-  `/csbox tacz list [guns|ammo|attachments] [namespace] [json]`，直接浏览当前安装枪包的
-  真实注册 ID 与元信息（枪械类别/用弹/弹匣容量、弹药堆叠/反查用枪、附件槽位），
-  第三方枪包无需查文档猜 ID；`json` 模式输出可点击复制的 JSON 数组，供配置/工具引用。
+- **查已加载 ID（推荐工作流）**：装好 TACZ 后进游戏跑 `/csbox editor`，内嵌链接会把
+  服务端实际加载的全部物品 id（含 `tacz:*` 枪械/弹药/附件）带进网页编辑器的自动补全，
+  物品池直接搜索选择，第三方枪包无需查文档猜 ID。

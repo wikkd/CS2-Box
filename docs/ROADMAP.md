@@ -1,7 +1,6 @@
 # CS2-Box 路线图
 
-> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.3**（2026-10-18 发布，八平台同步，CI 全绿）；
-> `fabric_1_21_1` / `forge_1_18_2` 已入树（八平台 CI 矩阵），随下一版本首发。
+> 阶段性总体规划（非历史快照）。当前版本基线：**2.0.4**（2026-11-08 发布，八平台同步——`fabric_1_21_1` / `forge_1_18_2` 随本版首发，CI 全绿）。
 > 每个方向给出目标、复用点、影响面与前置条件；**不承诺排期**，由维护者按收益/成本取舍。
 > 落地进度的权威记录仍是 `CHANGELOG.md`，本文件只做方向目录与决策依据。
 
@@ -28,12 +27,13 @@
 
 - **开箱线**：5 档稀有度、4 档钥匙、自定义 JSON 箱子、批量开箱、滚动动画、3D 检视、磨损、保底（pity）、档内权重、count 区间、tag / loot_table 条目、随机附魔、`enabled/requires` 门控、`/csbox` 命令族（info / reload / validate / editor / nbt hand）
 - **经济线**：终端机（5 轮谈判、批量购买、3 小时倒计时）、军火商村民、武库拆解台、`_prices.json` 全局价格表（固定价 / 区间价 / 变体键）、钥匙合成与锻造
-- **配置与工具**：`config/csbox/*.json` 热重载、`box.schema.json` / `prices.schema.json`、`box-editor/` 网页工具、`scripts/boxgen.py` / `check-ids.py`、内嵌双语教程
+- **配置与工具**：`config/csbox/*.json` 热重载、`box.schema.json` / `prices.schema.json`、`box-editor/` 网页工具、`scripts/boxgen.py` / `check-ids.py`、在线双语教程（Gitee，`/csbox help` 可点击链接）
 - **联动**：JEI/REI/EMI 概率面板、Jade/WTHIT/TOP、TACZ 枪械（变体 / NBT / 检视）、KubeJS 事件（开箱 / 终端购买 / 实体掉落 / 拆解）、**Create**（机械手开箱 + 拆解台自动化，反射零编译依赖）
 - **安全与工程**：CSPRNG 种子（48 位 LCG 不外泄约定）、`OpenBlockGuard` 服务端权威冷却、common 纯业务约束（`checkCommonArchitecture`）、AnimRenderOps 渲染门面（漂移守护）、GitHub Actions 门禁（见 `docs/CI-PROTECTION.md`）
 - **2.0.2 体检批次**：终端 `restock_minutes` 整体移除、批量开箱按每玩家剩余额度裁剪、拆解台大额产出流转、同步包容量护栏、保底进度 UI 可见化、配置未知字段警告 + `format_version`、tooltip 缓存与行数上限；CI 补齐 Create compileOnly 依赖供给与平台漂移 baseline 修复
 - **2.0.3 收口批次**：跨平台一致性（批量分片容量与单包护栏统一）、`/csbox editor` 配置内嵌导入（`#pack=`）+ box-editor 工作区分享 / EV 面板 / 应用到游戏、Cloth lambda 专用服务器崩溃修复（issue #2）+ `checkDistSafety` 门禁、`mcshared` 跨时代源码根下沉
-- **平台扩张批次（未发布）**：`fabric_1_21_1` / `forge_1_18_2` 入树（八平台 CI 全量编译 + 冒烟）、Superb Warfare 零依赖 3D 预览（`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`）、村民经济防套利修复（key1 双输入报价、铁收购锚定 key0）
+- **平台扩张批次（2.0.4 已发布）**：`fabric_1_21_1` / `forge_1_18_2` 首发（八平台 CI 全量编译 + 冒烟 + 五平台 GameTest 门禁）、Superb Warfare 零依赖 3D 预览（`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`）、村民经济防套利修复（key1 双输入报价、铁收购锚定 key0）
+- **2.0.4 玩法批次**：可配置档位（顶层 `grades`，≤64 档）+ 玩法字段一批（`keys` 多钥匙 / `wear` / `bonus` / `announce_above` / 时间窗 / `open_cost` / `pity.first_open` / `negotiation` / `/csbox upgrade` / `sound` / `hide_odds` / `allow_bulk`）、1.18.2 / 1.20.1 时代资源映射修复（共享配方 / 成就 / 小屋结构恢复生效）
 
 ### 0.3 硬边界（历史决策，勿翻案）
 
@@ -41,7 +41,7 @@
 - **军火商经济大改**（`docs/archive/superpowers/archived/2026-08-09-arms-dealer-economy.md`）已归档：不做整体经济重设计；`_prices.json` 价格体系是当前权威
 - **玩家间交易**（player-to-player trading）：早期规划的 out-of-scope，除非单独提决议
 - **Cloth Config 回归**：out-of-scope
-- **运行时零外联**：教程内嵌、无联网下载（v2.0.1 起已是硬约束）
+- **运行时零外联**：无联网下载（v2.0.1 起已是硬约束；教程仅在线版，由玩家浏览器打开，模组自身零网络请求）
 
 ---
 
@@ -51,13 +51,13 @@
 |---|---|---|---|---|---|
 | RP-01 | Trade Up 升级合成 | 玩法 | S–M | 无（复用 grade 印记 + 价格表） | 高：垃圾回收第二通道 + 追梦玩法 |
 | RP-02 | 开箱图鉴 / 收集册 | 玩法 | M | 无（复用成就统计） | 高：收集粘性 |
-| RP-03 | 限时活动箱时间窗 | 玩法/运营 | S | 无（扩展 JSON schema） | 高：运营抓手 |
+| RP-03 | 限时活动箱时间窗（**窗口已落地**：2.0.4 `available_from`/`available_until`；`serverEvents` 全服加成仍开放） | 玩法/运营 | S | 无 | 高：运营抓手 |
 | RP-04 | 掉落源扩展（钓鱼/结构 loot） | 玩法 | S–M | 无（事件监听即可） | 中 |
 | RP-05 | KubeJS 事件扩充 | 联动 | S | 无（仿既有事件） | 中高：脚本服主 |
 | RP-06 | Create 26.x 适配 | 联动 | M | **上游 Create 26.x 构建** | 中（平台一致性） |
 | RP-07 | JEI/REI 26.x Forge 补齐 | 联动 | S | **上游 Modrinth 构建** | 中（平台一致性） |
 | RP-08 | 权限/付费接范例（LuckPerms 等） | 运营 | S | 无（文档 + 可选示例语句） | 中 |
-| RP-09 | 统计与排行榜、稀有掉落广播 | 运营 | M | 无（复用 BoxConstraintTracker / 成就统计） | 中高：服主口碑 |
+| RP-09 | 统计与排行榜、稀有掉落广播（**广播已落地**：2.0.4 `announce_above`；统计/排行榜仍开放） | 运营 | M | 无（复用 BoxConstraintTracker / 成就统计） | 中高：服主口碑 |
 | RP-10 | 发布自动化（八平台 CI 矩阵已就位） | 工程 | S–M | 无（CI 矩阵已覆盖 8 平台） | 高：省人力 |
 | RP-11 | 军械库整合包 v2 落地 | 长期主线 | L | FTB Quests 等外挂模组；`docs/superpowers/specs/2026-09-12-...` 草案 | 高（面向整合包发布） |
 
@@ -85,6 +85,8 @@
 - **风险**：跨服/重启持久化口径需先定（能力 vs 内存）；大图鉴同步包体需分页
 
 ### RP-03 · 限时活动箱时间窗
+
+**进度（2026-11）**：核心时间窗已随 2.0.4 落地——箱子配置 `available_from` / `available_until`（ISO-8601，窗外拒绝开箱，`/csbox info` 可见）；与原提案形态不同（顶层双字段 vs `availability` 对象），`serverEvents` 全服加成与活动状态展示仍未做。
 
 **目标**：箱子 JSON 增加可选 `"availability": { "start": "<ISO-8601>", "end": "<ISO-8601>" }`（省略 = 长期有效）；窗口外箱子**不可开**（提示文案）、`drop` 掉落暂停、`/csbox info` 与 JEI 面板显示「活动进行中 / 已结束」。
 
@@ -129,6 +131,8 @@
 - **无硬依赖**：接入方自行实现 `PERMISSION_GATE.set(...)`
 
 ### RP-09 · 统计与排行榜、稀有掉落广播
+
+**进度（2026-11）**：稀有掉落广播已随 2.0.4 落地（箱子配置 `announce_above`，开出达到指定档位全服播报）；统计命令与排行榜仍开放。
 
 **目标**：
 - `/csbox stats [player]`：总开箱、各档位次数、保底进程（只读透传 `PityTracker`）、磨损累计

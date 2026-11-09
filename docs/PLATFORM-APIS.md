@@ -3,7 +3,7 @@
 > 面向全部 **8 个在维护平台模块**的 API 差异开发说明。按「版本分类 → 全量速查矩阵 → 主题展开」组织，帮助你在开发任何平台时快速定位「哪个 API、哪个版本、怎么写」。
 
 - **基准模块**：legacy 用 `v1_21_1`（Forge 侧 `forge_1_20_1`），new 用 `v26_1_2`（Forge 侧 `forge_26_1_2` → `forge_26_2`；Fabric `fabric_1_21_1` 以 `v1_21_1` 为基准）
-- **平台列表**：NeoForge `v1_21_1` / `v26_1_2` / `v26_2` + Forge `forge_1_20_1` / `forge_26_1_2` / `forge_26_2` / `forge_1_18_2` + Fabric `fabric_1_21_1`（前六平台为 2.0.x 正式发布平台；`fabric_1_21_1` / `forge_1_18_2` 已入树，随下一版本首发）
+- **平台列表**：NeoForge `v1_21_1` / `v26_1_2` / `v26_2` + Forge `forge_1_20_1` / `forge_26_1_2` / `forge_26_2` / `forge_1_18_2` + Fabric `fabric_1_21_1`（八平台均为 2.0.x 正式发布平台；`fabric_1_21_1` / `forge_1_18_2` 自 2.0.4 首发）
 - **适用范围**：各平台 `src/main/java/com/reclizer/csgobox/<platform>/` 下的版本敏感代码
 - **配套文档**：架构总览见 [ARCHITECTURE.md](./ARCHITECTURE.md)；1.21.1→26.1.2 单次移植记录见 [port-26.1.2.md](./archive/port-26.1.2.md)
 - **已归档（EOL）平台**：v1_21_0 / v1_21_3 / v1_21_4 / v1_21_5 / v1_21_8 / v1_21_10 / v1_21_11 于 2026-08-09 移出仓库（tag `eol-legacy-21x-1.0.6`）；下文矩阵中的 legacy 中间断点行仅作历史参考

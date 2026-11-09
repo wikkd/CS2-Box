@@ -1,22 +1,67 @@
 # 更新日志
 
-## [Unreleased]
+## [2.0.4] - 2026-11-08
 
-> 平台扩张批次：**新增 Fabric 1.21.1 与 Forge 1.18.2 两个平台**（多端总数 6 → 8），并为「卓越前线」（Superb Warfare）提供开箱级联动。
+> 平台扩张 + 玩法扩展批次：**新增 Fabric 1.21.1 与 Forge 1.18.2 两个平台**（多端总数 6 → 8，随本版首发），「卓越前线」（Superb Warfare）开箱级联动；**档位结构可配置**（顶层 `grades` 数组）并新增一批可选玩法字段（多钥匙 / 磨损区间 / 单开奖励 / 全服播报 / 时间窗 / 开箱费用 / 首开保底 / 终端谈判参数 / `/csbox upgrade` / 自定义音效）；五平台 GameTest 集成测试接入 CI 门禁；修复 1.18.2 / 1.20.1 共享数据包资源静默失效与一批军火商经济问题。配置格式向后兼容（新字段全部可选，缺省 = 旧行为）。
 
 ### 新增（平台）
 
 - **`fabric_1_21_1`（Fabric 1.21.1，Loom 1.17.21 + Fabric Loader 0.16.14，Java 21）**：以 `v1_21_1` 为基准整模块移植（`scripts/port-fabric-1211.py` 机械转换 + 手工适配），覆盖开箱 / 批量开箱 / 终端机 / 拆解台 / 村民交易 / `/csbox` 全子命令；JEI / REI / EMI / Jade / WTHIT / Cloth Config / Mod Menu 均有 Fabric 构建并接入；TACZ 检视与 3D 枪械渲染经非官方移植 TaCZ: Refabricated 接入（`modCompileOnly` 由 Loom 重映射，运行时经 `FabricLoader.isModLoaded` 检测）。已知限制：dev 环境 Fabric Loader 钉 0.16.14 与 Refabricated 要求的 ≥0.17.2 冲突（生产环境不受影响）；1.21.1 Fabric 无 Create/TOP，对应功能不移植。详见 `docs/PORTING-fabric.md`。
-- **`forge_1_18_2`（Forge 1.18.2-40.3.0，Java 17，ForgeGradle 7.0.31 + SRG renamer）**：以 `forge_1_20_1` 为基准回移；1.18.2 无 GuiGraphics，全部 GUI 为 PoseStack 重写（`AnimRenderOps` 吸收渲染原语）；JEI 10.x / REI 8.x / Jade 5.x / Cloth 6.x 接入，EMI/WTHIT/TOP 无 1.18.2 构建不移植；TACZ 为数据级联动（物品校验 + `/csbox tacz` 列表，编译期对包内签名桩 jar）。详见 `docs/PORTING-forge-1182.md`。
+- **`forge_1_18_2`（Forge 1.18.2-40.3.0，Java 17，ForgeGradle 7.0.31 + SRG renamer）**：以 `forge_1_20_1` 为基准回移；1.18.2 无 GuiGraphics，全部 GUI 为 PoseStack 重写（`AnimRenderOps` 吸收渲染原语）；JEI 10.x / REI 8.x / Jade 5.x / Cloth 6.x 接入，EMI/WTHIT/TOP 无 1.18.2 构建不移植；TACZ 为数据级联动（物品校验，编译期对包内签名桩 jar）。详见 `docs/PORTING-forge-1182.md`。
 - 两个新平台接入 CI 矩阵（`build.yml` 8 平台全量编译 + 冒烟测试），并补齐 `v1_21_1` / `v26_2` 缺失的 `PlatformSmokeTest`（八平台齐备）。
 
 ### 新增（联动）
 
 - **Superb Warfare（卓越前线）3D 预览（零依赖）**：`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 的 `AnimRenderOps.renderItem3D` 新增命名空间门控分支（不引用任何 SBW 类），对其枪械改用 `ItemDisplayContext.FIXED`（展示框上下文）渲染真实 3D 模型（SBW 的 separate-transforms 模型在 GUI 透视只出 2D 图标），异常降级 2D。配套 `compat-packs/superb-warfare-pack/` 示范箱（物品 id 取自 0.8.9.2 发布 jar 实测）与 dev 测试环境脚本 `scripts/download-sbw-dev.sh`（SBW + Kotlin for Forge 5.12.0；5.8.0 与 NeoForge 21.1.248 的 FML 4.0.43 不兼容）。
 
+### 新增（玩法）
+
+- **可配置档位（顶层 `grades` 数组，八平台）**：箱子配置新增可选顶层 `"grades"` 数组（低→高），整体替代 `random` + `grade1..5` 五档结构——每档 `{id, name?, color?, weight?, items, stock?}`，1..`MAX_GRADES` 档自由定义；档位等级按位置推导（`BoxGrades.levelAt`：`size - index`，内部列表高→低），协议零改动（`GradeGroup` 逐档同步 id/name/color/weight，tooltip 概率行、开箱动画与 JEI/REI/EMI 概率分类自动跟随自定义档位）；自定义档位 `stock` 走新增的 `TierStockManager`（内存态限量，重启回满）；缺省 = 默认 5 档，legacy 行为不变；`saveToFile`（forge 线）对非 legacy 形态的箱子回写 `grades` 格式。`docs/box-schema/box.schema.json`、JSON Schema 校验器与 box-editor（schema/示例/版本元数据经 `scripts/sync-box-editor-data.py` 重生成进 `data.js`）同步支持。
+- **玩法字段一批（全部可选、缺省 = 旧行为，八平台）**：`hide_odds`（隐藏概率行）/ `allow_bulk`（批量开箱门禁）/ `keys`（多钥匙 any-of，列表内任一钥匙匹配即可开箱）/ `wear:[min,max]`（掉落耐久物品按磨损区间扣损）/ `bonus{chance, mode:double|box}`（单开奖励：按几率双倍掉落或额外发放一个箱子）/ `announce_above`（开出达到指定档位的物品时全服播报）/ `available_from` / `available_until`（ISO-8601 时间窗，窗外拒绝开箱）/ `open_cost`（开箱额外扣除武库点数）/ `pity.first_open`（首开保底，内存态）/ `negotiation{rounds, timeout_minutes, price_bias}`（终端机谈判轮数 / 超时 / 价格偏置，服务端权威、零 wire 改动，`NegotiationModel.setParams` 按箱注入）/ `upgrade{target, consume}`（`/csbox upgrade` 把手中的箱子升档为 `target` 箱，消耗背包中手持箱的 `consume` 个副本——手持那份不计；全员可用）/ `sound`（自定义开箱音效，未知 id 播放时回退默认音）。JEI/REI/EMI 分类展示约束 / 折扣 / 保底 / 逐物品价格；`/csbox info` 展示新字段；lang 键（`grade_n`、播报、时间窗 / 开箱费用、upgrade 提示）中英双语。世界钟换算下沉 `mcshared/util/WorldClock`（game ticks × 50 → ms 唯一换算点，谈判倒计时 / 终端状态域专用）；NeoForge 26.x 开箱执行接缝 `OpenService.openSingle` 抽取（行为保持，`handleSingleOpen` 只剩传输层）。
+
+### 新增（测试）
+
+- **五平台 GameTest 集成测试 + CI 门禁**：同一套 6 用例（config→registry 加载、单开 E2E 发放 / 消耗 / GRADE 印记 / 防连点、缺钥匙拒开、`pity.first_open` 保底、`max_per_player`、终端拒绝）跑在 v1_21_1 / v26_1_2 / v26_2 / forge_1_18_2 / forge_1_20_1，统一入口 `./gradlew :<module>:gameTestServer`（ForgeGradle 别名 → `runGameTestServer`，Loom → `runGametest`；exit 码 = 失败用例数）；CI 新增 `gametest.yml` 五平台矩阵门禁。三代注册机制分别适配：NeoForge 21.1 / Forge legacy 用 `@GameTestHolder` 注解扫描（per-loader 系统属性 `neoforge.*` vs `forge.enabledGameTestNamespaces`）；NeoForge 26.x 无注解扫描——`RegisterGameTestsEvent` + TEST_FUNCTION 注册表（`RegisterEvent`）+ 每用例独立 environment（= batch）；fabric 走 `fabric-gametest` entrypoint（套件已就位，dev 运行被上游 Loom officialMojangMappings 半重映射 bug 阻断——与 runServer 同因，暂不入 CI）。分时代结构模板（gzip，DataVersion 2975/3465/3955/4790/4903；1.18.2/1.20.1 复数 `structures/`，1.21.1/26.x 单数 `structure/`）；fixture 定价经 `ensureFixturePrices` 合并（规避 dev 价格表已存在时 `writeIfAbsent` 静默丢弃）。分层测试流程（L1 单测 → L5 渠道 soak）与编写须知见 `docs/TESTING-PIPELINE.md`。已知无覆盖：forge_26_1_2 / forge_26_2（上游 26.x 无 GameTest 注册路径）。
+
+### 变更（移除）
+
+- **本地教程系统整体移除（改纯在线版）**：包内不再内置教程文件，`config/csbox/` 不再生成 `_tutorial_v<版本>.md` / `_tutorial_v<版本>_zh_cn.md`（`writeTutorialIfMissing` / `refreshTutorials` 安装器删除；历史落盘的教程文件不清理，可手动删除）。教程内容只保留 Gitee 在线版（`docs/tutorials/`），由 `/csbox help` 的「在线教程」链接与模组详情页 Website（地球）按钮打开——运行时保持零网络外联（打开链接的是玩家浏览器，模组自身不做任何请求）。`/csbox reload tutorial` 子命令与死字段 `MODVERSION` 同步移除。
+- **`/csbox tacz` 注册表浏览器移除**：`/csbox tacz list guns|ammo|attachments [...]` 子树与 `TaczList` 收集器整体删除（v2.0.1 引入；26.x 四平台从未包含，本版起八平台命令树完全一致）。TACZ 物品 / 变体 id 的发现改走 `/csbox editor` 内嵌的服务端注册表（装 TACZ 即含全部 `tacz:*` 条目进网页编辑器自动补全）与编辑器 TACZ 变体字段；`BoxItemCodec.validateTacz` 物品校验保留。净删约 2,200 行（4 平台 × CsboxCommand ~230 行 + TaczList ~330 行 + v1_21_1 的 `TaczListFormatTest` + 17 条 lang 键）。已知损失：headless 服务端控制台不再能枚举 TACZ id。
+- **`/csbox help` 行清单补全**：新增 `validate` / `upgrade` 两行（`upgrade` 为本版新命令，此前帮助从未列出），移除 `tacz` 行。
+
 ### 修复
 
+- **1.18.2 / 1.20.1 共享数据包资源静默失效（目录时代映射）**：1.21（24w21a）起数据包目录改单数（`recipe/` / `advancement/` / `loot_table/` / `structure/`），1.18.2 与 1.20.1 只读复数名——common 单源的配方、成就、战利品表与小屋结构 NBT 在这两平台全部静默失效。现两平台 `processResources` 生成时代映射副本：13 个成就（1.18.2 含终端机成交 / 破产触发器，`CriteriaTriggers` 注册补齐）、7 个配方（`icon`/`result` 的 `id`→`item` 字段翻译；1.18.2 `csgo_key3` 用旧 `minecraft:smithing` 格式，无 template 项）、军火商小屋战利品表与 6 个结构 NBT（1.20.1 小屋结构自此真正可生成；1.18.2 无数据包结构放置机制，维持降级说明）；同时排除 common 的死单数目录与 1.19+ 版式 worldgen JSON——1.18.2 此前 `structure_set` unbound 值会中断整个数据包加载（`Unbound values in registry worldgen/configured_structure_feature`）、村庄 `template_pool` 覆盖污染每次正常启动的注册表解析。common 保持单源，改共享配方后必须同步重生成两平台副本。
+- **`#tag` 标签解析修复（八平台）**：不再复用携带错误的 `#tag` 解析结果（错误不再跨条目扩散）；裸 `#` 选择器按 NBT 字符串语义守卫。物品校验与实际掉落口径一致。
+- **终端机报价/聊天气泡文本钳制 + 3D 预览自适应（八平台 GUI）**：超长报价与对话文本按布局钳制显示（不再溢出）；报价物品的 3D 预览按物品尺寸自动适配（过大/过小不再顶出或缩成一团）。
+- **`en_us.json` 双重编码字符串修复 + 缺失 zh 键补齐（八平台）**：部分英文界面文本此前经双重转义显示为乱码转义序列，已修复；补齐缺失的中文键。
+- **`parseWeights` 显式 0 被回填默认值（八平台）**：档位权重列表中显式写 `0` 的档位被静默回填默认权重（`[100,0,0,0,0]` 实际按 `[100,125,25,6,4]` 滚动）——想砍掉的档位照样出货。现在显式 `0` 保持为 `0`（该档永不出现）。
+- **`Outcome.giveItem()` 在 packet 族平台恒返回空（八平台）**：`Inventory.add` 具消费语义（成功即吞栈），现先授予副本再 add——依赖其返回值的路径（Create 机械手开箱产出、GameTest prize 断言）不再拿到空物品。
+- **CI 修复（开发侧）**：`local-repo` 的 ~610 个 maven 元数据文件（pom/module）此前被提交入库，Gradle「首仓库含该模块元数据即钉死其 artifact 来源」的解析语义使冷缓存的 Build Matrix 自 11-05 起全 9 job 断粮——已取消追踪并 gitignore 整目录（下载脚本拉取时自会重写所需 pom，本地行为零变化）；fabric CI job 改用 `remapJar`（Loom `jar` 只产出 devlibs 的 dev 映射 jar，`build/libs` 的 intermediary 分发 jar 须 `remapJar` 产出）。Build Matrix 恢复 9/9 全绿。
+- **Forge 1.20.1 / 1.18.2 网络包方向校验缺失（安全）**：13 个包此前全部以 5 参 `registerMessage` 注册（不声明 `NetworkDirection`），而 Forge 对未声明方向的包**不校验到达方向**（`NetworkHooks.validatePacketDirection` 的 `orElse(packetDirection)` 兜底）——恶意客户端可向服务端发送 clientbound 包（含「箱子注册表全量同步」），服务端执行后注册表被整包替换（任意物品发放路径）。现 13 处注册全部补显式方向（`PLAY_TO_SERVER` / `PLAY_TO_CLIENT`）。
+- **`PacketSyncBoxDefinitions` 写侧跳过定义不回退写指针（八平台）**：超限（128 KiB/箱）或超预算（896 KiB 总额）的定义被跳过时，已编码进 scratch 缓冲的字节未回退——客户端把跳过的字节当后续定义解码（整包错位、尾部定义丢失），且预算失真可使真实载荷突破 1 MiB clientbound 上限踢掉所有客户端。两处跳过分支现回退 `writerIndex(start)`；读侧同时补 count 上限（512 定义 / 256 报价档——forge 1.20.1 / 1.18.2 原有，其余六平台补齐）。
+- **批量开箱混合钥匙销毁（八平台）**：可用量按多钥匙并集统计、消费却按主钥匙单 id 且**边扫边扣**——持 1 主 + 3 副开 4 箱会把主钥匙扣光后失败，箱子退款但已扣钥匙永久丢失。新增 `tryConsumeKeysExact`（对全部 accepted ids 先计数、总量不足分毫不动、同线程两趟无交错）接入批量 finalize；同时补齐多钥匙 any-of 在 v26_1_2 / v26_2 / forge_1_20_1 / forge_1_18_2 **单开**路径的半落地（`547b9489` 此前只覆盖了计数侧与 forge 26.x 消费侧）。
+- **单开扣点顺序（八平台）**：配置 `open_cost` 的箱子先扣点后查钥匙，钥匙不在手（切槽位 / 延迟）时点数白扣无退款——重排为「时间窗 → 钥匙 → 点数」，任一资源失败时后面尚未扣。
+- **终端机购买 `def` 空指针（八平台）**：`/csbox reload` / 热重载移除终端定义后会话仍存活，此时购买在 tier-stock 循环 NPE（且全局 stock 已先行扣减）——补空判：def 为空即视为无 tier stock，购买安全拒绝。
+- **批量退款保栈级组件（八平台）**：批量开箱钥匙消费失败退款时用「新通用箱 + box_id」重建，丢失被消费栈的栈级组件（铁砧改名等）——现退还模板栈副本（空模板回退通用箱）。
+- **forge 26.1.2 / 26.2 预览包 256 截断补齐**：两 forge 平台的预览请求处理器此前对 >256 物品的箱不做截断（构造器抛异常 → 客户端预览挂死 10 秒）——补齐与 NeoForge 基准一致的截断 + 告警日志。
+- **`ItemCsgoBox` tooltip 缓存永不命中（八平台）**：缓存键比较误用 `!=`（每帧新建 record 引用必不相等）——改 `equals()`，tooltip 恢复按定义实例缓存（v2.0.2 的既定行为）。
+- **拆解台 `insertItem` 空槽超额复制（v1_21_1 / forge 三平台）**：空槽分支整栈复制入槽而返回值只报 `move` 个——自动化管道传超大来源栈时会复制出多余物品；现只插入 `move` 个。
+- **`TerminalBuyEvent` 改发授予物品的副本（八平台）**：事件此前携带已入包的同一实例，监听器修改即改到玩家已拿到的物品——现传 `copy()`。
+- **批量结果屏「收下」按钮点击区对齐（八平台）**：show-all 模式下按钮渲染在 84% 高度、点击判定却在 86%（基准系）/ 92%（forge 系）——点击区统一对齐渲染行。
+- **EMI 进服全量资源重载跳过（四个 EMI 平台）**：定义同步包每次玩家进服都触发，EMI 的唯一刷新路径是整包资源重载（客户端数秒卡顿）——`BoxEmiReload` 加内容指纹，注册表未变的同步直接跳过；首次同步与真实变更仍刷新。
+- **价格表超大数值溢出（common）**：`_prices.json` / 遗留迁移写超过 int 上限的价钱此前经 `(int)` 回绕成负价——现按非法条目报错跳过（价格表）或保留原位（遗留迁移）。
+- **杂项清理**：NeoForge 26.x 批量路径权限门盲转强改 instanceof 守卫（GameTest mock 不再 CCE）；14 个文件的重复 import 删除；4 处 "six platform" 陈旧注释改 eight；forge_1_18_2 GameTest 头注命令行版本笔误（forge-1.20.1 → forge-1.18.2）；`scripts/drift-baseline.json` 基线随本轮同步修复刷新（姊妹文件改动集逐字节一致，度量噪声）。
+- **死亡/断线致 HUD 永久隐藏
+
 - **死亡/断线致 HUD 永久隐藏（`v1_21_1` / `fabric_1_21_1` 镜像漏同步）**：开箱动画屏与检视屏渲染期间置 `options.hideGui = true`，此前只靠 `onClose()` 恢复；但死亡/重生或任何外部 `setScreen` 替换屏幕只调 `Screen.removed()` 不调 `onClose()`，残留为 true 的 hideGui 会让血条/热键栏/准星在重生后永久消失。其余 5 个使用 hideGui 的平台早有 `removed()` 恢复（其注释原话即此 bug 模式），`v26_2` / `forge_26_2` 走 `HudVisibility` 不受影响——本次给两平台的 `CsboxProgressScreen` / `CsLookItemScreen` 补齐同款防护（`CsboxBulkResultScreen` 两平台本就有），八平台口径一致。
+
+### 优化与内部
+
+- **热路径分配削减（八平台）**：注册表快照缓存、`BoxOdds` 零分配化、`GradeMap` 累积权重池、REI 输出缓存与静态 `AIR` id——满配大箱子的开箱/悬停路径减少每帧分配。
+- **packet 编排重构收尾**：`service/BoxOpenExecutor` 抽取（packet 族开箱编排，服务端权威路径不变）+ 死代码清扫与并发/生命周期加固。
+- **网页配置工具跟进**：box-editor 站点版本清单补 `fabric-1.21.1` / `forge-1.18.2`；compat-pack 模板、触屏 tooltip、schema 漂移测试。
+- **构建引导与瘦身**：共享挂件 `gradle/bootstrap-local-deps.gradle`——全新克隆首次构建自动补齐未入库的 compileOnly 依赖（TACZ/Create，经 `scripts/bootstrap-dev.sh`，产物齐全时零开销跳过）；`-Pslim` 编译期瘦身扩展到剩余三平台（八平台支持）。
 - **`forge_1_18_2` 武库商小屋降级明确化（清理死资源）**：1.18.2 没有数据包驱动的结构放置（无 `structure_set` / `configured_structure_feature` 数据注册表，`template_pool` 与村庄 houses 池也不可数据包注入），首建时机械移植遗留的 8 个小屋资源文件（不匹配任何版本 codec 的结构 JSON、biome tag、6 个结构 NBT）从未生效且无代码消费者，已删除；玩家获取军火商不受影响——合成军火拆解台放置后村民照常转职（动态定价与全部交易照常）。限制说明与未来补全路径见 `docs/PORTING-forge-1182.md`。
 - **武库商小屋群系白名单清理与覆盖策略落档**：白名单删除冗余的 `minecraft:grove`（经 `#minecraft:is_forest` 覆盖，1.20.1 / 1.21.1 / 26.1.2 / 26.2 原版标签已逐一核对；26.x 新增的 pale_garden 同样经该标签自动纳入，行为不变）；`docs/BIOME-INTEGRATION.md` 修正「野外据点 = 沙漠小屋」的错误示例（沙漠小屋只经村庄通道出现），并补齐白名单覆盖策略（刻意排除沙漠 / 高山山峰 / 沼泽 / 红树林；cherry_grove 与 meadow 系从 `#minecraft:is_mountain` 单独捞入以避开山峰）。
 - **军火商铁收购价与 key0 锚点结构性挂钩（防印钞）**：矿物→点数收购价随价格表浮动，但 key0 售价是固定锚点（默认 9 点），此前「3 铁 = 9 点 = 1 key0」的无套利关系只在默认表价下偶然成立——把铁定价到 500 会让 1 铁兑 30 点（3 铁兑 10 把 key0），村民变成印钞机。现在铁的收购价额外钉在 `min(表价 × buy_rate × 波动, floor(key0_price / 3))`：任何价格表下「卖铁换点 → 买 key0」都不会超过直接用 3 铁合成（上限生效时恰好零利润；默认表价下数值不变，铁仍 3 点）。金 / 钻不受影响——key1 / key2 售价与收购价同表浮动，无固定锚点可套利。同时在配置文档补充村民收购（6% 兜底、收未盖章散矿）、拆解台（90%、收盖章物品）与直接合成三者的定位层级说明。

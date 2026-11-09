@@ -75,22 +75,22 @@ forge_1_18_2 与其余平台零额外准备（1.18.2 的 TACZ 签名桩在构建
 
 构建产物:
 
-NeoForge 平台（jar 名 `csgobox-<mc>-<mod_version>.jar`，当前 `mod_version=2.0.3`）：
+NeoForge 平台（jar 名 `csgobox-<mc>-<mod_version>.jar`，当前 `mod_version=2.0.4`）：
 
-- `v1_21_1/build/libs/csgobox-1.21.1-2.0.3.jar`
-- `v26_1_2/build/libs/csgobox-26.1.2-2.0.3.jar`
-- `v26_2/build/libs/csgobox-26.2-2.0.3.jar`
+- `v1_21_1/build/libs/csgobox-1.21.1-2.0.4.jar`
+- `v26_1_2/build/libs/csgobox-26.1.2-2.0.4.jar`
+- `v26_2/build/libs/csgobox-26.2-2.0.4.jar`
 
 Forge 平台（jar 名 `csgobox-forge-<mc>-<mod_version>.jar`）：
 
-- `forge_1_20_1/build/libs/csgobox-forge-1.20.1-2.0.3-srg.jar`（**发布产物**；`renameJar` 的 SRG 重映射版，1.20.1 生产必需）
-- `forge_1_18_2/build/libs/csgobox-forge-1.18.2-2.0.3-srg.jar`（同上，`renameJar` SRG 重映射版）
-- `forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.3.jar`
-- `forge_26_2/build/libs/csgobox-forge-26.2-2.0.3.jar`
+- `forge_1_20_1/build/libs/csgobox-forge-1.20.1-2.0.4-srg.jar`（**发布产物**；`renameJar` 的 SRG 重映射版，1.20.1 生产必需）
+- `forge_1_18_2/build/libs/csgobox-forge-1.18.2-2.0.4-srg.jar`（同上，`renameJar` SRG 重映射版）
+- `forge_26_1_2/build/libs/csgobox-forge-26.1.2-2.0.4.jar`
+- `forge_26_2/build/libs/csgobox-forge-26.2-2.0.4.jar`
 
 Fabric 平台（jar 名 `csgobox-fabric-<mc>-<mod_version>.jar`）：
 
-- `fabric_1_21_1/build/libs/csgobox-fabric-1.21.1-2.0.3.jar`
+- `fabric_1_21_1/build/libs/csgobox-fabric-1.21.1-2.0.4.jar`
 
 ### 5. 运行开发客户端
 
