@@ -20,8 +20,11 @@ import java.util.function.Supplier;
 
 public class PacketSyncBoxItems {
 
-    private static final int MAX_ITEMS = 256;
-    private static final int MAX_WEIGHTS = 5;
+    /** Preview cap (shared with the PacketRequestBoxItems truncation guard). */
+    public static final int MAX_ITEMS = 256;
+    /** Per-tier weight wire cap: must cover custom tiers (up to
+    * BoxGrades.MAX_GRADES); the client never indexes this list. */
+    private static final int MAX_WEIGHTS = com.reclizer.csgobox.box.BoxGrades.MAX_GRADES;
     private static final int MAX_PENDING_RESPONSES = 8;
 
     private final long requestId;

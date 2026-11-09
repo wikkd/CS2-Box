@@ -33,7 +33,9 @@ public record PacketSyncBoxItems(
 
     /** Preview cap (shared with the PacketRequestBoxItems truncation guard). */
     public static final int MAX_ITEMS = 256;
-    private static final int MAX_WEIGHTS = 5;
+    /** Per-tier weight wire cap: must cover custom tiers (up to
+    * BoxGrades.MAX_GRADES); the client never indexes this list. */
+    private static final int MAX_WEIGHTS = com.reclizer.csgobox.box.BoxGrades.MAX_GRADES;
     private static final int MAX_PENDING_RESPONSES = 8;
 
     public static final Type<PacketSyncBoxItems> TYPE = new Type<>(
