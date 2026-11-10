@@ -179,9 +179,16 @@ public final class AnimRenderOps {
                     offsetX = ox;
                     offsetY = oy;
                     // The 2D draw resolves its own (glint-animated) state via
-                    // guiGraphics.item(); trackedState is used here only for
-                    // measurement, so caching it for the 3D path is harmless.
-                    MODEL_CACHE.put(key, new CachedModel(ox, oy, tracked, 1F, 0F, 0F, 0F));
+                    // guiGraphics.item(); store the REAL geometry alongside so
+                    // the 3D path can reuse this cache entry without mis-fitting
+                    // (span/center measured per bounds, defaults when absent).
+                    float span = (bounds != null)
+                            ? (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()))
+                            : 1.0F;
+                    float cx = (bounds != null) ? (float) ((bounds.minX + bounds.maxX) * 0.5D) : 0.0F;
+                    float cy = (bounds != null) ? (float) ((bounds.minY + bounds.maxY) * 0.5D) : 0.0F;
+                    float cz = (bounds != null) ? (float) ((bounds.minZ + bounds.maxZ) * 0.5D) : 0.0F;
+                    MODEL_CACHE.put(key, new CachedModel(ox, oy, tracked, span, cx, cy, cz));
                 } catch (Throwable ignored) {
                     // Best-effort measurement; centre so icons never drift bottom-right.
                     offsetX = -8F;
