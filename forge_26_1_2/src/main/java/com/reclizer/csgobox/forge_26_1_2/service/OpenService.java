@@ -725,7 +725,6 @@ public final class OpenService {
         }
 
         // Re-validate after async compute; inventory might have changed.
-        Identifier keyId = ItemCsgoBox.getKey(templateBox);
         Availability avail = countAvailability(sp, templateBox, ItemCsgoBox.getAcceptedKeys(templateBox));
         int recheckBoxes = avail.boxes();
         int recheckKeys = avail.keys();
