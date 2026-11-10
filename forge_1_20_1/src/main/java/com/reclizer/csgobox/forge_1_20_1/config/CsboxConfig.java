@@ -1,9 +1,11 @@
 package com.reclizer.csgobox.forge_1_20_1.config;
 
+import com.reclizer.csgobox.config.CsboxConfigAccess;
 import com.reclizer.csgobox.config.CsboxConfigDefaults;
+import com.reclizer.csgobox.config.ErrorChatAudience;
 import net.minecraftforge.common.ForgeConfigSpec;
 
-public class CsboxConfig {
+public class CsboxConfig implements CsboxConfigAccess {
 
     /** Sentinel upper bound meaning "no limit" for unbounded config ranges. */
     public static final int NO_UPPER_BOUND = CsboxConfigDefaults.NO_UPPER_BOUND;
@@ -105,10 +107,5 @@ public class CsboxConfig {
 
     public void setDamageItemByWear(boolean value) {
         damageItemByWearValue.set(value);
-    }
-
-    public enum ErrorChatAudience {
-        OP_ONLY,
-        EVERYONE
     }
 }

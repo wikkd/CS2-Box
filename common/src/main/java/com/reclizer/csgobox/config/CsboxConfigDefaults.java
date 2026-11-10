@@ -5,9 +5,9 @@ package com.reclizer.csgobox.config;
  * legal range, shared by all platform builders (NeoForge
  * {@code ModConfigSpec} and Forge {@code ForgeConfigSpec}).
  *
- * <p>Enum defaults are stored as their constant names because the enum types
- * themselves are declared per platform; builders resolve them with
- * {@code valueOf}. Values here must match the behaviour documented in
+ * <p>Enum defaults are stored as their constant names and resolved with
+ * {@code valueOf} by the platform config builders and the shared Cloth
+ * Config screen. Values here must match the behaviour documented in
  * {@code docs/CONFIGURATION.md}.</p>
  */
 public final class CsboxConfigDefaults {

@@ -3,7 +3,9 @@ package com.reclizer.csgobox.fabric_1_21_1.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.reclizer.csgobox.config.CsboxConfigAccess;
 import com.reclizer.csgobox.config.CsboxConfigDefaults;
+import com.reclizer.csgobox.config.ErrorChatAudience;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +25,7 @@ import java.nio.file.StandardCopyOption;
  * load; writes through the setters are clamped the same way and only take
  * effect in memory until {@link #save()} persists the file.</p>
  */
-public class CsboxConfig {
+public class CsboxConfig implements CsboxConfigAccess {
 
     /** Sentinel upper bound meaning "no limit" for unbounded config ranges. */
     public static final int NO_UPPER_BOUND = CsboxConfigDefaults.NO_UPPER_BOUND;
@@ -205,10 +207,5 @@ public class CsboxConfig {
 
     public void setDamageItemByWear(boolean value) {
         this.damageItemByWear = value;
-    }
-
-    public enum ErrorChatAudience {
-        OP_ONLY,
-        EVERYONE
     }
 }

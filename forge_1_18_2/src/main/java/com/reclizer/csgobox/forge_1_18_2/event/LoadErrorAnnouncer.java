@@ -1,9 +1,9 @@
 package com.reclizer.csgobox.forge_1_18_2.event;
 
+import com.reclizer.csgobox.config.ErrorChatAudience;
 import com.reclizer.csgobox.forge_1_18_2.CsgoBox;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxJsonLoader;
 import com.reclizer.csgobox.forge_1_18_2.box.LoadError;
-import com.reclizer.csgobox.forge_1_18_2.config.CsboxConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
@@ -22,8 +22,8 @@ public final class LoadErrorAnnouncer {
         if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) return;
         if (!BoxJsonLoader.hasLoadErrors()) return;
 
-        CsboxConfig.ErrorChatAudience audience = CsgoBox.CONFIG.jsonErrorAudience();
-        if (audience == CsboxConfig.ErrorChatAudience.OP_ONLY
+        ErrorChatAudience audience = CsgoBox.CONFIG.jsonErrorAudience();
+        if (audience == ErrorChatAudience.OP_ONLY
                 && !sp.createCommandSourceStack().hasPermission(2)) {
             return;
         }

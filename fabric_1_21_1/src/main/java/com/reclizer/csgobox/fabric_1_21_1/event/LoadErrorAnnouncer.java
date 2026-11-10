@@ -1,9 +1,9 @@
 package com.reclizer.csgobox.fabric_1_21_1.event;
 
+import com.reclizer.csgobox.config.ErrorChatAudience;
 import com.reclizer.csgobox.fabric_1_21_1.CsgoBox;
 import com.reclizer.csgobox.fabric_1_21_1.box.BoxJsonLoader;
 import com.reclizer.csgobox.fabric_1_21_1.box.LoadError;
-import com.reclizer.csgobox.fabric_1_21_1.config.CsboxConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,8 +23,8 @@ public final class LoadErrorAnnouncer {
     public static void onPlayerJoin(ServerPlayer sp) {
         if (!BoxJsonLoader.hasLoadErrors()) return;
 
-        CsboxConfig.ErrorChatAudience audience = CsgoBox.CONFIG.jsonErrorAudience();
-        if (audience == CsboxConfig.ErrorChatAudience.OP_ONLY && !sp.hasPermissions(2)) {
+        ErrorChatAudience audience = CsgoBox.CONFIG.jsonErrorAudience();
+        if (audience == ErrorChatAudience.OP_ONLY && !sp.hasPermissions(2)) {
             return;
         }
 
