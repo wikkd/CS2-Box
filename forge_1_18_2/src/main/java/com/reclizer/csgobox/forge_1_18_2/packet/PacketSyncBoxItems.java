@@ -43,7 +43,7 @@ public class PacketSyncBoxItems {
         this.requestId = requestId;
         this.boxId = boxId == null ? Optional.empty() : boxId;
         this.items = items == null ? List.of() : List.copyOf(PacketValidation.copyStacks(items));
-        this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, 5, 1));
+        this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1));
         this.weights = weights == null ? List.of() : List.copyOf(PacketValidation.copyNonNegativeInts(weights));
         this.keyItem = keyItem == null ? ItemStack.EMPTY : keyItem.copy();
         this.pityRemaining = Math.max(-1, pityRemaining);
@@ -67,7 +67,7 @@ public class PacketSyncBoxItems {
         for (int i = 0; i < size; i++) {
             CompoundTag tag = buf.readNbt();
             itms.add(tag == null ? ItemStack.EMPTY : ItemStack.of(tag));
-            grds.add(Mth.clamp(buf.readVarInt(), 1, 5));
+            grds.add(Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES));
         }
         this.items = List.copyOf(itms);
         this.grades = List.copyOf(grds);

@@ -46,9 +46,12 @@ final class ColorToolsTest {
         assertNotEquals(ColorTools.colorItems(2), ColorTools.colorItems(3));
         assertNotEquals(ColorTools.colorItems(3), ColorTools.colorItems(4));
         assertNotEquals(ColorTools.colorItems(4), ColorTools.colorItems(5));
-        // unknown grade -> 0
+        // grade 0 (no tier) -> transparent
         assertEquals(0, ColorTools.colorItems(0));
-        assertEquals(0, ColorTools.colorItems(99));
+        // tiers 6+ (custom grades beyond the legacy ladder) render the CS2
+        // rare-special gold instead of an invisible transparent frame
+        assertEquals(0xffeb4b, ColorTools.colorItems(6));
+        assertEquals(0xffeb4b, ColorTools.colorItems(99));
         // grade 1..5 are non-zero ARGB
         for (int g = 1; g <= 5; g++) {
             assertNotEquals(0, ColorTools.colorItems(g));

@@ -107,7 +107,7 @@ public class ArmoryRecyclerMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             Integer grade = ItemCsgoBox.getGrade(stack);
-            return grade != null && grade >= 1 && grade <= 5;
+            return grade != null && grade >= 1 && grade <= com.reclizer.csgobox.box.BoxGrades.MAX_GRADES;
         }
     }
 

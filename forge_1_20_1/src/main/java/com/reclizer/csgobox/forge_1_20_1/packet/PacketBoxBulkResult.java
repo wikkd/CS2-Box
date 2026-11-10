@@ -33,7 +33,7 @@ public class PacketBoxBulkResult {
     public PacketBoxBulkResult(long requestId, List<ItemStack> items, List<Integer> grades) {
         this.requestId = requestId;
         this.items = items == null ? List.of() : List.copyOf(PacketValidation.copyStacks(items));
-        this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, 5, 1));
+        this.grades = grades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(grades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1));
         PacketValidation.requireSameSize("bulk items", this.items, "grades", this.grades);
         PacketValidation.requireMaxSize("bulk items", this.items, BULK_PER_PACKET);
     }

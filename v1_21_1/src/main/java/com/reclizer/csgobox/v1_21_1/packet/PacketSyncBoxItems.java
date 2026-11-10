@@ -63,7 +63,7 @@ public record PacketSyncBoxItems(
         PacketValidation.requireMaxSize("items", items, MAX_ITEMS);
         PacketValidation.requireMaxSize("weights", weights, MAX_WEIGHTS);
         items = PacketValidation.copyStacks(items);
-        grades = PacketValidation.copyClampedInts(grades, 1, 5, 1);
+        grades = PacketValidation.copyClampedInts(grades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1);
         weights = PacketValidation.copyNonNegativeInts(weights);
     }
 
@@ -103,7 +103,7 @@ public record PacketSyncBoxItems(
         List<Integer> grades = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             items.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
-            grades.add(Mth.clamp(buf.readVarInt(), 1, 5));
+            grades.add(Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES));
         }
 
         int weightLen = buf.readVarInt();

@@ -136,7 +136,7 @@ public record PacketCsgoProgress(long requestId) implements CustomPacketPayload 
                 }
             }
         }
-        return Mth.clamp(fallback, 1, 5);
+        return Mth.clamp(fallback, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
     }
 
     /**

@@ -29,12 +29,13 @@ public final class ColorTools {
 
     public static int colorItems(int grade) {
         return switch (grade) {
+            case 0 -> 0; // no tier (empty/invalid) — nothing to frame
             case 1 -> 0xff4c70ff;
             case 2 -> 0xff8d5eff;
             case 3 -> 0xffe54af2;
             case 4 -> 0xfff86351;
             case 5 -> 0xffffdc1d;
-            default -> 0;
+            default -> 0xffeb4b; // tiers 6+ (custom): CS2 rare-special gold
         };
     }
 }

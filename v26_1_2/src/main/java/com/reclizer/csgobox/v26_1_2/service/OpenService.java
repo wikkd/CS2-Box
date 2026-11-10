@@ -659,8 +659,8 @@ public final class OpenService {
                         }
                         if (pityItem != null && !pityItem.isEmpty()) {
                             giveItem = pityItem;
-                            pityRollGrade = Mth.clamp(pr.grade(), 1, 5);
-                            finalGrade = Mth.clamp(pr.grade(), 1, 5);
+                            pityRollGrade = Mth.clamp(pr.grade(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
+                            finalGrade = Mth.clamp(pr.grade(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
                             strip.items().set(winningIndex, giveItem.copy());
                             strip.grades().set(winningIndex, finalGrade);
                             fallback = false;
@@ -704,7 +704,7 @@ public final class OpenService {
                 // constant 0L made the spec resolve (count-range / enchant /
                 // loot-table) in finalizeBulkOpen deterministic and identical
                 // for every non-first item across players and batches.
-                int rolledGrade = Mth.clamp(g, 1, 5);
+                int rolledGrade = Mth.clamp(g, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
                 out.add(new BulkOpenResult(s, rolledGrade, SECURE_RANDOM.nextLong(), -1, List.of(), List.of(), bulkGateDef != null ? bulkGateDef.sampleWear(rng) : rng.nextFloat(), fallback, rolledGrade));
                 // v2.0.1-fix(D): empty results never advance the streak.
                 if (pity != null && !s.isEmpty()) {
@@ -1029,7 +1029,7 @@ public final class OpenService {
                 }
             }
         }
-        return Mth.clamp(fallback, 1, 5);
+        return Mth.clamp(fallback, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
     }
 
     /**

@@ -54,7 +54,7 @@ public record PacketBoxOpenResult(
     );
 
     public PacketBoxOpenResult {
-        grade = Mth.clamp(grade, 1, 5);
+        grade = Mth.clamp(grade, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
 
         if (animationItems == null) {
             animationItems = List.of();
@@ -65,7 +65,7 @@ public record PacketBoxOpenResult(
         PacketValidation.requireSameSize("animationItems", animationItems, "animationGrades", animationGrades);
         PacketValidation.requireMaxSize("animationItems", animationItems, ANIMATION_ITEM_COUNT);
         animationItems = PacketValidation.copyStacks(animationItems);
-        animationGrades = PacketValidation.copyClampedInts(animationGrades, 1, 5, 1);
+        animationGrades = PacketValidation.copyClampedInts(animationGrades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1);
         winningIndex = animationItems.isEmpty() ? 0 : Mth.clamp(winningIndex, 0, animationItems.size() - 1);
     }
 
@@ -97,7 +97,7 @@ public record PacketBoxOpenResult(
     }
 
     private static PacketBoxOpenResult read(RegistryFriendlyByteBuf buf) {
-        int grade = Mth.clamp(buf.readVarInt(), 1, 5);
+        int grade = Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
         int winningIndex = Mth.clamp(buf.readVarInt(), 0, ANIMATION_ITEM_COUNT - 1);
         long requestId = buf.readLong();
         int animationSize = buf.readVarInt();
@@ -109,7 +109,7 @@ public record PacketBoxOpenResult(
         List<Integer> animationGrades = new ArrayList<>(animationSize);
         for (int i = 0; i < animationSize; i++) {
             animationItems.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
-            animationGrades.add(Mth.clamp(buf.readVarInt(), 1, 5));
+            animationGrades.add(Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES));
         }
         return new PacketBoxOpenResult(grade, winningIndex, requestId, animationItems, animationGrades);
     }

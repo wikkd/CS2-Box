@@ -63,7 +63,7 @@ public record PacketBoxBulkResult(
         PacketValidation.requireSameSize("bulk items", items, "grades", grades);
         PacketValidation.requireMaxSize("bulk items", items, BULK_PER_PACKET);
         items = PacketValidation.copyStacks(items);
-        grades = PacketValidation.copyClampedInts(grades, 1, 5, 1);
+        grades = PacketValidation.copyClampedInts(grades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1);
     }
 
     private static void write(RegistryFriendlyByteBuf buf, PacketBoxBulkResult packet) {

@@ -34,10 +34,10 @@ public class PacketBoxOpenResult {
     public PacketBoxOpenResult(ItemStack item, int grade, int winningIndex,
                                long requestId, List<ItemStack> animationItems, List<Integer> animationGrades) {
         this.item = item == null ? ItemStack.EMPTY : item.copy();
-        this.grade = Mth.clamp(grade, 1, 5);
+        this.grade = Mth.clamp(grade, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
         this.requestId = requestId;
         this.animationItems = animationItems == null ? List.of() : List.copyOf(PacketValidation.copyStacks(animationItems));
-        this.animationGrades = animationGrades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(animationGrades, 1, 5, 1));
+        this.animationGrades = animationGrades == null ? List.of() : List.copyOf(PacketValidation.copyClampedInts(animationGrades, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES, 1));
         PacketValidation.requireSameSize("animationItems", this.animationItems, "animationGrades", this.animationGrades);
         PacketValidation.requireMaxSize("animationItems", this.animationItems, ANIMATION_ITEM_COUNT);
         this.winningIndex = this.animationItems.isEmpty() ? 0 : Mth.clamp(winningIndex, 0, this.animationItems.size() - 1);
@@ -46,7 +46,7 @@ public class PacketBoxOpenResult {
     public PacketBoxOpenResult(FriendlyByteBuf buf) {
         CompoundTag tag = buf.readNbt();
         this.item = tag == null ? ItemStack.EMPTY : ItemStack.of(tag);
-        this.grade = Mth.clamp(buf.readVarInt(), 1, 5);
+        this.grade = Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
         this.winningIndex = Mth.clamp(buf.readVarInt(), 0, ANIMATION_ITEM_COUNT - 1);
         this.requestId = buf.readLong();
         int animationSize = buf.readVarInt();
@@ -58,7 +58,7 @@ public class PacketBoxOpenResult {
         for (int i = 0; i < animationSize; i++) {
             CompoundTag aTag = buf.readNbt();
             ai.add(aTag == null ? ItemStack.EMPTY : ItemStack.of(aTag));
-            ag.add(Mth.clamp(buf.readVarInt(), 1, 5));
+            ag.add(Mth.clamp(buf.readVarInt(), 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES));
         }
         this.animationItems = List.copyOf(ai);
         this.animationGrades = List.copyOf(ag);

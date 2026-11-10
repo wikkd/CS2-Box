@@ -105,7 +105,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
             return;
         }
         Integer grade = in.get(ItemCsgoBox.GRADE.get());
-        int yield = grade != null && grade >= 1 && grade <= 5
+        int yield = grade != null && grade >= 1 && grade <= com.reclizer.csgobox.box.BoxGrades.MAX_GRADES
                 ? yieldForStack(in, level.getRandom()::nextInt) : 0;
         if (yield <= 0) {
             resetProgress();
@@ -230,7 +230,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
     public boolean canPlaceItemThroughFace(int index, ItemStack stack, Direction direction) {
         if (index == OUTPUT_SLOT) return false;
         Integer grade = stack.get(ItemCsgoBox.GRADE.get());
-        return grade != null && grade >= 1 && grade <= 5;
+        return grade != null && grade >= 1 && grade <= com.reclizer.csgobox.box.BoxGrades.MAX_GRADES;
     }
 
     @Override
@@ -323,7 +323,7 @@ public class ArmoryRecyclerBlockEntity extends BaseContainerBlockEntity implemen
                 return false;
             }
             Integer grade = stack.get(ItemCsgoBox.GRADE.get());
-            return grade != null && grade >= 1 && grade <= 5;
+            return grade != null && grade >= 1 && grade <= com.reclizer.csgobox.box.BoxGrades.MAX_GRADES;
         }
     }
 

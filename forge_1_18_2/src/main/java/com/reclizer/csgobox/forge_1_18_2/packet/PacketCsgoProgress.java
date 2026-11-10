@@ -130,7 +130,7 @@ public class PacketCsgoProgress {
                 }
             }
         }
-        return Mth.clamp(fallback, 1, 5);
+        return Mth.clamp(fallback, 1, com.reclizer.csgobox.box.BoxGrades.MAX_GRADES);
     }
 
     public static boolean tryConsumeKeys(Player entity, ItemStack box, int count) {
