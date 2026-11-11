@@ -2,6 +2,7 @@
   "name": "#FF5555 武器供应商终端",
   "type": "terminal",
   "drop": 0.05,
+  "negotiation": { "rounds": 3, "timeout_minutes": 60, "price_bias": -0.2 },
   "random": [
     10,
     20,

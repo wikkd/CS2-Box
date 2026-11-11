@@ -2152,6 +2152,11 @@ window.CSBDATA = {
         "name": "#FF5555 武器供应商终端",
         "type": "terminal",
         "drop": 0.05,
+        "negotiation": {
+          "rounds": 3,
+          "timeout_minutes": 60,
+          "price_bias": -0.2
+        },
         "random": [
           10,
           20,
@@ -2674,6 +2679,223 @@ window.CSBDATA = {
         "tacz:modern_kinetic_gun#tacz:spas_12": 3000,
         "tacz:modern_kinetic_gun#tacz:timeless50": 30000,
         "tacz:modern_kinetic_gun#tacz:ump45": 1500
+      }
+    },
+    {
+      "key": "gameplay_showcase",
+      "file": "gameplay_showcase.json",
+      "desc": {
+        "en": "Gameplay fields showcase (2.0.4: grades, keys, wear, bonus, pity, open_cost, ...)",
+        "zh": "玩法字段演示箱（2.0.4：自定义档位、多钥匙、磨损、奖励、保底、点数消耗……）"
+      },
+      "box": {
+        "name": "#FFAA00 玩法演示箱",
+        "type": "csbox",
+        "key": "csgobox:csgo_key0",
+        "keys": [
+          "csgobox:csgo_key1",
+          "csgobox:csgo_key_copper"
+        ],
+        "drop": 0.05,
+        "grades": [
+          {
+            "id": "scrap",
+            "name": "废料",
+            "color": "#AAAAAA",
+            "weight": 40,
+            "items": [
+              {
+                "id": "minecraft:coal",
+                "count": [
+                  4,
+                  8
+                ]
+              },
+              {
+                "id": "minecraft:string"
+              },
+              {
+                "id": "minecraft:clay_ball",
+                "count": [
+                  2,
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "id": "standard",
+            "name": "制式",
+            "color": "#FFFFFF",
+            "weight": 30,
+            "items": [
+              {
+                "id": "minecraft:iron_ingot",
+                "count": [
+                  2,
+                  4
+                ]
+              },
+              {
+                "id": "minecraft:iron_sword"
+              },
+              {
+                "id": "minecraft:arrow",
+                "count": 16
+              }
+            ]
+          },
+          {
+            "id": "advanced",
+            "name": "精制",
+            "color": "#55FFFF",
+            "weight": 15,
+            "items": [
+              {
+                "id": "minecraft:diamond",
+                "count": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "id": "minecraft:golden_apple"
+              },
+              {
+                "id": "minecraft:crossbow"
+              }
+            ]
+          },
+          {
+            "id": "rare_item",
+            "name": "稀有",
+            "color": "#FFAA00",
+            "weight": 8,
+            "items": [
+              {
+                "id": "minecraft:diamond_sword",
+                "enchant": {
+                  "id": "minecraft:sharpness",
+                  "level": [
+                    3,
+                    5
+                  ]
+                }
+              },
+              {
+                "id": "minecraft:totem_of_undying"
+              },
+              {
+                "id": "minecraft:ender_pearl",
+                "count": [
+                  2,
+                  4
+                ]
+              }
+            ]
+          },
+          {
+            "id": "epic",
+            "name": "史诗",
+            "color": "#FF55FF",
+            "weight": 5,
+            "items": [
+              {
+                "id": "minecraft:netherite_ingot"
+              },
+              {
+                "id": "minecraft:enchanted_book",
+                "enchant": {
+                  "level": [
+                    3,
+                    5
+                  ]
+                }
+              },
+              {
+                "id": "minecraft:experience_bottle",
+                "count": 16
+              }
+            ]
+          },
+          {
+            "id": "legend",
+            "name": "传说",
+            "color": "#FFFF55",
+            "weight": 2,
+            "items": [
+              {
+                "id": "minecraft:netherite_sword",
+                "enchant": {
+                  "id": "minecraft:sharpness",
+                  "level": 5
+                }
+              },
+              {
+                "id": "minecraft:trident"
+              },
+              {
+                "id": "minecraft:elytra"
+              }
+            ]
+          }
+        ],
+        "wear": [
+          0.15,
+          0.55
+        ],
+        "bonus": {
+          "chance": 0.15,
+          "mode": "double"
+        },
+        "announce_above": "rare_item",
+        "open_cost": 15,
+        "pity": {
+          "grade": "legend",
+          "every": 10,
+          "first_open": true
+        },
+        "available_from": "2026-01-01T00:00:00Z",
+        "sound": "minecraft:block.note_block.pling",
+        "hide_odds": false,
+        "allow_bulk": true,
+        "upgrade": {
+          "target": "weapon_dealer",
+          "consume": 3
+        }
+      },
+      "prices": {
+        "minecraft:arrow": 200,
+        "minecraft:bow": 200,
+        "minecraft:cooked_beef": 50,
+        "minecraft:crossbow": 1500,
+        "minecraft:diamond": 200,
+        "minecraft:diamond_block": 1500,
+        "minecraft:diamond_sword": 1500,
+        "minecraft:elytra": 4000,
+        "minecraft:emerald_block": 500,
+        "minecraft:enchanted_book": 500,
+        "minecraft:ender_chest": 200,
+        "minecraft:ender_pearl": 500,
+        "minecraft:experience_bottle": 200,
+        "minecraft:gold_ingot": 50,
+        "minecraft:golden_apple": 500,
+        "minecraft:golden_sword": 500,
+        "minecraft:iron_ingot": 50,
+        "minecraft:iron_sword": 200,
+        "minecraft:leather_helmet": 50,
+        "minecraft:nether_star": 1500,
+        "minecraft:netherite_sword": 4000,
+        "minecraft:shield": 500,
+        "minecraft:shulker_box": 4000,
+        "minecraft:stone_axe": 50,
+        "minecraft:totem_of_undying": 1500,
+        "minecraft:trident": 4000,
+        "minecraft:wooden_sword": 50,
+        "minecraft:nautilus_shell": [
+          200,
+          400
+        ]
       }
     }
   ],

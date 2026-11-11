@@ -468,6 +468,9 @@ def build_examples():
          {"en": "Survival supply terminal", "zh": "生存补给终端"}),
         ("tacz_gun_crate", "gun_crate.json", "gun_crate.json", "_prices.json",
          {"en": "TACZ gun crate (compat pack)", "zh": "TACZ 军火枪械箱（联动包）"}),
+        ("gameplay_showcase", "gameplay_showcase.json", "gameplay_showcase.json", "_prices.json",
+         {"en": "Gameplay fields showcase (2.0.4: grades, keys, wear, bonus, pity, open_cost, ...)",
+          "zh": "玩法字段演示箱（2.0.4：自定义档位、多钥匙、磨损、奖励、保底、点数消耗……）"}),
     ]
     for key, box_file, _, prices_file, desc in doc_examples:
         if key == "tacz_gun_crate":

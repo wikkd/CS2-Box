@@ -1,0 +1,85 @@
+{
+  "name": "#FFAA00 玩法演示箱",
+  "type": "csbox",
+  "key": "csgobox:csgo_key0",
+  "keys": ["csgobox:csgo_key1", "csgobox:csgo_key_copper"],
+  "drop": 0.05,
+  "grades": [
+    {
+      "id": "scrap",
+      "name": "废料",
+      "color": "#AAAAAA",
+      "weight": 40,
+      "items": [
+        { "id": "minecraft:coal", "count": [4, 8] },
+        { "id": "minecraft:string" },
+        { "id": "minecraft:clay_ball", "count": [2, 5] }
+      ]
+    },
+    {
+      "id": "standard",
+      "name": "制式",
+      "color": "#FFFFFF",
+      "weight": 30,
+      "items": [
+        { "id": "minecraft:iron_ingot", "count": [2, 4] },
+        { "id": "minecraft:iron_sword" },
+        { "id": "minecraft:arrow", "count": 16 }
+      ]
+    },
+    {
+      "id": "advanced",
+      "name": "精制",
+      "color": "#55FFFF",
+      "weight": 15,
+      "items": [
+        { "id": "minecraft:diamond", "count": [1, 2] },
+        { "id": "minecraft:golden_apple" },
+        { "id": "minecraft:crossbow" }
+      ]
+    },
+    {
+      "id": "rare_item",
+      "name": "稀有",
+      "color": "#FFAA00",
+      "weight": 8,
+      "items": [
+        { "id": "minecraft:diamond_sword", "enchant": { "id": "minecraft:sharpness", "level": [3, 5] } },
+        { "id": "minecraft:totem_of_undying" },
+        { "id": "minecraft:ender_pearl", "count": [2, 4] }
+      ]
+    },
+    {
+      "id": "epic",
+      "name": "史诗",
+      "color": "#FF55FF",
+      "weight": 5,
+      "items": [
+        { "id": "minecraft:netherite_ingot" },
+        { "id": "minecraft:enchanted_book", "enchant": { "level": [3, 5] } },
+        { "id": "minecraft:experience_bottle", "count": 16 }
+      ]
+    },
+    {
+      "id": "legend",
+      "name": "传说",
+      "color": "#FFFF55",
+      "weight": 2,
+      "items": [
+        { "id": "minecraft:netherite_sword", "enchant": { "id": "minecraft:sharpness", "level": 5 } },
+        { "id": "minecraft:trident" },
+        { "id": "minecraft:elytra" }
+      ]
+    }
+  ],
+  "wear": [0.15, 0.55],
+  "bonus": { "chance": 0.15, "mode": "double" },
+  "announce_above": "rare_item",
+  "open_cost": 15,
+  "pity": { "grade": "legend", "every": 10, "first_open": true },
+  "available_from": "2026-01-01T00:00:00Z",
+  "sound": "minecraft:block.note_block.pling",
+  "hide_odds": false,
+  "allow_bulk": true,
+  "upgrade": { "target": "weapon_dealer", "consume": 3 }
+}
