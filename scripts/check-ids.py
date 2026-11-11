@@ -313,6 +313,38 @@ def walk(data, path, errors, infos, ns_counts, registry):
                 continue  # 物品条目已整体检查，避免重复计数/重复报错
             elif k == "key" and path == "":
                 check_id_value(v, wp, errors, ns_counts, registry)
+            elif k == "keys" and path == "" and isinstance(v, list):
+                # v2.x 多钥匙 any-of：每项都是物品 id（与顶层 key 同语义）
+                for i, kv in enumerate(v):
+                    if isinstance(kv, str):
+                        check_id_value(kv, f"{wp}[{i}]", errors, ns_counts,
+                                       registry)
+                    else:
+                        errors.append(f"{wp}[{i}]: 应为物品 id 字符串")
+                continue
+            elif k == "grades":
+                # v2.x 自定义档位：tier id 是普通字符串（legacy 五档
+                # consumer/industrial/... 均无 namespace），不能走物品 id 校验；
+                # 档位内 items 与 grade1..5 同构，走 check_item。
+                if isinstance(v, list):
+                    for i, tier in enumerate(v):
+                        tp = f"{wp}[{i}]"
+                        if not isinstance(tier, dict):
+                            errors.append(f"{tp}: 应为档位对象")
+                            continue
+                        tier_id = tier.get("id")
+                        if not isinstance(tier_id, str) or not tier_id.strip():
+                            errors.append(f"{tp}.id: 档位 id 必须为非空字符串")
+                        items = tier.get("items")
+                        if isinstance(items, list):
+                            for j, item in enumerate(items):
+                                check_item(item, f"{tp}.items[{j}]", errors,
+                                           infos, ns_counts, registry)
+                        else:
+                            errors.append(f"{tp}.items: 应为物品数组")
+                else:
+                    errors.append(f"{wp}: 应为档位数组")
+                continue  # 档位子树已整体检查，避免档位 id 被误当物品 id
             walk(v, wp, errors, infos, ns_counts, registry)
     elif isinstance(data, list):
         for i, v in enumerate(data):
