@@ -162,7 +162,7 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 - **`CONFIG` 是 `public static final`**，在 `static {}` 块中经
   `ModConfigSpec.Builder().configure(CsboxConfig::new)` 初始化。**不要写 `null` 守卫**——
   该字段永不为 null（用 `init()` 延迟填充是 v1.0.5 已修的历史 bug）
-- **存储与 GUI 分离**：`ModConfigSpec`/`ForgeConfigSpec` TOML 是唯一配置存储；Cloth Config（可选客户端模组）通过各平台 `config/CsboxClothConfigScreen.java` 提供 GUI，读/写同一 `ConfigValue`
+- **存储与 GUI 分离**：`ModConfigSpec`/`ForgeConfigSpec` TOML 是唯一配置存储；Cloth Config（可选客户端模组）通过各平台 `config/CsboxClothConfigScreen.java` 薄壳提供 GUI——唯一实现在 `mcshared/gui/config/SharedClothConfigScreen`（2026-11-10 注入式下沉，平台壳只传本平台 `CsgoBox.CONFIG`（实现 common `CsboxConfigAccess`）、文案工厂与保存回调），读/写同一 `ConfigValue`
 
 ### 3.4 物品（平台 `item/`）
 
@@ -200,13 +200,16 @@ CS2-Box 是用 Java 17 / 21 / 25 编写的 NeoForge + Forge + Fabric 模组，�
 common 无 `platform/` 接口层（2026-08 重构中移除），平台模块直接承载注册、网络、GUI 等版本敏感工作。
 
 **`common/src/main/mcshared/`（2026-09-27 新增）— 跨时代共享的 MC 绑定源码根**：各平台副本逐字节一致
-（包名归一化后哈希相同）、只依赖 1.20.1~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）
+（包名归一化后哈希相同）、只依赖 1.18.2~26.2 全线稳定 MC API 与 loader 中立第三方 API（WTHIT/Cloth）
 的类，经各平台 `srcDir project(':common').file('src/main/mcshared')` 直编（`fabric_1_21_1` 同样接入；
-`forge_1_18_2` 排除 `mcshared/wthit/**`，1.18.2 无 WTHIT 构建）。当前 5 个类：`BulkOpenResult` /
-`PacketValidation` / `TerminalOfferItems` / `TerminalRoundData` / wthit `RecyclerBlockProvider`。
+`forge_1_18_2` 排除 `mcshared/wthit/**`，1.18.2 无 WTHIT 构建）。当前 7 个类：`BulkOpenResult` /
+`PacketValidation` / `TerminalOfferItems` / `TerminalRoundData` / `WorldClock`（世界钟，game ticks × 50 → ms
+唯一换算点）/ wthit `RecyclerBlockProvider` / `gui/config/SharedClothConfigScreen`（Cloth 配置屏唯一实现，
+2026-11-10 自八平台副本注入式下沉——平台壳传 `CsgoBox.CONFIG`（实现 common `CsboxConfigAccess`）、文案工厂
+（1.18.2 传 `TranslatableComponent::new`）与保存回调）。
 `checkCommonArchitecture` 只扫 `src/main/java`/`src/test/java`，不覆盖该根。**下沉新文件前必须先验证
-各平台副本归一化哈希一致**；引用平台类型（如 `CsgoBox.CONFIG`、平台方块类）的类暂不下沉
-（`CsboxClothConfigScreen` / `CsgoBoxWthitPlugin`，需注入式重构）。
+各平台副本归一化哈希一致**；引用平台类型的类暂不下沉（如 `wthit/CsgoBoxWthitPlugin` 引用平台方块类；
+`CsboxClothConfigScreen` 的平台类型依赖已由 `CsboxConfigAccess` 接口 + 注入消除，故已下沉）。
 
 **保留在平台、不下沉**（与 MC 强耦合）：packet record 本体与 StreamCodec、`tryConsumeKeys` /
 `tryConsumeBoxes`（inventory / EquipmentSlot / BuiltInRegistries）、`CsboxPlayerData`、

@@ -62,6 +62,7 @@
 
 ### 优化与内部
 
+- **Cloth 配置屏注入式下沉（八平台去重）**：八平台各 ~105 行的 `CsboxClothConfigScreen` 同文副本下沉为 `mcshared/gui/config/SharedClothConfigScreen` 唯一实现，平台壳缩为 ~25 行并保留类名与 `create(Screen)` 签名（`ClothConfigHook` / Mod Menu 注册点零改动，专用服务器加载隔离不变）。注入三点：本平台 `CsgoBox.CONFIG`（新实现 common 接口 `CsboxConfigAccess`，既有 getter/`set*` 逐一匹配、零新增成员）、文案工厂（1.18.2 传 `TranslatableComponent::new`，其余 `Component::translatable`）与保存回调（spec `save()` / Fabric `saveConfig()`）；`ErrorChatAudience` 枚举自平台嵌套定义上移 common（`LoadErrorAnnouncer` 同步切换），新增守卫测试防 `JSON_ERROR_AUDIENCE` 常量名漂移。八平台串行 clean 矩阵 + 冒烟测试全绿，漂移门禁 181 对镜像基线内。
 - **热路径分配削减（八平台）**：注册表快照缓存、`BoxOdds` 零分配化、`GradeMap` 累积权重池、REI 输出缓存与静态 `AIR` id——满配大箱子的开箱/悬停路径减少每帧分配。
 - **packet 编排重构收尾**：`service/BoxOpenExecutor` 抽取（packet 族开箱编排，服务端权威路径不变）+ 死代码清扫与并发/生命周期加固。
 - **网页配置工具跟进**：box-editor 站点版本清单补 `fabric-1.21.1` / `forge-1.18.2`；compat-pack 模板、触屏 tooltip、schema 漂移测试。
