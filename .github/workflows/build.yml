@@ -111,6 +111,14 @@ jobs:
         if: matrix.run_tests == 'true'
         run: ./gradlew :${{ matrix.module }}:test -Pactive_versions=${{ matrix.version_key }} --console=plain
 
+      - name: Dist-safety guard (issue #2: entry class must not reference client-only types)
+        # fabric_1_21_1 has no such task by design: Fabric resolves entrypoints per
+        # environment and has no event bus that reflection-scans method signatures,
+        # so the NeoForge/Forge dedicated-server crash pattern (issue #2) cannot
+        # occur there.
+        if: matrix.module != 'fabric_1_21_1'
+        run: ./gradlew :${{ matrix.module }}:checkDistSafety -Pactive_versions=${{ matrix.version_key }} --console=plain
+
       - name: Assemble jar
         run: ./gradlew :${{ matrix.module }}:${{ matrix.assemble_task || 'jar' }} -Pactive_versions=${{ matrix.version_key }} --console=plain
 
