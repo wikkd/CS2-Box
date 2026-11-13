@@ -15,6 +15,7 @@ import com.tacz.guns.client.model.bedrock.BedrockPart;
 import com.tacz.guns.client.resource.GunDisplayInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -84,6 +85,11 @@ public final class AnimRenderOps {
      *  leaves margin for the drag-rotation tilt so an oversized model cannot
      *  overflow the square (same 0.82 constant as the 26.x PIP path). */
     private static final float PREVIEW_FILL = 0.82F;
+    /** SBW-only fit boost on top of {@link #PREVIEW_FILL}: the measured OBB
+     *  largest axis contains diagonal slack the rotated silhouette never
+     *  fills, so long guns read too small at the shared rule (user-tuned
+     *  1.3x). Only applied when the probe produced real bounds. */
+    private static final float SBW_FIT_BOOST = 1.3F;
     /** Cached centre + largest-axis span (block units, in the drag-rotation
      *  space) of each baked item model's geometry. Models are stable
      *  instances owned by the model manager and are replaced on resource
@@ -92,6 +98,16 @@ public final class AnimRenderOps {
     }
 
     private static final Map<BakedModel, Object> ITEM_MODEL_BOUNDS = new WeakHashMap<>();
+
+    /** Cached centre + largest-axis span (block units, display-transform
+     *  space) of each Superb Warfare item's FIXED-context render, measured
+     *  once per baked model by probing the real render chain with a vertex
+     *  recorder — GeckoLib guns draw through a custom renderer, so there are
+     *  no BakedQuads to scan (the vanilla {@link #ITEM_MODEL_BOUNDS} path
+     *  sees nothing) and the emitted vertices are the only ground truth.
+     *  Keyed like {@link #ITEM_MODEL_BOUNDS}: models are stable instances
+     *  replaced on resource reload, so a WeakHashMap lets old models go. */
+    private static final Map<BakedModel, Object> FIXED_CONTEXT_BOUNDS = new WeakHashMap<>();
 
     private AnimRenderOps() {
     }
@@ -415,14 +431,22 @@ public final class AnimRenderOps {
      *  perspective to a flat 2D icon and only the other perspectives carry
      *  the 3D gun (a GeckoLib custom renderer behind the per-gun display
      *  settings models), so FIXED is the cheapest context with a calibrated
-     *  one-block transform. Quad auto-fit and centring are skipped: the
-     *  fixed transform is already frame-fitted and the custom renderer has
-     *  no quads to measure. A renderer failure degrades to the 2D icon. */
+     *  one-block transform. The custom renderer exposes no quads, so the
+     *  size is measured by probing the render itself ({@link
+     *  #fixedContextBounds}): oversized guns shrink to the preview square via
+     *  {@link #fitScaleFor} and rotate around their rendered centre, exactly
+     *  like the vanilla and TACZ branches. A renderer failure degrades to the
+     *  2D icon. */
     private static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                                   int cx, int cy, Quat rotation, float scale) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         BakedModel model = mc.getItemRenderer().getModel(item, player.level(), player, 0);
+        ModelBounds bounds = fixedContextBounds(item, model);
+        float fitScale = fitScaleFor(bounds.span(), scale);
+        if (bounds != NO_BOUNDS) {
+            fitScale *= SBW_FIT_BOOST;
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
@@ -431,7 +455,13 @@ public final class AnimRenderOps {
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
-        pose.scale(16.0F * scale, 16.0F * scale, 16.0F * scale);
+        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
+        // Rotate around the model's geometric centre, not the model origin:
+        // the fixed display transforms park the geometry far from the origin,
+        // so an origin pivot would swing the gun around a point outside its
+        // body. Same convention as the vanilla and TACZ branches.
+        Vector3f center = bounds.center();
+        pose.translate(-center.x, -center.y, -center.z);
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
         PoseStack modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushPose();
@@ -456,6 +486,120 @@ public final class AnimRenderOps {
         if (!rendered) {
             renderItem2D(player, gg, item, cx, cy, scale);
         }
+    }
+
+    /** Offline probe sink for {@link #fixedContextBounds}: hands the probe
+     *  render one vertex recorder regardless of render type and discards
+     *  everything else, so the measurement draws nothing and touches no
+     *  shared GPU batch. Vanilla-default VertexConsumer flows (foil glint,
+     *  14-arg vertex) all funnel into these abstract methods. */
+    private static final class FixedContextProbe implements MultiBufferSource, VertexConsumer {
+        private float minX, minY, minZ, maxX, maxY, maxZ;
+        private boolean any;
+
+        void reset() {
+            minX = minY = minZ = Float.MAX_VALUE;
+            maxX = maxY = maxZ = -Float.MAX_VALUE;
+            any = false;
+        }
+
+        @Override
+        public VertexConsumer getBuffer(RenderType renderType) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer vertex(double x, double y, double z) {
+            minX = Math.min(minX, (float) x);
+            minY = Math.min(minY, (float) y);
+            minZ = Math.min(minZ, (float) z);
+            maxX = Math.max(maxX, (float) x);
+            maxY = Math.max(maxY, (float) y);
+            maxZ = Math.max(maxZ, (float) z);
+            any = true;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer color(int red, int green, int blue, int alpha) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer uv(float u, float v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer overlayCoords(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer uv2(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer normal(float x, float y, float z) {
+            return this;
+        }
+
+        @Override
+        public void endVertex() {
+        }
+
+        @Override
+        public void defaultColor(int red, int green, int blue, int alpha) {
+        }
+
+        @Override
+        public void unsetDefaultColor() {
+        }
+    }
+
+    private static final FixedContextProbe FIXED_CONTEXT_PROBE = new FixedContextProbe();
+
+    /** Centre + largest-axis span (block units) of a Superb Warfare item's
+     *  rendered FIXED-context geometry, computed once per baked model by
+     *  running the real render chain into {@link #FIXED_CONTEXT_PROBE} on a
+     *  throwaway stack: the vertices reach the recorder in display-transform
+     *  space (fixed ItemTransform applied, bones resolved, model units
+     *  already divided down to blocks) — exactly the space the preview pose
+     *  scales, so centre and span are directly usable by {@link
+     *  #fitScaleFor}. A failed or empty probe caches the sentinel and keeps
+     *  the historical raw-scale behaviour. */
+    private static ModelBounds fixedContextBounds(ItemStack item, BakedModel model) {
+        Object cached = FIXED_CONTEXT_BOUNDS.get(model);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_CENTER) {
+            return NO_BOUNDS;
+        }
+        FIXED_CONTEXT_PROBE.reset();
+        boolean rendered = true;
+        try {
+            PoseStack probeStack = new PoseStack();
+            Minecraft.getInstance().getItemRenderer().render(item, ItemDisplayContext.FIXED, false,
+                    probeStack, FIXED_CONTEXT_PROBE, 15728880, OverlayTexture.NO_OVERLAY, model);
+        } catch (Throwable t) {
+            LOGGER.warn("Superb Warfare 3D preview size probe failed; keeping the raw preview scale", t);
+            rendered = false;
+        }
+        ModelBounds bounds = NO_BOUNDS;
+        if (rendered && FIXED_CONTEXT_PROBE.any) {
+            bounds = new ModelBounds(
+                    new Vector3f(
+                            (FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
+                            (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
+                            (FIXED_CONTEXT_PROBE.minZ + FIXED_CONTEXT_PROBE.maxZ) * 0.5F),
+                    Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
+                            Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
+                                    FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
+        }
+        FIXED_CONTEXT_BOUNDS.put(model, bounds == NO_BOUNDS ? NO_CENTER : bounds);
+        return bounds;
     }
 
     /** TACZ gun 3D render: same pose convention as the vanilla branch, but
