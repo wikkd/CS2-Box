@@ -244,6 +244,45 @@ final class BoxJsonSchemaValidatorTest {
             assertEquals(1, issues.size());
             assertEquals("grade5", issues.get(0).field());
         }
+
+        @Test
+        @DisplayName("announce_above accepts a custom grades tier id")
+        void announceAboveAcceptsGradesId() {
+            String json = """
+                    {
+                      "grades": [
+                        {"id": "scrap", "items": [{"id": "minecraft:coal"}]},
+                        {"id": "rare_item", "items": [{"id": "minecraft:diamond"}]}
+                      ],
+                      "announce_above": "rare_item"
+                    }
+                    """;
+            assertTrue(validate(json).isEmpty(),
+                    "a tier id from the box's own grades must validate");
+        }
+
+        @Test
+        @DisplayName("announce_above rejects a tier id not among the configured grades")
+        void announceAboveRejectsUnknownGradesId() {
+            String json = """
+                    {
+                      "grades": [
+                        {"id": "scrap", "items": [{"id": "minecraft:coal"}]}
+                      ],
+                      "announce_above": "not_a_tier"
+                    }
+                    """;
+            assertSingleIssue(validate(json), "announce_above");
+        }
+
+        @Test
+        @DisplayName("announce_above on a legacy box still requires a built-in grade id or number")
+        void announceAboveLegacyBoxRejectsCustomNames() {
+            String json = """
+                    { "announce_above": "rare_item" }
+                    """;
+            assertSingleIssue(validate(json), "announce_above");
+        }
     }
 
     @Nested

@@ -739,7 +739,14 @@ public final class BoxJsonSchemaValidator {
             JsonElement a = json.get("announce_above");
             boolean ok = a.isJsonPrimitive() && a.getAsJsonPrimitive().isNumber();
             if (!ok && a.isJsonPrimitive() && a.getAsJsonPrimitive().isString()) {
-                ok = BoxGrades.gradeLevel(a.getAsString()) > 0;
+                String s = a.getAsString();
+                // Mirror the loader: a custom "grades" box accepts its own tier
+                // ids; a legacy box falls back to the five built-in ids.
+                if (json.has("grades") && json.get("grades").isJsonArray()) {
+                    ok = findTierIndex(json.getAsJsonArray("grades"), s) >= 0;
+                } else {
+                    ok = BoxGrades.gradeLevel(s) > 0;
+                }
             }
             if (!ok) {
                 issues.add(new SchemaIssue("announce_above",
