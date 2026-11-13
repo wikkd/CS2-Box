@@ -154,9 +154,10 @@ public class CsboxBulkOverviewScreen extends Screen {
         int textureSize = preview.w();
         float scale = textureSize / 16F;
 
-        AnimRenderOps.fillGradient(guiGraphics, preview.x(), preview.y(),
-                preview.right(), preview.bottom(),
-                OverlayColor.panel(), OverlayColor.panelHover());
+        // No backdrop card here: the auto-fit preview (AnimRenderOps) shrinks
+        // oversized models to 82% of the square, so a panel fill would show as
+        // a stray grey frame around the model. Every other screen keeps its 3D
+        // preview on the blurred world directly — match that.
 
         AnimRenderOps.renderItem3D(guiGraphics, this.templateBox, this.player,
                 centerX - textureSize / 2, centerY - textureSize / 2,
