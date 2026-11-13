@@ -65,6 +65,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
 import java.util.Map;
+import java.util.Set;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -342,6 +343,14 @@ public class CsgoBox {
          * baked csgo_box model; terminal-type items (ItemTerminal) go to the
          * terminal model instead so every terminal config file renders as a
          * terminal. Static items keep their real model.
+         *
+         * <p>The fixed compile-time items (ammo/attachment/gun/normal_crate,
+         * tacz_terminal) have no {@code models/item/<id>.json} either — 26.x
+         * resolves them via {@code items/<id>.json} pointing back at the shared
+         * model, an API 1.21.1 lacks. Their failed bake is not always detectable
+         * through the particle-icon heuristic (issue surfaced 2026-11-12: the
+         * TACZ terminal rendered invisible in GUIs), so they are remapped
+         * explicitly by item identity.</p>
          */
         @SubscribeEvent
         public static void onModelBaking(ModelEvent.ModifyBakingResult event) {
@@ -362,18 +371,32 @@ public class CsgoBox {
                 }
                 ModelResourceLocation loc = new ModelResourceLocation(itemId, "inventory");
                 BakedModel current = models.get(loc);
+                Item item = BuiltInRegistries.ITEM.get(itemId);
+                boolean isTerminalItem = item instanceof ItemTerminal;
+                // Fixed items without a 1.21.1 model file: always remap (they
+                // share the generic model by design, mirroring 26.x items/).
+                boolean fixedWithoutModel = FIXED_ITEMS_WITHOUT_MODEL.contains(itemId.getPath());
                 // Swap missing-model dynamic boxes to the csgo_box model
                 // (terminals to the terminal model); items with a real model
                 // are left untouched.
-                if (current == null
-                        || current.getParticleIcon().contents().name().equals(missingSprite)) {
-                    Item item = BuiltInRegistries.ITEM.get(itemId);
-                    BakedModel replacement = item instanceof ItemTerminal && terminalModel != null
+                boolean needsRemap = current == null
+                        || fixedWithoutModel
+                        || current.getParticleIcon().contents().name().equals(missingSprite);
+                if (needsRemap) {
+                    BakedModel replacement = isTerminalItem && terminalModel != null
                             ? terminalModel : baseModel;
                     models.put(loc, replacement);
                 }
             }
         }
+
+        /** Compile-time items that ship without their own 1.21.1 model file and
+         *  render through the shared csgo_box/terminal models (26.x resolves
+         *  them via {@code assets/csgobox/items/<id>.json}; 1.21.1 has no such
+         *  indirection, so the remap below substitutes for it). */
+        private static final Set<String> FIXED_ITEMS_WITHOUT_MODEL = Set.of(
+                "ammo_crate", "attachment_crate", "gun_crate", "normal_crate",
+                "tacz_terminal");
 
         /**
          * Map the recycler {@code MenuType} to its screen. Fired by
