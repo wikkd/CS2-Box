@@ -56,9 +56,8 @@
 - **EMI 进服全量资源重载跳过（四个 EMI 平台）**：定义同步包每次玩家进服都触发，EMI 的唯一刷新路径是整包资源重载（客户端数秒卡顿）——`BoxEmiReload` 加内容指纹，注册表未变的同步直接跳过；首次同步与真实变更仍刷新。
 - **价格表超大数值溢出（common）**：`_prices.json` / 遗留迁移写超过 int 上限的价钱此前经 `(int)` 回绕成负价——现按非法条目报错跳过（价格表）或保留原位（遗留迁移）。
 - **杂项清理**：NeoForge 26.x 批量路径权限门盲转强改 instanceof 守卫（GameTest mock 不再 CCE）；14 个文件的重复 import 删除；4 处 "six platform" 陈旧注释改 eight；forge_1_18_2 GameTest 头注命令行版本笔误（forge-1.20.1 → forge-1.18.2）；`scripts/drift-baseline.json` 基线随本轮同步修复刷新（姊妹文件改动集逐字节一致，度量噪声）。
-- **死亡/断线致 HUD 永久隐藏
-
 - **死亡/断线致 HUD 永久隐藏（`v1_21_1` / `fabric_1_21_1` 镜像漏同步）**：开箱动画屏与检视屏渲染期间置 `options.hideGui = true`，此前只靠 `onClose()` 恢复；但死亡/重生或任何外部 `setScreen` 替换屏幕只调 `Screen.removed()` 不调 `onClose()`，残留为 true 的 hideGui 会让血条/热键栏/准星在重生后永久消失。其余 5 个使用 hideGui 的平台早有 `removed()` 恢复（其注释原话即此 bug 模式），`v26_2` / `forge_26_2` 走 `HudVisibility` 不受影响——本次给两平台的 `CsboxProgressScreen` / `CsLookItemScreen` 补齐同款防护（`CsboxBulkResultScreen` 两平台本就有），八平台口径一致。
+- **Superb Warfare 3D 预览缩放溢出（`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`）**：SBW 枪械改走 FIXED 透视渲染真实 3D 模型时未做尺寸适配——GeckoLib 自定义渲染器没有 BakedQuads 可测（vanilla 路径的 quad 自动适配量不到任何几何），IGLA/RPG 等长枪（模型长轴 3.8-4.4 格、fixed 变换还带 1.2-1.65 倍缩放）按调用尺度原样渲染，在终端机报价大图/检视屏直接溢出预览框数倍（L4 截图实测）。现按模型探测真实渲染几何：离线 probe（吞掉全部顶点的空 `MultiBufferSource`+`VertexConsumer`）以恒等栈跑一次 FIXED 渲染，记录顶点包络（块单位、含 fixed transform 与骨骼链变换），按最大轴自动缩放至预览框 82% 并绕渲染中心旋转——与 vanilla 物品/TACZ 枪械分支同口径；结果按 BakedModel 缓存（资源重载自动失效），探测失败或无顶点回退原行为。
 
 ### 优化与内部
 
