@@ -1,0 +1,44 @@
+{
+  "name": "#5599CC 沉浸式飞行终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": ["immersive_aircraft"],
+  "random": [40, 30, 20, 7, 3],
+  "grade5": [
+    { "id": "immersive_aircraft:warship", "count": 1 },
+    { "id": "immersive_aircraft:cargo_airship", "count": 1 }
+  ],
+  "grade4": [
+    { "id": "immersive_aircraft:gyrodyne", "count": 1 },
+    { "id": "immersive_aircraft:biplane", "count": 1 },
+    { "id": "immersive_aircraft:airship", "count": 1 }
+  ],
+  "grade3": [
+    { "id": "immersive_aircraft:quadrocopter", "count": 1 },
+    { "id": "immersive_aircraft:bamboo_hopper", "count": 1 },
+    { "id": "immersive_aircraft:nether_engine", "count": 1 },
+    { "id": "immersive_aircraft:heavy_crossbow", "count": 1 },
+    { "id": "immersive_aircraft:bomb_bay", "count": 1 },
+    { "id": "immersive_aircraft:rotary_cannon", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "immersive_aircraft:engine", "count": 1 },
+    { "id": "immersive_aircraft:eco_engine", "count": 1 },
+    { "id": "immersive_aircraft:enhanced_propeller", "count": 1 },
+    { "id": "immersive_aircraft:hull", "count": 1 },
+    { "id": "immersive_aircraft:steel_boiler", "count": 1 },
+    { "id": "immersive_aircraft:telescope", "count": 1 },
+    { "id": "immersive_aircraft:hull_reinforcement", "count": 1 },
+    { "id": "immersive_aircraft:gyroscope", "count": 1 }
+  ],
+  "grade1": [
+    { "id": "immersive_aircraft:propeller", "count": 1 },
+    { "id": "immersive_aircraft:sail", "count": 1 },
+    { "id": "immersive_aircraft:boiler", "count": 1 },
+    { "id": "immersive_aircraft:industrial_gears", "count": 1 },
+    { "id": "immersive_aircraft:improved_landing_gear", "count": 1 },
+    { "id": "immersive_aircraft:sturdy_pipes", "count": 1 },
+    { "id": "immersive_aircraft:gyroscope_dials", "count": 1 },
+    { "id": "immersive_aircraft:gyroscope_hud", "count": 1 }
+  ]
+}

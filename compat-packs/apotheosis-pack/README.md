@@ -19,7 +19,7 @@
 cp compat-packs/apotheosis-pack/*.json config/csbox/
 ```
 
-进游戏 `/csbox reload`，然后 `/give @p csgobox:gem_crate`。
+进游戏 `/csbox reload`，然后 `/csbox give @p csgobox:gem_crate`。
 
 ## 说明
 

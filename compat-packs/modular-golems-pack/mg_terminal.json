@@ -1,0 +1,161 @@
+{
+  "name": "#9966DD 模组傀儡终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "modulargolems"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "modulargolems:ancient_remnant_sandstorm_purple",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_plasma_purple",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_bomb_purple",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:carminite_purple",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:add_100_slot",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "modulargolems:barbaric_vanguard_helmet",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:barbaric_vanguard_chestplate",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:barbaric_vanguard_boots",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:barbaric_vanguard_shinguard",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:ancient_remnant_sandstorm_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_plasma_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:carminite_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:cauldron_blue",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "modulargolems:battle_axe",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:ancient_remnant_sandstorm",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_plasma",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:bell_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:cleanse_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:attack_high_blue",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:azure_cube",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:dog_golem_holder",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "modulargolems:bell",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:cleanse",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:attack_high",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:carminite",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_bomb",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:cauldron",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:annihilation_cube",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:add_1_slot",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "modulargolems:black_config_card",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:blue_config_card",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:brown_config_card",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:beacon_boots",
+      "count": 1
+    },
+    {
+      "id": "modulargolems:beacon_cannon",
+      "count": 1
+    }
+  ]
+}

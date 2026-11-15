@@ -1,0 +1,62 @@
+{
+  "name": "#FFAA55 预览测试·同id实体约定",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "grade5": [
+    {
+      "id": "minecraft:end_crystal",
+      "count": 1
+    },
+    {
+      "id": "minecraft:trident",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "minecraft:item_frame",
+      "count": 1
+    },
+    {
+      "id": "minecraft:glow_item_frame",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "minecraft:painting",
+      "count": 1
+    },
+    {
+      "id": "minecraft:armor_stand",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "minecraft:oak_boat",
+      "count": 1
+    },
+    {
+      "id": "minecraft:oak_chest_boat",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "minecraft:tnt_minecart",
+      "count": 1
+    },
+    {
+      "id": "minecraft:hopper_minecart",
+      "count": 1
+    }
+  ]
+}

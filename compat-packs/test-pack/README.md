@@ -29,7 +29,7 @@ cp compat-packs/test-pack/_prices.json config/csbox/
 ```
 
 > 自建箱子/终端不再按文件名注册物品（v2.0.1 起），请用 `/csbox give` 发放；
-> `/give @p csgobox:<文件名>` 只对 5 个随模组发布的默认 id 有效。
+> `/csbox give @p csgobox:<文件名>` 只对 5 个随模组发布的默认 id 有效。
 > 若想覆盖默认终端机 `csgobox:terminal` 的奖池，把终端定义改名为 `terminal.json` 再放入配置目录。
 
 ## 文件说明

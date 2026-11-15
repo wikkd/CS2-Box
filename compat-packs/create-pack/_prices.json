@@ -1,0 +1,17 @@
+{
+  "create:andesite_alloy": 80,
+  "create:blaze_cake": 400,
+  "create:brass_hand": 300,
+  "create:brass_ingot": 150,
+  "create:cogwheel": 40,
+  "create:crushed_raw_iron": 60,
+  "create:deployer": 900,
+  "create:electron_tube": 60,
+  "create:mechanical_arm": 1200,
+  "create:precision_mechanism": 2000,
+  "create:schematic": 500,
+  "create:shaft": 20,
+  "create:super_glue": 300,
+  "create:wrench": 500,
+  "create:zinc_ingot": 120
+}

@@ -19,7 +19,7 @@
 cp compat-packs/irons-spells-pack/*.json config/csbox/
 ```
 
-进游戏 `/csbox reload`，然后 `/give @p csgobox:spellbook_crate`。
+进游戏 `/csbox reload`，然后 `/csbox give @p csgobox:spellbook_crate`。
 
 ## 说明
 

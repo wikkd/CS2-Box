@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗物语终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_cookery"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_cookery:teapot_3d",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:shawarma_spit",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:eight_immortals_table",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_cookery:buddha_jumps_over_the_wall",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:cold_cut_ham_slices_block",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:fruit_basket_full",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_cookery:borscht",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:braised_beef_rice_bowl",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:stockpot_lid_using",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:trash_can",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:blaze_lamb_chop",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:scarecrow",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_cookery:baozi_plate",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:beef_noodle",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:candied_potato",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:stockpot_lid_normal",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:apple_platter",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_cookery:bamboo_tube_rice",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:barley_tea",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:biluochun",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:chair_acacia",
+      "count": 1
+    }
+  ]
+}

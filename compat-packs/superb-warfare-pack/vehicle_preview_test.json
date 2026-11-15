@@ -1,0 +1,129 @@
+{
+  "name": "#55AAFF 载具预览测试箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "requires": [
+    "superbwarfare"
+  ],
+  "grade5": [
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:t_90a",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:ah_6",
+          "id": "superbwarfare:container"
+        }
+      }
+    }
+  ],
+  "grade4": [
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:a_10a",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:bradley",
+          "id": "superbwarfare:container"
+        }
+      }
+    }
+  ],
+  "grade3": [
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:speedboat",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:truck",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:type_63",
+          "id": "superbwarfare:container"
+        }
+      }
+    }
+  ],
+  "grade2": [
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:mortar",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:sodayo_pick_up",
+          "id": "superbwarfare:container"
+        }
+      }
+    }
+  ],
+  "grade1": [
+    {
+      "id": "superbwarfare:container",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "EntityType": "superbwarfare:mortar",
+          "id": "superbwarfare:container"
+        }
+      }
+    },
+    {
+      "id": "superbwarfare:igla_9k38",
+      "count": 1
+    }
+  ]
+}

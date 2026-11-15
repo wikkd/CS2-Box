@@ -7,8 +7,9 @@
 1. 语法检查
    - id         必须匹配 namespace:path（namespace=[a-z0-9_.-]+，
                 path=[a-z0-9_./-]+），例如 minecraft:iron_ingot
-   - tag        必须以 # 开头，且 # 后为合法 namespace:path，
-                例如 #minecraft:swords
+   - tag        字符串：'#xxx' = 物品标签引用（# 后需 namespace:path），
+                其余字符串 = legacy NBT（SNBT 配对轻查）；对象 = JSON NBT
+                （forge_1_20_1 写法，递归查只允许基础类型）
    - loot_table 必须是合法 namespace:path，
                 例如 minecraft:chests/simple_dungeon
    - 顶层 key 也按 id 语法检查
@@ -103,10 +104,17 @@ def check_id_value(value, where, errors, ns_counts, registry):
 
 
 def check_tag_value(value, where, errors, infos, registry):
-    """tag：'#xxx' = 物品标签引用；否则 = legacy NBT 字符串（SNBT，如 1.20.1 的
-    TACZ GunId 顶层 NBT），只做轻量括号/引号配对检查。"""
+    """tag：'#xxx' = 物品标签引用；字符串 = legacy NBT（SNBT，如 1.20.1 的
+    TACZ GunId 顶层 NBT），只做轻量括号/引号配对检查；对象 = JSON NBT
+    （forge_1_20_1 codec 的 isJsonObject 分支，如 BlockItem 的
+    BlockEntityTag——载具召唤箱写法），递归轻查只允许基础类型。"""
+    if isinstance(value, dict):
+        if not _json_nbt_ok(value, where, errors):
+            return
+        infos.append(f"{where}: JSON NBT tag 对象（1.20.1 写法），跳过内容检查")
+        return
     if not isinstance(value, str):
-        errors.append(f"{where}: tag 应为字符串: {value!r}")
+        errors.append(f"{where}: tag 应为字符串或对象: {value!r}")
         return
     if not value.startswith("#"):
         if not _nbt_balanced(value):
@@ -124,6 +132,19 @@ def check_tag_value(value, where, errors, infos, registry):
             errors.append(f"{where}: 命名空间/模组不存在: {ns}（tag）")
         else:
             infos.append(f"{where}: tag 离线只能核对命名空间，无法核对 # 后路径 {rest!r}")
+
+
+def _json_nbt_ok(value, where, errors):
+    """JSON NBT 对象轻查：只允许 dict/list/str/int/float/bool/None 的有限嵌套，
+    防止把函数/正则等非 NBT 数据误当 tag 写进箱子。"""
+    if isinstance(value, dict):
+        return all(_json_nbt_ok(v, where, errors) for v in value.values())
+    if isinstance(value, list):
+        return all(_json_nbt_ok(v, where, errors) for v in value)
+    if isinstance(value, (str, int, float)) or value is None or isinstance(value, bool):
+        return True
+    errors.append(f"{where}: tag 对象含非 NBT 类型: {value!r}")
+    return False
 
 
 def _nbt_balanced(s):
@@ -299,7 +320,7 @@ def walk(data, path, errors, infos, ns_counts, registry):
             wp = f"{path}.{k}" if path else k
             if k == "id" and isinstance(v, str):
                 check_id_value(v, wp, errors, ns_counts, registry)
-            elif k == "tag" and isinstance(v, str):
+            elif k == "tag" and isinstance(v, (str, dict)):
                 check_tag_value(v, wp, errors, infos, registry)
             elif k == "loot_table" and isinstance(v, str):
                 check_loot_value(v, wp, errors, infos, registry)

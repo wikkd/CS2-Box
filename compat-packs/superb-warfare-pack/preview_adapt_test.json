@@ -1,0 +1,118 @@
+{
+  "name": "#55FF88 预览适配测试箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "create:schematic",
+      "count": 1,
+      "components": {
+        "create:schematic_file": "preview_test.nbt",
+        "create:schematic_owner": "dev"
+      }
+    },
+    {
+      "id": "create:schematic",
+      "count": 1,
+      "components": {
+        "create:schematic_file": "no_such_file.nbt",
+        "create:schematic_owner": "dev"
+      }
+    },
+    {
+      "id": "minecraft:paper",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "id": "minecraft:chest",
+          "EntityType": "minecraft:pig"
+        }
+      }
+    },
+    {
+      "id": "minecraft:book",
+      "count": 1,
+      "components": {
+        "minecraft:block_entity_data": {
+          "id": "superbwarfare:container",
+          "EntityType": "superbwarfare:truck"
+        }
+      }
+    }
+  ],
+  "grade4": [
+    {
+      "id": "immersive_aircraft:gyrodyne",
+      "count": 1
+    },
+    {
+      "id": "minecraft:villager_spawn_egg",
+      "count": 1,
+      "components": {
+        "minecraft:entity_data": {
+          "id": "minecraft:villager",
+          "VillagerData": {
+            "type": "minecraft:swamp",
+            "profession": "minecraft:nitwit",
+            "level": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "minecraft:trident",
+      "count": 1
+    },
+    {
+      "id": "minecraft:minecart",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "minecraft:sheep_spawn_egg",
+      "count": 1,
+      "components": {
+        "minecraft:entity_data": {
+          "id": "minecraft:sheep",
+          "Color": 15
+        }
+      }
+    },
+    {
+      "id": "minecraft:diamond_chestplate",
+      "count": 1
+    },
+    {
+      "id": "minecraft:netherite_helmet",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "minecraft:wolf_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "minecraft:creeper_spawn_egg",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "minecraft:iron_helmet",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:engine",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "#996633 预览测试·机械动力包裹",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "requires": [
+    "create"
+  ],
+  "grade5": [
+    {
+      "id": "create:cardboard_package_12x12",
+      "count": 1
+    },
+    {
+      "id": "create:rare_creeper_package",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "create:cardboard_package_10x12",
+      "count": 1
+    },
+    {
+      "id": "create:rare_starlotte_package",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "create:cardboard_package_10x8",
+      "count": 1
+    },
+    {
+      "id": "create:cardboard_package_12x10",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "create:packager",
+      "count": 1
+    },
+    {
+      "id": "create:repackager",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "create:package_frogport",
+      "count": 1
+    },
+    {
+      "id": "create:package_filter",
+      "count": 1
+    }
+  ]
+}

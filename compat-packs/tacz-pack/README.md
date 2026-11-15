@@ -22,10 +22,10 @@
 cp compat-packs/tacz-pack/*.json config/csbox/
 ```
 
-- 箱子：进游戏 `/csbox reload`，然后 `/give @p csgobox:gun_crate`。
+- 箱子：进游戏 `/csbox reload`，然后 `/csbox give @p csgobox:gun_crate`。
 - 终端机：**新增配置文件后需重启游戏**（动态物品在 RegisterEvent 注册阶段创建，
   `/csbox reload` 只刷新已有物品的配置数据），然后
-  `/give @p csgobox:tacz_terminal`，手持右键打开终端。
+  `/csbox give @p csgobox:tacz_terminal`，手持右键打开终端。
 
 ## 各平台正确写法（重要）
 

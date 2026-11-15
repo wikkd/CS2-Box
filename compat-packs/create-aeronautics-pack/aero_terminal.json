@@ -1,0 +1,33 @@
+{
+  "name": "#44AADD 创造航空终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": ["aeronautics"],
+  "random": [40, 30, 20, 7, 3],
+  "grade5": [
+    { "id": "aeronautics:pearlescent_levitite", "count": 1 },
+    { "id": "aeronautics:gyroscopic_propeller_bearing", "count": 1 },
+    { "id": "aeronautics:music_disc_cloud_skipper", "count": 1 }
+  ],
+  "grade4": [
+    { "id": "aeronautics:smart_propeller", "count": 1 },
+    { "id": "aeronautics:levitite", "count": 1 },
+    { "id": "aeronautics:mounted_potato_cannon", "count": 1 }
+  ],
+  "grade3": [
+    { "id": "aeronautics:adjustable_burner", "count": 1 },
+    { "id": "aeronautics:aviators_goggles", "count": 1 },
+    { "id": "aeronautics:steam_vent", "count": 1 },
+    { "id": "aeronautics:levitite_blend_bucket", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "aeronautics:propeller_bearing", "count": 1 },
+    { "id": "aeronautics:andesite_propeller", "count": 1 },
+    { "id": "aeronautics:end_stone_powder", "count": 1 },
+    { "id": "aeronautics:red_envelope", "count": 1 }
+  ],
+  "grade1": [
+    { "id": "aeronautics:wooden_propeller", "count": 1 },
+    { "id": "aeronautics:white_envelope", "count": 1 }
+  ]
+}

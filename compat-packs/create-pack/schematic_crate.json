@@ -1,0 +1,47 @@
+{
+  "name": "#DD8833 机械动力蓝图军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": ["create"],
+  "random": [40, 30, 20, 7, 3],
+  "grade5": [
+    {
+      "id": "create:schematic",
+      "count": 1,
+      "components": {
+        "create:schematic_file": "preview_test.nbt",
+        "create:schematic_owner": "dev"
+      }
+    },
+    {
+      "id": "create:schematic",
+      "count": 1,
+      "components": {
+        "create:schematic_file": "no_such_file.nbt",
+        "create:schematic_owner": "dev"
+      }
+    }
+  ],
+  "grade4": [
+    { "id": "create:precision_mechanism", "count": 1 },
+    { "id": "create:mechanical_arm", "count": 1 }
+  ],
+  "grade3": [
+    { "id": "create:deployer", "count": 1 },
+    { "id": "create:wrench", "count": 1 },
+    { "id": "create:super_glue", "count": 1 }
+  ],
+  "grade2": [
+    { "id": "create:brass_ingot", "count": 1 },
+    { "id": "create:zinc_ingot", "count": 1 },
+    { "id": "create:crushed_raw_iron", "count": 1 },
+    { "id": "create:brass_hand", "count": 1 }
+  ],
+  "grade1": [
+    { "id": "create:andesite_alloy", "count": 1 },
+    { "id": "create:electron_tube", "count": 1 },
+    { "id": "create:cogwheel", "count": 1 },
+    { "id": "create:shaft", "count": 1 },
+    { "id": "create:blaze_cake", "count": 1 }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "#66CC99 预览测试·森罗物语",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "requires": [
+    "kaleidoscope_cookery"
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_cookery:scarecrow",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:tomato_platter",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_cookery:qingtuan_plate",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:apple_platter",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_cookery:shengjian_mantou_plate",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:watermelon_platter",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_cookery:zongzi_plate",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:baozi_plate",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_cookery:berry_platter",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_cookery:sticky_rice_cake_plate",
+      "count": 1
+    }
+  ]
+}

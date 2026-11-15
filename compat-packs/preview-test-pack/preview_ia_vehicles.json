@@ -1,0 +1,65 @@
+{
+  "name": "#55AADD 预览测试·沉浸式载具",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "random": [
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "requires": [
+    "immersive_aircraft"
+  ],
+  "grade5": [
+    {
+      "id": "immersive_aircraft:warship",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:cargo_airship",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "immersive_aircraft:biplane",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:airship",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "immersive_aircraft:quadrocopter",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:gyrodyne",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "immersive_aircraft:bamboo_hopper",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:hull",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "immersive_aircraft:engine",
+      "count": 1
+    },
+    {
+      "id": "immersive_aircraft:propeller",
+      "count": 1
+    }
+  ]
+}
