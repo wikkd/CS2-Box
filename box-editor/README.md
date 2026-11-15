@@ -1,186 +1,121 @@
 # CS2-Box 宝箱配置编辑器（Box Editor）
 
-一个**纯前端、零依赖、可离线打开**的可视化配置工具，帮助普通玩家/服主在不手写 JSON
-的情况下创建 CS2-Box 的宝箱 / 终端机配置与统一价格表。
+为 CS2-Box 模组打造的纯前端可视化配置工具：不写 JSON，在表单里点点选选，
+就能创建宝箱、终端机配置和统一价格表。
 
-- 目录：`box-editor/`
-- 数据同步：`scripts/sync-box-editor-data.py`（从 `docs/box-schema` 与 `docs/examples`
-  生成 `js/data.js`，保证编辑器校验规则与游戏文档一致）
-- 跟随游戏版本（1.21.1 / 26.1.2 / 26.2 / Forge 26.1.2 / Forge 26.2 / Forge 1.20.1），
-  按版本控制 TACZ 变体键与 Data Components / legacy NBT 的可用性
-- 界面中英双语（右上角切换，自动记忆；首次访问未选择过时跟随浏览器语言自动选择）
-- 页面背景为随仓库分发的封面图（`img/bg.jpg`，固定铺满）；界面为**奶白色
-  毛玻璃**风格（半透明奶白组件 + 背景模糊，透出封面图，保持可读性；
-  `file://` 下同样生效）
+- **纯前端、零依赖、零网络**——双击 `index.html` 即可使用（`file://` 可用），
+  也可以用 npm 起本地服务；不需要安装任何依赖
+- **跟随八平台版本**（1.21.1 NeoForge / Fabric、26.1.2、26.2、Forge 26.1.2 /
+  Forge 26.2 / Forge 1.20.1 / Forge 1.18.2），按版本控制 TACZ 变体键与
+  Data Components / legacy NBT 的可用性
+- **中英双语**，右上角切换、自动记忆，首次访问跟随浏览器语言
+- **实时预览与校验**：JSON 输出、概率 / 期望值计算、开箱模拟、规则校验
+  （点校验项直接跳到出问题的输入框）
+- **多草稿工作区**：同时管理多份配置草稿，支持分享链接、撤销重做、
+  PWA 离线安装
+- **奶白毛玻璃界面**，仓库封面图作背景，浅色 / 深色主题可切换
 
-## 快速开始（本地）
+## 快速开始
 
-三种方式任选其一：
+- **直接打开**：双击 `box-editor/index.html`。推荐 Chrome / Edge——Firefox 在
+  `file://` 下禁用 localStorage，功能仍可用但不会自动保存。
+- **本地服务**（Node ≥ 18）：Windows 双击 `start.bat`，其他平台
+  `./start.sh`，或 `cd box-editor && npm start`。自动打开
+  `http://127.0.0.1:4173/`，可带 `--port` / `--no-open` 参数。
+- **构建产物**：`npm run build` 后 `node server.mjs --dir ./dist`，`dist/`
+  可整目录托管到任意静态服务。
 
-1. **双击打开**：直接用浏览器打开 `box-editor/index.html`（`file://` 可用，无需 Node）
-   - 推荐 Chrome / Edge；Firefox 的 `file://` 会禁用 localStorage，此时功能仍可用
-   （表单/校验/导出）但**不会自动保存**，刷新会回到默认示例
-2. **一键启动**（推荐，Node ≥ 18）：
-   - Windows：双击 `box-editor/start.bat`（自动打开 `http://127.0.0.1:4173/`）
-   - macOS / Linux / Git Bash：`./start.sh`
-   - 或手写：`cd box-editor && npm start`（等价 `node server.mjs`，`--port` / `--no-open` 可调）
-3. **访问 Dist 构建**：`npm run build` 后 `node server.mjs --dir ./dist`
+首次打开会自动载入「武器供应商终端」示例；所有改动自动保存在浏览器
+localStorage，刷新不丢。
 
-不需要安装任何依赖、不需要网络。首次打开会自动载入
-「武器供应商终端」示例，所有状态自动保存在浏览器 localStorage。
+## 配置流程
 
-## 构建与本地部署
+一次完整的宝箱配置通常是这样走下来的：
 
-```bash
-cd box-editor
+**1. 选版本、建草稿**
 
-npm run sync    # 【可选】从 docs/box-schema + docs/examples + compat-packs 重新生成 js/data.js（需 Python 3.9+）
-npm run build   # 零依赖复制静态资源到 box-editor/dist/
-npm start       # 本地部署：http://127.0.0.1:4173/
-```
+右上角选择目标平台版本（影响 TACZ 字段与 Data Components 的可见性，见
+[版本差异](#版本差异)）；左侧文件栏新建草稿。草稿名就是箱子 id，也是
+导出文件名。
 
-- `npm run sync` 等价于
-  `python ../scripts/sync-box-editor-data.py`（Windows 上若 `python` 是
-  WindowsApps 占位符，改用仓库推荐的
-  `C:/Users/FrostStarInquire/.venv-html-to-docx/Scripts/python.exe` 直接运行该脚本）
-- `dist/` 是可独立托管的产物目录（`index.html + css + js + data + README`），
-  可以整目录丢到任意静态托管 / CDN。
+**2. 填基本信息**
 
-## 功能
+类型选 `csbox`（宝箱）或 `terminal`（终端机）；文件名自动校验字符集；
+显示名支持 `#RRGGBB` 颜色前缀。钥匙、掉落概率、启用开关、所需模组都在
+这一屏。终端机多出折扣、库存、每人上限、冷却、权限几项参数。
 
-### 可视化表单
+**3. 搭奖池**
 
-- **基本信息**：文件名（即箱子 id，自动校验字符集）、显示名称（支持 `#RRGGBB`
-  颜色前缀）、类型（`csbox` / `terminal`）、钥匙、掉落概率、启用开关、所需模组
-- **顶部栏「高级」开关**：默认关闭，把进阶配置收纳起来：
-  - 「自定义贴图（图标）」——整数 `CustomModelData`（全平台，需资源包）
-    或 `ns:path` 物品模型 id（如 `minecraft:ender_chest`，仅 26.x 直接渲染），
-    附常用模型快捷选择与当前版本的兼容性提示；
-  - 「TACZ 专属字段」卡片（变体 GunId/AmmoId + 导入教程）与物品行的
-    **附魔配置**（随机附魔 / 指定附魔 + 等级）。
-  普通模式下若某物品已配置附魔 / TACZ 变体 / 原始 NBT，物品卡头部会出现
-  `⚙ 附魔 / TACZ` 徽章（点击即可开启高级模式）；图标配置则以黄色提示条显示。
-- **掉落与等级权重**：实体掉落列表（ID / 概率交替）、grade1–grade5 档内权重
-- **终端机参数**：折扣、库存、补货、每人上限、冷却、权限（仅 `terminal` 显示）
-- **五档奖池**：每件物品支持 物品ID / 物品标签(#) / 战利品表 三选一来源，
-  数量（固定 / 区间）、档内权重、附魔（随机 / 指定 / 指定+等级区间）、
-  TACZ 变体（写入 `tag: {GunId:"..."}`）；原始 NBT tag 与 Data Components（JSON）
-  收进物品卡底部「高级数据」折叠区（默认收起，有内容时自动展开并标注"已填写"，
-  粘贴 `/csbox nbt hand` 输出会自动带出）；
-  TACZ 变体 / 原始 NBT 属于**专属字段**，由「TACZ 专属字段」开关控制：自动时
-  跟随所选版本，也可点击循环「自动 → 启用 → 禁用」手动覆盖（开关状态会本地保存，
-  导入 / 载入示例时保留）
-- **价格表**：自动收集物品池里的所有物品键（含 `id#变体`）；**物品池 id 必须定价**
-  （未定价会导致游戏加载报错、终端机不售、拆解 0）；每格可填**固定价（`1500`）或范围价（`1500-3000`，导出为
-  `[1500, 3000]`，游戏内每次终端机报价/拆解随机取整）**；实时显示拆解回收
-  （固定价 = 表价 ×90% 向上取整，范围价 = min~max 折算区间）；可添加额外键、
-  **批量导入**（粘贴 `键<Tab>价格` 多行或整份 `_prices.json`，范围支持
-  `1500-3000` 与 `[1500, 3000]` 两种写法）
-- **撤销 / 重做**：顶部按钮或 `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`（输入框内保留
-  原生文本撤销）；误操作随时回退
-- **物品复制 / 批量粘贴**：每条物品可复制其 JSON，奖池内支持粘贴多条（JSON
-  对象/数组，或每行一个物品 ID）；可直接粘贴游戏内 `/csbox nbt hand` 输出的
-  聊天整段（标题/复制按钮行自动忽略；输出过长时按提示用聊天复制按钮取完整 JSON）
-- **分享链接**：一键把当前配置压缩进 URL（`#state=...`），发给别人打开即还原；
-  打开分享链接会覆盖本地当前草稿——编辑器会把草稿保留为撤销栈首项，
-  按 `Ctrl+Z`（或撤销按钮）即可撤回覆盖，toast 也有提示
-- **折叠记忆**：五个奖池卡片的展开/折叠状态自动保存
-- **功能区折叠**：各卡片标题可点击折叠/展开（掉落实体权重、终端机参数默认折叠，
-  其余默认展开），状态本地保存；卡头内操作按钮（如批量导入）不受折叠影响
+五个档位，每件物品三选一来源：物品 ID、物品标签（`#tag`）、战利品表。
+数量可以固定也可以区间，档内权重控制稀缺度，附魔支持随机 / 指定 /
+指定+等级区间。原始 NBT tag 和 Data Components 收在物品卡底部的
+「高级数据」折叠区，粘贴 `/csbox nbt hand` 的输出会自动带出。
 
-### 悬浮帮助
+**4. 定价**
 
-- 把鼠标移到任意输入框 / 下拉框上，会浮出对应的填写教程（中英文跟随界面语言；
-  键盘 Tab 聚焦同样显示），不用翻文档即可知道每个字段的含义与格式；
-  **触屏设备**没有悬停，改为**长按（约半秒）字段弹出提示**，移动手指或点按别处关闭。
+切到价格表页，箱子里的所有物品键（含 `id#变体`）会自动列出。每格填
+固定价（`1500`）或范围价（`1500-3000`，导出为 `[1500, 3000]`，游戏内
+每次报价 / 拆解时随机取整）。
 
-### TACZ 枪械/弹药导入教程（内置）
+> **物品池 id 必须定价。** 未定价会导致游戏加载报错、终端机不售、
+> 拆解产出 0。价格表实时显示拆解回收参考（固定价 = 表价 × 90% 向上取整）。
+> 支持批量导入：粘贴 `键<Tab>价格` 多行，或直接贴整份 `_prices.json`。
 
-- 「TACZ 专属字段」卡片内有 **查看 TACZ 导入教程** 按钮（中英双语弹窗），一步步
-  讲解：开关 → 物品 ID（`tacz:modern_kinetic_gun` / `tacz:ammo`）→ 变体
-  （`GunId`/`AmmoId`）→ 原始 NBT 高级方式 → `id#变体` 价格键 → 26.x 回退提示 →
-  `config/csbox/` 放置与 `/csbox reload` → 联动包参考
-  （`compat-packs/tacz-pack/`）。
-- 也适用批量导入：先批量粘贴物品，再在价格表页批量导入 `id#变体` 价格。
+**5. 预览与校验**
 
-### 双页工作区
+右侧栏实时生成当前页面的 JSON；「精简输出」可省略默认值让文件更短。
+切到「概率表」看每档抽中概率、每件物品的档内 / 综合概率和期望价值
+（与游戏端 `OddsCalculator` 同口径）。模拟开箱可以单次播放 CS2 风格
+滚动动画，或批量 10 / 100 次直接出统计表。底部校验结果分错误 / 警告 /
+提示三级，点击任意一条会滚动定位并高亮对应的输入框。
 
-- 编辑器拆成两个独立页面（顶部导航切换，状态本地共享）：
-  - **箱子配置**（`index.html`）：基本信息 / 奖池 / 掉落实体 / 终端机参数
-  - **价格表**（`prices.html`）：`_prices.json` 编辑，自动列出箱子页物品键
-- 两页共用一份本地状态：任一侧的修改都会同步到另一页（含跨标签页实时同步）。
+**6. 导出、放进游戏**
 
-### 多草稿文件栏
+下载 `xxx.json` + `_prices.json`（或单独下当前文件），放进游戏的
+`config/csbox/` 文件夹，游戏内 `/csbox reload` 生效。Chrome / Edge
+用户可以直接用「从游戏读取」反向导入现有配置，也能用「应用到游戏」
+把编辑器草稿直写回 `config/csbox/`（仅限这两款内核浏览器）。
 
-- 页面左侧「文件」侧栏可同时管理多份草稿：新建 / 复制 / 重命名 / 删除 / 一键切换，
-  各草稿独立保存在浏览器 localStorage（旧版单草稿数据首次打开自动迁移为第一个文件）
-- 草稿名即箱子 id（导出文件名），重命名改动可撤销（Ctrl+Z）；删除活动草稿时
-  自动落到剩余草稿（全部删光则新建空草稿）；侧栏可折叠，窄屏默认收起
+### 高级模式
 
-### 主题
+顶栏「高级」开关默认关闭，收纳了进阶配置：
 
-- 顶栏 ◐ 按钮切换 浅色（奶白毛玻璃）/ 深色（CS2 暗色）主题，选择持久保存；
-  未手动切换过时跟随系统 `prefers-color-scheme`
+- **自定义贴图（图标）**——整数 `CustomModelData`（全平台，需资源包），或
+  `ns:path` 物品模型 id（如 `minecraft:ender_chest`，仅 26.x 直接渲染），
+  附常用模型快捷选择与版本兼容性提示
+- **TACZ 专属字段**——变体 GunId / AmmoId，卡内附中英双语导入教程按钮；
+  开关支持「自动 → 启用 → 禁用」循环覆盖（自动时跟随所选版本）
+- **物品附魔配置**——随机附魔 / 指定附魔 + 等级
 
-### 实时预览与校验
+普通模式下，已配置附魔 / TACZ 变体 / 原始 NBT 的物品卡头部会出现
+`⚙ 附魔 / TACZ` 徽章，点一下就能开启高级模式。
 
-- 右侧实时生成当前页面对应的 `箱子.json` 或 `_prices.json` 内容
-- **概率表视图**：右侧栏「JSON 预览 / 概率表」切换。概率表按
-  `random` 等级权重 × 物品 `weight` 档内权重实时计算每个等级的抽中概率与
-  每件物品的档内/综合概率（与游戏 `OddsCalculator` 规则一致；权重 0 的物品
-  标记禁用，空档显示游戏回退提示；random 全 0 时提示箱子不可开启）；
-  第 4 列「期望价值」按价格表（范围价取中点）计算每件物品/每档的期望军备点数，
-  表尾汇总单次开箱内容期望与拆解回收参考（约 90%）
-- **模拟开箱视图**（仅箱子页）：单次开箱播放 CS2 风格横向滚动动画（结果预采样确定，
-  与服务端权威同口径），批量 10 / 100 次直接统计；统计表按档位分组展示命中次数、
-  实际频率与理论概率对照，累计到手动清零；配置修改后面板显示「统计基于旧配置」提示。
-  系统开启「减弱动态效果」时跳过动画直接出结果
-- **物品 ID 自动补全**：物品池输入框与价格表「额外键」输入框内置约 200 个常用原版
-  物品（中英名称），TACZ 枪械 / 弹药条目跟随版本可见性自动显隐
-  （列表由 `scripts/sync-box-editor-data.py` 生成，改表后需重新 sync）
-- **精简输出（省略默认值）**：勾选时省略可省略的默认字段（`type: "csbox"`、
-  `enabled: true`、物品 `count: 1` / `weight: 1` 等），文件更短；取消勾选则
-  输出完整 JSON（显式写入默认值），方便对照 schema 检查
-- 内嵌轻量校验（对应运行时规则：文件名字符集、终端禁止 key、random 5 项、
-  item 三选一来源、count/weight/enchant 合法性、价格表键格式与整数范围、
-  版本差异提示等）
-- 校验结果分 错误 / 警告 / 提示 三级展示；**点击任意一条校验项会滚动定位并
-  高亮对应的输入框**
+### 效率功能
 
-### PWA 离线安装
+- **撤销 / 重做**：`Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`，输入框内保留原生文本撤销
+- **复制粘贴**：每条物品可复制 JSON；奖池内可批量粘贴（JSON 对象 / 数组，
+  或每行一个物品 ID），也能直接贴 `/csbox nbt hand` 的聊天整段
+- **分享链接**：一键把当前配置压缩进 URL（`#state=...`），对方打开即还原；
+  覆盖本地草稿时可 `Ctrl+Z` 撤回
+- **悬浮帮助**：悬停任意输入框浮出填写教程（中英文），触屏设备长按约半秒弹出
+- **折叠记忆**：奖池卡片与功能区卡片的展开状态自动保存
+- **主题**：顶栏 ◐ 切换浅色 / 深色，未手动切换时跟随系统
 
-- 部署到 HTTPS（GitHub Pages 或 `npm start` 本地服务）后，浏览器地址栏会出现
-  「安装」入口，可把编辑器装成独立应用离线使用（Service Worker 预缓存全部静态
-  资源，HTML 导航 network-first、静态资源 cache-first，版本随构建自动换缓存）
-- `file://` 直接双击打开不受影响（无需也不注册 Service Worker）
+### 导入与迁移
 
-### 导入 / 迁移 / 导出
+- **导入**：选本地 `.json` 文件或粘贴 JSON 文本，自动识别箱子 vs 价格表
+- **旧格式导入**：v2.0.1 前的配置专用入口。内联 `price` 自动迁移进价格表
+  （同物多价取平均，已有价优先）；文件名为 `terminal.json` 的旧终端机自动
+  识别并移除遗留 `key`；ChloePrime 旧版写反的 `random` 权重自动检测并反转。
+  普通导入也会迁移内联 `price`，但不做后两项旧格式推断
+- **内置示例**：武器供应商终端、附魔书终端、生存补给终端、TACZ 军火枪械箱；
+  示例弹窗里可一键整包导入 `compat-packs/` 官方联动包模板
+  （Apotheosis / Iron's Spells / TACZ，含 `requires`、加权、附魔与
+  `id#变体` 价格示例）
+- **PWA**：部署到 HTTPS 后浏览器地址栏出现「安装」入口，可装成独立应用
+  离线使用；`file://` 双击打开不受影响
 
-- **导入**：选择本地 `.json` 文件，或粘贴 JSON 文本（自动识别箱子 vs 价格表）
-- **从游戏读取**：一键反向来——选择游戏的 `config/csbox` 文件夹，把里面全部
-  箱子 JSON（含终端机）与 `_prices.json` 导入工作区草稿（复用 `#pack=` 导入的
-  去重/冲突询问/损坏文件修复流程；只读访问，文件夹不会被改动；与「应用到游戏」
-  一样仅 Chrome / Edge 等内核浏览器可用）
-- **旧格式导入**（顶部按钮，v2.0.1 前的配置专用入口）：粘贴旧版箱子/终端机
-  JSON **无需填写文件名**，也可「选择文件」导入（自动携带文件名）。与普通导入的
-  区别是**旧格式识别**：物品行内联 `price` 自动迁移进价格表；**无 `type` 字段且
-  文件名（选择文件导入时自动识别）为 `terminal.json` 的旧终端机**会识别为终端机并
-  移除遗留 `key`（对齐游戏端 v2.0.0 自动迁移）；**ChloePrime 旧版把 `random` 等级
-  权重写反**（数组为递增顺序），导入时自动检测并反转（toast 提示，`Ctrl+Z` 可
-  撤销）；导出始终按当前版本新格式（`type` 显式、权重 grade1→grade5 正序、
-  价格进 `_prices.json`）。普通导入仍会迁移内联 `price`，只是不做旧终端机推断与
-  权重反转
-- **旧版自动迁移**：导入带内联 `price` 的旧版箱子 JSON 时，自动把价格迁移进价格表
-  ——同一物品多处价格按**平均值（四舍五入）**迁移，表中已有价格优先，非法价格
-  忽略，并自动从箱子 JSON 中剥离 `price` 字段（与游戏内 `LegacyPriceMigration`
-  规则一致）
-- **内置示例**：武器供应商终端、附魔书终端、生存补给终端、TACZ 军火枪械箱，
-  另有**官方联动包模板**（同仓库 `compat-packs/`：Apotheosis / Iron's Spells /
-  TACZ 整包，含 `requires`、加权、附魔与 `id#变体` 价格示例），在示例弹窗里
-  一键整包导入
-- **下载**：单独下载当前文件，或一键下载 `xxx.json` + `_prices.json`
-
-### 版本切换说明
+## 版本差异
 
 JSON 结构在八个平台间当前完全一致；版本切换主要影响：
 
@@ -192,42 +127,37 @@ JSON 结构在八个平台间当前完全一致；版本切换主要影响：
 | 1.21.1 (Fabric) | ✅ | ✅ | ❌（只支持整数 CustomModelData） |
 | Forge 1.18.2 | ❌（用 legacy NBT `tag`） | ✅ | ❌（只支持整数 CustomModelData） |
 
-> 上表是「自动」模式的行为。表单里的 **TACZ 专属字段** 开关可强制启用 / 禁用
-> 变体输入与 `id#变体` 键提示：强制启用后即使选了 26.x 也能配置 TACZ 变体并生成
-> `#变体` 价格键（是否被服务端接受取决于对应整合包）；强制禁用后即使选 1.21.1
-> 也会隐藏这些字段。
+> 上表是「自动」模式的行为。TACZ 专属字段开关可强制启用 / 禁用：强制启用后
+> 即使选了 26.x 也能配置变体并生成 `#变体` 价格键（是否被服务端接受取决于
+> 对应整合包）；强制禁用后即使选 1.21.1 也会隐藏这些字段。
 
-未来某版本 schema 分叉时，在 `scripts/sync-box-editor-data.py` 的版本元数据中挂载
-对应 schema 文件即可（当前共用 `docs/box-schema/` 的共享 schema）。
+未来某版本 schema 分叉时，在 `scripts/sync-box-editor-data.py` 的版本元数据中
+挂载对应 schema 文件即可（当前共用 `docs/box-schema/` 的共享 schema）。
 
-## 部署到 GitHub Pages
+## 部署
 
-本目录是纯静态站点，**推荐用仓库内的 Actions 工作流自动发布**（推送到 `main`
-且改动涉及 `box-editor/` / `docs/box-schema/` / `docs/examples/` 时自动构建上传）：
+本目录是纯静态站点，推荐用仓库内的 Actions 工作流自动发布（推送到 `main`
+且改动涉及 `box-editor/` / `docs/box-schema/` / `docs/examples/` 时自动
+构建上传）：
 
 1. 推送代码到 CS2-Box 仓库 `main` 分支
-2. 打开仓库 **Settings → Pages**，在 **Build and deployment → Source** 选择
+2. 仓库 **Settings → Pages → Build and deployment → Source** 选
    **`GitHub Actions`**（不是 Deploy from a branch）
-3. 等待 `.github/workflows/box-editor-pages.yml` 跑完，访问
-   `https://<用户名>.github.io/CS2-Box/`（工作流默认发布到站点根；如需子路径
-   发布，在仓库设置里把 Pages **Custom domain / path** 配成 `/box-editor`）
+3. 等 `.github/workflows/box-editor-pages.yml` 跑完，访问
+   `https://<用户名>.github.io/CS2-Box/`（默认发布到站点根；需要子路径时
+   在 Pages 设置里配 **Custom domain / path** 为 `/box-editor`）
 
-> 说明：浏览器在 `file://` 下无法 fetch 外部 JSON Schema 文件，因此本工具把
-> `docs/box-schema/*.schema.json`、内置示例与 `compat-packs/` 联动包模板
-> **内嵌**进 `js/data.js`（生成式），
-> 离线也能完整校验；原始 schema 副本保留在 `box-editor/data/schemas/shared/`
-> 供排查与未来版本化。
+> 浏览器在 `file://` 下无法 fetch 外部 JSON Schema 文件，所以 schema、内置
+> 示例与联动包模板都**内嵌**进 `js/data.js`（生成式），离线也能完整校验；
+> 原始 schema 副本保留在 `box-editor/data/schemas/shared/`。
 
-也可以完全手动部署（不依赖 Actions）：
-
-- 本地 `npm run build` 后，把 `box-editor/dist/` 推到任意静态托管；
-- 或整目录发布 `box-editor/`：Settings → Pages → **Deploy from a branch** →
-  `main` + 文件夹 `/box-editor`。
+手动部署不依赖 Actions：本地 `npm run build` 后把 `dist/` 推到任意静态托管，
+或整目录发布 `box-editor/`（Settings → Pages → **Deploy from a branch** →
+`main` + `/box-editor`）。
 
 ## 数据同步
 
-修改了 `docs/box-schema/`、内置示例或 `compat-packs/`（联动包模板）后，重新
-生成内嵌数据：
+修改了 `docs/box-schema/`、内置示例或 `compat-packs/` 后，重新生成内嵌数据：
 
 ```bash
 # Windows（仓库推荐 Python 3.12 环境）
@@ -237,10 +167,8 @@ C:/Users/FrostStarInquire/.venv-html-to-docx/Scripts/python.exe scripts/sync-box
 python scripts/sync-box-editor-data.py
 ```
 
-脚本会重写：
-
-- `box-editor/js/data.js`（schema + 版本元数据 + 示例 + compat-packs 联动包模板）
-- `box-editor/data/schemas/shared/*.schema.json`（原始副本）
+脚本会重写 `box-editor/js/data.js`（schema + 版本元数据 + 示例 + 联动包 +
+物品 / 实体补全表）与 `box-editor/data/schemas/shared/*.schema.json`。
 
 ## 目录结构
 
@@ -271,11 +199,11 @@ box-editor/
 └── README.md
 ```
 
-## 设计取舍（v0 初始版）
+## 设计取舍
 
-- 纯原生 JavaScript（无框架、无构建），保证 `file://` 与 GitHub Pages 零配置可用；
-  后续滚动开发如引入构建（Vite + Vue），仍可发布到 Pages，但会失去“双击即用”。
-- 编辑器校验是**轻量校验**（覆盖运行时主要规则），最终以游戏内 `/csbox validate`
-  与 Java 校验器为准。
-- `tag_nbt` 是 schema 残留文档字段，运行时并不读取——编辑器按 loader 实际行为
-  生成 `tag`（SNBT/JSON 对象），TACZ 变体也从 `tag` 提取。
+- 纯原生 JavaScript（无框架、无构建），保证 `file://` 与 GitHub Pages 零配置
+  可用；后续若引入构建（Vite + Vue）仍可发布到 Pages，但会失去「双击即用」。
+- 编辑器校验是**轻量校验**（覆盖运行时主要规则），最终以游戏内
+  `/csbox validate` 与 Java 校验器为准。
+- `tag_nbt` 是 schema 残留文档字段，运行时并不读取——编辑器按 loader 实际
+  行为生成 `tag`（SNBT/JSON 对象），TACZ 变体也从 `tag` 提取。
