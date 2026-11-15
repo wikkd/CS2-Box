@@ -296,6 +296,12 @@ public class CsgoBox {
             // the parameter and switched to a Supplier-based register signature.
             event.register(
                     new com.reclizer.csgobox.forge_26_1_2.gui.pip.Icon3DRenderer(event.getBufferSource()));
+            // Entity previews (spawn eggs / armor / summon cards / same-id
+            // entities) use their own PIP renderer so the drag feel matches
+            // the item icon renderer exactly (vanilla GuiEntityRenderer
+            // applies no flip and would spin the other way).
+            event.register(
+                    new com.reclizer.csgobox.forge_26_1_2.gui.pip.EntityIcon3DRenderer(event.getBufferSource()));
         }
     }
 }

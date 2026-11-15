@@ -308,6 +308,12 @@ public class CsgoBox {
             // register a no-arg instance.
             event.register(
                     new com.reclizer.csgobox.forge_26_2.gui.pip.Icon3DRenderer());
+            // Entity previews (spawn eggs / armor / summon cards / same-id
+            // entities) use their own PIP renderer so the drag feel matches
+            // the item icon renderer exactly (vanilla GuiEntityRenderer
+            // applies no flip and would spin the other way).
+            event.register(
+                    new com.reclizer.csgobox.forge_26_2.gui.pip.EntityIcon3DRenderer());
         }
     }
 }

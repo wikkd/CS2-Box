@@ -90,8 +90,13 @@ public record PacketBoxOpenResult(
      * the stack unchanged when there is nothing to strip. Decoys keep
      * {@code minecraft:custom_data} because TACZ guns carry their GunId there:
      * without it the client renders a plain gun whose TACZ slot fallback paints
-     * the missing-texture checkerboard over the whole animation card. The
-     * winner always keeps full data.
+     * the missing-texture checkerboard over the whole animation card. Decoys
+     * also keep {@code minecraft:block_entity_data}: the vehicle preview
+     * resolves SBW's vehicle icon from its "EntityType" field, and without it
+     * every decoy summon crate renders as the bare box. SBW's own inventory
+     * blits the same icon from this component on every slot, so keeping it
+     * leaks no more than the per-card grades already synced for the strip.
+     * The winner always keeps full data.
      */
     private static ItemStack stripComponents(ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
@@ -101,6 +106,10 @@ public record PacketBoxOpenResult(
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         if (customData != null && !customData.isEmpty()) {
             stripped.set(DataComponents.CUSTOM_DATA, customData);
+        }
+        CustomData blockEntityData = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        if (blockEntityData != null && !blockEntityData.isEmpty()) {
+            stripped.set(DataComponents.BLOCK_ENTITY_DATA, blockEntityData);
         }
         return stripped;
     }

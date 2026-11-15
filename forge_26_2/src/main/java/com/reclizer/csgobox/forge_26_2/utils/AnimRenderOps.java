@@ -2,17 +2,42 @@ package com.reclizer.csgobox.forge_26_2.utils;
 
 import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.forge_26_2.CsgoBox;
+import com.reclizer.csgobox.forge_26_2.gui.pip.EntityIcon3DRenderState;
 import com.reclizer.csgobox.forge_26_2.gui.pip.Icon3DRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.illager.SpellcasterIllager;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.component.TypedEntityData;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.world.level.Level;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
@@ -75,6 +100,7 @@ public final class AnimRenderOps {
     /** Clears cached model geometry (e.g. after a resource-pack / model reload). */
     private static void clearModelCache() {
         MODEL_CACHE.clear();
+        FLAT_ITEM_MODELS.clear();
     }
 
     private static void ensureModelCacheClearer() {
@@ -228,6 +254,37 @@ public final class AnimRenderOps {
             return;
         }
 
+        // Vanilla-class preview conventions (Forge 26.x carries no
+        // mod-specific strategies — the mod-version matrix admits no built
+        // mods here; the same-id entity rule further down covers any
+        // convention-following mod generically). Spawn eggs first (26.x
+        // getType is static), then humanoid armor on a shared stand, then
+        // generic summon containers. All degrade to the flat icon when their
+        // render state produces nothing usable.
+        if (item.getItem() instanceof SpawnEggItem) {
+            EntityType<?> eggType = null;
+            try {
+                eggType = SpawnEggItem.getType(item);
+            } catch (Throwable ignored) {
+                eggType = null;
+            }
+            if (eggType != null) {
+                renderEntityPreviewForType(guiGraphics, item, player, cx, cy, rotation, scale,
+                        eggType, entityDataOf(item));
+                return;
+            }
+        }
+        Equippable equippable = item.get(DataComponents.EQUIPPABLE);
+        if (equippable != null && HUMANOID_ARMOR_SLOTS.contains(equippable.slot())) {
+            renderArmorStandPreview(guiGraphics, item, player, cx, cy, rotation, scale, equippable.slot());
+            return;
+        }
+        EntityType<?> summon = summonContainerEntityType(item);
+        if (summon != null) {
+            renderEntityPreviewForType(guiGraphics, item, player, cx, cy, rotation, scale, summon, null);
+            return;
+        }
+
         int textureSize = Math.max(1, Math.round(16.0F * scale));
 
         ensureModelCacheClearer();
@@ -270,6 +327,20 @@ public final class AnimRenderOps {
                 float ox = (bounds != null) ? (-16F * (float) ((bounds.minX + bounds.maxX) * 0.5D) - 8F) : -8F;
                 float oy = (bounds != null) ? (-16F * (float) ((bounds.minY + bounds.maxY) * 0.5D) - 8F) : -8F;
                 MODEL_CACHE.put(key, new CachedModel(ox, oy, trackedState, modelSpan, modelCenterX, modelCenterY, modelCenterZ));
+            }
+        }
+
+        // Same-id entity convention (generic, no per-mod code): a flat-sprite
+        // item whose registry id is also an entity type draws the entity —
+        // vanilla kin (minecarts, armor stand, end crystal, item frames,
+        // painting, trident) and modded summonables. Food items never match:
+        // raw food ids collide with their animal entities (raw
+        // chicken/chicken) and the item is the truth.
+        if (isFlatSpriteItem(mc, item, player)) {
+            EntityType<?> convention = conventionEntityType(item);
+            if (convention != null) {
+                renderEntityPreviewForType(guiGraphics, item, player, cx, cy, rotation, scale, convention, null);
+                return;
             }
         }
 
@@ -325,5 +396,585 @@ public final class AnimRenderOps {
      *  Modern UI is intentionally excluded — see supports3D(). */
     private static boolean isShaderModActive() {
         return ModList.isLoaded("iris") || ModList.isLoaded("oculus");
+    }
+
+    // ============= Generic entity previews (spawn eggs / armor / summon cards / same-id entities) =============
+
+    /** Humanoid equipment slots the armor-stand preview covers; animal armor
+     *  (BODY slot) keeps its own renderer and is not covered. */
+    private static final Set<EquipmentSlot> HUMANOID_ARMOR_SLOTS =
+            Set.of(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
+
+    /** Item ids whose same-named entity must never become the 3D preview:
+     *  escape hatch for convention collisions (L4 finds one, add its
+     *  {@code namespace:path} item id). Empty today. */
+    private static final Set<String> ENTITY_CONVENTION_DENYLIST = Set.of();
+
+    /** Parked client-side preview entities, cached per entity-type id (the
+     *  model resources are heavy and renderers animate against the entity).
+     *  Not added to the client world — the PIP renderer submits their render
+     *  state explicitly. */
+    // Strong map on purpose: a WeakHashMap keyed by the freshly-built registry-id
+    // string drops every entry on the next GC, and the next frame then silently
+    // recreates a fresh entity (default pose = static), so the inspect animation
+    // drove an instance that was no longer the rendered one. Bounded by the
+    // number of entity types ever previewed; stale-level entries are replaced on
+    // first use after a world change (see entityPreviewInstance).
+    private static final Map<String, Entity> ENTITY_PREVIEW_INSTANCES = new HashMap<>();
+
+    /** Flat-sprite verdict per cached model key. 26.x bakes display
+     *  transforms inside the item model resolver, so the probe runs on a
+     *  FIXED-context render state (identity transform for generated sprites —
+     *  a thin axis there means the item model is a plane). Cleared on
+     *  resource reloads together with {@link #MODEL_CACHE}. */
+    private static final Map<ModelKey, Boolean> FLAT_ITEM_MODELS = new HashMap<>();
+
+    private static boolean isFlatSpriteItem(Minecraft mc, ItemStack item, LivingEntity player) {
+        ensureModelCacheClearer();
+        ModelKey key = modelKey(item);
+        Boolean cached = FLAT_ITEM_MODELS.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        boolean flat;
+        try {
+            TrackingItemStackRenderState state = new TrackingItemStackRenderState();
+            mc.getItemModelResolver().updateForLiving(state, item, ItemDisplayContext.FIXED, player);
+            AABB bounds = state.getModelBoundingBox();
+            flat = bounds != null
+                    && Math.min(bounds.getXsize(), Math.min(bounds.getYsize(), bounds.getZsize())) <= 1.0E-3F;
+        } catch (Throwable ignored) {
+            flat = false;
+        }
+        FLAT_ITEM_MODELS.put(key, flat);
+        return flat;
+    }
+
+    /** Resolves the same-id entity convention: an entity type sharing the
+     *  flat-sprite item's registry id means the 3D form lives on the entity
+     *  (modded summonables and vanilla kin: minecarts, armor stand, end
+     *  crystal, item frames, painting, trident). Food items never match (raw
+     *  chicken vs. the chicken entity — the food item is the truth), and the
+     *  denylist overrides everything. Null when the convention does not
+     *  apply. */
+    private static EntityType<?> conventionEntityType(ItemStack item) {
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(item.getItem());
+        if (ENTITY_CONVENTION_DENYLIST.contains(itemId.toString())
+                || item.get(DataComponents.FOOD) != null) {
+            return null;
+        }
+        return BuiltInRegistries.ENTITY_TYPE.containsKey(itemId)
+                ? BuiltInRegistries.ENTITY_TYPE.getValue(itemId) : null;
+    }
+
+    /** Generic summon-container convention: any item whose
+     *  {@code minecraft:block_entity_data} stores an {@code EntityType}
+     *  string that resolves to a registered entity (the Superb Warfare
+     *  summon-crate convention; SBW itself has no Forge 26.x build, but the
+     *  convention stays generic for anything reusing it under any
+     *  namespace). Type-only — the block entity tag is deliberately not
+     *  loaded onto the preview entity (block-entity fields are not entity
+     *  save data). Null when the convention does not apply. */
+    static EntityType<?> summonContainerEntityType(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return null;
+        }
+        try {
+            TypedEntityData<net.minecraft.world.level.block.entity.BlockEntityType<?>> data =
+                    stack.get(DataComponents.BLOCK_ENTITY_DATA);
+            if (data == null || !data.contains("EntityType")) {
+                return null;
+            }
+            Identifier typeId = data.getUnsafe().getString("EntityType")
+                    .map(Identifier::tryParse)
+                    .orElse(null);
+            return typeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)
+                    ? BuiltInRegistries.ENTITY_TYPE.getValue(typeId) : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Spawn-egg entity data ({@code minecraft:entity_data}); applied onto
+     *  the shared preview instance every frame so variants (sheep colour,
+     *  villager profession) render like the spawned mob. */
+    private static TypedEntityData<EntityType<?>> entityDataOf(ItemStack stack) {
+        try {
+            return stack.get(DataComponents.ENTITY_DATA);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** The parked client-side preview entity for an entity type, or null on
+     *  failure. Cached per entity type: the model resources are heavy and
+     *  the renderer animates against the entity, so a per-frame allocation
+     *  would reload/replay every frame. Not added to the client world — it
+     *  is rendered via the dispatcher's render-state path. Parked at the
+     *  origin facing the viewer; the entity stays fully visible (invisible
+     *  starves LivingEntity renderers to an empty render state) and the PIP
+     *  render target has no ground plane, so there is no shadow pass to
+     *  suppress. */
+    private static Entity entityPreviewInstance(EntityType<?> type, Level level) {
+        String cacheKey = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
+        Entity cached = ENTITY_PREVIEW_INSTANCES.get(cacheKey);
+        if (cached != null && cached.level() == level) {
+            return cached;
+        }
+        try {
+            Entity entity = type.create(level, EntitySpawnReason.COMMAND);
+            if (entity == null) {
+                return null;
+            }
+            entity.setPos(0.0D, 0.0D, 0.0D);
+            entity.setYRot(180.0F);
+            entity.setXRot(0.0F);
+            ENTITY_PREVIEW_INSTANCES.put(cacheKey, entity);
+            return entity;
+        } catch (Throwable t) {
+            CsgoBox.LOGGER.warn("Entity preview instance creation failed for {}",
+                    BuiltInRegistries.ENTITY_TYPE.getKey(type), t);
+            return null;
+        }
+    }
+
+    /** Entity-based 3D preview through the entity PIP renderer: extract the
+     *  render state, fit the entity's AABB into the preview square with the
+     *  shared 0.82 rule, and degrade to the flat icon when the entity or its
+     *  render state produces nothing usable. {@code spawnData} (spawn-egg
+     *  {@code entity_data}) is re-applied every frame — the instance is
+     *  reused per type, so per-frame application keeps two variants of one
+     *  type from bleeding into each other. The AABB stands in for the
+     *  v1_21_1-style vertex probe: the submit-node renderer exposes no
+     *  vertex funnel, and entity AABBs match their model extents. Rotation
+     *  goes through the same Quat-to-Euler decomposition the item state
+     *  uses (Forge's PIP consumes degrees, see the item branch). */
+    private static void renderEntityPreviewForType(GuiGraphicsExtractor gg, ItemStack stack, LivingEntity player,
+                                                   int cx, int cy, Quat rotation, float scale, EntityType<?> type,
+                                                   TypedEntityData<EntityType<?>> spawnData) {
+        Entity entity = entityPreviewInstance(type, player.level());
+        markPreviewMob(entity);
+        if (entity == null) {
+            renderItem2D(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        // Entity.load resets yHeadRot/yBodyRot on every call; identical
+        // spawn data must not be re-applied per frame or it wipes the
+        // inspect animation state (see previewSpawnDataChanged).
+        if (spawnData != null
+                && previewSpawnDataChanged(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(), stack)) {
+            try {
+                spawnData.loadInto(entity);
+                // loadInto may carry Pos/Rotation from the save tag; keep the
+                // parked pose so the preview never drifts.
+                entity.setPos(0.0D, 0.0D, 0.0D);
+                entity.setYRot(180.0F);
+                entity.setXRot(0.0F);
+            } catch (Throwable t) {
+                CsgoBox.LOGGER.warn("Entity preview: applying the spawn tag failed; keeping the default look", t);
+            }
+        }
+        AABB bounds = entity.getBoundingBox();
+        float span = (float) Math.max(bounds.getXsize(), Math.max(bounds.getYsize(), bounds.getZsize()));
+        if (span <= 0.0F) {
+            renderItem2D(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        EntityRenderState state;
+        try {
+            state = Minecraft.getInstance().getEntityRenderDispatcher().extractEntity(entity, 1.0F);
+        } catch (Throwable t) {
+            CsgoBox.LOGGER.warn("Entity preview render state extraction failed; degrading to the flat icon", t);
+            state = null;
+        }
+        if (state == null) {
+            renderItem2D(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        int textureSize = Math.max(1, Math.round(16.0F * scale));
+        Quaternionf jq = new Quaternionf(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        Vector3f euler = jq.getEulerAnglesXYZ(new Vector3f());
+        gg.getRenderState().addPicturesInPictureState(new EntityIcon3DRenderState(
+                state,
+                euler.x * (180.0F / (float) Math.PI),
+                euler.y * (180.0F / (float) Math.PI),
+                euler.z * (180.0F / (float) Math.PI),
+                textureSize, span,
+                0.0F, (float) bounds.getYsize() * 0.5F, 0.0F,
+                cx, cy, cx + textureSize, cy + textureSize));
+    }
+
+    // ===================== Living-entity preview animation (inspect) =====================
+
+    /** Walk stride the living previews step at while the inspect animation
+     *  is on: vanilla feeds min(distance * 4, 1) as the target walk speed,
+     *  so 0.6 reads as a steady stroll (1.0 is the renderer's clamp). */
+    private static final float PREVIEW_MOB_WALK_TARGET = 0.6F;
+
+    /** Walk/attack alternation: segments last 3-7 s (client ticks) and
+     *  alternate walking and attacking, starting with a walk segment. */
+    private static final int PREVIEW_MOB_PHASE_BASE = 60;
+    private static final int PREVIEW_MOB_PHASE_SPREAD = 81;
+    /** Vanilla swing duration for a fresh entity (6 ticks at the default
+     *  attack speed; getCurrentSwingDuration() is private on 1.18.2/1.20.1,
+     *  hence the constant). */
+    private static final int PREVIEW_MOB_SWING_DURATION = 6;
+    /** Head lunge depth while swinging (degrees, downward dip) - the
+     *  visible attack for quadrupeds whose model has no arm-swing pose. */
+    private static final float PREVIEW_MOB_LUNGE_DEG = 30.0F;
+
+    /** The living entity the current look-item screen's drop renders as
+     *  (null = none): set by the entity preview path on every render and
+     *  cleared when a screen opens, so the inspect button only arms for mob
+     *  drops. Armor stands stay posed (equipment display) and vehicles are
+     *  not living, so neither arms it. */
+    private static LivingEntity previewMobInstance;
+
+    /** True while the inspect-button animation mode is on. */
+    private static boolean previewMobAnim;
+
+    /** Remembers the screen's living-entity preview (no-op otherwise). */
+    private static void markPreviewMob(Entity entity) {
+        if (entity instanceof LivingEntity living && !(entity instanceof ArmorStand)) {
+            if (PREVIEW_MOB_MARK_LOG.add(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString())) {
+                CsgoBox.LOGGER.info("[csgobox] preview mob armed: type={}",
+                        BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+            }
+            previewMobInstance = living;
+        }
+    }
+
+    /** True when the screen's current item renders as a living entity. */
+    public static boolean hasPreviewMobInstance() {
+        return previewMobInstance != null;
+    }
+
+    /** Drops the marker; called when a look-item screen opens so a previous
+     *  screen's mob can never arm the button for a non-mob item. */
+    public static void clearPreviewMobInstance() {
+        previewMobInstance = null;
+    }
+
+    /** The spawn-data payload last applied to a shared instance, per entity
+     *  type id (see {@link #previewSpawnDataChanged}). */
+    private static final Map<String, ItemStack> ENTITY_PREVIEW_LOADED = new HashMap<>();
+
+    /** One-shot INFO log guards for the inspect-animation diagnostics. */
+    private static final Set<String> PREVIEW_MOB_MARK_LOG = new HashSet<>();
+    private static final Set<String> PREVIEW_MOB_DRIVE_LOG = new HashSet<>();
+
+    /** True when {@code stack}'s spawn data differs from the payload last
+     *  applied to the shared instance of this entity type (and records the
+     *  new one). Vanilla {@code Entity.load} resets the head/body rotation
+     *  from the tag's Rotation on every call, so re-applying identical data
+     *  per frame would wipe the inspect animation state; identical stacks
+     *  skip the reload. Different stacks (two variants of one type in one
+     *  frame) still reload, keeping the per-frame variant correctness. */
+    private static boolean previewSpawnDataChanged(String typeKey, ItemStack stack) {
+        ItemStack loaded = ENTITY_PREVIEW_LOADED.get(typeKey);
+        if (loaded != null && ItemStack.matches(loaded, stack)) {
+            return false;
+        }
+        ENTITY_PREVIEW_LOADED.put(typeKey, stack.copy());
+        return true;
+    }
+
+    /** One-shot resolve of the private per-mob animation state fields (sheep
+     *  graze clock, creeper swell pair); null on failure and the action
+     *  degrades to a standing pause. The enderman stare and spellcaster
+     *  casting drive public API only. */
+    private static final Field SHEEP_EAT_TICK = resolveField(Sheep.class, "eatAnimationTick");
+    private static final Field CREEPER_SWELL = resolveField(Creeper.class, "swell");
+    private static final Field CREEPER_OLD_SWELL = resolveField(Creeper.class, "oldSwell");
+
+    /** Special per-mob action ids for the phase pool. */
+    private static final int PREVIEW_SPECIAL_GRAZE = 1;
+    private static final int PREVIEW_SPECIAL_SWELL = 2;
+    private static final int PREVIEW_SPECIAL_STARE = 3;
+    private static final int PREVIEW_SPECIAL_SPELL = 4;
+
+    /** Resolves a private field once for the preview drives; null on
+     *  failure, never throws. */
+    private static Field resolveField(Class<?> owner, String name) {
+        try {
+            Field field = owner.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        } catch (Throwable t) {
+            CsgoBox.LOGGER.warn("[csgobox] preview mob: {}.{} unreachable, its special action degrades",
+                    owner.getSimpleName(), name);
+            return null;
+        }
+    }
+
+    /** Reflection write for the private animation-state fields; silent on a
+     *  failed resolve (the action then just does not play). */
+    private static void setIntQuietly(Field field, LivingEntity living, int value) {
+        if (field != null) {
+            try {
+                field.setInt(living, value);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    /** The mob-specific special action this instance can play (0 = none):
+     *  walk/attack stay universal, the special joins the phase pool per mob
+     *  class. */
+    private static int previewMobSpecial(LivingEntity living) {
+        if (living instanceof Sheep) {
+            return SHEEP_EAT_TICK != null ? PREVIEW_SPECIAL_GRAZE : 0;
+        }
+        if (living instanceof Creeper) {
+            return CREEPER_SWELL != null && CREEPER_OLD_SWELL != null ? PREVIEW_SPECIAL_SWELL : 0;
+        }
+        if (living instanceof EnderMan) {
+            return PREVIEW_SPECIAL_STARE;
+        }
+        if (living instanceof SpellcasterIllager) {
+            return PREVIEW_SPECIAL_SPELL;
+        }
+        return 0;
+    }
+
+    /** The mainstream entity-animation libraries (GeckoLib, AzureLib): their
+     *  entities override swing() to fire their own named attack animations
+     *  (triggerAnim), so the attack segment calls the public vanilla swing()
+     *  on them instead of driving the swing fields directly. Walk/idle need
+     *  no bridge at all: GeoEntityRenderer reads walkAnimation and GeoEntity
+     *  reads tickCount (both bytecode-verified), which the drive advances. */
+    private static final Class<?> GECKOLIB_ANIMATABLE =
+            resolveAnimatableClass("software.bernie.geckolib.animatable.GeoAnimatable");
+    private static final Class<?> AZURELIB_ANIMATABLE =
+            resolveAnimatableClass("mod.azure.azurelib.animatable.GeoAnimatable");
+
+    /** Quietly resolves an animation-library marker class; null when the
+     *  library is absent (the normal case - no log noise). */
+    private static Class<?> resolveAnimatableClass(String name) {
+        try {
+            return Class.forName(name);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** True for entities from the mainstream animation libraries. */
+    private static boolean isAnimatableEntity(LivingEntity living) {
+        return (GECKOLIB_ANIMATABLE != null && GECKOLIB_ANIMATABLE.isInstance(living))
+                || (AZURELIB_ANIMATABLE != null && AZURELIB_ANIMATABLE.isInstance(living));
+    }
+
+    /** The creeper swell ramp for a position in its segment: rise to 24
+     *  (0.86 of the fuse threshold), hold, fall - the scale pump and the
+     *  white overlay read it through getSwelling(); no explosion, ever. */
+    private static int previewMobSwellCurve(int pos, int len) {
+        if (pos < 20) {
+            return pos * 24 / 20;
+        }
+        if (len - pos < 20) {
+            return (len - pos) * 24 / 20;
+        }
+        return 24;
+    }
+
+    /** Inspect-button animation tick, driven by the look-item screen: every
+     *  cached living preview instance walks in place (the same easing the
+     *  vanilla movement code applies), slowly looks around with its head and
+     *  advances its age so breathing/idle cycles run; modded animatable
+     *  models keyed on tickCount keep playing too. The entity itself is
+     *  never ticked: only these render-consumed fields change, so no AI,
+     *  particles or sounds can leak out of a GUI preview. */
+    public static void tickPreviewMobAnimations(boolean enabled) {
+        previewMobAnim = enabled;
+        if (!enabled) {
+            return;
+        }
+        for (Entity entity : ENTITY_PREVIEW_INSTANCES.values()) {
+            if (!(entity instanceof LivingEntity living) || entity instanceof ArmorStand) {
+                continue;
+            }
+            if (PREVIEW_MOB_DRIVE_LOG.add(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString())) {
+                CsgoBox.LOGGER.info("[csgobox] preview mob anim: type={} (first drive)",
+                        BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+            }
+            drivePreviewMobAnimation(living);
+        }
+    }
+
+    /** Parks the living previews again (look-item screen closed): stop the
+     *  stride and drop the head to neutral so the next screen opens on the
+     *  frozen statue instead of a mid-step frame. */
+    public static void resetPreviewMobAnimation() {
+        previewMobAnim = false;
+        for (Entity entity : ENTITY_PREVIEW_INSTANCES.values()) {
+            if (!(entity instanceof LivingEntity living) || entity instanceof ArmorStand) {
+                continue;
+            }
+            living.walkAnimation.stop();
+            living.swinging = false;
+            living.swingTime = 0;
+            living.oAttackAnim = 0.0F;
+            living.attackAnim = 0.0F;
+        // clear the per-mob special states (frozen poses would persist)
+        if (living instanceof Sheep) {
+            setIntQuietly(SHEEP_EAT_TICK, living, 0);
+        } else if (living instanceof Creeper) {
+            setIntQuietly(CREEPER_OLD_SWELL, living, 0);
+            setIntQuietly(CREEPER_SWELL, living, 0);
+        } else if (living instanceof EnderMan enderman) {
+            enderman.setTarget(null);
+        } else if (living instanceof SpellcasterIllager spellcaster) {
+            spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.NONE);
+        }
+            living.yHeadRotO = living.yBodyRot;
+            living.yHeadRot = living.yBodyRot;
+            living.xRotO = 0.0F;
+            living.setXRot(0.0F);
+        }
+    }
+
+    /** Irregular but stateless schedule source: an integer mix (golden-ratio
+     *  seed + xorshift rounds) that is deterministic per segment index, so
+     *  the walk/attack alternation stores no schedule state. */
+    private static int previewMobMix(int seed) {
+        int h = seed * -1640531527;
+        h ^= h >>> 16;
+        h *= 0x85EBCA6B;
+        h ^= h >>> 13;
+        return h & 0x7FFFFFFF;
+    }
+
+    /** One client tick of the inspect animation for a preview instance:
+     *  variable-length segments (3-7 s) alternate walking (stride + head
+     *  wander) and attacking (planted stance, vanilla swing state machine,
+     *  head lunge). The phase is derived from the entity's own tick count,
+     *  so no schedule state is stored; the entity is still never ticked. */
+    private static void drivePreviewMobAnimation(LivingEntity living) {
+        int t = living.tickCount;
+        int seg = 0;
+        int len;
+        while (true) {
+            len = PREVIEW_MOB_PHASE_BASE + previewMobMix(seg) % PREVIEW_MOB_PHASE_SPREAD;
+            if (t < len) {
+                break;
+            }
+            t -= len;
+            seg++;
+        }
+        int special = previewMobSpecial(living);
+        int roll = previewMobMix(seg) % 10;
+        int phase = special == 0
+                ? (roll < 5 ? 0 : 1)
+                : (roll < 3 ? 0 : roll < 6 ? 1 : special);
+        boolean attacking = phase == 1;
+        int posInSeg = t;
+
+        // Vanilla swing state machine, mirrored from LivingEntity.tick (the
+        // preview entity is never ticked, so this is the only driver): the
+        // attackAnim ramp 0 -> 5/6 -> 0 is what the humanoid attack pose and
+        // the held-item layers consume.
+        living.oAttackAnim = living.attackAnim;
+        if (living.swinging) {
+            living.swingTime++;
+            if (living.swingTime >= PREVIEW_MOB_SWING_DURATION) {
+                living.swingTime = 0;
+                living.swinging = false;
+            }
+        } else {
+            living.swingTime = 0;
+        }
+        living.attackAnim = (float) living.swingTime / (float) PREVIEW_MOB_SWING_DURATION;
+
+        living.tickCount++;
+        float clock = (float) living.tickCount * 0.03F;
+        living.walkAnimation.update(phase == 0 ? PREVIEW_MOB_WALK_TARGET : 0.0F, 0.4F, living.isBaby() ? 3.0F : 1.0F);
+
+        if (phase == 1) {
+            // Attack segment: plant the stance, face the viewer, and swing at
+            // a per-segment cadence. The head dips with each swing - the only
+            // visible attack for quadrupeds (no arm-swing pose in vanilla).
+            int cadence = 9 + previewMobMix(seg * 31 + 7) % 6;
+            if (posInSeg % cadence == 0) {
+                if (isAnimatableEntity(living)) {
+                    // GeckoLib/AzureLib entities override swing() to fire
+                    // their own named attack animations (triggerAnim) - the
+                    // public vanilla call reaches the override with no
+                    // per-mod code; vanilla mobs keep the field drive.
+                    living.swing(InteractionHand.MAIN_HAND);
+                } else if (!living.swinging || living.swingTime >= PREVIEW_MOB_SWING_DURATION / 2) {
+                    living.swingTime = -1;
+                    living.swinging = true;
+                    living.swingingArm = InteractionHand.MAIN_HAND;
+                }
+            }
+            living.yHeadRotO = living.yHeadRot;
+            living.yHeadRot = living.yBodyRot;
+            living.xRotO = living.getXRot();
+            living.setXRot(PREVIEW_MOB_LUNGE_DEG * (float) Math.sin((double) living.attackAnim * Math.PI));
+        } else if (phase == 0) {
+            living.yHeadRotO = living.yHeadRot;
+            living.yHeadRot = living.yBodyRot
+                    + (float) Math.sin((double) clock) * 35.0F
+                    + (float) Math.sin((double) clock * 2.7D + 1.3D) * 12.0F;
+            living.xRotO = living.getXRot();
+            living.setXRot((float) Math.sin((double) clock * 1.6D + 0.7D) * 12.0F);
+        } else {
+            // Special segment: planted stance and a neutral head; each action
+            // drives its own state (sheep graze clock, creeper swell pair,
+            // enderman stare flag, spellcaster casting spell).
+            living.yHeadRotO = living.yHeadRot;
+            living.yHeadRot = living.yBodyRot;
+            living.xRotO = living.getXRot();
+            living.setXRot(0.0F);
+            if (phase == PREVIEW_SPECIAL_GRAZE) {
+                // SheepModel sinks the head off getHeadEatPositionScale (the
+                // fur layer mirrors it): ramp in 40 -> 36, hold the pose, and
+                // ramp out to 0 - vanilla EatGrassGoal values, stateless.
+                int eat = posInSeg < 4 ? 40 - posInSeg
+                        : posInSeg < len - 4 ? 36
+                        : Math.max(0, len - 1 - posInSeg);
+                setIntQuietly(SHEEP_EAT_TICK, living, eat);
+            } else if (phase == PREVIEW_SPECIAL_SWELL) {
+                // CreeperRenderer pumps the scale and flashes the white
+                // overlay off getSwelling(): rise, hold, fall - no fuse.
+                setIntQuietly(CREEPER_OLD_SWELL, living, previewMobSwellCurve(Math.max(0, posInSeg - 1), len));
+                setIntQuietly(CREEPER_SWELL, living, previewMobSwellCurve(posInSeg, len));
+            } else if (phase == PREVIEW_SPECIAL_STARE && living instanceof EnderMan enderman) {
+                // The stare pose reads model.creepy, which EndermanRenderer
+                // copies from isCreepy(): the public setTarget sets the synced
+                // flag (null clears it); no ticking, so no scream sound.
+                enderman.setTarget(Minecraft.getInstance().player);
+            } else if (phase == PREVIEW_SPECIAL_SPELL && living instanceof SpellcasterIllager spellcaster) {
+                // SPELLCASTING arm pose reads isCastingSpell() from the synced
+                // data; setIsCastingSpell is public and writes both sides.
+                spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.FANGS);
+            }
+        }
+        // Transition-based flags clear outside their windows (idempotent
+        // writes; a mob matches at most one special).
+        if (living instanceof EnderMan enderman && phase != PREVIEW_SPECIAL_STARE) {
+            enderman.setTarget(null);
+        } else if (living instanceof SpellcasterIllager spellcaster && phase != PREVIEW_SPECIAL_SPELL) {
+            spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.NONE);
+        }
+    }
+
+    /** Armor preview on the shared armor stand: equip the piece (its
+     *  {@code EQUIPPABLE} slot), extract the render state, and draw. GUI
+     *  never draws the worn model — it lives in the equipment layers the
+     *  stand's renderer carries. Unlike the probed legacy path there is no
+     *  emptiness detection: pieces whose equipment assets render nothing
+     *  degrade visually to a bare stand (acceptable — Forge 26.x armor is
+     *  vanilla-class today). */
+    private static void renderArmorStandPreview(GuiGraphicsExtractor gg, ItemStack stack, LivingEntity player,
+                                                int cx, int cy, Quat rotation, float scale, EquipmentSlot slot) {
+        if (entityPreviewInstance(EntityTypes.ARMOR_STAND, player.level()) instanceof ArmorStand stand) {
+            stand.setItemSlot(slot, stack);
+            // The stand instance is cached per type, so the call below parks
+            // and extracts the same (already equipped) stand.
+            renderEntityPreviewForType(gg, stack, player, cx, cy, rotation, scale, EntityTypes.ARMOR_STAND, null);
+            return;
+        }
+        renderItem2D(player, gg, stack, cx, cy, scale);
     }
 }

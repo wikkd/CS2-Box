@@ -1,0 +1,86 @@
+package com.reclizer.csgobox.forge_26_2.gui.pip;
+
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+
+/**
+ * Renders an {@link EntityIcon3DRenderState} into the GUI's per-PIP render
+ * target using a full 3D PoseStack — the entity mirror of
+ * {@link Icon3DRenderer}, so spawn eggs, armor stands, summon containers and
+ * same-id entities spin with exactly the drag feel the item previews use.
+ *
+ * <p>The PoseStack pipeline matches {@link Icon3DRenderer}:
+ * {@code translate(-centre)} -&gt; {@code scale(1, -1, -1)} (PIP texture UV
+ * compensation) -&gt; {@code mulPose} rotations, after which the parent class
+ * applies {@code renderState.scale * guiScale}. The entity itself is
+ * submitted through the vanilla {@link EntityRenderDispatcher#submit} state
+ * path with a default (identity) camera — preview entities are parked facing
+ * the viewer (yRot 180) and stay fully visible (invisible starves
+ * LivingEntity renderers; the PIP target has no ground plane, so no shadow
+ * pass to suppress).</p>
+ *
+ * <p>Note: deliberately omits the {@code @OnlyIn(Dist.CLIENT)} annotation;
+ * see {@link Icon3DRenderState} for the rationale.</p>
+ */
+public class EntityIcon3DRenderer extends PictureInPictureRenderer<EntityIcon3DRenderState> {
+
+    @Override
+    public Class<EntityIcon3DRenderState> getRenderStateClass() {
+        return EntityIcon3DRenderState.class;
+    }
+
+    /** Same rationale as {@link Icon3DRenderer#getTranslateY}: origin at the
+     *  texture centre, matching the item renderer and the 1.21.1 reference
+     *  path. */
+    @Override
+    protected float getTranslateY(int height, int guiScale) {
+        return height / 2.0F;
+    }
+
+    @Override
+    protected String getTextureLabel() {
+        return "csgo-box-entity-3d-icon";
+    }
+
+    @Override
+    protected void renderToTexture(EntityIcon3DRenderState renderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
+        poseStack.translate(
+                -renderState.modelCenterX(),
+                -renderState.modelCenterY(),
+                -renderState.modelCenterZ());
+
+        // (1, -1, -1) Y/Z flip compensates for the ortho projection's
+        // invertY=true, identical to the item icon renderer.
+        poseStack.scale(1.0F, -1.0F, -1.0F);
+
+        // User-driven rotation, same XYZ order the item state decomposes the
+        // common Quat into (flip first, then mulPose — see Icon3DRenderer).
+        if (renderState.rotXDeg() != 0.0F) {
+            poseStack.mulPose(Axis.XP.rotationDegrees(renderState.rotXDeg()));
+        }
+        if (renderState.rotYDeg() != 0.0F) {
+            poseStack.mulPose(Axis.YP.rotationDegrees(renderState.rotYDeg()));
+        }
+        if (renderState.rotZDeg() != 0.0F) {
+            poseStack.mulPose(Axis.ZP.rotationDegrees(renderState.rotZDeg()));
+        }
+
+        // Entity-in-UI lighting (vanilla GuiEntityRenderer's choice).
+        Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
+
+        // 26.2 API: the parent PictureInPictureRenderer owns the
+        //    SubmitNodeStorage and calls renderAllFeatures() on the
+        //    FeatureRenderDispatcher itself after this method returns.
+        //    We just submit into the collector supplied as parameter.
+        EntityRenderDispatcher entityDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        // Identity camera: the preview entity is parked facing the viewer.
+        entityDispatcher.submit(renderState.entityRenderState(), new CameraRenderState(),
+                0.0D, 0.0D, 0.0D, poseStack, submitNodeCollector);
+    }
+}

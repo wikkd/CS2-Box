@@ -11,6 +11,7 @@ import com.reclizer.csgobox.forge_26_1_2.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -18,8 +19,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
@@ -80,6 +85,61 @@ public class CsLookItemScreen extends Screen {
     private static final String[] SKIN_STYLES = {
             "custom_paint", "gunsmith", "patina", "hydrographic", "spray_paint", "anodized"
     };
+
+    /** Random scenery (picture toolbar button): pitch band around the horizon
+     *  in degrees; yaw is a full random circle. */
+    private static final float SCENERY_PITCH_RANGE_DEG = 30.0F;
+    /** Flight duration in client ticks: a slow cinematic glide (instant-replay
+     *  style camera move). */
+    private static final int SCENERY_GLIDE_TICKS = 60;
+    /** Background panorama spin: continuous slow yaw drift while the screen
+     *  is open, in degrees per client tick — the vanilla main-menu pace
+     *  (PanoramaRenderer adds deltaTicks * panoramaSpeed * 0.1, i.e. 2 deg/s
+     *  at the default 100% panorama speed). */
+    private static final float SCENERY_SPIN_DEG_PER_TICK = 0.1F;
+    /** Mount parking spot: this far in front of the player's face (along the
+     *  view direction), so the camera starts outside the head model. */
+    private static final double SCENERY_MOUNT_FORWARD = 0.5;
+    /** Scenery flight: distance range from the player (blocks) and the
+     *  clearance above the surface heightmap the camera parks at. */
+    private static final double SCENERY_DIST_MIN = 8.0;
+    private static final double SCENERY_DIST_RANGE = 12.0;
+    private static final double SCENERY_SURFACE_CLEARANCE = 2.0;
+    /** Client-side rig entity id seed (negative: never collides with server
+     *  entity ids, which count up from zero). */
+    private static int sceneryRigIdCounter;
+
+    /** Scenery camera rig: a client-side-only marker entity the render camera
+     *  rides via {@link Minecraft#setCameraEntity} (the vanilla spectator
+     *  camera mechanism, no mixins). Markers never render and have no AI, and
+     *  the player's own view is never touched. */
+    private Entity sceneryRig;
+    private Entity sceneryOriginalCamera;
+    /** Flight animation state: pose to fly from, target pose, and tick
+     *  progress within SCENERY_GLIDE_TICKS (-1 = not flying). */
+    private double sceneryFromX;
+    private double sceneryFromY;
+    private double sceneryFromZ;
+    private float sceneryFromYaw;
+    private float sceneryFromPitch;
+    private double sceneryToX;
+    private double sceneryToY;
+    private double sceneryToZ;
+    private float sceneryToYaw;
+    private float sceneryToPitch;
+    private int sceneryAnimTick = -1;
+    /** Guards the screen-open camera mount so window resizes don't re-mount. */
+    private boolean sceneryAutoStarted;
+    /** True while we hid the local player model for the panorama mount
+     *  (skipped when already invisible, e.g. an invisibility potion). */
+    private boolean sceneryPlayerHidden;
+    /** Inspect-button animation mode: cached living-entity previews (mob
+     *  drops) walk in place while on; toggled by the inspect-character-model
+     *  toolbar button (index 2),
+     *  which is armed only when the current item renders as a living entity. */
+    private boolean mobAnimMode = false;
+
+
 
     /** Displays the server-authoritative reward after the progress animation completes. */
     public CsLookItemScreen(ItemStack item, int grade) {
@@ -270,13 +330,14 @@ public class CsLookItemScreen extends Screen {
             if (hover) {
                 this.hoveredButton = i;
             }
-            boolean active = i == 3 && this.showInfoPanel;
+            boolean active = (i == 3 && this.showInfoPanel) || (i == 2 && this.mobAnimMode);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
             guiGraphics.fill(x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
-                guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size, (alpha << 24) | 0xFFFFFF);
+                guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size,
+                        (alpha << 24) | (i == 2 ? 0x54FF54 : 0xFFFFFF));
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
             int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
@@ -487,13 +548,206 @@ public class CsLookItemScreen extends Screen {
             return true;
         }
         int infoSize = toolbarButtonSize();
+        int inspectX = toolbarButtonX(0);
+        int inspectY = toolbarButtonY() + toolbarEnterRise(0);
+        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), inspectX, inspectY, infoSize, infoSize)) {
+            return true;
+        }
+        int modelX = toolbarButtonX(2);
+        int modelY = toolbarButtonY() + toolbarEnterRise(2);
+        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), modelX, modelY, infoSize, infoSize)) {
+            // Inspect-character-model button: on living-entity drops this
+            // toggles the mob animation (dead placeholder for other items).
+            if (AnimRenderOps.hasPreviewMobInstance()) {
+                this.mobAnimMode = !this.mobAnimMode;
+            }
+            return true;
+        }
         int infoX = toolbarButtonX(3);
+
+
         int infoY = toolbarButtonY() + toolbarEnterRise(3);
         if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), infoX, infoY, infoSize, infoSize)) {
             this.showInfoPanel = !this.showInfoPanel;
             return true;
         }
+        int stickerX = toolbarButtonX(4);
+        int stickerY = toolbarButtonY() + toolbarEnterRise(4);
+        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), stickerX, stickerY, infoSize, infoSize)) {
+            this.randomizeScenery();
+            return true;
+        }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    /** Screen-open camera mount: the background rides the scenery rig like
+     *  the main-menu panorama (continuous slow spin; the position never
+     *  changes until a "change scenery" click). */
+    @Override
+    public void init() {
+        super.init();
+        AnimRenderOps.clearPreviewMobInstance();
+        if (!this.sceneryAutoStarted) {
+            this.sceneryAutoStarted = true;
+            this.beginSceneryPanorama();
+        }
+    }
+
+    /** Mounts the render camera onto a rig parked at the player's eye so the
+     *  backdrop spins slowly from the player's own view (main-menu panorama
+     *  style). No flight: the rig stays put until a "change scenery" click. */
+    private void beginSceneryPanorama() {
+        if (this.minecraft == null || this.minecraft.level == null || this.player == null) {
+            return;
+        }
+        if (this.sceneryRig != null) {
+            return;
+        }
+        this.sceneryRig = this.createSceneryRig();
+        if (this.sceneryRig == null) {
+            return;
+        }
+        this.sceneryOriginalCamera = this.minecraft.getCameraEntity();
+        this.minecraft.setCameraEntity(this.sceneryRig);
+        // The panorama shows the world, not the player: hide the local model
+        // while mounted (mid-spin the head would otherwise sweep through the
+        // close-up frame). Restored in removed().
+        if (!this.player.isInvisible()) {
+            this.player.setInvisible(true);
+            this.sceneryPlayerHidden = true;
+        }
+    }
+
+    /** True while the scenery rig owns the render camera (panorama mount);
+     *  read by the render-cancel handler in the event package. */
+    public boolean isSceneryRigMounted() {
+        return this.sceneryRig != null;
+    }
+
+    /** Scenery toolbar button (index 4): fly the render camera to a random
+     *  nearby spot so the live world backdrop behind the item changes, while
+     *  the player's own view is never touched. The camera rides a client-side
+     *  marker entity (vanilla spectator camera mechanism), mounted when the
+     *  screen opens and later flying from wherever it currently is.
+     *  {@link #removed()} hands the camera back and discards the rig. */
+    private void randomizeScenery() {
+        if (this.minecraft == null || this.minecraft.level == null || this.player == null) {
+            return;
+        }
+        if (this.sceneryRig == null) {
+            this.sceneryRig = this.createSceneryRig();
+            if (this.sceneryRig == null) {
+                return;
+            }
+            this.sceneryOriginalCamera = this.minecraft.getCameraEntity();
+            this.minecraft.setCameraEntity(this.sceneryRig);
+            this.sceneryFromX = this.sceneryRig.getX();
+            this.sceneryFromY = this.sceneryRig.getY();
+            this.sceneryFromZ = this.sceneryRig.getZ();
+            this.sceneryFromYaw = this.sceneryRig.getYRot();
+            this.sceneryFromPitch = this.sceneryRig.getXRot();
+        } else {
+            this.sceneryFromX = this.sceneryRig.getX();
+            this.sceneryFromY = this.sceneryRig.getY();
+            this.sceneryFromZ = this.sceneryRig.getZ();
+            this.sceneryFromYaw = this.sceneryRig.getYRot();
+            this.sceneryFromPitch = this.sceneryRig.getXRot();
+        }
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        double angle = rnd.nextDouble() * Math.PI * 2.0;
+        double dist = SCENERY_DIST_MIN + rnd.nextDouble() * SCENERY_DIST_RANGE;
+        // Glide the short way around the circle: wrap the delta, not the target.
+        this.sceneryToX = this.player.getX() + Math.cos(angle) * dist;
+        this.sceneryToY = this.scenerySurfaceY(this.sceneryToX, this.player.getZ() + Math.sin(angle) * dist);
+        this.sceneryToZ = this.player.getZ() + Math.sin(angle) * dist;
+        this.sceneryToYaw = this.sceneryFromYaw + wrapDegrees(rnd.nextFloat() * 360.0F - this.sceneryFromYaw);
+        this.sceneryToPitch = (rnd.nextFloat() * 2.0F - 1.0F) * SCENERY_PITCH_RANGE_DEG;
+        this.sceneryAnimTick = 0;
+
+    }
+
+    /** Surface height at the target block, with an unloaded-chunk fallback
+     *  (heightmaps answer the world floor for missing chunks). */
+    private double scenerySurfaceY(double x, double z) {
+        ClientLevel level = this.minecraft.level;
+        int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, (int) Math.floor(x), (int) Math.floor(z));
+        if (surface <= level.getMinY()) {
+            return this.player.getY() + 4.0;
+        }
+        return surface + SCENERY_SURFACE_CLEARANCE;
+    }
+
+    /** Advances the scenery camera: between flights it spins the rig yaw
+     *  slowly and continuously (main-menu panorama pace); during a flight it
+     *  eases the rig (and thus the render camera) from the pose the click
+     *  started at toward the random target over SCENERY_GLIDE_TICKS client
+     *  ticks. Old-position bookkeeping feeds the vanilla per-frame
+     *  interpolation, so both stay smooth at frame rate. */
+    private void advanceSceneryGlide() {
+        if (this.sceneryRig == null) {
+            return;
+        }
+        if (this.sceneryAnimTick < 0) {
+            // Panorama spin: slow continuous yaw drift, position untouched.
+            this.sceneryRig.yRotO = this.sceneryRig.getYRot();
+            this.sceneryRig.setYRot(wrapDegrees(this.sceneryRig.getYRot() + SCENERY_SPIN_DEG_PER_TICK));
+            return;
+        }
+        this.sceneryAnimTick++;
+        float t = Math.min(1.0F, (float) this.sceneryAnimTick / (float) SCENERY_GLIDE_TICKS);
+        float e = 1.0F - (1.0F - t) * (1.0F - t) * (1.0F - t); // easeOutCubic
+        this.sceneryRig.xo = this.sceneryRig.getX();
+        this.sceneryRig.yo = this.sceneryRig.getY();
+        this.sceneryRig.zo = this.sceneryRig.getZ();
+        this.sceneryRig.yRotO = this.sceneryRig.getYRot();
+        this.sceneryRig.xRotO = this.sceneryRig.getXRot();
+        this.sceneryRig.setPos(this.sceneryFromX + (this.sceneryToX - this.sceneryFromX) * e,
+                this.sceneryFromY + (this.sceneryToY - this.sceneryFromY) * e,
+                this.sceneryFromZ + (this.sceneryToZ - this.sceneryFromZ) * e);
+        this.sceneryRig.setYRot(this.sceneryFromYaw + (this.sceneryToYaw - this.sceneryFromYaw) * e);
+        this.sceneryRig.setXRot(this.sceneryFromPitch + (this.sceneryToPitch - this.sceneryFromPitch) * e);
+        if (t >= 1.0F) {
+            this.sceneryAnimTick = -1;
+        }
+    }
+    /** Creates the client-side-only camera rig (a marker entity, which never
+     *  renders and has no AI) and registers it into the client level. */
+    private Entity createSceneryRig() {
+        ClientLevel level = this.minecraft.level;
+        Entity rig = EntityType.MARKER.create(level, EntitySpawnReason.COMMAND);
+        if (rig == null) {
+            return null;
+        }
+        rig.setId(-1_900_000_000 - sceneryRigIdCounter++);
+        rig.setPos(this.player.getX(), this.player.getEyeY(), this.player.getZ());
+        rig.setYRot(this.player.getYRot());
+        rig.setXRot(this.player.getXRot());
+        // Park in front of the face (along the view direction) so the camera
+        // starts outside the head model instead of sitting inside it.
+        double lookYaw = Math.toRadians(this.player.getYRot());
+        double lookPitch = Math.toRadians(this.player.getXRot());
+        rig.setPos(rig.getX() - Math.sin(lookYaw) * Math.cos(lookPitch) * SCENERY_MOUNT_FORWARD,
+                rig.getY() - Math.sin(lookPitch) * SCENERY_MOUNT_FORWARD,
+                rig.getZ() + Math.cos(lookYaw) * Math.cos(lookPitch) * SCENERY_MOUNT_FORWARD);
+        rig.xo = rig.getX();
+        rig.yo = rig.getY();
+        rig.zo = rig.getZ();
+        rig.yRotO = rig.getYRot();
+        rig.xRotO = rig.getXRot();
+        level.addEntity(rig);
+        return rig;
+    }
+
+    /** Wraps an angle delta to [-180, 180). */
+    private static float wrapDegrees(float deg) {
+        deg %= 360.0F;
+        if (deg >= 180.0F) {
+            deg -= 360.0F;
+        }
+        if (deg < -180.0F) {
+            deg += 360.0F;
+        }
+        return deg;
     }
 
     @Override
@@ -525,6 +779,25 @@ public class CsLookItemScreen extends Screen {
         if (this.minecraft != null) {
             this.minecraft.options.hideGui = false;
         }
+        if (this.sceneryRig != null) {
+            // Hand the render camera back to the player and drop the rig.
+            if (this.minecraft != null && this.minecraft.getCameraEntity() == this.sceneryRig) {
+                this.minecraft.setCameraEntity(this.sceneryOriginalCamera != null
+                        ? this.sceneryOriginalCamera : this.player);
+            }
+            this.sceneryRig.discard();
+            this.sceneryRig = null;
+            this.sceneryAnimTick = -1;
+            this.sceneryAutoStarted = false;
+        }
+        AnimRenderOps.resetPreviewMobAnimation();
+        this.mobAnimMode = false;
+        if (this.sceneryPlayerHidden) {
+            if (this.player != null) {
+                this.player.setInvisible(false);
+            }
+            this.sceneryPlayerHidden = false;
+        }
         super.removed();
     }
 
@@ -535,6 +808,8 @@ public class CsLookItemScreen extends Screen {
         float glowTarget = this.hoveredButton >= 0 ? 1F : 0F;
         this.toolbarGlow += (glowTarget - this.toolbarGlow) * 0.5F;
         if (this.minecraft == null || this.minecraft.player == null) return;
+        this.advanceSceneryGlide();
+        AnimRenderOps.tickPreviewMobAnimations(this.mobAnimMode);
         if (!this.minecraft.player.isAlive() || this.minecraft.player.isRemoved()) {
             this.onClose();
         }

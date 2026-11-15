@@ -343,6 +343,13 @@ public class CsgoBox {
             event.register(
                     com.reclizer.csgobox.v26_2.gui.pip.Icon3DRenderState.class,
                     com.reclizer.csgobox.v26_2.gui.pip.Icon3DRenderer::new);
+            // Entity previews (spawn eggs / armor / summon cards / same-id
+            // entities) use their own PIP renderer so the drag feel matches
+            // the item icon renderer exactly (vanilla GuiEntityRenderer
+            // applies no flip and would spin the other way).
+            event.register(
+                    com.reclizer.csgobox.v26_2.gui.pip.EntityIcon3DRenderState.class,
+                    com.reclizer.csgobox.v26_2.gui.pip.EntityIcon3DRenderer::new);
         }
     }
 }
