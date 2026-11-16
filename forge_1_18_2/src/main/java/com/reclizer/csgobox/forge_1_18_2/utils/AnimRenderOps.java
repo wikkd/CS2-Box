@@ -49,7 +49,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -786,7 +786,7 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
         // spawn data must not be re-applied per frame or it wipes the
         // inspect animation state (see previewSpawnDataChanged).
             if (spawnTag != null
-                    && previewSpawnDataChanged(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(), stack)) {
+                    && previewSpawnDataChanged(ForgeRegistries.ENTITIES.getKey(type).toString(), stack)) {
                 try {
                     entity.load(spawnTag);
                     // load() may carry Pos/Rotation from the save tag; keep
@@ -885,9 +885,9 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
     /** Remembers the screen's living-entity preview (no-op otherwise). */
     private static void markPreviewMob(Entity entity) {
         if (entity instanceof LivingEntity living && !(entity instanceof ArmorStand)) {
-            if (PREVIEW_MOB_MARK_LOG.add(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString())) {
+            if (PREVIEW_MOB_MARK_LOG.add(ForgeRegistries.ENTITIES.getKey(entity.getType()).toString())) {
                 LOGGER.info("[csgobox] preview mob armed: type={}",
-                        BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+                        ForgeRegistries.ENTITIES.getKey(entity.getType()));
             }
             previewMobInstance = living;
         }
@@ -935,6 +935,56 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
     private static final Field SHEEP_EAT_TICK = resolveField(Sheep.class, "eatAnimationTick");
     private static final Field CREEPER_SWELL = resolveField(Creeper.class, "swell");
     private static final Field CREEPER_OLD_SWELL = resolveField(Creeper.class, "oldSwell");
+    private static final Method SPELL_CAST_METHOD = resolveSpellCastMethod();
+    private static final Object SPELL_FANGS = resolveSpellConstant("FANGS");
+    private static final Object SPELL_NONE = resolveSpellConstant("NONE");
+
+    /** The IllagerSpell enum is protected on this era: the spellcaster
+     *  casting call and its two constants resolve reflectively (degrading
+     *  silently in production where the names remap away). */
+    private static Method resolveSpellCastMethod() {
+        try {
+            for (Method method : SpellcasterIllager.class.getDeclaredMethods()) {
+                if (method.getName().equals("setIsCastingSpell") && method.getParameterCount() == 1
+                        && method.getParameterTypes()[0].isEnum()) {
+                    method.setAccessible(true);
+                    return method;
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("[csgobox] preview mob: spellcaster casting call unreachable, the action degrades", t);
+        }
+        return null;
+    }
+
+    /** Enum constant by name off the casting method's parameter type. */
+    private static Object resolveSpellConstant(String name) {
+        Method method = SPELL_CAST_METHOD;
+        if (method == null) {
+            return null;
+        }
+        try {
+            for (Object constant : method.getParameterTypes()[0].getEnumConstants()) {
+                if (constant instanceof Enum<?> enumConstant && enumConstant.name().equals(name)) {
+                    return constant;
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("[csgobox] preview mob: spell constant {} unreachable, the action degrades", name);
+        }
+        return null;
+    }
+
+    /** Reflection call of setIsCastingSpell; silent on a failed resolve. */
+    private static void setSpellQuietly(SpellcasterIllager illager, Object spell) {
+        Method method = SPELL_CAST_METHOD;
+        if (method != null && spell != null) {
+            try {
+                method.invoke(illager, spell);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
 
     /** Special per-mob action ids for the phase pool. */
     private static final int PREVIEW_SPECIAL_GRAZE = 1;
@@ -1042,9 +1092,9 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
             if (!(entity instanceof LivingEntity living) || entity instanceof ArmorStand) {
                 continue;
             }
-            if (PREVIEW_MOB_DRIVE_LOG.add(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString())) {
+            if (PREVIEW_MOB_DRIVE_LOG.add(ForgeRegistries.ENTITIES.getKey(entity.getType()).toString())) {
                 LOGGER.info("[csgobox] preview mob anim: type={} (first drive)",
-                        BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+                        ForgeRegistries.ENTITIES.getKey(entity.getType()));
             }
             drivePreviewMobAnimation(living);
         }
@@ -1074,7 +1124,7 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
         } else if (living instanceof EnderMan enderman) {
             enderman.setTarget(null);
         } else if (living instanceof SpellcasterIllager spellcaster) {
-            spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.NONE);
+            setSpellQuietly(spellcaster, SPELL_NONE);
         }
 
             living.yHeadRotO = living.yBodyRot;
@@ -1201,8 +1251,8 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
                 enderman.setTarget(Minecraft.getInstance().player);
             } else if (phase == PREVIEW_SPECIAL_SPELL && living instanceof SpellcasterIllager spellcaster) {
                 // SPELLCASTING arm pose reads isCastingSpell() from the synced
-                // data; setIsCastingSpell is public and writes both sides.
-                spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.FANGS);
+                // data; the call goes through reflection (the enum is protected).
+                setSpellQuietly(spellcaster, SPELL_FANGS);
             }
         }
         // Transition-based flags clear outside their windows (idempotent
@@ -1210,7 +1260,7 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
         if (living instanceof EnderMan enderman && phase != PREVIEW_SPECIAL_STARE) {
             enderman.setTarget(null);
         } else if (living instanceof SpellcasterIllager spellcaster && phase != PREVIEW_SPECIAL_SPELL) {
-            spellcaster.setIsCastingSpell(SpellcasterIllager.IllagerSpell.NONE);
+            setSpellQuietly(spellcaster, SPELL_NONE);
         }
     }
 
