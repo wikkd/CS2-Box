@@ -389,7 +389,6 @@ final class NegotiationModelTest {
     void scriptData() {
         assertEquals(12, NegotiationModel.LINES.length);
         assertEquals(5, NegotiationModel.ROUND_SKIN.length);
-        assertEquals(3, NegotiationModel.SKIN_NAME_KEYS.length);
         for (int r : NegotiationModel.ROUND_SKIN) {
             assertTrue(r >= 0 && r < 3);
         }

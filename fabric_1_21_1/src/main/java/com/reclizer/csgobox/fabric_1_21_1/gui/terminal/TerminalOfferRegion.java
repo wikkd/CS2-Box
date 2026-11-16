@@ -145,7 +145,7 @@ public final class TerminalOfferRegion {
         }
 
         // ---- A: name box (top-left) — sized to the ACTUAL rendered width ----
-        String name = Component.translatable(NegotiationModel.SKIN_NAME_KEYS[offer.skinIdx()]).getString();
+        String name = TerminalOfferItems.nameFor(offer);
         int nameRenderW = Math.round(font.width(name) * 0.59F)
                 + Math.round(1.25F * (name.length() - 1));
         int nameW = nameRenderW + 6;

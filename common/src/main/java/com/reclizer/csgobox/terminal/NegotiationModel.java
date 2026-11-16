@@ -83,11 +83,6 @@ public final class NegotiationModel {
     };
     public static final int[] ROUND_SKIN = {0, 2, 1, 2, 0};
 
-    public static final String[] SKIN_NAME_KEYS = {
-            "csgobox.terminal.skin.0",
-            "csgobox.terminal.skin.1",
-            "csgobox.terminal.skin.2",
-    };
     /** Offer price in whole Armory Points (no decimals — the mod's currency). */
     public static final String[] SKIN_PRICE = {"22", "16", "16"};
     /** Dealer line when the player cancels a trade or lacks Armory Points. */
