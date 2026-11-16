@@ -1,0 +1,45 @@
+# 1.20.1 Forge dev 重映射清单（scripts/remap-1201.sh 消费）
+#
+# 格式：TSV 三列（列间用制表符分隔，行内不允许出现制表符以外的列分隔符）
+#   第1列  源 jar 路径（相对仓库根，即 SRG 形态的生产 jar）
+#   第2列  部署名（forge_1_20_1/run/mods/ 下的文件名，同时是
+#          local-repo 内 <源>-official.jar 的产物命名基准）
+#   第3列  jarjar 内包路径（相对 jar 根，分号分隔；无内包则留空 "-"）
+#
+# 产物 = 源同目录下 "<源文件名去 .jar>-official.jar"。
+# 工具/映射指纹见 scripts/remap-1201.sh（stamp 侧车文件）。
+# 门禁见 scripts/check-official-remap.py。
+#
+# 不在本清单：kaleidoscope-twilight / kaleidoscopechinesefood——上游注册顺序
+# bug（构造期消费跨模组 effect supplier），与 cookery 同装必炸，不装载不部署。
+#
+# NOTE: 表格列必须用真实 TAB；编辑后可用 `grep -P '\t' scripts/remap-1201-manifest.txt` 自查。
+#
+# ===== TACZ（永恒枪械工坊 official 1.20.1）=====
+local-repo/com/tacz/tacz/1.1.8-hotfix/tacz-1.1.8-hotfix.jar	tacz-1.20.1-1.1.8-hotfix-official.jar	META-INF/jarjar/simplebedrockmodel-2.2.2-forge+mc1.20.1.jar
+# ===== Create（6.0.8，三个 jarjar 内包都是 SRG 形态）=====
+local-repo/com/simibubi/create/create/6.0.8/create-6.0.8.jar	create-6.0.8-official.jar	META-INF/jarjar/Ponder-Forge-1.20.1-1.0.91.jar;META-INF/jarjar/flywheel-forge-1.20.1-1.0.5.jar;META-INF/jarjar/Registrate-MC1.20-1.3.3.jar
+# ===== SlashBlade:Resharped 1.9.65 =====
+local-repo/com/flammpfeil/slashblade/1.9.65/SlashBladeResharped-1.20.1-1.9.65.jar	SlashBladeResharped-1.20.1-1.9.65-official.jar	-
+# ===== 森罗物语（kaleidoscope）家族 11 件（twilight/chinesefood 不装载，见上）=====
+local-repo/com/kaleidoscope/1.20.1/kaleidoscopecookery-1.6.0-forge+mc1.20.1.jar	kaleidoscopecookery-1.6.0-forge+mc1.20.1-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-compat__1.20.1-forge.jar	kaleidoscope-compat__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-contraption__1.20.1-forge.jar	kaleidoscope-contraption__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-doll__1.20.1-forge.jar	kaleidoscope-doll__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-end__1.20.1-forge.jar	kaleidoscope-end__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-grilling__1.20.1-forge.jar	kaleidoscope-grilling__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-nether__1.20.1-forge.jar	kaleidoscope-nether__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope-world-liquor__1.20.1-forge.jar	kaleidoscope-world-liquor__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscope_bloodwine__1.20.1-forge.jar	kaleidoscope_bloodwine__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscopedimensions-wine__1.20.1-forge.jar	kaleidoscopedimensions-wine__1.20.1-forge-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/kaleidoscopetavern__1.20.1-forge.jar	kaleidoscopetavern__1.20.1-forge-official.jar	-
+# ===== 前置/库（dev 测试环境依赖）=====
+local-repo/dev/architectury/architectury-forge/9.0.7/architectury-forge-9.0.7.jar	architectury-9.0.7-official.jar	-
+local-repo/me/shedaniel/cloth/cloth-config-forge/11.0.99/cloth-config-forge-11.0.99.jar	cloth-config-11.0.99-official.jar	-
+local-repo/com/kaleidoscope/1.20.1/curios-forge-5.14.1+1.20.1.jar	curios-forge-5.14.1+1.20.1-official.jar	-
+local-repo/me/shedaniel/rei/12.1.785/RoughlyEnoughItems-forge-12.1.785.jar	rei-1.20.1-12.1.785-official.jar	-
+
+# ===== 背包模组（Traveler's Backpack 9.1.58 / Sophisticated Backpacks 3.26.20.2248 + sophisticatedcore 前置）=====
+local-repo/com/tiviacz/travelersbackpack/9.1.58/travelersbackpack-forge-1.20.1-9.1.58.jar	travelersbackpack-forge-1.20.1-9.1.58-official.jar	-
+local-repo/net/p3pp3rf1y/sophisticatedbackpacks/3.26.20.2248/sophisticatedbackpacks-1.20.1-3.26.20.2248.jar	sophisticatedbackpacks-1.20.1-3.26.20.2248-official.jar	-
+local-repo/net/p3pp3rf1y/sophisticatedcore/1.5.35.2478/sophisticatedcore-1.20.1-1.5.35.2478.jar	sophisticatedcore-1.20.1-1.5.35.2478-official.jar	-

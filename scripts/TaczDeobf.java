@@ -48,6 +48,20 @@ import java.util.zip.ZipOutputStream;
 public class TaczDeobf {
     private static final Pattern SRG_FIELD = Pattern.compile("f_\\d+_|field_\\d+");
     private static final Pattern SRG_METHOD = Pattern.compile("m_\\d+_|method_\\d+");
+    // Mixin "compatibility prefix" naming: <anything>$<srgname> (e.g.
+    // enchanted_plate$m_142194_). Mixin resolves these by the part after the
+    // last '$', so only the SRG tail must be remapped.
+    private static final Pattern PREFIXED_SRG =
+            Pattern.compile("^(.+\\$)((?:m_|f_|field_|method_)\\d+_?)$");
+
+    /** Split "prefix$m_123_" into {"prefix$", "m_123_"}; null if not prefixed. */
+    private static String[] splitPrefixed(String name) {
+        java.util.regex.Matcher m = PREFIXED_SRG.matcher(name);
+        if (m.matches()) {
+            return new String[] { m.group(1), m.group(2) };
+        }
+        return null;
+    }
 
     public static void main(String[] args) throws Exception {
         if (args.length != 3) {
@@ -112,20 +126,38 @@ public class TaczDeobf {
             Map<String, String> fr = new HashMap<>();
             if (cn.fields != null) {
                 for (FieldNode fn : cn.fields) {
-                    if (SRG_FIELD.matcher(fn.name).matches()) {
-                        String official = fieldsExact.get(owner + "/" + fn.name);
-                        if (official == null) official = fieldsGlobal.get(fn.name);
-                        if (official != null && !official.equals(fn.name)) fr.put(fn.name, official);
+                    String target = fn.name;
+                    String prefix = null;
+                    String[] split = splitPrefixed(fn.name);
+                    if (split != null) {
+                        prefix = split[0];
+                        target = split[1];
+                    }
+                    if (SRG_FIELD.matcher(target).matches()) {
+                        String official = fieldsExact.get(owner + "/" + target);
+                        if (official == null) official = fieldsGlobal.get(target);
+                        if (official != null && !official.equals(target)) {
+                            fr.put(fn.name, prefix == null ? official : prefix + official);
+                        }
                     }
                 }
             }
             if (cn.methods != null) {
                 for (MethodNode mn : cn.methods) {
-                    if (SRG_METHOD.matcher(mn.name).matches()) {
+                    String target = mn.name;
+                    String prefix = null;
+                    String[] split = splitPrefixed(mn.name);
+                    if (split != null) {
+                        prefix = split[0];
+                        target = split[1];
+                    }
+                    if (SRG_METHOD.matcher(target).matches()) {
                         String argsDesc = argsPart(mn.desc);
-                        String official = methodsExact.get(owner + "/" + mn.name + ":" + argsDesc);
-                        if (official == null) official = methodsGlobal.get(mn.name + ":" + argsDesc);
-                        if (official != null && !official.equals(mn.name)) mr.put(mn.name + ":" + argsDesc, official);
+                        String official = methodsExact.get(owner + "/" + target + ":" + argsDesc);
+                        if (official == null) official = methodsGlobal.get(target + ":" + argsDesc);
+                        if (official != null && !official.equals(target)) {
+                            mr.put(mn.name + ":" + argsDesc, prefix == null ? official : prefix + official);
+                        }
                     }
                 }
             }
@@ -230,7 +262,12 @@ public class TaczDeobf {
                         if (min.owner.equals(owner) && methodRenames != null) {
                             newName = methodRenames.get(min.name + ":" + argsDesc);
                         }
-                        if (newName == null && SRG_METHOD.matcher(min.name).matches()) {
+                        // Method references with an f_-style SRG name exist in the
+                        // wild (Create 6.0.8 calls WoodType.f_61839_() = name():
+                        // pre-1.20.1 SRG registered it field-style). Lookup is by
+                        // name+desc in the METHOD map, so let both prefixes try.
+                        if (newName == null && (SRG_METHOD.matcher(min.name).matches()
+                                || SRG_FIELD.matcher(min.name).matches())) {
                             newName = methodsExact.get(min.owner + "/" + min.name + ":" + argsDesc);
                             if (newName == null) newName = methodsGlobal.get(min.name + ":" + argsDesc);
                         }
@@ -273,7 +310,8 @@ public class TaczDeobf {
                                         || tag == Opcodes.H_NEWINVOKESPECIAL) {
                                     String argsDesc = argsPart(h.getDesc());
                                     String nn = methodsExact.get(h.getOwner() + "/" + h.getName() + ":" + argsDesc);
-                                    if (nn == null && SRG_METHOD.matcher(h.getName()).matches()) {
+                                    if (nn == null && (SRG_METHOD.matcher(h.getName()).matches()
+                                            || SRG_FIELD.matcher(h.getName()).matches())) {
                                         nn = methodsGlobal.get(h.getName() + ":" + argsDesc);
                                     }
                                     if (nn != null && !nn.equals(h.getName())) {

@@ -62,8 +62,8 @@ Forge 1.20.1 生产运行时是 **SRG 命名域**；`jar` 直出产物（officia
 ## 4. 运行时 E2E 清单（L4，人工）
 
 ```bash
-# 先部署 TACZ 的 official-mapped 副本（见下方"TACZ 运行时"一节）
-./scripts/remap-tacz-1201.sh
+# 先部署全部第三方模组的 official-mapped 副本（见下方"TACZ 运行时"一节）
+./scripts/remap-1201.sh
 ./gradlew :forge_1_20_1:runClient -Pactive_versions=forge-1.20.1
 ```
 
@@ -103,29 +103,43 @@ Critical injection failure ... could not find any targets matching
 'Lnet/minecraft/world/entity/LivingEntity;m_8119_()V'
 ```
 
-因此 dev 环境测试 TACZ 前，先跑一次：
+因此 dev 环境测试 TACZ（及一切第三方 1.20.1 模组 jar）前，先跑统一管线：
 
 ```bash
-./scripts/remap-tacz-1201.sh
+./scripts/remap-1201.sh
 ```
 
-该脚本离线完成（全部依赖在 Gradle 缓存内）：
-1. `scripts/TaczDeobf.java`（ASM + srgutils）把 TACZ jar 整包从 SRG 重映射为
+该脚本由 `scripts/remap-1201-manifest.txt` 清单驱动（TACZ / Create /
+SlashBlade / 森罗家族 / architectury / cloth-config / curios / REI 共 17 项），
+幂等可重跑：产物带工具指纹侧车（`*.stamp`，含 `TaczDeobf.java` /
+`remap-tacz-1201.py` / tsrg 的 sha256），任一工具或映射表变了下次运行自动
+全量重建；产物新于源 jar 也才允许跳过。TACZ 的处理流程（全部 jar 通用）：
+
+1. `scripts/TaczDeobf.java`（ASM + srgutils）把 jar 整包从 SRG 重映射为
    official：**方法/字段引用 + 声明全部**（含 mixin `@Shadow` 成员与覆写方法
-   如 `createBlockStateDefinition`）。SpecialSource 只能部分重映射这类 jar
+   如 `createBlockStateDefinition`，record 访问器的 f_ 型方法 id 亦覆盖）。
+   SpecialSource 只能部分重映射这类 jar
    （会漏 `BlockState.m_61124_`、继承字段 `f_49792_`、覆写声明 `m_7926_`），
    故不用它。另外还处理 **lambda / 方法引用**：`invokedynamic` 调用点的
    SAM 方法名（如 `Pack$ResourcesSupplier.open` 的 `m_247679_`）与 bootstrap
    句柄里的方法/字段引用必须同步改，否则启动时抛
    `AbstractMethodError: ... does not define or inherit an implementation of ...`
    （lambda 类没实现已改名后的接口方法）；
-2. 同样重映射 TACZ jarjar 内嵌的 `simplebedrockmodel` 并回填；
-3. `scripts/remap-tacz-1201.py` 把两个 jar 的 mixin refmap 目标从 SRG 改写为
-   official 名称。
+2. 清单声明的 jarjar 内嵌包（TACZ 的 `simplebedrockmodel`、Create 的
+   Ponder/flywheel/Registrate）同样重映射并回填；
+3. `scripts/remap-tacz-1201.py` 把全部 jar 的 mixin refmap 目标从 SRG 改写为
+   official 名称；
+4. 每个产物过 `scripts/check-official-remap.py` 门（常量池可执行 SRG 引用 /
+   refmap 残留 → 拒绝部署）后才 diff-cp 部署进 `run/mods`。
 
-产物：`local-repo/com/tacz/tacz/1.1.8-hotfix/tacz-1.1.8-hotfix-official.jar`，
-并自动部署到 `forge_1_20_1/run/mods/tacz-1.20.1-1.1.8-hotfix-official.jar`
-（该文件 gitignore，不提交）。之后 `runClient` 即可正常加载 TACZ。
+产物：各源 jar 同目录 `<名>-official.jar`，并部署到
+`forge_1_20_1/run/mods/<清单部署名>`（run/mods 被 gitignore，不提交）。
+之后 `runClient` 即可正常加载 TACZ。单独审计现状（不重建）：
+
+```bash
+python scripts/check-official-remap.py          # 全量审计 run/mods
+python scripts/check-official-remap.py --deps   # 附带缺前置依赖告警
+```
 
 ## 5. 已知待办
 

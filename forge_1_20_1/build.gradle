@@ -136,7 +136,7 @@ dependencies {
     // remap dependency jars — the un-remapped jar crashes runClient with
     // "Critical injection failure" in tacz.mixins.json. To test TACZ in the
     // dev client, deploy the official-mapped copy produced by
-    // scripts/remap-tacz-1201.sh into forge_1_20_1/run/mods instead.
+    // scripts/remap-1201.sh into forge_1_20_1/run/mods instead.
     // Supertype (IFPGeoItemRenderer) of TACZ's AnimateGeoItemRenderer; extracted
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.2-forge+mc1.20.1'

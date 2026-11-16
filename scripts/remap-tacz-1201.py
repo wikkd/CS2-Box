@@ -20,8 +20,12 @@ import re
 import sys
 import zipfile
 
-METHOD_RE = re.compile(r'(L[^;]+;)(m_[0-9]+_?)\(([^)]*)\)(.)')
-FIELD_RE = re.compile(r'(L[^;]+;)(f_[0-9]+_?|field_[0-9]+)(?=[^A-Za-z0-9_]|$)')
+METHOD_RE = re.compile(r'(L[^;]+;)((?:[A-Za-z0-9_$]+\$)?(?:m_[0-9]+_?|method_[0-9]+))\(([^)]*)\)(.)')
+FIELD_RE = re.compile(r'(L[^;]+;)((?:[A-Za-z0-9_$]+\$)?(?:f_[0-9]+_?|field_[0-9]+))(?=[^A-Za-z0-9_]|$)')
+# Bare-name forms (no L<class>; wrapper): mixin @Accessor refmap values like
+# "f_143509_:Ljava/lang/String;" and method targets "m_8119_()V...".
+BARE_FIELD_RE = re.compile(r'\b((?:[A-Za-z0-9_$]+\$)?(?:f_[0-9]+_?|field_[0-9]+))(?=[:\s(]|$)')
+BARE_METHOD_RE = re.compile(r'\b((?:[A-Za-z0-9_$]+\$)?(?:m_[0-9]+_?|method_[0-9]+))\(')
 
 
 def load_srg_to_official(tsrg_gz):
@@ -48,11 +52,15 @@ def load_srg_to_official(tsrg_gz):
                 parts = line.split()
                 cur = parts[0] if parts else None
                 continue
-            # tsrg2 member line: "\t<leftName> <desc> <rightName>"
+            # tsrg2 member line: "\t<leftName> <desc> <rightName>" for methods;
+            # field lines may omit the descriptor: "\t<leftName> <rightName>".
             parts = line.split()
-            if len(parts) < 3:
+            if len(parts) == 3:
+                name, desc, srg = parts
+            elif len(parts) == 2:
+                name, desc, srg = parts[0], "", parts[1]
+            else:
                 continue
-            name, desc, srg = parts[0], parts[1], parts[2]
             if desc.startswith('('):
                 args = desc[:desc.index(')') + 1]
                 methods[(cur, srg, args)] = name
@@ -63,31 +71,79 @@ def load_srg_to_official(tsrg_gz):
     return methods, fields, methods_global, fields_global
 
 
+def _map_srg_token(name, args, methods, fields, methods_global, fields_global):
+    """Map one (possibly prefixed) SRG token to official; returns None if no hit."""
+    prefix = ""
+    target = name
+    idx = name.rfind("$")
+    if idx != -1:
+        prefix, target = name[:idx + 1], name[idx + 1:]
+    if target.startswith(("m_", "method_")):
+        official = methods_global.get((target, "(" + (args or "") + ")"))
+        if official is None and args is None:
+            # args unknown: try any descriptor with this SRG name
+            for (srg, _a), off in methods_global.items():
+                if srg == target:
+                    return prefix + off
+        if official:
+            return prefix + official
+    elif target.startswith(("f_", "field_")):
+        official = fields_global.get(target)
+        if official:
+            return prefix + official
+    return None
+
+
 def remap_descriptor(text, methods, fields, methods_global, fields_global):
     def repl_method(m):
         wrapped = m.group(1)
         cls = wrapped[1:-1]  # strip the leading 'L' and trailing ';'
-        srg, args, ret = m.group(2), m.group(3), m.group(4)
-        official = methods.get((cls, srg, '(' + args + ')'))
+        token, ret = m.group(2), m.group(4)
+        prefix = ""
+        target = token
+        idx = token.rfind("$")
+        if idx != -1:
+            prefix, target = token[:idx + 1], token[idx + 1:]
+        official = methods.get((cls, target, '(' + m.group(3) + ')'))
         if official is None:
-            official = methods_global.get((srg, '(' + args + ')'))
+            official = methods_global.get((target, '(' + m.group(3) + ')'))
         if official:
-            return 'L' + cls + ';' + official + '(' + args + ')' + ret
+            return 'L' + cls + ';' + prefix + official + '(' + m.group(3) + ')' + ret
         return m.group(0)
 
     def repl_field(m):
         wrapped = m.group(1)
         cls = wrapped[1:-1]
-        srg = m.group(2)
-        official = fields.get((cls, srg))
+        token = m.group(2)
+        prefix = ""
+        target = token
+        idx = token.rfind("$")
+        if idx != -1:
+            prefix, target = token[:idx + 1], token[idx + 1:]
+        official = fields.get((cls, target))
         if official is None:
-            official = fields_global.get(srg)
+            official = fields_global.get(target)
         if official:
-            return 'L' + cls + ';' + official
+            return 'L' + cls + ';' + prefix + official
+        return m.group(0)
+
+    def repl_bare_method(m):
+        mapped = _map_srg_token(m.group(1), None, methods, fields, methods_global, fields_global)
+        if mapped:
+            return mapped + '('
+        return m.group(0)
+
+    def repl_bare_field(m):
+        mapped = _map_srg_token(m.group(1), None, methods, fields, methods_global, fields_global)
+        if mapped:
+            return mapped
         return m.group(0)
 
     text = METHOD_RE.sub(repl_method, text)
-    return FIELD_RE.sub(repl_field, text)
+    text = FIELD_RE.sub(repl_field, text)
+    text = BARE_METHOD_RE.sub(repl_bare_method, text)
+    text = BARE_FIELD_RE.sub(repl_bare_field, text)
+    return text
 
 
 def rewrite_refmaps(jar, methods, fields, methods_global, fields_global):
@@ -96,7 +152,11 @@ def rewrite_refmaps(jar, methods, fields, methods_global, fields_global):
     with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
-            if item.filename.endswith('.refmap.json'):
+            # refmap naming varies by mod: "x.refmap.json" (dot) and
+            # "x-forge-refmap.json" (hyphen, e.g. REI / architectury) both exist;
+            # endswith('refmap.json') covers both. The dot-only filter silently
+            # skipped hyphen-named refmaps (2026-11-16 pipeline first run).
+            if item.filename.endswith('refmap.json'):
                 try:
                     obj = json.loads(data.decode('utf-8'))
                 except Exception:
