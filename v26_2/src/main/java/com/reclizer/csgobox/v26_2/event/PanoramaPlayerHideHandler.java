@@ -33,7 +33,7 @@ public final class PanoramaPlayerHideHandler {
     @SubscribeEvent
     public static void onRenderLivingPre(RenderLivingEvent.Pre<?, ?, ?> event) {
         Minecraft mc = Minecraft.getInstance();
-        if (!(mc.screen instanceof CsLookItemScreen screen) || !screen.isSceneryRigMounted()
+        if (!(mc.gui.screen() instanceof CsLookItemScreen screen) || !screen.isSceneryRigMounted()
                 || mc.player == null) {
             return;
         }
