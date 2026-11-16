@@ -184,6 +184,22 @@ tasks.named('compileJava', JavaCompile).configure {
     classpath += files(taczStubJarTask)
 }
 
+// The Forge userdev metadata pulls eventbus as a dynamic `5.0.+`. Gradle
+// re-lists dynamic versions once its metadata cache expires, and the mirror
+// repo set on network-constrained machines (init-mirror drops the dead CDNs;
+// bmclapi carries no 5.x eventbus) then finds nothing — pin the concrete
+// 1.18.2-era version the local cache has carried all along.
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'net.minecraftforge'
+                && details.requested.name == 'eventbus'
+                && details.requested.version == '5.0.+') {
+            details.useVersion '5.0.7'
+            details.because 'dynamic 5.0.+ is unresolvable through the mirror repo set; 5.0.7 is what Forge 40.3.x ships'
+        }
+    }
+}
+
 dependencies {
     implementation minecraft.dependency("net.minecraftforge:forge:${mc_version_forge_1_18_2}-${forge_version_forge_1_18_2}")
 
