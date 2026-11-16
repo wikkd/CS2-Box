@@ -9,6 +9,7 @@ import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
+import com.reclizer.csgobox.v1_21_1.utils.SlashBladePreview;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -610,9 +611,13 @@ public class CsLookItemScreen extends Screen {
         int modelY = toolbarButtonY() + toolbarEnterRise(2);
         if (button == 0 && isInside(mouseX, mouseY, modelX, modelY, infoSize, infoSize)) {
             // Inspect-character-model button: on living-entity drops this
-            // toggles the mob animation (dead placeholder for other items).
+            // toggles the mob animation, on SlashBlade blades it flips the
+            // rack pose between the floor rack (horizontal) and the wall
+            // mount (vertical); dead placeholder for other items.
             if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
+            } else if (SlashBladePreview.hasPreviewBlade()) {
+                SlashBladePreview.toggleStyle();
             }
             return true;
         }
@@ -639,6 +644,7 @@ public class CsLookItemScreen extends Screen {
     public void init() {
         super.init();
         AnimRenderOps.clearPreviewMobInstance();
+        SlashBladePreview.clearPreviewBlade();
         if (!this.sceneryAutoStarted) {
             this.sceneryAutoStarted = true;
             this.beginSceneryPanorama();

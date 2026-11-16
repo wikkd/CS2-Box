@@ -1,0 +1,737 @@
+{
+  "name": "#C8447C 拔刀终端",
+  "drop": 0.05,
+  "requires": [
+    "slashblade"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "grade5": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.fox_black",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:piercing",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/sange/sange_black.png",
+          "model": "slashblade:model/named/sange/sange.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:fox_black"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.fox_white",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/sange/sange.png",
+          "model": "slashblade:model/named/sange/sange.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:fox_white"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.orotiagito",
+          "baseAttackModifier": 7.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:wave_edge",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/orotiagito.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:orotiagito"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.yamato",
+          "baseAttackModifier": 7.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": true,
+          "sealed": true,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/yamato.png",
+          "model": "slashblade:model/named/yamato.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:yamato"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.yasha_true",
+          "baseAttackModifier": 6.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:circle_slash",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/yasha/yasha_true.png",
+          "model": "slashblade:model/named/yasha/yasha_true.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:yasha_true"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_trapezohedron",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.agito",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:wave_edge",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/agito_false.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:agito"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.doutanuki",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:circle_slash",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/muramasa/muramasa.png",
+          "model": "slashblade:model/named/muramasa/muramasa.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:doutanuki"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.muramasa",
+          "baseAttackModifier": 7.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:drive_vertical",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/muramasa/muramasa.png",
+          "model": "slashblade:model/named/muramasa/muramasa.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:muramasa"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.sange",
+          "baseAttackModifier": 6.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:void_slash",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/sange/sange.png",
+          "model": "slashblade:model/named/sange/sange.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:sange"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.yuzukitukumo",
+          "baseAttackModifier": 6.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:drive_horizontal",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/agito.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:yuzukitukumo"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_sphere",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.koseki",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:drive_vertical",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/dios/dios.png",
+          "model": "slashblade:model/named/dios/dios.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:koseki"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_netherite",
+          "baseAttackModifier": 8.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_netherite"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.tagayasan",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:drive_vertical",
+          "defaultBewitched": true,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:tagayasan"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.yasha",
+          "baseAttackModifier": 6.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:sakura_end",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/yasha/yasha.png",
+          "model": "slashblade:model/named/yasha/yasha.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:yasha"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_crystal",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.orotiagito_sealed",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:wave_edge",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/agito_false.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:orotiagito_sealed"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_diamond",
+          "baseAttackModifier": 7.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_diamond"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.ruby",
+          "baseAttackModifier": 5.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:ruby"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_ingot",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.agito_rust",
+          "baseAttackModifier": 3.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": true,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/agito_false.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:agito_rust"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.orotiagito_rust",
+          "baseAttackModifier": 3.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": true,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/agito_false.png",
+          "model": "slashblade:model/named/agito.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:orotiagito_rust"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_golden",
+          "baseAttackModifier": 2.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_golden"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_iron",
+          "baseAttackModifier": 4.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_iron"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_stone",
+          "baseAttackModifier": 3.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_stone"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.rodai_wooden",
+          "baseAttackModifier": 2.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": false,
+          "sealed": false,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": []
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:rodai_wooden"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "components": {
+        "slashblade:blade_state": {
+          "translationKey": "item.slashblade.sabigatana",
+          "baseAttackModifier": 3.0,
+          "proudSoul": 0,
+          "killCount": 0,
+          "refine": 0,
+          "broken": true,
+          "sealed": true,
+          "slashArtsKey": "slashblade:judgement_cut",
+          "defaultBewitched": false,
+          "comboRoot": "slashblade:standby",
+          "specialEffects": [],
+          "texture": "slashblade:model/named/muramasa/muramasa.png",
+          "model": "slashblade:model/named/muramasa/muramasa.obj",
+          "carryType": "PSO2",
+          "effectColor": 3355647,
+          "effectColorInverse": false,
+          "adjust": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "minecraft:custom_data": {
+          "VariantId": "slashblade:sabigatana"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul",
+      "count": 1
+    },
+    {
+      "id": "slashblade:proudsoul_tiny",
+      "count": 1
+    }
+  ]
+}

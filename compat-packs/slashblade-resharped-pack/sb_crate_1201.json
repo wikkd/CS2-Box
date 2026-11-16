@@ -1,0 +1,289 @@
+{
+  "name": "#C8447C 拔刀军火箱",
+  "drop": 1.0,
+  "requires": [
+    "slashblade"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "key": "csgobox:csgo_key0",
+  "grade5": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:fox_black",
+        "bladeState": {
+          "translationKey": "item.slashblade.fox_black"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:fox_white",
+        "bladeState": {
+          "translationKey": "item.slashblade.fox_white"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:orotiagito",
+        "bladeState": {
+          "translationKey": "item.slashblade.orotiagito"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:yamato",
+        "bladeState": {
+          "translationKey": "item.slashblade.yamato"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:yasha_true",
+        "bladeState": {
+          "translationKey": "item.slashblade.yasha_true"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_trapezohedron",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:agito",
+        "bladeState": {
+          "translationKey": "item.slashblade.agito"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:doutanuki",
+        "bladeState": {
+          "translationKey": "item.slashblade.doutanuki"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:muramasa",
+        "bladeState": {
+          "translationKey": "item.slashblade.muramasa"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:sange",
+        "bladeState": {
+          "translationKey": "item.slashblade.sange"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:yuzukitukumo",
+        "bladeState": {
+          "translationKey": "item.slashblade.yuzukitukumo"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_sphere",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:koseki",
+        "bladeState": {
+          "translationKey": "item.slashblade.koseki"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_netherite",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_netherite"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:tagayasan",
+        "bladeState": {
+          "translationKey": "item.slashblade.tagayasan"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:yasha",
+        "bladeState": {
+          "translationKey": "item.slashblade.yasha"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_crystal",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:orotiagito_sealed",
+        "bladeState": {
+          "translationKey": "item.slashblade.orotiagito_sealed"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_diamond",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_diamond"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:ruby",
+        "bladeState": {
+          "translationKey": "item.slashblade.ruby"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul_ingot",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:agito_rust",
+        "bladeState": {
+          "translationKey": "item.slashblade.agito_rust"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:orotiagito_rust",
+        "bladeState": {
+          "translationKey": "item.slashblade.orotiagito_rust"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_golden",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_golden"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_iron",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_iron"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_stone",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_stone"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:rodai_wooden",
+        "bladeState": {
+          "translationKey": "item.slashblade.rodai_wooden"
+        }
+      }
+    },
+    {
+      "id": "slashblade:slashblade",
+      "count": 1,
+      "tag": {
+        "VariantId": "slashblade:sabigatana",
+        "bladeState": {
+          "translationKey": "item.slashblade.sabigatana"
+        }
+      }
+    },
+    {
+      "id": "slashblade:proudsoul",
+      "count": 1
+    },
+    {
+      "id": "slashblade:proudsoul_tiny",
+      "count": 1
+    }
+  ]
+}

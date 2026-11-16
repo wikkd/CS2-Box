@@ -31,6 +31,8 @@ import java.util.Optional;
  *       class touch, same discipline as AnimRenderOps itself: instance
  *       construction never loads TACZ classes, only gated method bodies
  *       do);</li>
+ *   <li>SlashBlade: Resharped blades (weapon-rack entity proxy, zero
+ *       SlashBlade class references);</li>
  *   <li>Superb Warfare vehicle summon crates (entity proxy, zero SBW
  *       class references);</li>
  *   <li>Superb Warfare guns (FIXED-context baked render, zero SBW class
@@ -61,6 +63,7 @@ final class ItemPreviewStrategies {
     /** The ordered strategy chain; first match wins. */
     static final List<ItemPreviewStrategy> ALL = List.of(
             new TaczGunStrategy(),
+            new SlashBladeStrategy(),
             new SbwVehicleStrategy(),
             new SbwGunStrategy(),
             new SpawnEggStrategy(),
@@ -121,6 +124,34 @@ final class ItemPreviewStrategies {
             // missing-texture checkerboard across the card; suppress the draw
             // so the card frame alone shows until the display is available.
             return TimelessAPI.getGunDisplay(stack).isEmpty();
+        }
+    }
+
+    /** SlashBlade (拔刀剑: Resharped) blades: the mod's BEWLR draws the real
+     *  3D blade model only when the stack is mounted in its BladeStandEntity
+     *  (the weapon rack) — every other FIXED context draws the flat icon.
+     *  The 3D pass parks a client-side rack entity, mounts the blade through
+     *  its two public fields, and lets the mod's own rack renderer pose the
+     *  blade horizontally exactly like the rack does; zero SlashBlade class
+     *  references (namespace + cached reflective instanceof gate, vanilla
+     *  registry entity). 2D grids keep the flat icon. */
+    private static final class SlashBladeStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return AnimRenderOps.isSlashBladeBlade(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderSlashBladeRackPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
         }
     }
 

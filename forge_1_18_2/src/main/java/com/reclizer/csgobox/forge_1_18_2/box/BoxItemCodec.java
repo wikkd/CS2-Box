@@ -720,6 +720,13 @@ public final class BoxItemCodec {
                 String v = tag.getString(TACZ_AMMO_ID_TAG).trim();
                 return v.isEmpty() ? null : v;
             }
+            // Generic variant marker (any mod; e.g. SlashBlade Resharped
+            // blades share one item id): the price table keys it as
+            // id#<variant>.
+            if (tag.contains("VariantId", 8)) {
+                String v = tag.getString("VariantId").trim();
+                return v.isEmpty() ? null : v;
+            }
             return null;
         } catch (Throwable t) {
             return null;

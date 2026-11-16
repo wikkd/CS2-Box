@@ -57,9 +57,11 @@ public final class PriceTable {
     private static final Pattern KEY_RE = Pattern.compile("^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$");
 
     /** NBT variant field in a legacy {@code "tag"} string: TACZ guns carry
-     *  {@code GunId}, ammo carries {@code AmmoId}. Group 1 = the variant id. */
+     *  {@code GunId}, ammo carries {@code AmmoId}, and any mod may carry the
+     *  generic {@code VariantId} marker (e.g. SlashBlade Resharped blades).
+     *  Group 1 = the variant id. */
     private static final Pattern VARIANT_FIELD_RE = Pattern.compile(
-            "\\b(?:GunId|AmmoId)\\b\\s*[:=]\\s*\"?([A-Za-z0-9_.:+-]+)\"?");
+            "\\b(?:GunId|AmmoId|VariantId)\\b\\s*[:=]\\s*\"?([A-Za-z0-9_.:+-]+)\"?");
 
     private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 
@@ -207,18 +209,51 @@ public final class PriceTable {
      * it works identically on every platform.
      */
     public static Optional<String> variantId(JsonObject entry) {
-        if (entry == null || !entry.has("tag")) {
+        if (entry == null) {
             return Optional.empty();
         }
-        JsonElement tag = entry.get("tag");
-        if (!tag.isJsonPrimitive() || !tag.getAsJsonPrimitive().isString()) {
-            return Optional.empty();
+        if (entry.has("tag")) {
+            JsonElement tag = entry.get("tag");
+            if (tag.isJsonPrimitive() && tag.getAsJsonPrimitive().isString()) {
+                Matcher m = VARIANT_FIELD_RE.matcher(tag.getAsString());
+                if (m.find()) {
+                    String variant = m.group(1).trim();
+                    if (!variant.isEmpty()) {
+                        return Optional.of(variant);
+                    }
+                }
+            } else if (tag.isJsonObject()) {
+                // JSON-object NBT form (NBT eras): a plain VariantId string
+                // field rides alongside the real NBT payload.
+                Optional<String> v = stringField(tag.getAsJsonObject(), "VariantId");
+                if (v.isPresent()) {
+                    return v;
+                }
+            }
         }
-        Matcher m = VARIANT_FIELD_RE.matcher(tag.getAsString());
-        if (m.find()) {
-            String variant = m.group(1).trim();
-            if (!variant.isEmpty()) {
-                return Optional.of(variant);
+        // Components era (1.21+): minecraft:custom_data.VariantId.
+        if (entry.has("components")
+                && entry.get("components").isJsonObject()) {
+            JsonObject components = entry.getAsJsonObject("components");
+            if (components.has("minecraft:custom_data")
+                    && components.get("minecraft:custom_data").isJsonObject()) {
+                Optional<String> v = stringField(
+                        components.getAsJsonObject("minecraft:custom_data"), "VariantId");
+                if (v.isPresent()) {
+                    return v;
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** A non-blank string member of {@code obj}, or empty. */
+    private static Optional<String> stringField(JsonObject obj, String field) {
+        JsonElement e = obj.get(field);
+        if (e != null && e.isJsonPrimitive() && e.getAsJsonPrimitive().isString()) {
+            String v = e.getAsString().trim();
+            if (!v.isEmpty()) {
+                return Optional.of(v);
             }
         }
         return Optional.empty();

@@ -151,6 +151,37 @@ final class PriceTableTest {
     }
 
     @Test
+    @DisplayName("generic VariantId marker is read from tag string, tag object and custom_data")
+    void variantIdGenericMarker() {
+        // tag string (SNBT form)
+        JsonObject stringForm = JsonParser.parseString("""
+                {"id": "slashblade:slashblade", "tag": "{VariantId:\\"slashblade:agito\\"}"}
+                """).getAsJsonObject();
+        assertEquals("slashblade:agito", PriceTable.variantId(stringForm).orElseThrow());
+
+        // JSON-object tag form (NBT eras): the marker rides beside the payload
+        JsonObject objectForm = JsonParser.parseString("""
+                {"id": "slashblade:slashblade", "tag": {"VariantId": "slashblade:yamato",
+                        "bladeState": {"translationKey": "item.slashblade.yamato"}}}
+                """).getAsJsonObject();
+        assertEquals("slashblade:yamato", PriceTable.variantId(objectForm).orElseThrow());
+
+        // components form (1.21+): minecraft:custom_data.VariantId
+        JsonObject componentsForm = JsonParser.parseString("""
+                {"id": "slashblade:slashblade", "components": {
+                        "slashblade:blade_state": {"translationKey": "item.slashblade.agito"},
+                        "minecraft:custom_data": {"VariantId": "slashblade:agito"}}}
+                """).getAsJsonObject();
+        assertEquals("slashblade:agito", PriceTable.variantId(componentsForm).orElseThrow());
+
+        // TACZ GunId still wins over an unrelated VariantId (first match in the string)
+        JsonObject gun = JsonParser.parseString("""
+                {"id": "tacz:modern_kinetic_gun", "tag": "{GunId:\\"tacz:ak47\\",VariantId:\\"x\\"}"}
+                """).getAsJsonObject();
+        assertEquals("tacz:ak47", PriceTable.variantId(gun).orElseThrow());
+    }
+
+    @Test
     @DisplayName("hash is stable for the same content and changes on edits")
     void hashStability() {
         List<String> issuesA = new ArrayList<>();

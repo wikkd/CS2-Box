@@ -38,8 +38,10 @@ import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.SpellcasterIllager;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
@@ -65,6 +67,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Single per-platform adaptation point for animation rendering primitives.
@@ -380,6 +383,16 @@ public final class AnimRenderOps {
         EntityType<?> summon = summonContainerEntityType(item);
         if (summon != null) {
             renderEntityPreviewForType(gg, item, player, cx, cy, rotation, scale, summon, null);
+            return;
+        }
+        // SlashBlade (拔刀剑: Resharped) blades: the mod's BEWLR draws the real
+        // 3D blade model only when the stack is mounted in its BladeStandEntity
+        // (the weapon rack) — every other FIXED context draws the flat icon.
+        // Park a client-side rack entity, mount the blade through its public
+        // fields, and let the mod's own rack renderer pose it horizontally
+        // exactly like the rack does. See renderSlashBladeRackPreview.
+        if (isSlashBladeBlade(item)) {
+            renderSlashBladeRackPreview(gg, item, player, cx, cy, rotation, scale);
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -2117,5 +2130,249 @@ public final class AnimRenderOps {
                 }
             }
         }
+    }
+
+    // ===================== SlashBlade rack-form preview (挂刀架形态) =====================
+
+    /** SlashBlade (拔刀剑: Resharped) item namespace. The namespace check
+     *  alone proves the optional mod is loaded; no SlashBlade class is ever
+     *  referenced at compile time — the blade gate resolves the base item
+     *  class reflectively (cached), and the preview below speaks to the mod
+     *  through vanilla APIs and two public fields only. */
+    private static final String SLASHBLADE_MOD_ID = "slashblade";
+
+    /** The weapon-rack entity ({@code BladeStandEntity}, 刀挂台) and the
+     *  floor-stand item ({@code BLADESTAND_1}) the preview mounts blades on.
+     *  The entity id derivation is jar-verified: the mod builds entity ids
+     *  via {@code CaseFormat(UPPER_CAMEL → LOWER_UNDERSCORE)(getSimpleName())
+     *  .replace("entity_", "")} — {@code BladeStandEntity} carries no
+     *  {@code entity_} substring, so the id is the plain snake-case form,
+     *  matching the {@code entity.slashblade.blade_stand_entity} lang key. */
+    private static final ResourceLocation SLASHBLADE_STAND_TYPE =
+            new ResourceLocation(SLASHBLADE_MOD_ID, "blade_stand_entity");
+    private static final ResourceLocation SLASHBLADE_STAND_ITEM =
+            new ResourceLocation(SLASHBLADE_MOD_ID, "bladestand_1");
+    /** The wall-mount stand ({@code BLADESTAND_1_W}): its renderer branch
+     *  (YP 180, skipping the floor branches' XP(-90)) keeps the common tail
+     *  XP(90) uncancelled and stands the blade upright — the 立式 style of
+     *  the random pair. The floor stands' XP(-90) cancels that tail, which
+     *  is the horizontal rack pose (挂式). */
+    private static final ResourceLocation SLASHBLADE_STAND_ITEM_WALL =
+            new ResourceLocation(SLASHBLADE_MOD_ID, "bladestand_1w");
+
+    /** {@code mods.flammpfeil.slashblade.item.ItemSlashBlade}, resolved once
+     *  after the namespace gate proved the mod is on the classpath (the
+     *  detuned variant and every named blade extend it — javap-verified).
+     *  Null when unresolvable: the gate then never matches. */
+    private static Class<?> SLASHBLADE_BLADE_CLASS;
+    private static boolean SLASHBLADE_BLADE_CLASS_RESOLVED;
+
+    /** {@code BladeStandEntity.currentType} (the rack model branch selector)
+     *  and {@code currentTypeStack} (the mounted stack) — both public fields
+     *  on the mod's entity (javap-verified), reached by reflection so this
+     *  file stays SlashBlade-class-free at compile time. Null after a failed
+     *  resolve and the preview degrades to the flat icon. */
+    private static Field SLASHBLADE_STAND_TYPE_FIELD;
+    private static Field SLASHBLADE_STAND_STACK_FIELD;
+    private static boolean SLASHBLADE_STAND_FIELDS_RESOLVED;
+
+    /** Probe-measured bounds of each blade variant on the shared rack stand,
+     *  keyed by item id + hover name: the 24 named blades share one item id
+     *  ({@code slashblade:slashblade}) and differ by their {@code
+     *  bladeState} identity, which the hover name reflects — the per-type
+     *  entity cache cannot be reused because blade geometry varies per
+     *  variant. Same sentinel semantics as {@link #ARMOR_PREVIEW_BOUNDS}. */
+    private static final Map<String, Object> SLASHBLADE_STAND_BOUNDS = new HashMap<>();
+
+    /** One-shot INFO guard per blade variant for the rack-preview probe. */
+    private static final Set<String> SLASHBLADE_MOUNT_LOG = new HashSet<>();
+
+    /** Variant key ({@link #slashBladeVariantKey}) of the blade the current
+     *  3D preview last rendered (null = none) — arms the inspect-button
+     *  style toggle (see {@link SlashBladePreview}). */
+    private static String slashBladePreviewKey;
+
+    /** Display style of the previewed blade: false = floor rack (horizontal,
+     *  挂式), true = wall mount (vertical, 立式). Re-randomized whenever the
+     *  previewed variant changes — a screen open clears the marker first
+     *  (see {@link #clearSlashBladePreviewInstance}), so every fresh look
+     *  re-rolls the dice; the inspect button flips it in between. */
+    private static boolean slashBladeUpright;
+
+    /** True for SlashBlade blade items: the namespace gate proves the mod is
+     *  loaded (no isModLoaded round-trip needed), then the cached reflective
+     *  instanceof keeps the rack items (HangingEntityItem) and proud-soul
+     *  materials (plain Item) out of the rack preview. */
+    private static boolean isSlashBladeBlade(ItemStack stack) {
+        if (stack.isEmpty()
+                || !SLASHBLADE_MOD_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace())) {
+            return false;
+        }
+        if (!SLASHBLADE_BLADE_CLASS_RESOLVED) {
+            SLASHBLADE_BLADE_CLASS_RESOLVED = true;
+            try {
+                SLASHBLADE_BLADE_CLASS = Class.forName("mods.flammpfeil.slashblade.item.ItemSlashBlade");
+            } catch (Throwable t) {
+                SLASHBLADE_BLADE_CLASS = null;
+            }
+        }
+        return SLASHBLADE_BLADE_CLASS != null && SLASHBLADE_BLADE_CLASS.isInstance(stack.getItem());
+    }
+
+    /** SlashBlade blade 3D preview in the weapon-rack form (挂架形态): the
+     *  mod's BEWLR only draws the real 3D blade model when the stack is
+     *  mounted in its {@code BladeStandEntity} — every other FIXED context
+     *  draws the flat icon (renderBlade bytecode: the {@code isFramed &&
+     *  getFrame() instanceof BladeStandEntity} gate routes to
+     *  {@code renderModel}; everything else renders the icon). So park a
+     *  shared client-side rack entity, mount the blade through its two
+     *  public fields ({@code currentTypeStack} = the blade — the rack
+     *  renderer itself re-applies {@code setEntityRepresentation(this)} per
+     *  frame, opening the gate; {@code currentType} = the floor-stand item —
+     *  selects the horizontal pose branch), and let the mod's own
+     *  {@code BladeStandEntityRenderer} run its full rack chain (anchor
+     *  translate, 45° wall-rotation steps, ×2 scale, horizontal pose).
+     *  The renderer draws only the blade — the stand's own body never
+     *  enters the preview — and the probe-based auto-fit, centring and
+     *  {@link #SBW_FIT_BOOST} apply on top. Zero SlashBlade class
+     *  references: the entity comes from the vanilla registry, the fields
+     *  are written reflectively. Degrades to the flat icon when the entity,
+     *  the fields or the render are unavailable. */
+    private static void renderSlashBladeRackPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                                    int cx, int cy, Quat rotation, float scale) {
+        Entity stand = slashBladeStandInstance(player.level());
+        if (stand != null) {
+            markSlashBladePreview(slashBladeVariantKey(item));
+            if (mountSlashBladeOnStand(stand, item, slashBladeUpright)) {
+                ModelBounds bounds = slashBladeStandBounds(item, stand, slashBladeUpright);
+                if (bounds != NO_BOUNDS && renderEntityPreview(gg, stand, bounds, cx, cy, rotation, scale)) {
+                    return;
+                }
+            }
+        }
+        renderItem2DFlat(player, gg, item, cx, cy, scale);
+    }
+
+    /** Cache/identity key of a blade variant: the named blades share one
+     *  item id and differ by their {@code bladeState} identity, which the
+     *  hover name reflects. */
+    private static String slashBladeVariantKey(ItemStack stack) {
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()
+                + "#" + stack.getHoverName().getString();
+    }
+
+    /** Arms the inspect-button style toggle for {@code key}: re-randomizes
+     *  the display style whenever the previewed variant changes. */
+    private static void markSlashBladePreview(String key) {
+        if (!key.equals(slashBladePreviewKey)) {
+            slashBladePreviewKey = key;
+            slashBladeUpright = ThreadLocalRandom.current().nextBoolean();
+        }
+    }
+
+    /** True while the current 3D preview renders a SlashBlade blade.
+     *  Package-private: the {@link SlashBladePreview} facade relays it to
+     *  the look screens (the facade also keeps this platform-only public
+     *  surface out of the drift-checked AnimRenderOps op table). */
+    static boolean hasSlashBladePreviewInstance() {
+        return slashBladePreviewKey != null;
+    }
+
+    /** Drops the blade marker; called when a look screen opens so the next
+     *  preview re-rolls its random style. */
+    static void clearSlashBladePreviewInstance() {
+        slashBladePreviewKey = null;
+    }
+
+    /** Flips the previewed blade between the floor rack (horizontal, 挂式)
+     *  and the wall mount (vertical, 立式) — the inspect button's toggle. */
+    static void toggleSlashBladeStyle() {
+        slashBladeUpright = !slashBladeUpright;
+    }
+
+    /** The parked client-side rack entity for the rack-form preview, or null
+     *  when the entity id is gone. Cached in the shared entity preview pool
+     *  (one rack instance ever; the mounted stack is re-applied every
+     *  frame). */
+    private static Entity slashBladeStandInstance(Level level) {
+        // DefaultedRegistry.get falls back to the pig for unknown ids, so
+        // existence must go through containsKey.
+        if (!BuiltInRegistries.ENTITY_TYPE.containsKey(SLASHBLADE_STAND_TYPE)) {
+            return null;
+        }
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(SLASHBLADE_STAND_TYPE);
+        return type == null ? null : entityPreviewInstance(type, level);
+    }
+
+    /** Mounts {@code stack} on the parked rack through the two public fields
+     *  (resolved once, reflectively): {@code currentTypeStack} = a copy of
+     *  the blade, {@code currentType} = the stand item of the requested
+     *  style ({@code upright} = wall mount / 立式, else the floor rack /
+     *  挂式). The copy carries the entity representation itself: the rack
+     *  renderer re-applies {@code setEntityRepresentation} only when its own
+     *  {@code currentTypeStack} is EMPTY (the rebuild branch), so a directly
+     *  mounted non-empty stack without it never opens the TEISR renderModel
+     *  gate. The rack body comes along: doRender's second renderItem draws
+     *  the ItemFrame's own item, set here to the matching stand model.
+     *  False when the fields are unreachable or the stand item is gone. */
+    private static boolean mountSlashBladeOnStand(Entity stand, ItemStack stack, boolean upright) {
+        if (!SLASHBLADE_STAND_FIELDS_RESOLVED) {
+            SLASHBLADE_STAND_FIELDS_RESOLVED = true;
+            try {
+                Class<?> cls = Class.forName("mods.flammpfeil.slashblade.entity.BladeStandEntity");
+                SLASHBLADE_STAND_TYPE_FIELD = cls.getField("currentType");
+                SLASHBLADE_STAND_STACK_FIELD = cls.getField("currentTypeStack");
+            } catch (Throwable t) {
+                LOGGER.warn("SlashBlade rack preview: BladeStandEntity fields unreachable; degrading to the flat icon", t);
+                SLASHBLADE_STAND_TYPE_FIELD = null;
+                SLASHBLADE_STAND_STACK_FIELD = null;
+            }
+        }
+        if (SLASHBLADE_STAND_TYPE_FIELD == null || SLASHBLADE_STAND_STACK_FIELD == null) {
+            return false;
+        }
+        try {
+            // DefaultedRegistry.get falls back to air for unknown ids — the
+            // containsKey guard keeps an absent stand item out of the mount.
+            ResourceLocation standId = upright ? SLASHBLADE_STAND_ITEM_WALL : SLASHBLADE_STAND_ITEM;
+            Item standItem = BuiltInRegistries.ITEM.containsKey(standId)
+                    ? BuiltInRegistries.ITEM.get(standId) : null;
+            if (standItem == null) {
+                return false;
+            }
+            ItemStack copy = stack.copy();
+            copy.setEntityRepresentation(stand);
+            SLASHBLADE_STAND_TYPE_FIELD.set(stand, standItem);
+            SLASHBLADE_STAND_STACK_FIELD.set(stand, copy);
+            if (stand instanceof ItemFrame frame) {
+                frame.setItem(new ItemStack(standItem));
+            }
+            return true;
+        } catch (Throwable t) {
+            LOGGER.warn("SlashBlade rack preview: mounting the blade failed; degrading to the flat icon", t);
+            return false;
+        }
+    }
+
+    /** Bounds of a blade variant mounted on the shared rack stand, cached per
+     *  variant + display style (the horizontal rack pose and the upright wall
+     *  pose bound differently). The stand must already be mounted when
+     *  probing. */
+    private static ModelBounds slashBladeStandBounds(ItemStack stack, Entity stand, boolean upright) {
+        String cacheKey = slashBladeVariantKey(stack) + "#" + (upright ? "w" : "r");
+        Object cached = SLASHBLADE_STAND_BOUNDS.get(cacheKey);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(stand);
+        SLASHBLADE_STAND_BOUNDS.put(cacheKey, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        if (SLASHBLADE_MOUNT_LOG.add(cacheKey)) {
+            LOGGER.info("[csgobox] slashblade rack preview: mounted {} span={}",
+                    cacheKey, bounds == NO_BOUNDS ? "none" : bounds.span());
+        }
+        return bounds;
     }
 }
