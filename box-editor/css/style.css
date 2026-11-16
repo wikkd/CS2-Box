@@ -264,6 +264,20 @@ textarea { resize: vertical; font-family: var(--mono); font-size: 12px; line-hei
 }
 .grade-items { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
 
+/* Custom-tier config row (v2.x "grades" array): id/name/color/weight/stock
+   inline under the summary, same flex idiom as .entity-row. */
+.tier-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+.tier-btns { display: inline-flex; gap: 4px; }
+.grade-card summary .tier-btns .btn { padding: 1px 6px; font-size: 11px; }
+
 .item-card {
   background: #11161f;
   border: 1px solid var(--border-soft);

@@ -438,6 +438,7 @@
         fileName: state.fileName,
         meta: state.meta,
         grades: state.grades,
+        tiers: state.tiers,
         priceRows: state.priceRows,
       })),
     };
@@ -525,6 +526,9 @@
       fileName: payload.state.fileName || 'my_box',
       meta: Object.assign(NS.emptyMeta(), payload.state.meta),
       grades: normalizeGrades(payload.state.grades),
+      tiers: Array.isArray(payload.state.tiers) && payload.state.tiers.length
+        ? payload.state.tiers
+        : null,
       priceRows: payload.state.priceRows || {},
     });
     state.versionKey = payload.versionKey || state.versionKey || '1.21.1';
@@ -571,14 +575,42 @@
   }
 
   function normalizeGrades(g) {
-    const out = [[], [], [], [], []];
     if (Array.isArray(g)) {
-      for (let i = 0; i < 5; i++) {
-        const items = Array.isArray(g[i]) ? g[i] : [];
-        out[i] = items.map((it) => Object.assign(NS.emptyItem(), it));
-      }
+      // Custom tiers keep their own count (1..64); the legacy format pads to
+      // the fixed five slots.
+      return g.map((items) =>
+        (Array.isArray(items) ? items : []).map((it) => Object.assign(NS.emptyItem(), it)));
     }
-    return out;
+    return [[], [], [], [], []];
+  }
+
+  /** Grade tier display name for index gi: custom tiers use their configured
+   *  name/id, the legacy format uses the built-in five names. */
+  function tierDisplayName(gi) {
+    if (Array.isArray(state.tiers) && state.tiers.length) {
+      const t = state.tiers[gi] || {};
+      return (t.name || '').trim() || t.id || ('tier' + (gi + 1));
+    }
+    const g = DATA.gradeNames[gi] || {};
+    return g[I18N.lang] || g.zh || ('grade' + (gi + 1));
+  }
+
+  /** Custom tier color for index gi (`#RRGGBB`), or null when unset/invalid
+   *  or in legacy mode (legacy tiers use the g1..g5 CSS classes). */
+  function tierColor(gi) {
+    if (Array.isArray(state.tiers) && state.tiers.length) {
+      const c = ((state.tiers[gi] || {}).color || '').trim();
+      return /^#[0-9a-fA-F]{6}$/.test(c) ? c : null;
+    }
+    return null;
+  }
+
+  /** Grade badge color style for tier gi: custom tiers carry their configured
+   *  `#RRGGBB` inline (currentColor flows into the badge border); the legacy
+   *  five tiers use the g1..g5 CSS classes instead. */
+  function tierColorStyle(gi) {
+    const c = tierColor(gi);
+    return c ? ' style="color:' + esc(c) + '"' : '';
   }
 
   function loadPrefs() {
@@ -2009,7 +2041,7 @@
     document.addEventListener('toggle', (e) => {
       if (e.target && e.target.classList && e.target.classList.contains('grade-card')) {
         const gi = Number(e.target.dataset.grade);
-        if (gi >= 0 && gi < 5) {
+        if (gi >= 0) {
           gradeOpen[gi] = e.target.open;
           try { localStorage.setItem(LS_GRADE_OPEN, JSON.stringify(gradeOpen)); } catch (err) { /* file:// */ }
         }
@@ -2032,6 +2064,24 @@
       if (f === 'meta.name') {
         const colorInput = $('#name-color');
         if (colorInput) colorInput.value = nameColorValue(el.value);
+      }
+      if (f.indexOf('tiers.') === 0) {
+        // Live tier summary refresh: badge label/color and the id <code> track
+        // the config row the user is typing in (no full rebuild — that would
+        // fight the focus restoration on every keystroke).
+        const gi = Number(f.split('.')[1]);
+        const gcard = document.querySelector('.grade-card[data-grade="' + gi + '"]');
+        if (gcard) {
+          const badge = gcard.querySelector('summary .grade-badge');
+          if (badge) {
+            badge.textContent = tierDisplayName(gi);
+            badge.style.color = tierColor(gi) || '';
+          }
+          const codeEl = gcard.querySelector('summary code');
+          if (codeEl && Array.isArray(state.tiers) && state.tiers[gi]) {
+            codeEl.textContent = (state.tiers[gi].id || '').trim() || ('tier' + (gi + 1));
+          }
+        }
       }
       schedulePreview();
     });
@@ -2148,6 +2198,61 @@
           arr[jj] = tmp;
           rebuildGrade(gi);
           schedulePreview();
+          break;
+        }
+        case 'add-tier': {
+          // The tier buttons live inside <summary>: without preventDefault the
+          // click would also toggle the card's open state.
+          e.preventDefault();
+          pushHistory();
+          if (!Array.isArray(state.tiers) || !state.tiers.length) {
+            // Switching the draft to the custom-tier format: seed five tiers
+            // from the current five-slot pool (lowest → highest preserved).
+            state.tiers = [0, 1, 2, 3, 4].map((i) => ({
+              id: 'grade' + (i + 1),
+              name: (DATA.gradeNames[i] || {}).zh || '',
+              color: '',
+              weight: Number(state.meta.random[i]) > 0 ? Number(state.meta.random[i]) : 1,
+              stock: '',
+            }));
+          } else if (state.tiers.length < 64) {
+            state.tiers.push({ id: 'tier' + (state.tiers.length + 1), name: '', color: '', weight: 1, stock: '' });
+            state.grades.push([]);
+          }
+          rebuildGrades();
+          schedulePreview();
+          break;
+        }
+        case 'del-tier': {
+          e.preventDefault();
+          pushHistory();
+          const gi = Number(btn.dataset.grade);
+          if (Array.isArray(state.tiers) && state.tiers.length > 1 && gi >= 0 && gi < state.tiers.length) {
+            state.tiers.splice(gi, 1);
+            state.grades.splice(gi, 1);
+            rebuildGrades();
+            schedulePreview();
+          }
+          break;
+        }
+        case 'move-tier': {
+          e.preventDefault();
+          pushHistory();
+          const gi = Number(btn.dataset.grade);
+          const dir = Number(btn.dataset.dir);
+          if (Array.isArray(state.tiers) && state.tiers.length) {
+            const jj = gi + dir;
+            if (gi >= 0 && jj >= 0 && gi < state.tiers.length && jj < state.tiers.length) {
+              const tmpT = state.tiers[gi];
+              state.tiers[gi] = state.tiers[jj];
+              state.tiers[jj] = tmpT;
+              const tmpI = state.grades[gi] || [];
+              state.grades[gi] = state.grades[jj] || [];
+              state.grades[jj] = tmpI;
+              rebuildGrades();
+              schedulePreview();
+            }
+          }
           break;
         }
         case 'add-entity': {
@@ -2381,6 +2486,12 @@
       if (parts[3] === 'enchantLevelMax' && Number(value) < Number(item.enchantLevelMin)) item.enchantLevelMin = value;
       return;
     }
+    if (parts[0] === 'tiers') {
+      const gi = Number(parts[1]);
+      if (!Array.isArray(state.tiers) || !state.tiers[gi]) return;
+      state.tiers[gi][parts[2]] = value;
+      return;
+    }
   }
 
   function onPriceInput(el) {
@@ -2458,6 +2569,7 @@
         (advanced ? '<section class="card" id="card-tacz"></section>' : '') +
         '<section class="card" id="card-drop"></section>' +
         (state.meta.type === 'terminal' ? '<section class="card" id="card-term"></section>' : '') +
+        '<section class="card" id="card-gameplay"></section>' +
         '<section class="card" id="card-grades"></section>' +
         '<div class="version-note">' + esc(t('version.note') + ': ' + v.note[I18N.lang]) + '</div>';
     if (pricesPage) {
@@ -2467,6 +2579,7 @@
       if (advanced) rebuildTaczCard();
       rebuildDrop();
       if (state.meta.type === 'terminal') rebuildTerm();
+      rebuildGameplay();
       rebuildGrades();
     }
     const compactToggle = $('#compact-toggle');
@@ -2565,18 +2678,24 @@
   function rebuildDrop() {    const el = card('card-drop');
     if (!el) return;
     const m = state.meta;
+    const custom = Array.isArray(state.tiers) && state.tiers.length > 0;
+    // The legacy random weights only exist for the five-slot format; custom
+    // tiers carry their weight inside each tier card instead.
+    const randomHtml = custom
+      ? '<p class="help">' + esc(t('drop.randomCustomNote')) + '</p>'
+      : '<div class="row">' +
+        '<label>' + esc(t('drop.random')) +
+        '<div class="random-row">' +
+        m.random.map((v, i) =>
+          '<span class="random-slot" data-help="drop.randomHelp"><b>' + esc((DATA.gradeNames[i] || {})[I18N.lang] || (DATA.gradeNames[i] || {}).zh || '') + '</b>' +
+          '<input data-f="meta.random.' + i + '" value="' + esc(v) + '" type="number" min="0" max="10000"></span>').join('') +
+        '</div>' +
+        '<span class="help">' + esc(t('drop.randomHelp')) + '</span>' +
+        '</label>' +
+        '</div>';
     el.innerHTML =
       '<h2>' + esc(t('drop.title')) + '</h2>' +
-      '<div class="row">' +
-      '<label>' + esc(t('drop.random')) +
-      '<div class="random-row">' +
-      m.random.map((v, i) =>
-        '<span class="random-slot" data-help="drop.randomHelp"><b>' + esc((DATA.gradeNames[i] || {})[I18N.lang] || (DATA.gradeNames[i] || {}).zh || '') + '</b>' +
-        '<input data-f="meta.random.' + i + '" value="' + esc(v) + '" type="number" min="0" max="10000"></span>').join('') +
-      '</div>' +
-      '<span class="help">' + esc(t('drop.randomHelp')) + '</span>' +
-      '</label>' +
-      '</div>' +
+      randomHtml +
       '<h3>' + esc(t('drop.entity')) + '</h3>' +
       '<div id="entity-rows"></div>' +
       '<button class="btn small" data-action="add-entity">' + esc(t('drop.entityAdd')) + '</button>';
@@ -2610,9 +2729,76 @@
       field('term.maxPer', 'term.maxPerHelp', input('meta.maxPerPlayer', m.maxPerPlayer, '-1', false)) +
       field('term.cooldown', 'term.cooldownHelp', input('meta.cooldownSeconds', m.cooldownSeconds, '0', false)) +
       field('term.permission', 'term.permissionHelp', input('meta.permission', m.permission, 'csgobox.open', false)) +
-      field('term.pityGrade', 'term.pityGradeHelp', input('meta.pityGrade', m.pityGrade, '', false)) +
-      field('term.pityEvery', 'term.pityEveryHelp', input('meta.pityEvery', m.pityEvery, '20', false)) +
       '</div>';
+  }
+
+  /** v2.x gameplay card (2.0.4 baseline): pity (both box types — it was
+   *  wrongly terminal-only before), toggles, multi-keys, wear range, bonus,
+   *  announce threshold, availability window, open cost, sound, upgrade rule
+   *  and (terminal-only) the negotiation parameters. */
+  function rebuildGameplay() {
+    const el = card('card-gameplay');
+    if (!el) return;
+    const m = state.meta;
+    const isTerm = state.meta.type === 'terminal';
+    let html = '<h2>' + esc(t('gp.title')) + '</h2>';
+
+    // pity (v2.0.1 + v2.x first_open) — applies to csbox and terminal alike
+    html += '<h3>' + esc(t('gp.pityTitle')) + '</h3><div class="grid2">' +
+      field('gp.pityGrade', 'gp.pityGradeHelp', input('meta.pityGrade', m.pityGrade, 'classified', false)) +
+      field('gp.pityEvery', 'gp.pityEveryHelp', input('meta.pityEvery', m.pityEvery, '20', false)) +
+      '</div>' +
+      '<div class="row"><label class="chk" data-help="gp.pityFirstHelp">' +
+      '<input type="checkbox" data-f="meta.pityFirst" data-kind="checkbox"' + (m.pityFirst ? ' checked' : '') + '> ' +
+      esc(t('gp.pityFirst')) + '</label></div>';
+
+    // toggles
+    html += '<h3>' + esc(t('gp.togglesTitle')) + '</h3><div class="split-row">' +
+      '<label class="chk" data-help="gp.hideOddsHelp">' +
+      '<input type="checkbox" data-f="meta.hideOdds" data-kind="checkbox"' + (m.hideOdds ? ' checked' : '') + '> ' +
+      esc(t('gp.hideOdds')) + '</label>' +
+      '<label class="chk" data-help="gp.allowBulkHelp">' +
+      '<input type="checkbox" data-f="meta.allowBulk" data-kind="checkbox"' + (m.allowBulk !== false ? ' checked' : '') + '> ' +
+      esc(t('gp.allowBulk')) + '</label>' +
+      '</div>';
+
+    // keys (crates only — terminals have no key gate)
+    if (!isTerm) {
+      html += '<div class="row"><label class="grow" data-help="gp.keysHelp">' + esc(t('gp.keys')) +
+        '<input data-f="meta.keysText" value="' + esc(m.keysText) + '" placeholder="csgobox:csgo_key1, csgobox:csgo_key2" class="grow"></label></div>';
+    }
+
+    // wear / bonus / announce / window / cost / sound / upgrade
+    html += '<h3>' + esc(t('gp.ruleTitle')) + '</h3><div class="grid2">' +
+      field('gp.wearMin', 'gp.wearHelp', '<span class="name-color-row">' +
+        '<input data-f="meta.wearMin" value="' + esc(m.wearMin) + '" type="number" min="0" max="1" step="0.01" placeholder="0" class="grow">' +
+        '<input data-f="meta.wearMax" value="' + esc(m.wearMax) + '" type="number" min="0" max="1" step="0.01" placeholder="1" class="grow">' +
+        '</span>') +
+      field('gp.bonusChance', 'gp.bonusHelp', '<span class="name-color-row">' +
+        '<input data-f="meta.bonusChance" value="' + esc(m.bonusChance) + '" type="number" min="0" max="1" step="0.01" placeholder="0.1" class="grow">' +
+        '<select data-f="meta.bonusMode" data-help="gp.bonusHelp">' +
+        '<option value="double"' + (m.bonusMode !== 'box' ? ' selected' : '') + '>' + esc(t('gp.bonusDouble')) + '</option>' +
+        '<option value="box"' + (m.bonusMode === 'box' ? ' selected' : '') + '>' + esc(t('gp.bonusBox')) + '</option>' +
+        '</select></span>') +
+      field('gp.announce', 'gp.announceHelp', input('meta.announceText', m.announceText, 'classified', false)) +
+      field('gp.openCost', 'gp.openCostHelp', input('meta.openCost', m.openCost, '0', false)) +
+      field('gp.availableFrom', 'gp.availableHelp', input('meta.availableFrom', m.availableFrom, '2026-12-24T00:00:00+08:00', false)) +
+      field('gp.availableUntil', 'gp.availableHelp', input('meta.availableUntil', m.availableUntil, '2027-01-06T23:59:59+08:00', false)) +
+      field('gp.sound', 'gp.soundHelp', input('meta.sound', m.sound, 'minecraft:entity.player.levelup', false)) +
+      field('gp.upTarget', 'gp.upTargetHelp', input('meta.upTarget', m.upTarget, 'rare_box', false)) +
+      field('gp.upConsume', 'gp.upConsumeHelp', input('meta.upConsume', m.upConsume, '1', false)) +
+      '</div>';
+
+    // negotiation (terminal-only parameters)
+    if (isTerm) {
+      html += '<h3>' + esc(t('gp.negTitle')) + '</h3><div class="grid2">' +
+        field('gp.negRounds', 'gp.negRoundsHelp', input('meta.negRounds', m.negRounds, '5', false)) +
+        field('gp.negTimeout', 'gp.negTimeoutHelp', input('meta.negTimeout', m.negTimeout, '180', false)) +
+        field('gp.negBias', 'gp.negBiasHelp', input('meta.negBias', m.negBias, '0', false)) +
+        '</div>';
+    }
+
+    el.innerHTML = html; /* esc-exempt: field()/input()/select() and the checkbox rows escape every dynamic part above */
   }
 
   /* Args: (labelKey, helpKey, inputHtml). helpKey is an i18n key (may be '');
@@ -2642,31 +2828,63 @@
   function rebuildGrades() {
     const el = card('card-grades');
     if (!el) return;
-    const v = version();
-    el.innerHTML =
+    const custom = Array.isArray(state.tiers) && state.tiers.length > 0;
+    const count = custom ? state.tiers.length : 5;
+    let head =
       '<div class="card-head">' +
       '<h2>' + esc(t('grade.title')) + '</h2>' +
       '<div class="head-actions">' +
       '<button class="btn small" data-action="expand-all">' + esc(t('grade.expandAll')) + '</button>' +
       '<button class="btn small" data-action="collapse-all">' + esc(t('grade.collapseAll')) + '</button>' +
-      '</div></div>' +
-      '<div class="grade-list">' +
-      DATA.gradeNames.map((g, gi) => {
-        const count = state.grades[gi].length;
-        return '<details class="grade-card" data-grade="' + gi + '"' + (gradeOpen[gi] ? ' open' : '') + '>' +
-          '<summary>' +
-          '<span class="grade-badge g' + (gi + 1) + '">' + esc(g[I18N.lang]) + '</span>' +
-          '<code>grade' + (gi + 1) + '</code>' +
-          '<span class="muted">' + esc(t('grade.priceHint')) + '</span>' +
-          '<span class="count-badge">' + count + '</span>' +
-          '</summary>' +
-          '<div class="grade-items" id="grade-items-' + gi + '"></div>' +
-          '<button class="btn small accent" data-action="add-item" data-grade="' + gi + '">' + esc(t('grade.add')) + '</button>' +
-          '<button class="btn small" data-action="paste-items" data-grade="' + gi + '">' + esc(t('item.pasteItems')) + '</button>' +
-          '</details>';
-      }).join('') +
-      '</div>';
-    for (let gi = 0; gi < 5; gi++) rebuildGrade(gi);
+      (custom
+        ? '<button class="btn small accent" data-action="add-tier">' + esc(t('grade.addTier')) + '</button>'
+        : '<button class="btn small" data-action="add-tier">' + esc(t('grade.switchCustom')) + '</button>') +
+      '</div></div>';
+    if (custom) {
+      head += '<p class="help">' + esc(t('grade.customHelp')) + '</p>';
+    }
+    let list = '<div class="grade-list">';
+    for (let gi = 0; gi < count; gi++) {
+      const items = state.grades[gi] || [];
+      const tier = custom ? (state.tiers[gi] || {}) : null;
+      const badgeClass = custom ? 'grade-badge' : 'grade-badge g' + (gi + 1);
+      const badgeLabel = custom ? tierDisplayName(gi) : (DATA.gradeNames[gi] || {})[I18N.lang];
+      list += '<details class="grade-card" data-grade="' + gi + '"' + (gradeOpen[gi] ? ' open' : '') + '>' +
+        '<summary>' +
+        '<span class="' + badgeClass + '"' + tierColorStyle(gi) + '>' + esc(badgeLabel) + '</span>' +
+        (custom
+          ? '<code>' + esc(tier.id || ('tier' + (gi + 1))) + '</code>' +
+            '<span class="tier-btns">' +
+            '<button class="btn small" data-action="move-tier" data-grade="' + gi + '" data-dir="-1" data-help="grade.tierUp" aria-label="' + esc(t('grade.tierUp')) + '">↑</button>' +
+            '<button class="btn small" data-action="move-tier" data-grade="' + gi + '" data-dir="1" data-help="grade.tierDown" aria-label="' + esc(t('grade.tierDown')) + '">↓</button>' +
+            '<button class="btn small danger" data-action="del-tier" data-grade="' + gi + '" data-help="grade.tierDel" aria-label="' + esc(t('grade.tierDel')) + '">✕</button>' +
+            '</span>'
+          : '<code>grade' + (gi + 1) + '</code>') +
+        '<span class="muted">' + esc(t('grade.priceHint')) + '</span>' +
+        '<span class="count-badge">' + items.length + '</span>' +
+        '</summary>';
+      if (custom) {
+        list += '<div class="tier-config">' +
+          '<label class="mini" data-help="grade.tierIdHelp">' + esc(t('grade.tierId')) +
+          '<input data-f="tiers.' + gi + '.id" value="' + esc(tier.id || '') + '" placeholder="consumer" class="w14"></label>' +
+          '<label class="mini" data-help="grade.tierNameHelp">' + esc(t('grade.tierName')) +
+          '<input data-f="tiers.' + gi + '.name" value="' + esc(tier.name || '') + '" placeholder="" class="w14"></label>' +
+          '<label class="mini" data-help="grade.tierColorHelp">' + esc(t('grade.tierColor')) +
+          '<input data-f="tiers.' + gi + '.color" value="' + esc(tier.color || '') + '" placeholder="#AA00AA" class="w9"></label>' +
+          '<label class="mini" data-help="grade.tierWeightHelp">' + esc(t('grade.tierWeight')) +
+          '<input data-f="tiers.' + gi + '.weight" value="' + esc(tier.weight === undefined ? 1 : tier.weight) + '" type="number" min="0" max="10000" class="w7"></label>' +
+          '<label class="mini" data-help="grade.tierStockHelp">' + esc(t('grade.tierStock')) +
+          '<input data-f="tiers.' + gi + '.stock" value="' + esc(tier.stock === undefined || tier.stock === '' ? '' : tier.stock) + '" type="number" min="0" placeholder="∞" class="w7"></label>' +
+          '</div>';
+      }
+      list += '<div class="grade-items" id="grade-items-' + gi + '"></div>' +
+        '<button class="btn small accent" data-action="add-item" data-grade="' + gi + '">' + esc(t('grade.add')) + '</button>' +
+        '<button class="btn small" data-action="paste-items" data-grade="' + gi + '">' + esc(t('item.pasteItems')) + '</button>' +
+        '</details>';
+    }
+    list += '</div>';
+    el.innerHTML = head + list; /* esc-exempt: tier badge/inputs and every label above pass through esc() / tierColorStyle() */
+    for (let gi = 0; gi < count; gi++) rebuildGrade(gi);
   }
 
   /** Rebuild the DOM, then restore focus/caret to the element the user was
@@ -2855,8 +3073,10 @@
           : String(Math.ceil(parsed.min * 0.9)) + '–' + String(Math.ceil(parsed.max * 0.9));
       }
       let status = priced ? t('prices.state.priced') : (r.key.includes('#') && !taczVisible() ? t('prices.variantUnsupported') : t('prices.state.default'));
+      const isCustom = Array.isArray(state.tiers) && state.tiers.length > 0;
       const gradeTag = r.grades.size
-        ? [...r.grades].sort((a, b) => a - b).map((g) => 'g' + g).join(',')
+        ? [...r.grades].sort((a, b) => a - b).map((g) =>
+            isCustom ? esc(((state.tiers[g - 1] || {}).id || ('g' + g))) : 'g' + g).join(',')
         : '<span class="extra-tag">' + esc(t('prices.state.extra')) + '</span>';
       const removable = r.row.pinned && !r.grades.size;
       return '<tr data-price-key="' + esc(r.key) + '">' +
@@ -2870,7 +3090,13 @@
     // EV / value panel: per-grade chance and expected value per open, priced
     // at the midpoint (ranges) — mirrors the recycle column's 90% rule.
     const en = NS.boxEconomy(state);
-    const gradeLabel = (gi) => ((DATA.gradeNames[gi] || {})[I18N.lang] || (DATA.gradeNames[gi] || {}).zh || ('grade' + (gi + 1)));
+    const gradeLabel = (gi) => {
+      if (Array.isArray(state.tiers) && state.tiers.length) {
+        const t = state.tiers[gi] || {};
+        return (t.name || '').trim() || t.id || ('tier' + (gi + 1));
+      }
+      return (DATA.gradeNames[gi] || {})[I18N.lang] || (DATA.gradeNames[gi] || {}).zh || ('grade' + (gi + 1));
+    };
     const pct = (x) => (x * 100).toFixed(1) + '%';
     const econRows = en.grades.map((gr) =>
       '<tr><td>' + esc(gradeLabel(gr.gi)) + '</td>' +
@@ -2944,7 +3170,7 @@
         if (raw) colState = JSON.parse(raw) || {};
       } catch (e) { /* defaults */ }
       // first-run defaults: advanced / conditional sections start collapsed
-      const defaults = { drop: true, term: true, meta: false, tacz: false, grades: false, prices: false };
+      const defaults = { drop: true, term: true, gameplay: true, meta: false, tacz: false, grades: false, prices: false };
       for (const k of Object.keys(defaults)) {
         if (colState[k] === undefined) colState[k] = defaults[k];
       }
@@ -2963,7 +3189,7 @@
   /** Wraps each section card into a clickable header + collapsible body at
    * runtime. Idempotent: re-wraps when a rebuild replaces the card HTML. */
   function decorateCollapsibleCards() {
-    const ids = ['meta', 'tacz', 'drop', 'term', 'grades', 'prices'];
+    const ids = ['meta', 'tacz', 'drop', 'term', 'gameplay', 'grades', 'prices'];
     for (const id of ids) {
       const sec = document.getElementById('card-' + id);
       if (!sec) continue;
@@ -3004,7 +3230,7 @@
 
   function locateIssue(path) {
     let el = null;
-    const gradeMatch = /^grade([1-5])\[(\d+)\](?:\.([\w-]+))?$/.exec(path);
+    const gradeMatch = /^grade([1-9][0-9]*)\[(\d+)\](?:\.([\w-]+))?$/.exec(path);
     if (gradeMatch) {
       const gi = Number(gradeMatch[1]) - 1;
       const ii = Number(gradeMatch[2]) - 1;
@@ -3017,6 +3243,10 @@
     } else if (path === 'grades') {
       const first = document.querySelector('.grade-card');
       el = first || null;
+    } else if (path === 'tiers') {
+      el = document.querySelector('.grade-card') || document.getElementById('card-grades');
+    } else if (path === 'tiers.weight') {
+      el = document.querySelector('[data-f="tiers.0.weight"]') || document.querySelector('.grade-card');
     } else if (path.indexOf('prices.') === 0) {
       const key = path.slice('prices.'.length);
       el = document.querySelector('#card-prices tr[data-price-key="' + CSS.escape(key) + '"]');
@@ -3029,6 +3259,26 @@
       el = document.querySelector('[data-f="meta.entity.0.id"]');
     } else if (path === 'meta.pity') {
       el = document.querySelector('[data-f="meta.pityGrade"]');
+    } else if (path === 'meta.pityFirst') {
+      el = document.querySelector('[data-f="meta.pityFirst"]');
+    } else if (path === 'meta.keys') {
+      el = document.querySelector('[data-f="meta.keysText"]');
+    } else if (path === 'meta.wear') {
+      el = document.querySelector('[data-f="meta.wearMin"]');
+    } else if (path === 'meta.bonus') {
+      el = document.querySelector('[data-f="meta.bonusChance"]');
+    } else if (path === 'meta.announce_above') {
+      el = document.querySelector('[data-f="meta.announceText"]');
+    } else if (path === 'meta.available') {
+      el = document.querySelector('[data-f="meta.availableFrom"]');
+    } else if (path === 'meta.open_cost') {
+      el = document.querySelector('[data-f="meta.openCost"]');
+    } else if (path === 'meta.sound') {
+      el = document.querySelector('[data-f="meta.sound"]');
+    } else if (path === 'meta.upgrade') {
+      el = document.querySelector('[data-f="meta.upTarget"]');
+    } else if (path === 'meta.negotiation') {
+      el = document.querySelector('[data-f="meta.negRounds"]');
     } else {
       el = document.querySelector('[data-f="' + CSS.escape(path) + '"]');
     }
@@ -3181,7 +3431,12 @@
     let evTotal = 0;
     let recycleTotal = 0;
     const rows = grades.map((g) => {
-      const gradeName = esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
+      const gradeName = g.tierName != null
+        ? esc(g.tierName)
+        : esc((DATA.gradeNames[g.gi] || {})[I18N.lang] || (DATA.gradeNames[g.gi] || {}).zh || 'grade' + (g.gi + 1));
+      const badgeStyle = g.tierName != null && g.tierColor
+        ? ' style="color:' + esc(g.tierColor) + '"'
+        : '';
       let gradeEv = 0;
       const gradeRows = g.items.length
         ? g.items.map((it) => {
@@ -3203,7 +3458,7 @@
       evTotal += g.gradeProb * gradeEv;
       recycleTotal += g.gradeProb * gradeEv * 0.9;
       return '<tr class="prob-grade"' + rowStyle() + '>' +
-        '<td><b>' + gradeName + '</b></td>' +
+        '<td><b' + badgeStyle + '>' + gradeName + '</b></td>' +
         '<td>' + esc(String(g.weight)) + '</td>' +
         '<td>' + esc(fmtProb(g.gradeProb)) + '</td>' +
         '<td class="prob-ev">' + (gradeEv > 0 ? esc(fmtMid(Math.round(gradeEv * 10) / 10)) : '—') + '</td>' +
@@ -3322,7 +3577,7 @@
   let simRunning = false;
 
   function simCurrentConfigKey() {
-    try { return JSON.stringify([state.grades, state.meta.random]); } catch (e) { return ''; }
+    try { return JSON.stringify([state.grades, state.tiers, state.meta.random]); } catch (e) { return ''; }
   }
 
   function simEnsureStats() {
@@ -3331,7 +3586,7 @@
       const { grades } = NS.computeProbabilities(state);
       simStats = {
         opened: 0,
-        gradeCounts: [0, 0, 0, 0, 0],
+        gradeCounts: grades.map(() => 0),
         items: [],
         gradeTheory: grades.map((g) => g.gradeProb),
         configKey,
@@ -3344,7 +3599,7 @@
   function simApplyResult(res) {
     const st = simEnsureStats();
     st.opened += res.opened;
-    for (let i = 0; i < 5; i++) st.gradeCounts[i] += res.gradeCounts[i];
+    for (let i = 0; i < st.gradeCounts.length; i++) st.gradeCounts[i] += res.gradeCounts[i] || 0;
     const map = new Map(st.items.map((e) => [e.gi + ':' + e.idx, e]));
     for (const it of res.items) {
       const key = it.gi + ':' + it.idx;
@@ -3403,7 +3658,9 @@
     strip.innerHTML = cells.map((c, i) => {
       const gi = c ? c.gi : 0;
       const label = c ? (c.note || c.value) : '';
-      return '<div class="sim-cell g' + (gi + 1) + (i === SIM_WIN_IDX ? ' sim-win" data-win="1"' : '"') + '>' +
+      const customCls = (Array.isArray(state.tiers) && state.tiers.length) ? '' : ' g' + (gi + 1);
+      const colorStyle = c ? tierColorStyle(gi) : '';
+      return '<div class="sim-cell' + customCls + (i === SIM_WIN_IDX ? ' sim-win" data-win="1"' : '"') + colorStyle + '>' +
         '<span>' + esc(label) + '</span></div>';
     }).join('');
     const offset = SIM_WIN_IDX * SIM_CELL_W + SIM_CELL_W / 2 - wrap.clientWidth / 2;
@@ -3464,10 +3721,11 @@
         '<th>' + esc(t('sim.theory')) + '</th>' +
         '</tr></thead><tbody>';
       const pct = (hits) => esc(fmtProb(st.opened ? hits / st.opened : 0));
-      for (let gi = 0; gi < 5; gi++) {
+      for (let gi = 0; gi < st.gradeCounts.length; gi++) {
         if (!st.gradeCounts[gi] && !(st.gradeTheory[gi] > 0)) continue;
-        const gname = esc((DATA.gradeNames[gi] || {})[I18N.lang] || (DATA.gradeNames[gi] || {}).zh || 'grade' + (gi + 1));
-        html += '<tr class="prob-grade"><td colspan="4"><span class="grade-badge g' + (gi + 1) + '">' + gname + '</span></td></tr>';
+        const gname = esc(tierDisplayName(gi));
+        const badgeCls = (Array.isArray(state.tiers) && state.tiers.length) ? 'grade-badge' : 'grade-badge g' + (gi + 1);
+        html += '<tr class="prob-grade"><td colspan="4"><span class="' + badgeCls + '"' + tierColorStyle(gi) + '>' + gname + '</span></td></tr>';
         const items = st.items.filter((it) => it.gi === gi).sort((a, b) => b.hits - a.hits);
         for (const it of items) {
           html += '<tr class="prob-item">' +

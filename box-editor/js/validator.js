@@ -48,6 +48,12 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const version = DATA.versions.find((v) => v.key === versionKey) || DATA.versions[0];
     const taczOn = state.taczEnabled == null ? version.taczVariants : !!state.taczEnabled;
     const meta = state.meta;
+    const customTiers = Array.isArray(state.tiers) && state.tiers.length > 0;
+    const tierCount = customTiers ? state.tiers.length : 5;
+    const tierIds = customTiers
+      ? state.tiers.map((t) => ((t || {}).id || '') + '').map((s) => s.trim()).filter(Boolean)
+      : null;
+    const PITY_GRADES = ['consumer', 'industrial', 'mil_spec', 'restricted', 'classified'];
 
     /* ------- top-level ------- */
     const fileName = (state.fileName || '').trim();
@@ -82,8 +88,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const pityGrade = (meta.pityGrade || '').trim();
     const pityEveryStr = String(meta.pityEvery ?? '').trim();
     if (pityGrade || pityEveryStr !== '') {
-      const PITY_GRADES = ['consumer', 'industrial', 'mil_spec', 'restricted', 'classified'];
-      const gradeOk = PITY_GRADES.includes(pityGrade);
+      // Custom tiers resolve the pity grade against their own tier ids; the
+      // legacy format keeps the canonical five-id mapping.
+      const gradeOk = customTiers ? tierIds.includes(pityGrade) : PITY_GRADES.includes(pityGrade);
       if (!gradeOk) add(issues, 'error', 'meta.pityGrade', 'v.badPityGrade');
       if (!intOk(meta.pityEvery, 2)) add(issues, 'error', 'meta.pityEvery', 'v.badPityEvery');
       // A half-filled pity is DROPPED silently by buildBox (both fields are
@@ -93,19 +100,118 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       }
     }
 
-    /* ------- random ------- */
-    const rn = meta.random.map((v) => (v === '' || v === null ? null : Number(v)));
-    const anyFilled = rn.some((v) => v !== null);
-    if (anyFilled) {
-      let bad = false;
-      if (rn.length !== 5) bad = true;
-      else for (const v of rn) {
-        if (v === null || !Number.isInteger(v) || v < 0 || v > 10000) { bad = true; break; }
+    /* ------- v2.x gameplay fields (2.0.4 baseline) ------- */
+    const keys = (meta.keysText || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (keys.length > 8) add(issues, 'warn', 'meta.keys', 'v.tooManyKeys', { n: keys.length });
+    if (keys.some((k) => !ID_RE.test(k))) add(issues, 'error', 'meta.keys', 'v.badKeyId');
+
+    if (meta.wearMin !== '' && meta.wearMin != null && !numOk(meta.wearMin, 0, 1)) {
+      add(issues, 'error', 'meta.wear', 'v.badWear');
+    } else if (meta.wearMax !== '' && meta.wearMax != null && !numOk(meta.wearMax, 0, 1)) {
+      add(issues, 'error', 'meta.wear', 'v.badWear');
+    } else if (meta.wearMin !== '' && meta.wearMin != null && meta.wearMax !== '' && meta.wearMax != null
+        && Number(meta.wearMax) < Number(meta.wearMin)) {
+      // Export collapses max onto min (runtime rule) — flag it so the author
+      // does not discover a narrowed range only in-game.
+      add(issues, 'error', 'meta.wear', 'v.badWearRange');
+    }
+
+    if (meta.bonusChance !== '' && meta.bonusChance != null && !numOk(meta.bonusChance, 0, 1)) {
+      add(issues, 'error', 'meta.bonus', 'v.badBonus');
+    }
+
+    const ann = (meta.announceText || '').trim();
+    if (ann !== '') {
+      if (/^-?\d+$/.test(ann)) {
+        if (Number(ann) < 0) add(issues, 'error', 'meta.announce_above', 'v.badAnnounce');
+        else if (Number(ann) === 0) add(issues, 'info', 'meta.announce_above', 'v.announceOff');
+        else if (customTiers && Number(ann) > tierCount) {
+          add(issues, 'warn', 'meta.announce_above', 'v.announceLevelHigh', { level: ann, n: tierCount });
+        }
+      } else if (!(customTiers ? tierIds.includes(ann) : PITY_GRADES.includes(ann))) {
+        add(issues, 'error', 'meta.announce_above', 'v.badAnnounceId', { id: ann });
       }
-      if (bad) add(issues, 'error', 'meta.random', 'v.badRandom');
-      else if (rn.every((v) => v !== null && v <= 0)) add(issues, 'info', 'meta.random', 'v.randomDefault');
+    }
+
+    // The runtime parses ISO-8601 via OffsetDateTime.parse then Instant.parse —
+    // both REQUIRE a zone designator (Z or ±HH:MM). A local datetime without
+    // one is a load error and the field is ignored.
+    const ISO_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|z|[+-]\d{2}:\d{2})$/;
+    const iso = (v) => {
+      const s = String(v || '').trim();
+      return s ? s : null;
+    };
+    const fromIso = iso(meta.availableFrom);
+    const untilIso = iso(meta.availableUntil);
+    if ((fromIso && !ISO_RE.test(fromIso)) || (untilIso && !ISO_RE.test(untilIso))) {
+      add(issues, 'error', 'meta.available', 'v.badIso');
+    } else if (fromIso && untilIso && Date.parse(fromIso) > Date.parse(untilIso)) {
+      add(issues, 'warn', 'meta.available', 'v.windowReversed');
+    }
+
+    if (!intOk(meta.openCost, 0)) add(issues, 'error', 'meta.open_cost', 'v.badOpenCost');
+
+    const soundId = (meta.sound || '').trim();
+    if (soundId && !ID_RE.test(soundId)) add(issues, 'warn', 'meta.sound', 'v.badSoundId');
+
+    const upTarget = (meta.upTarget || '').trim();
+    if (upTarget) {
+      if (!FILE_RE.test(upTarget)) add(issues, 'warn', 'meta.upgrade', 'v.badUpgradeTarget', { id: upTarget });
+      if (meta.upConsume !== '' && meta.upConsume != null && !intOk(meta.upConsume, 1)) {
+        add(issues, 'error', 'meta.upgrade', 'v.badUpgradeConsume');
+      }
+    }
+
+    if (meta.negRounds !== '' && meta.negRounds != null) {
+      if (!intOk(meta.negRounds, 0)) add(issues, 'error', 'meta.negotiation', 'v.badNegRounds');
+      else if (Number(meta.negRounds) > 5) add(issues, 'warn', 'meta.negotiation', 'v.negRoundsClamped');
+    }
+    if (!intOk(meta.negTimeout, 0)) add(issues, 'error', 'meta.negotiation', 'v.badNegTimeout');
+    if (meta.negBias !== '' && meta.negBias != null && !numOk(meta.negBias, -0.9, 9)) {
+      add(issues, 'error', 'meta.negotiation', 'v.badNegBias');
+    }
+
+    /* ------- custom tiers (v2.x "grades" array) ------- */
+    if (customTiers) {
+      if (state.tiers.length > 64) add(issues, 'error', 'tiers', 'v.tooManyTiers', { n: state.tiers.length });
+      const seen = new Set();
+      state.tiers.forEach((t, gi) => {
+        const base = 'tiers.' + gi;
+        const id = ((t || {}).id || '') + '';
+        const idTrim = id.trim();
+        if (!idTrim) add(issues, 'error', base + '.id', 'v.tierIdRequired', { n: gi + 1 });
+        else if (seen.has(idTrim)) add(issues, 'error', base + '.id', 'v.tierDup', { id: idTrim });
+        else seen.add(idTrim);
+        if (!intOk(t.weight, 0, 10000)) add(issues, 'error', base + '.weight', 'v.tierWeight');
+        const color = String((t || {}).color || '').trim();
+        if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) add(issues, 'error', base + '.color', 'v.tierColor');
+        if (t.stock !== '' && t.stock !== null && t.stock !== undefined && !intOk(t.stock, 0)) {
+          add(issues, 'error', base + '.stock', 'v.tierStock');
+        }
+      });
+    }
+
+    /* ------- random (legacy five-slot weights only) ------- */
+    if (customTiers) {
+      // The custom tier format replaces random/grade1..5 entirely — leftover
+      // legacy weights are ignored by the loader.
+      if (meta.random.some((v) => v !== '' && v !== null && Number(v) > 0)) {
+        add(issues, 'info', 'meta.random', 'v.randomIgnoredCustom');
+      }
     } else {
-      add(issues, 'info', 'meta.random', 'v.randomDefault');
+      const rn = meta.random.map((v) => (v === '' || v === null ? null : Number(v)));
+      const anyFilled = rn.some((v) => v !== null);
+      if (anyFilled) {
+        let bad = false;
+        if (rn.length !== 5) bad = true;
+        else for (const v of rn) {
+          if (v === null || !Number.isInteger(v) || v < 0 || v > 10000) { bad = true; break; }
+        }
+        if (bad) add(issues, 'error', 'meta.random', 'v.badRandom');
+        else if (rn.every((v) => v !== null && v <= 0)) add(issues, 'info', 'meta.random', 'v.randomDefault');
+      } else {
+        add(issues, 'info', 'meta.random', 'v.randomDefault');
+      }
     }
 
     /* ------- requires ------- */
@@ -138,9 +244,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       }
     }
 
-    /* ------- grades ------- */
+    /* ------- grades (items; custom tiers iterate their own count) ------- */
     let gradeFilledCount = 0;
-    for (let gi = 0; gi < 5; gi++) {
+    for (let gi = 0; gi < tierCount; gi++) {
       const items = state.grades[gi] || [];
       const gradeKey = 'grade' + (gi + 1);
       const hasContent = items.some((it) => (it.value || '').trim());
@@ -174,10 +280,11 @@ window.CSBoxEdit = window.CSBoxEdit || {};
         // weight
         if (!intOk(it.weight, 0)) add(issues, 'error', path + '.weight', 'v.badWeight');
 
-        // enchant
+        // enchant — custom mode with an empty id is legal: id-less {level}
+        // means a random applicable enchantment in the level window (runtime
+        // applyRandomEnchant). Only the level fields need validating.
         if (it.enchantMode === 'custom') {
-          if (!(it.enchantId || '').trim()) add(issues, 'warn', path + '.enchant', 'v.badEnchant');
-          else if (it.enchantLevelMode === 'fixed' && !intOk(it.enchantLevel, 1)) {
+          if (it.enchantLevelMode === 'fixed' && !intOk(it.enchantLevel, 1)) {
             add(issues, 'error', path + '.enchant', 'v.badEnchantLevel');
           } else if (it.enchantLevelMode === 'range') {
             const ok = intOk(it.enchantLevelMin, 1) && intOk(it.enchantLevelMax, 1);
@@ -212,7 +319,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       });
     }
     if (gradeFilledCount === 0) {
-      add(issues, 'info', 'grades', 'v.allGradesEmpty');
+      add(issues, 'info', customTiers ? 'tiers' : 'grades', 'v.allGradesEmpty');
     }
 
     /* ------- price table ------- */

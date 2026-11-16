@@ -849,3 +849,137 @@ test('validator: variant price key checks the base id only', () => {
   assert.equal(issues.filter((i) => i.key.startsWith('v.unknown')).length, 0);
   delete NS.gameRegistry;
 });
+
+/* ---------- v2.0.4 gameplay fields: round-trip + probability ---------- */
+
+const GAMEPLAY_DOC = {
+  type: 'csbox',
+  name: 'G',
+  key: 'csgobox:csgo_key0',
+  keys: ['csgobox:csgo_key1', 'csgobox:csgo_key2'],
+  drop: 0.05,
+  hide_odds: false,
+  allow_bulk: true,
+  wear: [0.15, 0.55],
+  bonus: { chance: 0.25, mode: 'box' },
+  announce_above: 'classified',
+  available_from: '2026-12-24T00:00:00+08:00',
+  available_until: '2027-01-06T23:59:59+08:00',
+  open_cost: 15,
+  sound: 'minecraft:entity.player.levelup',
+  upgrade: { target: 'rare_box', consume: 3 },
+  negotiation: { rounds: 3, timeout_minutes: 90, price_bias: -0.5 },
+  pity: { grade: 'classified', every: 10, first_open: true },
+  grade1: [{ id: 'minecraft:iron_ingot' }],
+  grade5: [{ id: 'minecraft:diamond' }],
+};
+
+test('v2.0.4 gameplay fields round-trip losslessly (legacy five-slot)', () => {
+  const st = NS.boxToState(JSON.parse(JSON.stringify(GAMEPLAY_DOC)), 'gp').state;
+  const out = NS.buildBox(st);
+  assert.deepEqual(out, GAMEPLAY_DOC);
+});
+
+test('v2.0.4 gameplay fields round-trip losslessly (custom tiers)', () => {
+  const doc = JSON.parse(JSON.stringify(GAMEPLAY_DOC));
+  delete doc.grade1; delete doc.grade5; delete doc.random;
+  doc.grades = [
+    { id: 'common', name: '普通', color: '#FFFFFF', weight: 10, items: [{ id: 'minecraft:iron_ingot' }] },
+    { id: 'rare', name: '稀有', color: '#55FFFF', weight: 5, stock: 7, items: [{ id: 'minecraft:diamond', enchant: { level: [3, 5] } }] },
+  ];
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'gp').state;
+  const out = NS.buildBox(st);
+  assert.deepEqual(out, doc);
+});
+
+test('id-less enchant {level:[min,max]} survives the round-trip (random applicable enchant)', () => {
+  const doc = { type: 'csbox', name: 'T', grade1: [{ id: 'minecraft:enchanted_book', enchant: { level: [3, 5] } }] };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'en').state;
+  assert.equal(st.grades[0][0].enchantMode, 'custom');
+  assert.equal(st.grades[0][0].enchantId, '');
+  assert.deepEqual(NS.buildBox(st).grade1[0].enchant, { level: [3, 5] });
+});
+
+test('explicit hide_odds:false / allow_bulk:true survive the round-trip', () => {
+  const doc = { type: 'csbox', name: 'T', hide_odds: false, allow_bulk: true, grade1: [{ id: 'minecraft:stone' }] };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'ex').state;
+  const out = NS.buildBox(st);
+  assert.equal(out.hide_odds, false);
+  assert.equal(out.allow_bulk, true);
+});
+
+test('unset hide_odds / allow_bulk stay omitted in compact output', () => {
+  const doc = { type: 'csbox', name: 'T', grade1: [{ id: 'minecraft:stone' }] };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'ex').state;
+  const out = NS.buildBox(st);
+  assert.equal('hide_odds' in out, false);
+  assert.equal('allow_bulk' in out, false);
+});
+
+test('announce_above numeric level round-trips as a number', () => {
+  const doc = { type: 'csbox', name: 'T', announce_above: 3, grade1: [{ id: 'minecraft:stone' }] };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'an').state;
+  assert.equal(NS.buildBox(st).announce_above, 3);
+});
+
+test('custom tier weights drive computeProbabilities', () => {
+  const doc = {
+    type: 'csbox', name: 'T',
+    grades: [
+      { id: 'common', weight: 6, items: [{ id: 'minecraft:iron_ingot' }] },
+      { id: 'rare', weight: 2, items: [{ id: 'minecraft:diamond' }] },
+      { id: 'epic', weight: 2, items: [{ id: 'minecraft:elytra' }] },
+    ],
+  };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'cw').state;
+  const probs = NS.computeProbabilities(st);
+  assert.equal(probs.custom, true);
+  assert.equal(probs.grades.length, 3);
+  assert.deepEqual(probs.grades.map((g) => g.tierId), ['common', 'rare', 'epic']);
+  assert.ok(Math.abs(probs.grades[0].gradeProb - 0.6) < 1e-9);
+  assert.ok(Math.abs(probs.grades[2].gradeProb - 0.2) < 1e-9);
+});
+
+test('custom tiers with zero weight never roll (openable still true)', () => {
+  const doc = {
+    type: 'csbox', name: 'T',
+    grades: [
+      { id: 'common', weight: 5, items: [{ id: 'minecraft:iron_ingot' }] },
+      { id: 'dead', weight: 0, items: [{ id: 'minecraft:diamond' }] },
+    ],
+  };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'zw').state;
+  const probs = NS.computeProbabilities(st);
+  assert.equal(probs.openable, true);
+  assert.equal(probs.grades[1].gradeProb, 0);
+  const sim = NS.simulateOpens(st, 200, () => 0.99);
+  assert.equal(sim.gradeCounts[1], 0);
+});
+
+test('simulator handles >5 custom tiers', () => {
+  const tiers = [];
+  for (let i = 0; i < 7; i++) {
+    tiers.push({ id: 't' + i, weight: 1, items: [{ id: 'minecraft:stone' }] });
+  }
+  const st = NS.boxToState({ type: 'csbox', name: 'T', grades: tiers }, 'm7').state;
+  const sim = NS.simulateOpens(st, 70, () => 0.5);
+  assert.equal(sim.gradeCounts.length, 7);
+  assert.equal(sim.opened, 70);
+});
+
+test('payloadState keeps custom tier count (no legacy 5-slot padding)', () => {
+  const doc = {
+    type: 'csbox', name: 'T',
+    grades: [
+      { id: 'only', items: [{ id: 'minecraft:stone' }] },
+    ],
+  };
+  const st = NS.boxToState(JSON.parse(JSON.stringify(doc)), 'p1').state;
+  const restored = NS.payloadState({
+    versionKey: '1.21.1',
+    state: { fileName: st.fileName, meta: st.meta, grades: st.grades, tiers: st.tiers, priceRows: {} },
+  });
+  assert.equal(restored.tiers.length, 1);
+  assert.equal(restored.grades.length, 1);
+  assert.deepEqual(NS.buildBox(restored).grades, doc.grades);
+});

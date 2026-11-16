@@ -86,6 +86,39 @@ probe('bad components JSON',              (s) => { s.grades[0][0].components = '
 probe('variant without TACZ support',     (s) => { s.taczEnabled = false; s.grades[0][0].variant = 'tacz:ak47'; }, 'grade1[1].variant');
 probe('tag without # prefix',             (s) => { s.grades[0][0].source = 'tag'; s.grades[0][0].value = 'c endlessly'; }, 'grade1[1].tag');
 
+/* ---- v2.0.4 gameplay fields ---- */
+probe('keys with a malformed id',         (s) => { s.meta.keysText = 'not-an-id'; }, 'meta.keys');
+probe('keys above the 8-key sync cap',    (s) => { s.meta.keysText = 'a:b, c:d, e:f, g:h, i:j, k:l, m:n, o:p, q:r'; }, 'meta.keys');
+probe('wear endpoint outside [0,1]',      (s) => { s.meta.wearMin = 1.5; }, 'meta.wear');
+probe('wear max below min',               (s) => { s.meta.wearMin = 0.8; s.meta.wearMax = 0.2; }, 'meta.wear');
+probe('bonus chance outside [0,1]',       (s) => { s.meta.bonusChance = 2; }, 'meta.bonus');
+probe('announce_above unknown tier id',   (s) => { s.meta.announceText = 'nope'; }, 'meta.announce_above');
+probe('announce_above negative level',    (s) => { s.meta.announceText = '-1'; }, 'meta.announce_above');
+probe('available_from without timezone',  (s) => { s.meta.availableFrom = '2026-12-24T00:00:00'; }, 'meta.available');
+probe('available_until without timezone', (s) => { s.meta.availableUntil = '2027-01-01T00:00:00'; }, 'meta.available');
+probe('open_cost below 0',                (s) => { s.meta.openCost = -5; }, 'meta.open_cost');
+probe('sound not a registry id',          (s) => { s.meta.sound = 'pling'; }, 'meta.sound');
+probe('upgrade consume below 1',          (s) => { s.meta.upTarget = 'other_box'; s.meta.upConsume = 0; }, 'meta.upgrade');
+probe('negotiation rounds not an int',    (s) => { s.meta.negRounds = 'x'; }, 'meta.negotiation');
+probe('negotiation rounds above the cap', (s) => { s.meta.negRounds = 9; }, 'meta.negotiation');
+probe('negotiation timeout below 0',      (s) => { s.meta.negTimeout = -1; }, 'meta.negotiation');
+probe('negotiation bias outside range',   (s) => { s.meta.negBias = 12; }, 'meta.negotiation');
+
+/* ---- v2.x custom tier array ("grades") ---- */
+function withTiers(mutateTiers) {
+  return (s) => {
+    s.tiers = mutateTiers().map((t) => Object.assign({ id: 't', name: '', color: '', weight: 1, stock: '' }, t));
+    s.grades = s.tiers.map(() => []);
+    s.grades[0].push(Object.assign(NS.emptyItem(), { source: 'id', value: 'minecraft:diamond' }));
+  };
+}
+probe('custom tier missing id',           withTiers(() => [{ id: '' }, { id: 'b' }]), 'tiers.0.id');
+probe('custom tier duplicate id',         withTiers(() => [{ id: 'same' }, { id: 'same' }]), 'tiers.1.id');
+probe('custom tier weight outside 0-10000', withTiers(() => [{ id: 'a', weight: 10001 }]), 'tiers.0.weight');
+probe('custom tier bad color',            withTiers(() => [{ id: 'a', color: 'red' }]), 'tiers.0.color');
+probe('custom tier negative stock',       withTiers(() => [{ id: 'a', stock: -3 }]), 'tiers.0.stock');
+probe('custom tiers above the 64 cap',    withTiers(() => Array.from({ length: 65 }, (_, i) => ({ id: 't' + i }))), 'tiers');
+
 // unpriced pool item (the game refuses to load these — harder than the schema)
 probe('unpriced pool item',               (s) => { s.priceRows['minecraft:diamond'] = { price: '' }; }, 'prices.minecraft:diamond');
 
@@ -110,6 +143,9 @@ const COVERED = new Set([
   'name', 'type', 'key', 'drop', 'random', 'entity', 'discount',
   'stock', 'max_per_player', 'cooldown_seconds', 'pity', 'requires',
   'grade1', 'grade2', 'grade3', 'grade4', 'grade5',
+  // v2.0.4 gameplay fields
+  'grades', 'keys', 'wear', 'bonus', 'announce_above', 'available_from',
+  'available_until', 'open_cost', 'sound', 'upgrade', 'negotiation',
 ]);
 
 const SKIPPED = new Map([
@@ -118,6 +154,13 @@ const SKIPPED = new Map([
   ['enabled', 'boolean — the editor renders a checkbox, no bad value reaches validate()'],
   ['format_version', 'runtime loader metadata; the editor never emits it'],
   ['permission', 'plain string, no schema constraint'],
+  // booleans rendered as checkboxes — no bad value reaches validate()
+  ['hide_odds', 'boolean checkbox, no bad value the validator could flag'],
+  ['allow_bulk', 'boolean checkbox, no bad value the validator could flag'],
+  // removed from the runtime in 2.0.2 (TerminalStockManager restock dropped);
+  // the schema keeps documenting it and the loader tolerates it as legacy —
+  // the editor neither reads nor re-emits it (dropped on export).
+  ['restock_minutes', 'removed 2.0.2 legacy key; loader-tolerated, editor drops it'],
 ]);
 
 test('every box-schema property is covered or skip-listed', () => {
@@ -189,15 +232,23 @@ test('validate() rejects a doc-level reversed price range', () => {
  *    mode; buildBox emits the canonical omitted form);
  *  - variant tags are re-emitted with SNBT-escaped quotes `{GunId:\"...\"}`
  *    which parses to the same compound as the source's bare quotes. */
+function normalizeItem(it) {
+  if (!it || typeof it !== 'object' || Array.isArray(it)) return;
+  if (it.count === 1) delete it.count;
+  if (typeof it.tag === 'string') it.tag = it.tag.replace(/\\"/g, '"');
+}
+
 function normalizeDoc(doc) {
   const clone = JSON.parse(JSON.stringify(doc));
   for (let g = 1; g <= 5; g++) {
     const items = clone['grade' + g];
     if (!Array.isArray(items)) continue;
-    for (const it of items) {
-      if (!it || typeof it !== 'object' || Array.isArray(it)) continue;
-      if (it.count === 1) delete it.count;
-      if (typeof it.tag === 'string') it.tag = it.tag.replace(/\\"/g, '"');
+    items.forEach(normalizeItem);
+  }
+  // v2.x custom tier arrays carry items too — same equivalences apply.
+  if (Array.isArray(clone.grades)) {
+    for (const tier of clone.grades) {
+      if (tier && Array.isArray(tier.items)) tier.items.forEach(normalizeItem);
     }
   }
   return clone;

@@ -70,6 +70,28 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       permission: '',
       pityGrade: '', // v2.0.1 pity (保底) target grade id
       pityEvery: '', // v2.0.1 pity (保底) force threshold
+      // v2.x gameplay fields (2.0.4 baseline alignment)
+      pityFirst: false, // pity.first_open: the very first open is forced
+      hideOdds: false, // hide_odds: no probability lines on the item tooltip
+      hideOddsExplicit: false, // true = the source doc carried hide_odds (round-trip fidelity)
+      allowBulk: true, // allow_bulk: Shift+right-click bulk open (default true)
+      allowBulkExplicit: false, // true = the source doc carried allow_bulk
+      typeExplicit: false, // true = the source doc carried an explicit type field
+      keysText: '', // keys: extra any-of key ids, comma separated (max 8)
+      wearMin: '', // wear: [min, max] float 0..1
+      wearMax: '',
+      bonusChance: '', // bonus: {chance 0..1, mode double|box}
+      bonusMode: 'double',
+      announceText: '', // announce_above: tier id / legacy grade id / level int
+      availableFrom: '', // available_from: ISO-8601 date-time
+      availableUntil: '', // available_until: ISO-8601 date-time
+      openCost: '', // open_cost: armory points per open (>= 0)
+      sound: '', // sound: custom open sound id
+      upTarget: '', // upgrade: {target box id, consume >= 1}
+      upConsume: '',
+      negRounds: '', // negotiation: {rounds 0=5, timeout_minutes 0=180, price_bias}
+      negTimeout: '',
+      negBias: '',
     };
   }
 
@@ -101,11 +123,42 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       fileName: 'my_box',
       meta: emptyMeta(),
       grades: [[], [], [], [], []],
+      // v2.x custom tier metadata (the top-level "grades" array), lowest tier
+      // first — aligned index-for-index with `grades`. null = legacy format
+      // (random weights + grade1..5).
+      tiers: null,
       priceRows: {}, // key -> { price: number|'' , pinned: bool }
       // TACZ field visibility: null = follow selected version metadata,
       // true = force enable, false = force disable (editor preference only).
       taczEnabled: null,
     };
+  }
+
+  /** Clamp a float into 0..1 (mirrors BoxGrades.clampDropRate and the wear
+   *  clamp in BoxDefinition). */
+  function clamp01(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    return Math.min(Math.max(n, 0), 1);
+  }
+
+  /** Number of grade tiers for the current state: custom tiers use their own
+   *  count (1..64), the legacy format always has five. */
+  function tierCountOf(state) {
+    return Array.isArray(state.tiers) && state.tiers.length ? state.tiers.length : 5;
+  }
+
+  /** Grade weight for tier index gi: custom tiers read tier.weight (default
+   *  1, <= 0 rolls never), the legacy format reads meta.random. */
+  function tierWeightOf(state, gi) {
+    if (Array.isArray(state.tiers) && state.tiers.length) {
+      const t = state.tiers[gi] || {};
+      const w = Number(t.weight);
+      return Number.isFinite(w) && w > 0 ? w : 0;
+    }
+    const raw = Array.isArray(state.meta && state.meta.random) ? state.meta.random : [];
+    const n = Number(raw[gi]);
+    return Number.isFinite(n) && n > 0 ? n : 0;
   }
 
   /** Registry/dotted id-ish pattern (used for keys and ids). */
@@ -202,19 +255,23 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       o.enchant = true;
     } else if (it.enchantMode === 'custom') {
       const eid = (it.enchantId || '').trim();
-      if (eid) {
-        if (it.enchantLevelMode === 'range') {
-          let a = intOrEmpty(it.enchantLevelMin);
-          let b = intOrEmpty(it.enchantLevelMax);
-          if (a === '') a = 1;
-          if (b === '') b = 1;
-          if (b < a) b = a;
-          o.enchant = { id: eid, level: [a, b] };
-        } else {
-          const lv = intOrEmpty(it.enchantLevel);
-          o.enchant = { id: eid, level: lv === '' ? 1 : lv };
-        }
+      let level;
+      if (it.enchantLevelMode === 'range') {
+        let a = intOrEmpty(it.enchantLevelMin);
+        let b = intOrEmpty(it.enchantLevelMax);
+        if (a === '') a = 1;
+        if (b === '') b = 1;
+        if (b < a) b = a;
+        level = [a, b];
+      } else {
+        const lv = intOrEmpty(it.enchantLevel);
+        level = lv === '' ? 1 : lv;
       }
+      // Runtime semantics (BoxItemResolver.applyRandomEnchant): an id pins the
+      // enchantment; id-less {level} = a random applicable enchantment in the
+      // level window — a legal config the editor must not drop.
+      if (eid) o.enchant = { id: eid, level };
+      else o.enchant = { level };
     }
 
     const variant = (it.variant || '').trim();
@@ -249,8 +306,10 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     if (name) obj.name = name;
 
     const type = meta.type === 'terminal' ? 'terminal' : 'csbox';
-    if (type === 'terminal') obj.type = type;
-    else if (verbose) obj.type = type; // csbox is the schema default; explicit only in verbose
+    // An explicit `type: "csbox"` in the source must survive a round-trip, so
+    // explicitness is tracked separately from the value (compact output still
+    // omits the field for drafts created in the editor).
+    if (type === 'terminal' || meta.typeExplicit || verbose) obj.type = type;
 
     const key = (meta.key || '').trim();
     if (type !== 'terminal' && key) obj.key = key;
@@ -297,22 +356,97 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const perm = (meta.permission || '').trim();
     if (perm) obj.permission = perm;
 
-    // v2.0.1 pity: only emitted when BOTH fields are valid (grade in the
-    // five-tier ids, every >= 2); a half-filled pity config is dropped.
+    // v2.0.1 pity: only emitted when BOTH fields are valid (grade resolves to
+    // a level, every >= 2); a half-filled pity config is dropped.
     const pityGrade = (meta.pityGrade || '').trim();
     const pityEveryStr = String(meta.pityEvery ?? '').trim();
     const pityEvery = Number(pityEveryStr);
     if (pityGrade && pityEveryStr !== '' && Number.isInteger(pityEvery) && pityEvery >= 2) {
       obj.pity = { grade: pityGrade, every: pityEvery };
+      if (meta.pityFirst === true) obj.pity.first_open = true;
     }
 
-    for (let gi = 1; gi <= 5; gi++) {
-      const items = [];
-      for (const it of state.grades[gi - 1]) {
-        const o = buildItem(it, verbose);
-        if (o) items.push(o);
+    // v2.x gameplay fields (2.0.4 baseline). Defaults are omitted: hide_odds
+    // false, allow_bulk true, wear [0,1], bonus off, announce off, no window,
+    // open_cost 0, negotiation defaults. Explicit source values (even explicit
+    // defaults) survive the round-trip via the *Explicit flags.
+    if (meta.hideOdds === true || meta.hideOddsExplicit) obj.hide_odds = meta.hideOdds === true;
+    if (meta.allowBulk === false || meta.allowBulkExplicit) obj.allow_bulk = meta.allowBulk !== false;
+    const keys = (meta.keysText || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (keys.length) obj.keys = keys;
+    const wMin = numOrEmpty(meta.wearMin);
+    const wMax = numOrEmpty(meta.wearMax);
+    if (wMin !== '' || wMax !== '') {
+      let a = wMin === '' ? 0 : clamp01(wMin);
+      let b = wMax === '' ? 1 : clamp01(wMax);
+      if (b < a) b = a; // runtime rule: max collapses onto min
+      obj.wear = [a, b];
+    }
+    const bonusChance = numOrEmpty(meta.bonusChance);
+    if (bonusChance !== '' && bonusChance > 0) {
+      obj.bonus = { chance: clamp01(bonusChance), mode: meta.bonusMode === 'box' ? 'box' : 'double' };
+    }
+    const ann = (meta.announceText || '').trim();
+    if (ann !== '') obj.announce_above = /^-?\d+$/.test(ann) ? parseInt(ann, 10) : ann;
+    const availFrom = (meta.availableFrom || '').trim();
+    if (availFrom) obj.available_from = availFrom;
+    const availUntil = (meta.availableUntil || '').trim();
+    if (availUntil) obj.available_until = availUntil;
+    const openCost = intOrEmpty(meta.openCost);
+    if (openCost !== '' && openCost >= 0) obj.open_cost = openCost;
+    const sound = (meta.sound || '').trim();
+    if (sound) obj.sound = sound;
+    const upTarget = (meta.upTarget || '').trim();
+    if (upTarget) {
+      const upConsume = intOrEmpty(meta.upConsume);
+      obj.upgrade = { target: upTarget, consume: upConsume === '' || upConsume < 1 ? 1 : upConsume };
+    }
+    const negRounds = intOrEmpty(meta.negRounds);
+    const negTimeout = intOrEmpty(meta.negTimeout);
+    const negBias = numOrEmpty(meta.negBias);
+    if (negRounds !== '' || negTimeout !== '' || negBias !== '') {
+      const neg = {};
+      if (negRounds !== '') neg.rounds = Math.max(0, negRounds);
+      if (negTimeout !== '') neg.timeout_minutes = Math.max(0, negTimeout);
+      if (negBias !== '') neg.price_bias = Math.min(Math.max(negBias, -0.9), 9);
+      obj.negotiation = neg;
+    }
+
+    // grades: the v2.x custom tier array replaces random/grade1..5 entirely
+    // (the runtime parses either format, custom wins); empty tiers are
+    // skipped exactly like the in-game loader does.
+    if (Array.isArray(state.tiers) && state.tiers.length) {
+      const arr = [];
+      for (let ti = 0; ti < state.tiers.length; ti++) {
+        const t = state.tiers[ti] || {};
+        const items = [];
+        for (const it of (state.grades[ti] || [])) {
+          const o = buildItem(it, verbose);
+          if (o) items.push(o);
+        }
+        if (!items.length) continue;
+        const tObj = { id: (t.id || '').trim() || ('tier' + (ti + 1)) };
+        const tierName = (t.name || '').trim();
+        if (tierName) tObj.name = tierName;
+        const color = (t.color || '').trim();
+        if (color) tObj.color = color;
+        const w = intOrEmpty(t.weight);
+        if (w !== '' && (w !== 1 || verbose)) tObj.weight = w;
+        const stock = intOrEmpty(t.stock);
+        if (stock !== '') tObj.stock = stock;
+        tObj.items = items;
+        arr.push(tObj);
       }
-      if (items.length) obj['grade' + gi] = items;
+      if (arr.length) obj.grades = arr;
+    } else {
+      for (let gi = 1; gi <= 5; gi++) {
+        const items = [];
+        for (const it of state.grades[gi - 1]) {
+          const o = buildItem(it, verbose);
+          if (o) items.push(o);
+        }
+        if (items.length) obj['grade' + gi] = items;
+      }
     }
     return obj;
   }
@@ -461,6 +595,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const legacy = !!(opts && opts.legacy);
     m.name = typeof obj.name === 'string' ? obj.name : '';
     m.type = obj.type === 'terminal' ? 'terminal' : (obj.type === 'csbox' ? 'csbox' : (typeof obj.type === 'string' ? obj.type : 'csbox'));
+    m.typeExplicit = typeof obj.type === 'string';
     if (legacy && typeof obj.type !== 'string' && legacyBaseName(fileName) === 'terminal') {
       m.type = 'terminal'; // pre-v2.0.0 terminal.json had no `type`
     }
@@ -480,14 +615,78 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const pityObj = obj.pity;
     m.pityGrade = pityObj && typeof pityObj.grade === 'string' ? pityObj.grade : '';
     m.pityEvery = pityObj ? intOrEmpty(pityObj.every) : '';
+    m.pityFirst = !!(pityObj && pityObj.first_open === true);
+
+    // v2.x gameplay fields (2.0.4 baseline)
+    m.hideOdds = obj.hide_odds === true;
+    m.hideOddsExplicit = typeof obj.hide_odds === 'boolean';
+    m.allowBulk = obj.allow_bulk !== false;
+    m.allowBulkExplicit = typeof obj.allow_bulk === 'boolean';
+    m.keysText = Array.isArray(obj.keys)
+      ? obj.keys.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()).join(', ')
+      : '';
+    if (Array.isArray(obj.wear) && obj.wear.length === 2) {
+      m.wearMin = numOrEmpty(obj.wear[0]);
+      m.wearMax = numOrEmpty(obj.wear[1]);
+    }
+    if (obj.bonus && typeof obj.bonus === 'object' && !Array.isArray(obj.bonus)) {
+      m.bonusChance = numOrEmpty(obj.bonus.chance);
+      m.bonusMode = obj.bonus.mode === 'box' ? 'box' : 'double';
+    }
+    m.announceText = typeof obj.announce_above === 'number' ? String(obj.announce_above)
+      : (typeof obj.announce_above === 'string' ? obj.announce_above.trim() : '');
+    m.availableFrom = typeof obj.available_from === 'string' ? obj.available_from : '';
+    m.availableUntil = typeof obj.available_until === 'string' ? obj.available_until : '';
+    m.openCost = intOrEmpty(obj.open_cost);
+    m.sound = typeof obj.sound === 'string' ? obj.sound : '';
+    if (obj.upgrade && typeof obj.upgrade === 'object' && !Array.isArray(obj.upgrade)) {
+      m.upTarget = typeof obj.upgrade.target === 'string' ? obj.upgrade.target : '';
+      m.upConsume = intOrEmpty(obj.upgrade.consume);
+    }
+    if (obj.negotiation && typeof obj.negotiation === 'object' && !Array.isArray(obj.negotiation)) {
+      m.negRounds = intOrEmpty(obj.negotiation.rounds);
+      m.negTimeout = intOrEmpty(obj.negotiation.timeout_minutes);
+      m.negBias = numOrEmpty(obj.negotiation.price_bias);
+    }
 
     const migrations = [];
-    for (let gi = 1; gi <= 5; gi++) {
-      const arr = obj['grade' + gi];
-      if (!Array.isArray(arr)) continue;
-      for (const item of arr) {
-        if (!item || typeof item !== 'object') continue;
-        st.grades[gi - 1].push(parseItem(item, migrations));
+    if (Array.isArray(obj.grades)) {
+      // v2.x custom tier array (lowest → highest) — replaces the legacy
+      // format entirely, exactly like the runtime loader.
+      const tiers = [];
+      const gradeItems = [];
+      for (const te of obj.grades) {
+        if (!te || typeof te !== 'object' || Array.isArray(te)) continue;
+        const t = {
+          id: typeof te.id === 'string' ? te.id.trim() : '',
+          name: typeof te.name === 'string' ? te.name : '',
+          color: typeof te.color === 'string' ? te.color : '',
+          weight: 1,
+          stock: intOrEmpty(te.stock),
+        };
+        const w = intOrEmpty(te.weight);
+        if (w !== '') t.weight = w;
+        const items = [];
+        const itemsArr = Array.isArray(te.items) ? te.items : [];
+        for (const item of itemsArr) {
+          if (!item || typeof item !== 'object') continue;
+          items.push(parseItem(item, migrations));
+        }
+        tiers.push(t);
+        gradeItems.push(items);
+      }
+      if (tiers.length) {
+        st.tiers = tiers;
+        st.grades = gradeItems;
+      }
+    } else {
+      for (let gi = 1; gi <= 5; gi++) {
+        const arr = obj['grade' + gi];
+        if (!Array.isArray(arr)) continue;
+        for (const item of arr) {
+          if (!item || typeof item !== 'object') continue;
+          st.grades[gi - 1].push(parseItem(item, migrations));
+        }
       }
     }
     return { state: st, migrations };
@@ -686,22 +885,20 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   /* ------------------------------ probabilities ------------------------------ */
 
   /** Compute the drop probability table for the current pool: per-grade
-   *  chance from the `random` weights and per-item in-grade share from each
-   *  item's `weight` (absent/empty = 1, `<= 0` = disabled entry with 0%).
+   *  chance from the tier weights (custom `tiers` weight field, or the legacy
+   *  `random` array) and per-item in-grade share from each item's `weight`
+   *  (absent/empty = 1, `<= 0` = disabled entry with 0%).
    *  Pure function — the UI renders it. An empty grade has no items and is
    *  flagged for the UI to show the in-game fallback note. */
   function computeProbabilities(state) {
-    const meta = state.meta || {};
-    const raw = Array.isArray(meta.random) ? meta.random : [];
-    const eff = (v) => {
-      const n = Number(v);
-      return Number.isFinite(n) && n > 0 ? n : 0;
-    };
-    const weights = [0, 1, 2, 3, 4].map((i) => eff(raw[i]));
+    const custom = Array.isArray(state.tiers) && state.tiers.length > 0;
+    const count = custom ? state.tiers.length : 5;
+    const weights = [];
+    for (let gi = 0; gi < count; gi++) weights.push(tierWeightOf(state, gi));
     const totalWeight = weights.reduce((a, b) => a + b, 0);
 
     const grades = [];
-    for (let gi = 0; gi < 5; gi++) {
+    for (let gi = 0; gi < count; gi++) {
       const gw = weights[gi];
       const itemsRaw = state.grades && state.grades[gi] ? state.grades[gi] : [];
       const items = [];
@@ -732,15 +929,20 @@ window.CSBoxEdit = window.CSBoxEdit || {};
           if (!it.disabled) it.itemProb = it.weight / sumW;
         }
       }
+      const t = custom ? (state.tiers[gi] || {}) : null;
       grades.push({
         gi,
         weight: gw,
         gradeProb: totalWeight > 0 ? gw / totalWeight : 0,
         items,
         empty: items.length === 0,
+        // custom tier display metadata (null for the legacy five tiers)
+        tierId: t ? (t.id || '') : null,
+        tierName: t ? ((t.name || '').trim() || t.id || ('tier' + (gi + 1))) : null,
+        tierColor: t ? ((t.color || '').trim()) : null,
       });
     }
-    return { totalWeight, openable: totalWeight > 0, grades };
+    return { totalWeight, openable: totalWeight > 0, grades, custom };
   }
 
   /** Pure open-box simulator — samples n opens from the same probability
@@ -757,7 +959,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   function simulateOpens(state, n, rng) {
     const rand = rng || Math.random;
     const { openable, grades } = computeProbabilities(state);
-    const gradeCounts = [0, 0, 0, 0, 0];
+    const gradeCounts = grades.map(() => 0);
     const items = []; // aggregated per pool entry, in pool order
     const byKey = new Map();
     let last = null;
@@ -835,9 +1037,13 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       fileName: s.fileName || 'my_box',
       meta: Object.assign(NS.emptyMeta(), s.meta),
       grades: (s.grades || []).map((arr) => (Array.isArray(arr) ? arr : [])),
+      tiers: Array.isArray(s.tiers) && s.tiers.length
+        ? s.tiers.map((t) => (t && typeof t === 'object' && !Array.isArray(t) ? t : {}))
+        : null,
       priceRows: s.priceRows && typeof s.priceRows === 'object' ? s.priceRows : {},
     });
-    while (st.grades.length < 5) st.grades.push([]);
+    const want = st.tiers ? st.tiers.length : 5;
+    while (st.grades.length < want) st.grades.push([]);
     st.versionKey = p.versionKey || '1.21.1';
     st.taczEnabled = p.taczEnabled == null ? null : !!p.taczEnabled;
     return st;
@@ -981,6 +1187,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.emptyMeta = emptyMeta;
   NS.emptyItem = emptyItem;
   NS.emptyState = emptyState;
+  NS.tierCountOf = tierCountOf;
+  NS.tierWeightOf = tierWeightOf;
   NS.priceKeyOf = priceKeyOf;
   NS.parsePriceInput = parsePriceInput;
   NS.extractVariant = extractVariant;
@@ -1001,5 +1209,6 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.computeProbabilities = computeProbabilities;
   NS.simulateOpens = simulateOpens;
   NS.boxEconomy = boxEconomy;
+  NS.payloadState = payloadState;
   NS.applyManifest = applyManifest;
 })(window.CSBoxEdit);
