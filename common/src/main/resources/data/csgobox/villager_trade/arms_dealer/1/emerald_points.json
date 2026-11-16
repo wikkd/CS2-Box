@@ -13,6 +13,10 @@
     "id": "csgobox:armory_point"
   },
   "max_uses": 12,
+  "merchant_predicate": {
+    "condition": "csgobox:pool_member",
+    "mineral": "minecraft:emerald"
+  },
   "reputation_discount": 0.05,
   "wants": {
     "id": "minecraft:emerald"

@@ -35,9 +35,9 @@ public record ArmsDealerPriceProvider(QuoteField field, int fallback) implements
 
     /** Which field of {@link VillagerPricing.Quote} this provider reads. */
     public enum QuoteField {
-        IRON, EMERALD, GOLD, DIAMOND,
+        IRON, EMERALD, GOLD, DIAMOND, COAL, COPPER,
         KEY0, KEY1_POINTS, KEY1_GOLD, KEY2_POINTS, KEY2_DIAMONDS,
-        BOX, TERMINAL;
+        TERMINAL;
 
         String id() {
             return name().toLowerCase(Locale.ROOT);
@@ -85,12 +85,13 @@ public record ArmsDealerPriceProvider(QuoteField field, int fallback) implements
             case EMERALD -> quote.emerald();
             case GOLD -> quote.gold();
             case DIAMOND -> quote.diamond();
+            case COAL -> quote.coal();
+            case COPPER -> quote.copper();
             case KEY0 -> quote.key0();
             case KEY1_POINTS -> quote.key1Points();
             case KEY1_GOLD -> quote.key1Gold();
             case KEY2_POINTS -> quote.key2Points();
             case KEY2_DIAMONDS -> quote.key2Diamonds();
-            case BOX -> quote.box();
             case TERMINAL -> quote.terminal();
         };
         // Point inputs/outputs never exceed the 64-stack cap; the key1 gold and
@@ -102,8 +103,13 @@ public record ArmsDealerPriceProvider(QuoteField field, int fallback) implements
                 : Math.min(value, VillagerPricing.POINT_STACK_LIMIT);
     }
 
-    /** Lazy, cached — matches the 1.20.1/1.21.1 platforms (restart to reload). */
-    private static VillagerPricingConfig config() {
+    /**
+     * Lazy, cached — matches the 1.20.1/1.21.1 platforms (restart to reload).
+     * Package-private so {@link ArmsDealerPoolCondition},
+     * {@link ArmsDealerBoxFunction} and {@link ArmsDealerBoxPriceProvider}
+     * share one cached config.
+     */
+    static VillagerPricingConfig config() {
         VillagerPricingConfig c = pricingConfig;
         if (c == null) {
             synchronized (ArmsDealerPriceProvider.class) {

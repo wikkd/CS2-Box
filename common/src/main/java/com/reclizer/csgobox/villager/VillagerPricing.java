@@ -35,8 +35,9 @@ import java.util.function.IntUnaryOperator;
  *       is the crafting cost at full table value — with the default table it
  *       sits well above the static fallback prices, so toggling dynamic
  *       pricing on/off visibly changes what keys cost.</li>
- *   <li><b>box / terminal</b>: derived from key0 ({@code key0 × boxKeyRatio}
- *       and {@code key0 × terminalKeyRatio}).</li>
+ *   <li><b>terminal</b>: derived from key0 ({@code key0 × terminalKeyRatio}).
+ *       Box sales are priced by {@link VillagerBoxPool} from the contents'
+ *       table-price expectation × {@code boxSellRatio}, not from key0.</li>
  * </ul>
  *
  * <p>When {@code enabled} is false the model returns {@code null} and the
@@ -53,12 +54,13 @@ public final class VillagerPricing {
             int emerald,    // 1 emerald → N points
             int gold,       // 1 gold_ingot → N points
             int diamond,    // 1 diamond → N points
+            int coal,       // 1 coal → N points
+            int copper,     // 1 copper_ingot → N points
             int key0,       // N points → 1 csgo_key0
             int key1Points, // N points (≤ 64) → 1 csgo_key1
             int key1Gold,   // + M gold ingots (0 when the points already cover it)
             int key2Points, // N points (≤ 64) → 1 csgo_key2
             int key2Diamonds, // + M diamonds (0 when the points already cover it)
-            int box,        // N points → 1 csgo_box
             int terminal) { // N points → 1 terminal
     }
 
@@ -85,6 +87,8 @@ public final class VillagerPricing {
         int goldBase = base(t, cfg, "minecraft:gold_ingot", nextBounded);
         int diamondBase = base(t, cfg, "minecraft:diamond", nextBounded);
         int emeraldBase = emeraldBase(t, cfg, nextBounded);
+        int coalBase = base(t, cfg, "minecraft:coal", nextBounded);
+        int copperBase = base(t, cfg, "minecraft:copper_ingot", nextBounded);
 
         // 3 iron craft one key0 and key0 sells for key0Price points: cap the
         // iron buy at that parity so the table can never make "iron → points
@@ -94,6 +98,10 @@ public final class VillagerPricing {
         int emerald = point(emeraldBase * cfg.buyRate() * factor);
         int gold = point(goldBase * cfg.buyRate() * factor);
         int diamond = point(diamondBase * cfg.buyRate() * factor);
+        // Coal / copper have no direct craft route into the economy, so they
+        // float uncapped (the fallback bases keep them below iron's value).
+        int coal = point(coalBase * cfg.buyRate() * factor);
+        int copper = point(copperBase * cfg.buyRate() * factor);
 
         int key0 = point(cfg.key0Price() * key0Factor);
 
@@ -109,11 +117,10 @@ public final class VillagerPricing {
                 ? (int) Math.ceil(Math.max(0.0, key2Value - key2Points) / diamondBase)
                 : 0;
 
-        int box = point(key0 * cfg.boxKeyRatio() * factor);
         int terminal = point(key0 * cfg.terminalKeyRatio() * factor);
 
-        return new Quote(iron, emerald, gold, diamond,
-                key0, key1Points, key1Gold, key2Points, key2Diamonds, box, terminal);
+        return new Quote(iron, emerald, gold, diamond, coal, copper,
+                key0, key1Points, key1Gold, key2Points, key2Diamonds, terminal);
     }
 
     /** Base price for a mineral: sampled table range, else fallback, else 0. */

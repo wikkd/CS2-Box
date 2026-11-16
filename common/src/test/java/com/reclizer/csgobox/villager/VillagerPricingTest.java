@@ -36,7 +36,7 @@ final class VillagerPricingTest {
     @DisplayName("disabled config yields no dynamic quote")
     void disabled() {
         VillagerPricingConfig cfg = new VillagerPricingConfig(
-                false, 0.06, 1.0, 0.1, 9, 0.05, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                false, 0.06, 1.0, 0.1, 9, 0.05, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         assertNull(VillagerPricing.quote(PriceTable.EMPTY, cfg, MIN_FACTOR_RNG));
     }
 
@@ -61,8 +61,8 @@ final class VillagerPricingTest {
         // diamonds ceil(476/200) = 3
         assertEquals(64, q.key2Points());
         assertTrue(q.key2Diamonds() >= 1, "key2Diamonds=" + q.key2Diamonds());
-        // box = 9 × 0.9 × 0.9 = 7.29 → 7; terminal = 9 × 2 × 0.9 = 16.2 → 16
-        assertTrue(q.box() >= 1);
+        // box sales are EV-priced by VillagerBoxPool (no quote field);
+        // terminal = 9 × 2 × 0.9 = 16.2 → 16
         assertTrue(q.terminal() >= 1);
     }
 
@@ -89,7 +89,6 @@ final class VillagerPricingTest {
         // key2: 3 × 200 × 0.9 = 540 → 64 points + ceil(476/200)=3 diamonds
         assertEquals(64, q.key2Points());
         assertEquals(3, q.key2Diamonds());
-        assertEquals(7, q.box());       // 9 × 0.9 × 0.9 = 7.29 → 7
         assertEquals(16, q.terminal()); // 9 × 2 × 0.9 = 16.2 → 16
     }
 
@@ -97,7 +96,7 @@ final class VillagerPricingTest {
     @DisplayName("no-fluctuation config with fixed table yields exact anchors")
     void noFluctuation() {
         VillagerPricingConfig cfg = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 9, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         PriceTable t = table("""
                 {
                   "minecraft:iron_ingot": 50,
@@ -117,7 +116,6 @@ final class VillagerPricingTest {
         assertEquals(2, q.key1Gold());     // ceil((150−64)/50) = 2
         assertEquals(64, q.key2Points());   // 3 × 200 = 600 → capped at 64
         assertEquals(3, q.key2Diamonds());  // ceil((600−64)/200) = 3
-        assertEquals(8, q.box());       // 9 × 0.9 = 8.1 → 8 (matches the old static price)
         assertEquals(18, q.terminal()); // 9 × 2 (matches the old static price)
     }
 
@@ -129,7 +127,7 @@ final class VillagerPricingTest {
                 {"minecraft:diamond": [100, 400], "minecraft:iron_ingot": 50}
                 """);
         VillagerPricingConfig cfg = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 9, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         VillagerPricing.Quote q = VillagerPricing.quote(t, cfg, MIN_FACTOR_RNG);
         assertNotNull(q);
         assertEquals(6, q.diamond());   // 100 × 0.06 = 6
@@ -171,7 +169,7 @@ final class VillagerPricingTest {
                 {"minecraft:emerald": 80, "minecraft:emerald_block": 500}
                 """);
         VillagerPricingConfig cfg = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 9, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         VillagerPricing.Quote q = VillagerPricing.quote(t, cfg, MIN_FACTOR_RNG);
         assertNotNull(q);
         assertEquals(5, q.emerald());
@@ -187,7 +185,7 @@ final class VillagerPricingTest {
                 {"minecraft:iron_ingot": 500, "minecraft:gold_ingot": 50, "minecraft:diamond": 200}
                 """);
         VillagerPricingConfig cfg = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 9, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         VillagerPricing.Quote q = VillagerPricing.quote(t, cfg, MIN_FACTOR_RNG);
         assertNotNull(q);
         assertEquals(3, q.iron());
@@ -205,11 +203,11 @@ final class VillagerPricingTest {
                 """);
         // raw 100 × 0.06 = 6 < cap 30/3 = 10 — below the cap the table wins
         VillagerPricingConfig cfg30 = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 30, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 30, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         assertEquals(6, VillagerPricing.quote(t, cfg30, MIN_FACTOR_RNG).iron());
         // same table with the default key0_price 9 (cap 3): raw 6 is capped
         VillagerPricingConfig cfg9 = new VillagerPricingConfig(
-                true, 0.06, 1.0, 0.0, 9, 0.0, 0.9, 2.0, VillagerPricingConfig.DEFAULT_FALLBACKS);
+                true, 0.06, 1.0, 0.0, 9, 0.0, 1.0, 2.0, true, VillagerPricingConfig.DEFAULT_FALLBACKS);
         assertEquals(3, VillagerPricing.quote(t, cfg9, MIN_FACTOR_RNG).iron());
     }
 

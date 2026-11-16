@@ -158,7 +158,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 - 其余平台暂无自动化测试；运行时回归清单见 `docs/RELEASE.md` 质量门
 - **代码审查标准与流程见 `docs/CODE-REVIEW.md`**（专属审查清单：CONSTRAINT-001 / 镜像纪律 / 版本四同步 / AnimRenderOps 漂移 / 并发权威等）；PR 描述模板 `.github/PULL_REQUEST_TEMPLATE.md` 由 CI `pr-checks.yml` 校验；GameTest 集成测试 CI 见 `gametest.yml`；分支保护设置见 `docs/CI-PROTECTION.md`
 
-### 平台 Java 文件差异矩阵（2026-09-27 刷新：ButtonPalette 行修正 + mcshared 下沉去重后文件数重数，同步当前树）
+### 平台 Java 文件差异矩阵（2026-11-17 重数：矿物收购池 26.x 各 +1 条件类、箱/终端机售卖池 26.x 各 +2（function+price provider）/legacy 四平台各 +1；含 2026-11-14 风景相机/实体预览工作）
 
 | 文件 | v1_21_1 | v26_1_2 | v26_2 | forge_26_1_2 | forge_26_2 | forge_1_20_1 |
 |------|:-------:|:-------:|:-----:|:------------:|:----------:|:------------:|
@@ -174,11 +174,11 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | `PacketSyncBoxDefinitions` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `Networking`（Forge 专用） | — | — | — | ✅ | ✅ | ✅ |
 | Create 集成 | 4 文件 | ❌ | ❌ | — | — | 4 文件 |
-| **文件数** | **105** | **96** | **97** | **84** | **85** | **105** |
+| **文件数** | **107** | **104** | **105** | **91** | **92** | **107** |
 
 - **刷新纪律**：文件数格子易过期（上一次「刷新」只改了标题没改数字），改矩阵必须实际 `find <module>/src/main/java -name '*.java' | wc -l` 重数后再填。
 
-### 新平台补充矩阵（2026-10-25，`fabric_1_21_1` / `forge_1_18_2`，文件数实数）
+### 新平台补充矩阵（2026-11-17 重数，`fabric_1_21_1` / `forge_1_18_2`，文件数实数）
 
 | 项目 | fabric_1_21_1 | forge_1_18_2 |
 |---|---|---|
@@ -187,7 +187,7 @@ NeoForge），**整文件覆盖同样禁止**。同步纪律：
 | Jade / TOP / WTHIT | ✅ 3 / ❌ / ✅ 2（+mcshared 1） | ✅ 3 / ❌ / ❌（1.18.2 无 WTHIT 构建，mcshared/wthit 排除编译） |
 | Create | ⚠️ 1（`create/CreatePlatformItems` 反射降级，无 Fabric 构建） | ⚠️ 1（同左，1.18.2 API 差异未移植 deployer） |
 | `PacketSyncBoxDefinitions` / Networking | ✅ / —（Fabric custom payload） | ✅ / `Networking`（SimpleChannel，FG5） |
-| **文件数** | **103** | **94** |
+| **文件数** | **105** | **96** |
 
 - TACZ：`v1_21_1`（unofficial 1.21.1 port，`scripts/download-tacz.sh`）、`forge_1_20_1`（official 1.20.1，`scripts/download-tacz-1201.sh`）与 `fabric_1_21_1`（TaCZ: Refabricated 1.21.1 Fabric 移植，`scripts/download-tacz-fabric.sh`，modCompileOnly）有 `compileOnly` 依赖，其它平台不需要；`forge_1_20_1` 的 gun NBT 在 ItemStack 顶层 tag（无 DataComponent 系统），`BoxItemCodec.validateTacz` 直接读写 `stack.getTag()`，枪 tag 的 `GunFireMode` 规范化在内联修正
 - ButtonPalette：`v26_1_2`/`v26_2` 的 26.x 辅助类，Forge 三平台已同步移植（forge_1_20_1 亦接入），仅 `v1_21_1` 未采用（非功能阻塞）
