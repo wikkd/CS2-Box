@@ -48,7 +48,6 @@ import org.slf4j.Logger;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -347,7 +346,13 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
      *  contribute 384 vertices against the plate's 24, dragging the median
      *  ~1.5 px off the plate centre); the cuboid rides on the plate
      *  regardless of the food arrangement. Raw-space measure mapped through
-     *  the same renderer matrix as {@link #modelBounds}; cached per model. */
+     *  the same renderer matrix as {@link #modelBounds}; cached per model.
+     *  Per axis, the footprint yields to the full-extent midpoint when the
+     *  base covers under half that axis's extent (contact line: tavern
+     *  stepladder/tap/brass_heart/holder, 2.6-7.4 px skew) or sits over
+     *  1.5 px off it (overhang the base cannot represent:
+     *  clay_pot_milk_tea, cold_roasted_meat); plates keep the footprint
+     *  rule unchanged. */
     private static Vector3f blockBackedCenter(BakedModel model) {
         Object cached = BLOCK_BACKED_CENTERS.get(model);
         if (cached instanceof Vector3f center) {
@@ -366,10 +371,18 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
         }
         float minY = Float.MAX_VALUE;
         float maxY = -Float.MAX_VALUE;
+        float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
         for (int i = 0; i < ys.size(); i++) {
+            float x = xs.getFloat(i);
             float y = ys.getFloat(i);
+            float z = zs.getFloat(i);
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
             minY = Math.min(minY, y);
             maxY = Math.max(maxY, y);
+            minZ = Math.min(minZ, z);
+            maxZ = Math.max(maxZ, z);
         }
         float baseMinX = Float.MAX_VALUE, baseMaxX = -Float.MAX_VALUE;
         float baseMinZ = Float.MAX_VALUE, baseMaxZ = -Float.MAX_VALUE;
@@ -381,8 +394,26 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
                 baseMaxZ = Math.max(baseMaxZ, zs.getFloat(i));
             }
         }
-        Vector3f center = new Vector3f((baseMinX + baseMaxX) * 0.5F,
-                (minY + maxY) * 0.5F, (baseMinZ + baseMaxZ) * 0.5F);
+        // The base plane is the visual footprint only along axes it actually
+        // spans AND when it sits under the visual mass. Two fallback triggers
+        // per axis (2026-11-16 catalog sweep of the whole Kaleidoscope
+        // family): (1) the base covers under half the model's extent —
+        // wall-leaning contact lines (tavern stepladder leans at z 14..16
+        // against a z 0..16 body, 7.4 px skew; tap 3.8 px; brass_heart
+        // pedestal 3.2 px; holder 2.6 px; blaze_lamb_chop z 0.17); (2) the
+        // base midpoint sits over 1.5 px off the full-extent midpoint —
+        // overhanging parts the base cannot represent (clay_pot_milk_tea
+        // spout pulls the body 2.5 px left of its foot; cold_roasted_meat
+        // bone 1.6 px). Plates and furniture bases span the model under the
+        // mass and keep the footprint rule unchanged.
+        float centerX = (baseMaxX - baseMinX) >= (maxX - minX) * 0.5F
+                && Math.abs((baseMinX + baseMaxX) * 0.5F - (minX + maxX) * 0.5F) <= 1.5F / 16F
+                ? (baseMinX + baseMaxX) * 0.5F : (minX + maxX) * 0.5F;
+        float centerZ = (baseMaxZ - baseMinZ) >= (maxZ - minZ) * 0.5F
+                && Math.abs((baseMinZ + baseMaxZ) * 0.5F - (minZ + maxZ) * 0.5F) <= 1.5F / 16F
+                ? (baseMinZ + baseMaxZ) * 0.5F : (minZ + maxZ) * 0.5F;
+        Vector3f center = new Vector3f(centerX,
+                (minY + maxY) * 0.5F, centerZ);
         transformPoint(guiRenderMatrix(model), center);
         BLOCK_BACKED_CENTERS.put(model, center);
         return center;
@@ -422,10 +453,12 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
     }
 
     /** Drag pivot + largest-axis span of the model's rendered geometry. The
-     *  pivot is the per-axis median of the raw vertices mapped through the
-     *  same transform chain — a transformed AABB midpoint drifts off the
-     *  visual centre once the GUI isometric rotation mixes asymmetric axes
-     *  (2026-11-14 aeronautics:wooden_propeller ~0.1 block off-hub orbit). */
+     *  pivot is the raw-vertex-extent box centre mapped through the same
+     *  transform chain — a transformed AABB midpoint drifts off the visual
+     *  centre once the GUI isometric rotation mixes asymmetric axes
+     *  (2026-11-14 aeronautics:wooden_propeller ~0.1 block off-hub orbit;
+     *  2026-11-16 Kaleidoscope Cookery: the interim vertex median is
+     *  density-sensitive, see the modelBounds comment). */
     private static ModelBounds modelBounds(BakedModel model) {
         Object cached = ITEM_MODEL_BOUNDS.get(model);
         if (cached instanceof ModelBounds bounds) {
@@ -442,19 +475,34 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
         float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
         float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
         Vector3f p = new Vector3f();
-        // Raw vertex coordinates feed the pivot median below: the transformed
-        // AABB midpoint drifts off the visual centre for models whose geometry
-        // is asymmetric about their origin — the GUI isometric rotation mixes
-        // the uneven axes (2026-11-14: aeronautics:wooden_propeller). The
-        // per-axis median of the raw vertices mapped through the same matrix
-        // rides on the dense body and equals the midpoint for symmetric
-        // models.
+        // Raw vertex coordinates feed the pivot box centre below: the
+        // transformed AABB midpoint drifts off the visual centre for models
+        // whose geometry is asymmetric about their origin — the GUI isometric
+        // rotation mixes the uneven axes (2026-11-14:
+        // aeronautics:wooden_propeller). 2026-11-16 (Kaleidoscope Cookery
+        // pack): the interim per-axis vertex MEDIAN is density-sensitive —
+        // decorative zero-thickness planes (trash_can handle and inner
+        // panels) and piled servings skew it 2-5 px off the visual centre
+        // (trash_can z median 5.0 vs box centre 8.0), and hand models list
+        // arbitrary face subsets so the skew is not predictable. The
+        // raw-vertex-extent box centre is density-independent, equals the
+        // midpoint for symmetric models, and rides the hub for the propeller
+        // (its blade extents bracket the hub symmetrically).
         FloatArrayList rawX = new FloatArrayList();
         FloatArrayList rawY = new FloatArrayList();
         FloatArrayList rawZ = new FloatArrayList();
         collectRawVertices(model, rawX, rawY, rawZ);
+        float rMinX = Float.MAX_VALUE, rMinY = Float.MAX_VALUE, rMinZ = Float.MAX_VALUE;
+        float rMaxX = -Float.MAX_VALUE, rMaxY = -Float.MAX_VALUE, rMaxZ = -Float.MAX_VALUE;
         for (int i = 0; i < rawX.size(); i++) {
-            p.set(rawX.getFloat(i), rawY.getFloat(i), rawZ.getFloat(i));
+            float rx = rawX.getFloat(i), ry = rawY.getFloat(i), rz = rawZ.getFloat(i);
+            rMinX = Math.min(rMinX, rx);
+            rMinY = Math.min(rMinY, ry);
+            rMinZ = Math.min(rMinZ, rz);
+            rMaxX = Math.max(rMaxX, rx);
+            rMaxY = Math.max(rMaxY, ry);
+            rMaxZ = Math.max(rMaxZ, rz);
+            p.set(rx, ry, rz);
             transformPoint(renderer, p);
             minX = Math.min(minX, p.x());
             minY = Math.min(minY, p.y());
@@ -467,23 +515,15 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
             ITEM_MODEL_BOUNDS.put(model, NO_CENTER);
             return NO_BOUNDS;
         }
-        // Pivot on the raw-vertex median (see above); largest axis of the
-        // rendered bounding box stays the auto-fit metric (block units).
-        Vector3f center = new Vector3f(median(rawX), median(rawY), median(rawZ));
+        // Pivot on the raw-vertex-extent box centre (see above); largest axis
+        // of the rendered bounding box stays the auto-fit metric (block units).
+        Vector3f center = new Vector3f((rMinX + rMaxX) * 0.5F,
+                (rMinY + rMaxY) * 0.5F, (rMinZ + rMaxZ) * 0.5F);
         transformPoint(renderer, center);
         ModelBounds bounds = new ModelBounds(center,
                 Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
         ITEM_MODEL_BOUNDS.put(model, bounds);
         return bounds;
-    }
-
-    /** Per-axis median of a coordinate sample (mean of the two middle values
-     *  on even counts). */
-    private static float median(FloatArrayList values) {
-        float[] sorted = values.toFloatArray();
-        Arrays.sort(sorted);
-        int n = sorted.length;
-        return (n & 1) == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) * 0.5F;
     }
 
     /** Collects every quad vertex position of the model into per-axis lists
@@ -638,7 +678,8 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
      *  {@link BlockItem} whose item model is a generated plane, its 3D form
      *  exists only on the placed block — return the block model so previews
      *  match the placed look. Portion-counter integer properties
-     *  ({@code servings}/{@code bites}) are maxed so the preview shows the
+     *  — amount-style integer properties are maxed, {@code bites} (bites
+     *  taken) is reset to the fresh state — so the preview shows the
      *  full/served state. The original model is returned unchanged when the
      *  item is not block-backed, its model is not flat, or the block has no
      *  measurable geometry. */
@@ -650,10 +691,17 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
             net.minecraft.world.level.block.state.BlockState state =
                     blockItem.getBlock().defaultBlockState();
             for (Property<?> property : state.getProperties()) {
-                if (property instanceof IntegerProperty intProperty
-                        && (property.getName().equals("servings") || property.getName().equals("bites"))) {
+                if (property instanceof IntegerProperty intProperty) {
                     List<Integer> values = List.copyOf(intProperty.getPossibleValues());
-                    state = state.setValue(intProperty, values.get(values.size() - 1));
+                    // Fullness semantics from the Kaleidoscope Cookery pack
+                    // (2026-11-16): amount counters peak at max, but {@code
+                    // bites} counts bites TAKEN (vanilla cake convention) —
+                    // max shows the nearly-eaten dish (candied_potato_3: 1
+                    // element vs _0's 16) and its sparse geometry then fed
+                    // the pivot. Amount props go max, bites goes back to the
+                    // fresh state.
+                    state = state.setValue(intProperty, property.getName().equals("bites")
+                            ? values.get(0) : values.get(values.size() - 1));
                 }
             }
             BakedModel blockModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
