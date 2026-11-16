@@ -37,10 +37,13 @@ public final class PanoramaPlayerHideHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof CsLookItemScreen screen && screen.isSceneryRigMounted()
                 && mc.player != null) {
-            LivingEntityRenderState state = event.getRenderState();
+            LivingEntityRenderState state = event.getState();
             if (state.entityType == EntityType.PLAYER) {
                 LocalPlayer player = mc.player;
-                double partial = state.partialTick;
+                // Forge's LivingEntityRenderState carries no partialTick (NeoForge
+        // adds it via patch); sample the same value vanilla feeds entity
+        // rendering with (javap: iconst_0).
+        double partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
                 double px = Mth.lerp(partial, player.xo, player.getX());
                 double py = Mth.lerp(partial, player.yo, player.getY());
                 double pz = Mth.lerp(partial, player.zo, player.getZ());
