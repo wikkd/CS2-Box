@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 世界名酒终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_world_liquor"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_world_liquor:lafite_1982",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:maotai",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:spiryt_vodka",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_world_liquor:johnnie_walker",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:jack_daniel",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:dassai",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_world_liquor:bombay_sapphire_gin",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:bacardi_carta_blanca",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:smirnoff_red_vodka",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:absolut_vodka",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:skyy_vodka",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_world_liquor:long_island_iced_tea",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:gin_tonic",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:cosmopolitan",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:highball",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:jerk",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_world_liquor:cola",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:sour_plum",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:cool_tea",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:tonic_water",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_world_liquor:oak_bar_cabinet",
+      "count": 1
+    }
+  ]
+}

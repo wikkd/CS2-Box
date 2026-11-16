@@ -1,0 +1,57 @@
+{
+  "name": "#EE8844 森罗玩偶终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_doll"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_doll:doll_machine",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_doll:purple_doll_gift_box",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_doll:green_doll_gift_box",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_doll:yellow_doll_gift_box",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_doll:tweaks_tool",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_doll:doll_entity_item",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_doll:doll_icon",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_doll:computer",
+      "count": 1
+    }
+  ]
+}

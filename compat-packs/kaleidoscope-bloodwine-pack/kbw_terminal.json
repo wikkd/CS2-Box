@@ -1,0 +1,73 @@
+{
+  "name": "#EE8844 血酒终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_bloodwine"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_bloodwine:courtyard_blood_brew",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:eternal_night_crimson",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:sinmark_crimson",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_bloodwine:hunter_drink",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:blood_sakura_wine",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:blood_champagne",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_bloodwine:blood_whiskey",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:blood_brandy",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:blood_grape_wine",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_bloodwine:blood_vodka",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_bloodwine:blood_carignan",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_bloodwine:blood_bucket",
+      "count": 1
+    }
+  ]
+}

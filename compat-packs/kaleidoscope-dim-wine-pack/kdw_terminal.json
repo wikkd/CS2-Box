@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 次元酒窖终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_dim_wine"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_dim_wine:magma_royal_salute",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:black_bone_lafite",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:divine_embryo_port",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_dim_wine:draconic_blood_wine",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:dragons_breath_brandy",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:crimson_crescendo",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_dim_wine:honeythorn_mead",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:royal_honey_brew",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:beeswax_honey_wine",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:ethereal_noble",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:goblins_stash",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_dim_wine:budweiser_beer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:fanta",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:sprite",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:pepsi",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:gingerbread_warmer",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_dim_wine:hop",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:hop_seed",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:crimson_grape",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:warped_grape",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_dim_wine:pollen_nectar",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 国味军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "kaleidoscope_chinesefood"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_chinesefood:straw_bed",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:enchanted_golden_apple_platter",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:golden_apple_platter",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_chinesefood:big_plate_chicken",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:yangrou_paomo",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:maocai",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_chinesefood:twice_cooked_pork",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:sichuan_boiled_fish",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:four_joy_meatballs",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:yellow_croaker_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:kongming_lantern",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_chinesefood:hk_milk_tea",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:dianhong_tea",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:mooncake",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:century_egg_congee",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:couplet",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_chinesefood:salt",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:eggplant",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:douzhi",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:fu_character",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_chinesefood:pumpkin_porridge",
+      "count": 1
+    }
+  ]
+}

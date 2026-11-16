@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗暮色军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "kaleidoscope_twilight"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_twilight:tomahawk_steak",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:twilight_wellington_steak",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:ice_crystal_hydra_steak",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_twilight:hydra_bolognese",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:salt_baked_naga",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:sauced_snake_feast",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_twilight:fiery_stockpot",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:twilight_stove",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:deer_song",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:lotus_chicken",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:keeping_pouch",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_twilight:rainbow_candy",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:aurora_ice_cream",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:glacier_cake",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:giant_spirit",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:witchcraft_secret_brew",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_twilight:twilight_fern",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:tea_date",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:frozen_bun",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:torchberry_cookie",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_twilight:four_leaf_ice_crystal",
+      "count": 1
+    }
+  ]
+}

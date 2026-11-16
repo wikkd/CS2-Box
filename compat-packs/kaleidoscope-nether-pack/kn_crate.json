@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗下界军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "kaleidoscope_nether"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_nether:forgetfulness_soup",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:everlasting_flame_steak",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:ruby_steak",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_nether:gilded_barbaric_roast",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:soul_glazed_roast",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:poisonous_ghast_roast",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_nether:nether_stove",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:luosifen",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:mapo_tofu",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:couples_lung_slice",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:blowgun",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_nether:golden_kabob",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:crimson_kabob",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:lava_roasted_chicken",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:spicy_pot",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:chongqing_noodles",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_nether:soul_pepper",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:crimson_fruit",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:warped_fruit",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:ham_slice",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_nether:roujiamo",
+      "count": 1
+    }
+  ]
+}

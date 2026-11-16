@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗烟火军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "kaleidoscope_grilling"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_grilling:secret_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:mysterious_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:dark_grilling",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_grilling:unfinished_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:pending_seasoning",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:potato_beef_stew",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_grilling:empty_seasoning_bottle",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:sour_spicy_noodles",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:houttuynia_stir_fried_pork",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:grilled_ender_pearl_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:totem_powder",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_grilling:grilled_lamb_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:grilled_beef_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:roasted_sweet_potato",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:grilled_golden_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:secret_chili_oil_bucket",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_grilling:grilled_gluten_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:grilled_bun_slice_skewer",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:canola_seeds",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:onion",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_grilling:sweet_potato",
+      "count": 1
+    }
+  ]
+}

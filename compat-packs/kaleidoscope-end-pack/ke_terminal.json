@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗末地终端",
+  "type": "terminal",
+  "drop": 0.05,
+  "requires": [
+    "kaleidoscope_end"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_end:dark_dragon_egg_stew",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dragon_head_with_sauce",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dragon_souffle",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_end:dark_dragon_steak",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:suspicious_dragon_egg",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dragon_egg_ice_cream",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_end:dragon_breath_popping_candy",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dragon_tooth_knife",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:end_stove",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:stuffed_void_conch",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:ender_dragon_smithing_template",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_end:stuffed_shulker",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:shulker_ice_cream",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:void_conch",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dragon_tooth",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:mint_chorus_mousse",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_end:chorus_petal",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:dream_berry",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:ender_mint",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:end_salad",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_end:void_tea",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "name": "#EE8844 森罗酒馆军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "kaleidoscope_tavern"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "kaleidoscope_tavern:barrel",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:mystery_cocktail",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:signature_cocktail",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "kaleidoscope_tavern:nether_special",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:sculk_special",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:champagne",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "kaleidoscope_tavern:bar_counter",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:bar_cabinet",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:shaker",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:molotov",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:depth_charge",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "kaleidoscope_tavern:wine",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:whiskey",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:brandy",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:vodka",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:rum",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "kaleidoscope_tavern:grape",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:empty_glassware",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:empty_bottle",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:vinegar",
+      "count": 1
+    },
+    {
+      "id": "kaleidoscope_tavern:red_bar_stool",
+      "count": 1
+    }
+  ]
+}

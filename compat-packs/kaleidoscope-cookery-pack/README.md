@@ -32,9 +32,33 @@ python scripts/merge-prices.py compat-packs/kaleidoscope-cookery-pack/_prices.js
 ## 3D 预览说明
 
 森罗物语是机制 A 类「普通 baked model」的代表：231 个物品模型里仅 8 个带
-`elements` 实体几何（`teapot_3d` / `shawarma_spit` / `eight_immortals_table` /
+`elements` 实体几何（`teapot_3d` / `shawawa_spit` / `eight_immortals_table` /
 `cold_cut_ham_slices_block` / `fruit_basket_full` / `stockpot_lid_normal` /
 `stockpot_lid_using` / `trash_can`），这些物品在开箱 3D 与检视屏里走默认
 baked-model 路径直接渲染真实几何，**零适配代码**；其余 223 个为平面贴图
 料理（箱子 grade1-2 的主力），预览与原版物品一致。本包同时验证默认路径
 auto-fit 对非 1 格几何的居中表现。
+
+## 1.20.1 基准部署（2026-11-16，测试基准平台）
+
+1.20.1 Forge 线 jar 全部是 SRG 生产形态（FG7 dev 运行时为官方成员名），
+进 dev 前须重映射：`scripts/remap-1201.sh` 统一管线批量处理
+`local-repo/com/kaleidoscope/1.20.1/` 的 14 jar（本体 1.6.0 + 12 附属 +
+curios 5.14.1 前置，Modrinth 拉取；twilight/chinesefood 两个不装载的
+不在 `remap-1201-manifest.txt` 清单内）。Create 6.0.8（contraption 的
+硬前置）同在清单（本体 + jarjar 内 Ponder/flywheel/Registrate 三层）。
+管线同拔刀剑（`TaczDeobf` + refmap 重写）。
+
+2026-11-16 实测：dev server `Done (2.193s)`、33 箱全载零告警、RCON 探针
+9 箱（kc/kg/kt/kwl/kd/ke/kn/kdw/kbw）`/csbox info` 全绿。**不装载 2 个**：
+
+- `kaleidoscopechinesefood`（中华料理）：与本体同装必炸——`ModFoods`
+  的食物效果 supplier（`lava_swim` 等）被本体 `BowlFoodBlockItem` 在
+  block 注册阶段立即 `.get()`，而 mob_effect 注册晚于 block，Forge 47
+  `RegistryObject.get()` 严格 requireNonNull → NPE。上游注册顺序 bug
+  （1.21.1 NeoForge 不触发——Holder 语义不同），生产环境同装同样会炸。
+- `kaleidoscope-twilight`（暮色联动）：同型——`KTTeacups` 的 `fire_breath`
+  效果 supplier 被本体 `TeacupItem` 构造期消费。另需暮色森林本体。
+
+两者移出 dev 后其余 9 包（含本体）全链路通过。附属 jar 装载还需
+`kaleidoscope_tavern`（end/nether/dim-wine/bloodwine 的 mandatory 链）。
