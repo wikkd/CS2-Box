@@ -13,6 +13,10 @@
     "id": "csgobox:armory_point"
   },
   "max_uses": 16,
+  "merchant_predicate": {
+    "condition": "csgobox:pool_member",
+    "mineral": "minecraft:iron_ingot"
+  },
   "reputation_discount": 0.05,
   "wants": {
     "id": "minecraft:iron_ingot"

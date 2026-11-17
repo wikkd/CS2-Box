@@ -1,4 +1,10 @@
 {
+  "given_item_modifiers": [
+    {
+      "function": "csgobox:villager_box",
+      "terminal": true
+    }
+  ],
   "gives": {
     "id": "csgobox:terminal"
   },

@@ -682,8 +682,10 @@ public final class AnimRenderOps {
 
     /** One-shot resolve of the private per-mob animation state fields (sheep
      *  graze clock, creeper swell pair); null on failure and the action
-     *  degrades to a standing pause. The enderman stare and spellcaster
-     *  casting drive public API only. */
+     *  degrades to a standing pause. The enderman stare drives public API
+     *  only. The IllagerSpell enum is protected on this era too: the
+     *  spellcaster casting call and its two constants resolve reflectively
+     *  (degrading silently in production where the names remap away). */
     private static final Field SHEEP_EAT_TICK = resolveField(Sheep.class, "eatAnimationTick");
     private static final Field CREEPER_SWELL = resolveField(Creeper.class, "swell");
     private static final Field CREEPER_OLD_SWELL = resolveField(Creeper.class, "oldSwell");

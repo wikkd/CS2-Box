@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.MapCodec;
 import com.reclizer.csgobox.v26_1_2.CsgoBox;
 import com.reclizer.csgobox.v26_1_2.block.ModBlocks;
+import com.reclizer.csgobox.villager.VillagerTradePool;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.registries.Registries;
@@ -14,6 +15,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -32,6 +35,20 @@ import java.util.function.Supplier;
  * the actual trades live in JSON under
  * {@code data/csgobox/trade_set/arms_dealer/level_N.json} and
  * {@code data/csgobox/villager_trade/arms_dealer/N/*.json}.</p>
+ *
+ * <p>Mineral-buy trades come from a <b>random pool</b> (shared JSON, see
+ * {@link VillagerTradePool}): each level's TradeSet lists the full mineral
+ * pool, the buy trades are gated by the {@code csgobox:pool_member}
+ * condition (registered here), and the {@code amount: 2} draw fills the
+ * slots with the active minerals plus the sell trades.</p>
+ *
+ * <p>The box (level 2) and terminal (level 4) sales draw from the live
+ * {@code BoxRegistry} ({@link VillagerBoxSell}): the {@code csgobox:villager_box}
+ * loot function rewrites the trade item to the villager's deterministic
+ * per-UUID pick (stable across level-ups) and the
+ * {@code csgobox:arms_dealer_box_price} provider prices it at the contents'
+ * table-price expectation × {@code box_sell_ratio} — both registered here.
+ * An empty pool drops the trade entirely (no unbound empty boxes for sale).</p>
  *
  * <p>All point values are anchored to the in-repo economy: 9 Armory Points =
  * 1 {@code csgo_key0} (see {@code data/csgobox/recipe/armory_point_exchange.json}).
@@ -54,8 +71,26 @@ public final class ModVillagers {
     public static final DeferredRegister<MapCodec<? extends NumberProvider>> PRICE_PROVIDERS =
             DeferredRegister.create(Registries.LOOT_NUMBER_PROVIDER_TYPE, CsgoBox.MODID);
 
+    /** Registers the {@code csgobox:arms_dealer_box_price} loot number provider
+     *  pricing the villager's assigned box / terminal sale. */
+    public static final DeferredRegister<MapCodec<? extends NumberProvider>> BOX_PROVIDERS =
+            DeferredRegister.create(Registries.LOOT_NUMBER_PROVIDER_TYPE, CsgoBox.MODID);
+
+    /** Registers the {@code csgobox:villager_box} loot function rewriting the
+     *  pooled box / terminal trade items (see {@link VillagerBoxSell}). */
+    public static final DeferredRegister<MapCodec<? extends LootItemFunction>> BOX_FUNCTIONS =
+            DeferredRegister.create(Registries.LOOT_FUNCTION_TYPE, CsgoBox.MODID);
+
+    /** Registers the {@code csgobox:pool_member} loot condition gating the
+     *  pooled mineral-buy villager trades (see {@link VillagerTradePool}). */
+    public static final DeferredRegister<MapCodec<? extends LootItemCondition>> POOL_CONDITIONS =
+            DeferredRegister.create(Registries.LOOT_CONDITION_TYPE, CsgoBox.MODID);
+
     static {
         PRICE_PROVIDERS.register("arms_dealer_price", () -> ArmsDealerPriceProvider.MAP_CODEC);
+        BOX_PROVIDERS.register("arms_dealer_box_price", () -> ArmsDealerBoxPriceProvider.MAP_CODEC);
+        BOX_FUNCTIONS.register("villager_box", () -> ArmsDealerBoxFunction.MAP_CODEC);
+        POOL_CONDITIONS.register("pool_member", () -> ArmsDealerPoolCondition.MAP_CODEC);
     }
 
     private static final ResourceKey<PoiType> POI_KEY = ResourceKey.create(
@@ -95,5 +130,8 @@ public final class ModVillagers {
         POI_TYPES.register(eventBus);
         PROFESSIONS.register(eventBus);
         PRICE_PROVIDERS.register(eventBus);
+        BOX_PROVIDERS.register(eventBus);
+        BOX_FUNCTIONS.register(eventBus);
+        POOL_CONDITIONS.register(eventBus);
     }
 }

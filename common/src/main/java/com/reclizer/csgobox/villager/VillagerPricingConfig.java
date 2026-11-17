@@ -25,14 +25,25 @@ import java.util.Map;
  * capped at {@code key0Price / 3}, the 3-iron-craft-one-key0 parity, so
  * selling iron for points can never beat crafting a key0), key1/key2 sell prices
  * are their crafting-cost anchors ({@code 3 × mineral base × sellMarkup}),
- * key0 keeps the mod's currency anchor (9 points = 1 key0), and the box /
- * terminal sell prices are derived from key0. Every price is re-sampled on
+ * key0 keeps the mod's currency anchor (9 points = 1 key0), and the terminal
+ * sell price is derived from key0. Box sales are priced by
+ * {@link VillagerBoxPool} from the contents' table-price expectation ×
+ * {@code boxSellRatio}. Every price is re-sampled on
  * each villager trade refresh within {@code ±fluctuation}, so prices follow
  * the live economy and never drift out of line with the recycler / terminal.
  *
  * <p>When the price table has no entry for a mineral, the {@code fallbacks}
  * map is used, so a server without {@code _prices.json} (e.g. a fresh 26.x
  * world) still gets sane trades instead of zero-point offers.</p>
+ *
+ * <p>{@code pool_enabled} (default true) additionally draws the mineral-buy
+ * offers from per-level random pools via {@link VillagerTradePool} — each
+ * villager offers a random subset of its level's minerals while every sell
+ * offer (key0 / key1 / terminal / key2) stays present;
+ * {@code false} restores the pre-pool fixed lists. The box / terminal sale
+ * pool ({@link VillagerBoxPool}) is independent of this knob — it is driven
+ * by the live BoxRegistry and {@code box_sell_ratio} (0 disables box
+ * sales).</p>
  *
  * <p>Pure value type — no Minecraft imports — so it compiles in the common
  * module and parses identically on every platform. Malformed fields are
@@ -46,8 +57,9 @@ public record VillagerPricingConfig(
         double fluctuation,
         int key0Price,
         double key0Fluctuation,
-        double boxKeyRatio,
+        double boxSellRatio,
         double terminalKeyRatio,
+        boolean poolEnabled,
         Map<String, Integer> fallbacks) {
 
     public static final String FILE_NAME = "_villager_prices.json";
@@ -57,13 +69,20 @@ public record VillagerPricingConfig(
             "minecraft:iron_ingot", 50,
             "minecraft:gold_ingot", 50,
             "minecraft:diamond", 200,
-            "minecraft:emerald", 55);
+            "minecraft:emerald", 55,
+            "minecraft:coal", 15,
+            "minecraft:copper_ingot", 25);
 
     /**
      * Defaults mirror the pre-dynamic economy so enabling the feature does
      * not shock existing servers: buyRate 0.06 reproduces the old
      * iron=3 / gold=3 / diamond=12 ballpark, key0 stays at the 9-point
-     * currency anchor, box ≈ 8 points and terminal = 2 key0 (18 points).
+     * currency anchor, terminal = 2 key0 (18 points). Box sales price at the
+     * contents' table-price expectation ({@code box_sell_ratio} 1.0 = zero
+     * expected margin). The random mineral-buy pool ({@link VillagerTradePool})
+     * and the box/terminal sale pool ({@link VillagerBoxPool}) are on by
+     * default; {@code pool_enabled=false} restores the pre-pool fixed mineral
+     * buys (the box sale pool has no legacy equivalent).
      */
     public static final VillagerPricingConfig DEFAULT = new VillagerPricingConfig(
             true,
@@ -72,8 +91,9 @@ public record VillagerPricingConfig(
             0.10,
             9,
             0.05,
-            0.9,
+            1.0,
             2.0,
+            true,
             DEFAULT_FALLBACKS);
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VillagerPricingConfig.class);
@@ -107,8 +127,9 @@ public record VillagerPricingConfig(
         double fluctuation = ratio(json, "fluctuation", DEFAULT.fluctuation(), issues);
         int key0Price = nonNegativeInt(json, "key0_price", DEFAULT.key0Price(), issues);
         double key0Fluctuation = ratio(json, "key0_fluctuation", DEFAULT.key0Fluctuation(), issues);
-        double boxKeyRatio = ratio(json, "box_key_ratio", DEFAULT.boxKeyRatio(), issues);
+        double boxSellRatio = ratio(json, "box_sell_ratio", DEFAULT.boxSellRatio(), issues);
         double terminalKeyRatio = ratio(json, "terminal_key_ratio", DEFAULT.terminalKeyRatio(), issues);
+        boolean poolEnabled = bool(json, "pool_enabled", DEFAULT.poolEnabled(), issues);
 
         Map<String, Integer> fallbacks = new LinkedHashMap<>(DEFAULT_FALLBACKS);
         if (json.has("fallbacks") && json.get("fallbacks").isJsonObject()) {
@@ -128,7 +149,7 @@ public record VillagerPricingConfig(
             }
         }
         return new VillagerPricingConfig(enabled, buyRate, sellMarkup, fluctuation,
-                key0Price, key0Fluctuation, boxKeyRatio, terminalKeyRatio, fallbacks);
+                key0Price, key0Fluctuation, boxSellRatio, terminalKeyRatio, poolEnabled, fallbacks);
     }
 
     /**
@@ -167,17 +188,27 @@ public record VillagerPricingConfig(
                 "key1/key2 = crafting cost (3 × mineral base) × sell_markup, paid as ≤ 64 Armory " +
                 "Points plus gold-ingot / diamond change for the remainder (a single trade input " +
                 "holds one 64-point stack), key0 = key0_price (9-point currency anchor), " +
-                "box = key0 × box_key_ratio, terminal = key0 × terminal_key_ratio. " +
+                "terminal = key0 × terminal_key_ratio. " +
+                "Box sales price at the contents' table-price expectation (grade odds × item " +
+                "weights × mean count × mean table price) × box_sell_ratio (1.0 = zero expected " +
+                "margin, so buying a box can never arbitrage the villager); prices beyond one " +
+                "points stack are paid as ≤ 64 points + gold-ingot change. Boxes whose contents " +
+                "can't be priced faithfully (loot_table entries, random-enchant specs) stay out " +
+                "of the sale pool. " +
                 "Each refresh re-samples within ±fluctuation. fallbacks are used when the price " +
-                "table lacks a mineral entry.");
+                "table lacks a mineral entry. pool_enabled draws the mineral-buy offers from " +
+                "per-level pools (each villager picks a random subset; sell offers for keys / " +
+                "terminal are always present); false restores the pre-pool fixed list " +
+                "(iron+emerald / gold / diamond / — / —). Requires a restart to reload.");
         root.addProperty("enabled", enabled);
         root.addProperty("buy_rate", buyRate);
         root.addProperty("sell_markup", sellMarkup);
         root.addProperty("fluctuation", fluctuation);
         root.addProperty("key0_price", key0Price);
         root.addProperty("key0_fluctuation", key0Fluctuation);
-        root.addProperty("box_key_ratio", boxKeyRatio);
+        root.addProperty("box_sell_ratio", boxSellRatio);
         root.addProperty("terminal_key_ratio", terminalKeyRatio);
+        root.addProperty("pool_enabled", poolEnabled);
         JsonObject fb = new JsonObject();
         fallbacks.forEach(fb::addProperty);
         root.add("fallbacks", fb);

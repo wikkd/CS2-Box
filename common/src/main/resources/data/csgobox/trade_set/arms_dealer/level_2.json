@@ -2,7 +2,10 @@
   "amount": 2,
   "random_sequence": "csgobox:trade_set/arms_dealer/level_2",
   "trades": [
+    "csgobox:arms_dealer/2/iron_points",
+    "csgobox:arms_dealer/2/emerald_points",
     "csgobox:arms_dealer/2/gold_points",
-    "csgobox:arms_dealer/2/points_box"
+    "csgobox:arms_dealer/2/box_sell",
+    "csgobox:arms_dealer/2/box_sell_change"
   ]
 }

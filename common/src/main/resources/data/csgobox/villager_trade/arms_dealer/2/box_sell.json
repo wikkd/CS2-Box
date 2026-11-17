@@ -1,0 +1,22 @@
+{
+  "given_item_modifiers": [
+    {
+      "function": "csgobox:villager_box",
+      "terminal": false
+    }
+  ],
+  "gives": {
+    "id": "csgobox:csgo_box"
+  },
+  "max_uses": 12,
+  "reputation_discount": 0.05,
+  "wants": {
+    "count": {
+      "part": "cheap_points",
+      "terminal": false,
+      "type": "csgobox:arms_dealer_box_price"
+    },
+    "id": "csgobox:armory_point"
+  },
+  "xp": 5
+}

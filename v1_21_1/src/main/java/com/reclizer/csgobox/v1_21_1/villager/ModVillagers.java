@@ -5,9 +5,12 @@ import com.reclizer.csgobox.box.BoxDefaults;
 import com.reclizer.csgobox.box.PriceTableRegistry;
 import com.reclizer.csgobox.v1_21_1.CsgoBox;
 import com.reclizer.csgobox.v1_21_1.block.ModBlocks;
+import com.reclizer.csgobox.v1_21_1.item.ItemCsgoBox;
 import com.reclizer.csgobox.v1_21_1.item.ModItems;
+import com.reclizer.csgobox.villager.VillagerBoxPool;
 import com.reclizer.csgobox.villager.VillagerPricing;
 import com.reclizer.csgobox.villager.VillagerPricingConfig;
+import com.reclizer.csgobox.villager.VillagerTradePool;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.registries.Registries;
@@ -44,6 +47,18 @@ import java.util.function.Supplier;
  * {@code config/csbox/_villager_prices.json}). When dynamic pricing is
  * disabled the trades fall back to the static values shared with the 26.x
  * datapack tables, so all platforms stay numerically aligned.</p>
+ *
+ * <p>Mineral buys additionally come from a <b>random pool</b>
+ * ({@link VillagerTradePool}): each villager offers a random subset of its
+ * level's minerals (keyed by UUID+level, re-rolled on level-up) while every
+ * sell offer stays present; {@code pool_enabled=false} restores the
+ * pre-pool fixed lists.</p>
+ *
+ * <p>The box (level 2) and terminal (level 4) sales draw from the live
+ * {@code BoxRegistry} ({@link VillagerBoxSell}): each villager deterministically
+ * sells ONE configured box / terminal (UUID-seeded — stable across level-ups),
+ * priced at the contents' table-price expectation × {@code box_sell_ratio};
+ * nothing sellable → the trade does not appear.</p>
  *
  * <p>Economy anchor: 9 Armory Points = 1 {@code csgo_key0}
  * (see {@code data/csgobox/recipe/armory_point_exchange.json}).
@@ -122,28 +137,39 @@ public final class ModVillagers {
             Item key0 = ModItems.ITEM_CSGO_KEY0.get();
             Item key1 = ModItems.ITEM_CSGO_KEY1.get();
             Item key2 = ModItems.ITEM_CSGO_KEY2.get();
-            Item box = ModItems.ITEM_CSGOBOX.get();
-            Item terminal = ModItems.ITEM_TERMINAL.get();
 
             Int2ObjectMap<VillagerTrades.ItemListing[]> byLevel = new Int2ObjectOpenHashMap<>();
 
-            // Level 1: minerals → points (iron / emerald); statics match the
-            // dynamic defaults (table 50/55 × buyRate 0.06 → 3)
+            // Mineral buys are drawn from per-level pools (VillagerTradePool):
+            // vanilla shuffles the array and fills 2 offer slots per level-up,
+            // skipping null offers without consuming a slot — so inactive pool
+            // members gate themselves off and the sell offers below are always
+            // present. pool_enabled=false restores the pre-pool fixed lists.
+            // Level 1: 2 of {coal, copper, iron, emerald, gold} → points;
+            // statics match the dynamic defaults (fallback × buyRate 0.06)
             byLevel.put(1, new VillagerTrades.ItemListing[]{
-                    dynamic(Items.IRON_INGOT, 1, point, q -> q.iron(), 3, 16, 2),
-                    dynamic(Items.EMERALD, 1, point, q -> q.emerald(), 3, 12, 2),
+                    pooledBuy(1, VillagerTradePool.COAL, Items.COAL, point, q -> q.coal(), 1, 16, 2),
+                    pooledBuy(1, VillagerTradePool.COPPER, Items.COPPER_INGOT, point, q -> q.copper(), 2, 16, 2),
+                    pooledBuy(1, VillagerTradePool.IRON, Items.IRON_INGOT, point, q -> q.iron(), 3, 16, 2),
+                    pooledBuy(1, VillagerTradePool.EMERALD, Items.EMERALD, point, q -> q.emerald(), 3, 12, 2),
+                    pooledBuy(1, VillagerTradePool.GOLD, Items.GOLD_INGOT, point, q -> q.gold(), 3, 16, 2),
             });
-            // Level 2: gold → points; points → csgo_box
+            // Level 2: 1 of {iron, emerald, gold} → points;
+            // villager-specific box sale (EV-priced pool from BoxRegistry)
             byLevel.put(2, new VillagerTrades.ItemListing[]{
-                    dynamic(Items.GOLD_INGOT, 1, point, q -> q.gold(), 3, 16, 5),
-                    dynamicSell(point, q -> q.box(), box, 8, 12, 5),
+                    pooledBuy(2, VillagerTradePool.IRON, Items.IRON_INGOT, point, q -> q.iron(), 3, 16, 5),
+                    pooledBuy(2, VillagerTradePool.EMERALD, Items.EMERALD, point, q -> q.emerald(), 3, 12, 5),
+                    pooledBuy(2, VillagerTradePool.GOLD, Items.GOLD_INGOT, point, q -> q.gold(), 3, 16, 5),
+                    boxSell(12, 5),
             });
-            // Level 3: diamond → points; points → csgo_key0 (9-point anchor)
+            // Level 3: 1 of {gold, diamond} → points; points → csgo_key0 (9-point anchor)
             byLevel.put(3, new VillagerTrades.ItemListing[]{
-                    dynamic(Items.DIAMOND, 1, point, q -> q.diamond(), 12, 12, 10),
+                    pooledBuy(3, VillagerTradePool.GOLD, Items.GOLD_INGOT, point, q -> q.gold(), 3, 12, 10),
+                    pooledBuy(3, VillagerTradePool.DIAMOND, Items.DIAMOND, point, q -> q.diamond(), 12, 12, 10),
                     dynamicSell(point, q -> q.key0(), key0, 9, 16, 10),
             });
-            // Level 4: points + gold → csgo_key1; points → terminal
+            // Level 4: points + gold → csgo_key1;
+            // villager-specific terminal sale (pool from BoxRegistry)
             byLevel.put(4, new VillagerTrades.ItemListing[]{
                     // key1's 3-gold crafting anchor exceeds one 64-point
                     // stack, so the remainder is paid in whole gold ingots
@@ -158,10 +184,15 @@ public final class ModVillagers {
                                 new ItemStack(key1, 1),
                                 8, 15, 0.05F);
                     },
-                    dynamicSell(point, q -> q.terminal(), terminal, 18, 4, 15),
+                    terminalSell(4, 15),
             });
-            // Level 5: points + diamond → csgo_key2 (two-input offer)
+            // Level 5: 1 of {iron, emerald, gold, diamond} → points;
+            // points + diamond → csgo_key2 (two-input offer)
             byLevel.put(5, new VillagerTrades.ItemListing[]{
+                    pooledBuy(5, VillagerTradePool.IRON, Items.IRON_INGOT, point, q -> q.iron(), 3, 12, 30),
+                    pooledBuy(5, VillagerTradePool.EMERALD, Items.EMERALD, point, q -> q.emerald(), 3, 12, 30),
+                    pooledBuy(5, VillagerTradePool.GOLD, Items.GOLD_INGOT, point, q -> q.gold(), 3, 12, 30),
+                    pooledBuy(5, VillagerTradePool.DIAMOND, Items.DIAMOND, point, q -> q.diamond(), 12, 12, 30),
                     (entity, random) -> {
                         VillagerPricing.Quote q = quoteFor(random);
                         int points = q != null ? q.key2Points() : 45;
@@ -179,20 +210,27 @@ public final class ModVillagers {
     }
 
     /**
-     * Mineral → points listing: {@code in} → N points, where N is the
+     * Pooled mineral → points listing: {@code in} → N points, where N is the
      * dynamic quote value (or the static fallback when dynamic pricing is
-     * disabled). Count is clamped to the 64-point stack cap, matching the
-     * 26.x number-provider side.
+     * disabled). The offer is {@code null} unless the mineral is active for
+     * this villager per {@link VillagerTradePool} — vanilla's draw skips
+     * nulls without consuming an offer slot, so gating composes with the
+     * random pool and with the always-present sell offers. Count is clamped
+     * to the 64-point stack cap, matching the 26.x number-provider side.
      */
-    private static VillagerTrades.ItemListing dynamic(Item in, int inCount, Item out,
-                                                      java.util.function.ToIntFunction<VillagerPricing.Quote> price,
-                                                      int fallback, int maxUses, int xp) {
+    private static VillagerTrades.ItemListing pooledBuy(int level, String mineralId, Item in, Item out,
+                                                        java.util.function.ToIntFunction<VillagerPricing.Quote> price,
+                                                        int fallback, int maxUses, int xp) {
         return (entity, random) -> {
+            if (!VillagerTradePool.isActive(entity.getUUID().getLeastSignificantBits(), level,
+                    mineralId, config().poolEnabled())) {
+                return null;
+            }
             VillagerPricing.Quote q = quoteFor(random);
             int count = q != null
                     ? Math.max(1, Math.min(price.applyAsInt(q), VillagerPricing.POINT_STACK_LIMIT))
                     : fallback;
-            return new MerchantOffer(new ItemCost(in, inCount), new ItemStack(out, count),
+            return new MerchantOffer(new ItemCost(in, 1), new ItemStack(out, count),
                     maxUses, xp, 0.05F);
         };
     }
@@ -208,6 +246,60 @@ public final class ModVillagers {
                     : fallback;
             return new MerchantOffer(new ItemCost(point, points), new ItemStack(out, 1),
                     maxUses, xp, 0.05F);
+        };
+    }
+
+    /**
+     * Villager-specific box sale: picks one crate deterministically per
+     * villager ({@link VillagerBoxSell}, seeded by UUID — stable across
+     * level-ups) from the live {@code BoxRegistry} and prices it at the
+     * contents' table-price expectation × {@code box_sell_ratio}. Prices
+     * beyond one points stack are paid with gold-ingot change (key1/key2
+     * convention). Nothing sellable → {@code null} (vanilla skips the slot —
+     * no more selling unbound empty boxes).
+     */
+    private static VillagerTrades.ItemListing boxSell(int maxUses, int xp) {
+        return (entity, random) -> {
+            VillagerBoxSell.Offer offer = VillagerBoxSell.resolve(
+                    entity.getUUID().getLeastSignificantBits(), false,
+                    config(), PriceTableRegistry.get());
+            if (offer == null) {
+                return null;
+            }
+            ItemStack box = ItemCsgoBox.setBoxId(offer.boxId(),
+                    new ItemStack(ModItems.itemForBox(offer.boxId(), false), 1));
+            int points = VillagerBoxPool.pointsPart(offer.price());
+            int gold = VillagerBoxPool.goldChange(offer.price(), offer.goldBase());
+            if (gold > 0) {
+                return new MerchantOffer(new ItemCost(ModItems.ITEM_ARMORY_POINT.get(), points),
+                        Optional.of(new ItemCost(Items.GOLD_INGOT, gold)),
+                        box, maxUses, xp, 0.05F);
+            }
+            return new MerchantOffer(new ItemCost(ModItems.ITEM_ARMORY_POINT.get(), points), box, maxUses, xp, 0.05F);
+        };
+    }
+
+    /**
+     * Villager-specific terminal sale: same pool mechanics as {@link #boxSell}
+     * for {@code type: "terminal"} definitions; the price stays the key0 ×
+     * {@code terminal_key_ratio} quote (a terminal is a shopfront, not a
+     * value store — its contents already sell at table price).
+     */
+    private static VillagerTrades.ItemListing terminalSell(int maxUses, int xp) {
+        return (entity, random) -> {
+            VillagerBoxSell.Offer offer = VillagerBoxSell.resolve(
+                    entity.getUUID().getLeastSignificantBits(), true,
+                    config(), PriceTableRegistry.get());
+            if (offer == null) {
+                return null;
+            }
+            VillagerPricing.Quote q = quoteFor(random);
+            int points = q != null
+                    ? Math.max(1, Math.min(q.terminal(), VillagerPricing.POINT_STACK_LIMIT))
+                    : 18;
+            ItemStack terminal = ItemCsgoBox.setBoxId(offer.boxId(),
+                    new ItemStack(ModItems.itemForBox(offer.boxId(), true), 1));
+            return new MerchantOffer(new ItemCost(ModItems.ITEM_ARMORY_POINT.get(), points), terminal, maxUses, xp, 0.05F);
         };
     }
 }

@@ -173,20 +173,22 @@
 | `fluctuation` | `0.10` | 每次刷新重采样幅度（±10%） |
 | `key0_price` | `9` | key0 货币锚（9 点 = 1 key0） |
 | `key0_fluctuation` | `0.05` | key0 单独波动（±5%） |
-| `box_key_ratio` | `0.9` | box 售价 = key0 × 0.9 |
+| `box_sell_ratio` | `1.0` | 箱子售价 = 内容表价期望值 × 该倍率（1.0 = 零期望利润，防开箱套利；0 = 关闭村民卖箱） |
 | `terminal_key_ratio` | `2.0` | terminal 售价 = key0 × 2.0 |
-| `fallbacks` | iron 50 / gold 50 / diamond 200 / emerald 55 | 价格表缺矿物条目时的兜底表价 |
+| `pool_enabled` | `true` | 随机矿物收购池开关（见「随机收购池」）；`false` 恢复固定收购列表 |
+| `fallbacks` | iron 50 / gold 50 / diamond 200 / emerald 55 / coal 15 / copper_ingot 25 | 价格表缺矿物条目时的兜底表价 |
 
 **定价规则**（每次村民交易刷新在 `±fluctuation` 内重采样，表价是区间时先采样区间再乘）
 
-- 收购：1 铁 / 绿宝石 / 金 / 钻 → `表价 × buy_rate × (1 ± fluctuation)` 点。绿宝石基价优先取表中
+- 收购：1 铁 / 绿宝石 / 金 / 钻 / 煤 / 铜 → `表价 × buy_rate × (1 ± fluctuation)` 点。绿宝石基价优先取表中
   `minecraft:emerald` 的直接定价，其次 `minecraft:emerald_block ÷ 9`，最后用 `fallbacks`。
   **铁另受 key0 平价上限**：`min(表价 × buy_rate × 波动, floor(key0_price / 3))`。3 铁可直接合成
   1 把 key0，而 key0 售价是固定锚点（默认 9 点）——不设上限的话，把铁的表价抬高（如 500）会让
   「卖铁换点 → 买 key0」远超直接合成（1 铁兑 30 点，3 铁兑 10 把 key0，村民变成印钞机）。
   上限生效时 3 铁恰好兑换 1 把 key0 的点数（零利润）；默认表价 50 下原始值就是 3 点，上限
-  不生效、默认数值不变。金 / 钻不受此上限：key1 / key2 售价与收购价随同一价格表浮动，
-  不存在固定锚点可套利。
+  不生效、默认数值不变。金 / 钻 / 煤 / 铜不受此上限（没有直通经济的合成路线）：key1 / key2
+  售价与收购价随同一价格表浮动，不存在固定锚点可套利；煤 / 铜的兜底基价刻意压在铁以下
+  （默认 15 / 25 → 收购 1 / 2 点），不会反向盖过铁。
 - key0：`key0_price × (1 ± key0_fluctuation)` 点。
 - key1 / key2：按合成成本锚定 `3 × 矿物表价 × sell_markup × (1 ± fluctuation)`；两者都因
   点数堆叠上限 64 拆成「≤64 点 + 整金/整钻」两段（找零矿物数为 0 时按 1 计，保证双输入
@@ -194,10 +196,51 @@
   显著高于静态回退价（key1 约 3 倍、key2 约 2.5 倍）——开启动态定价后钥匙按合成成本出售，
   关闭则回退旧静态价，切换开关会改变钥匙性价比，属预期行为；找零向上取整，实际支付可能
   略高于锚价。
-- box / terminal：`key0 × box_key_ratio / terminal_key_ratio × (1 ± fluctuation)`。
+- box / terminal：箱子售价见下方「随机箱 / 终端机售卖池」（EV 定价，不走 key0）；终端机仍为
+  `key0 × terminal_key_ratio × (1 ± fluctuation)`。
 - 防套利（结构性）：铁收购价被钉在 `key0_price / 3` 上限（见上），任何价格表下「矿 → 点 →
   key0」都不会超过用 3 铁直接合成 key0；金 / 钻 / 绿宝石对应的钥匙售价随同一价格表浮动，
   收购与出售同源，不存在固定锚点套利。
+
+**随机收购池（`pool_enabled`，默认开）**
+
+- 收购交易不再是每级固定两条：每个军火商村民按「UUID + 等级」做种子，从该级的矿物池
+  确定性抽取若干收购位——L1 抽 2 of {煤, 铜, 铁, 绿宝石, 金}；L2 抽 1 of {铁, 绿宝石, 金}
+  附带 8 点 → 箱子；L3 抽 1 of {金, 钻} 附带 9 点 → key0；L4 不变（key1 + 终端机，无收购位）；
+  L5 抽 1 of {铁, 绿宝石, 金, 钻} 附带 key2 报价。**出售类交易（箱子 / key0 / key1 / 终端机 /
+  key2）不进池**，每个村民必定提供——随机只发生在「收什么矿物」上。
+- 选择对同一村民稳定（同一等级下重开世界 / 重进服务器不变），升级到下一级时重掷；
+  与原版「报价只在生成 / 升级时构建」的语义一致。不同村民、不同等级的组合互不相同。
+- 机制上依赖原版的抽取规则：每级升级时原版把该级报价数组洗牌后最多填 2 个报价位，
+  **null 报价不占位**——未抽中的矿物在旧平台返回 null 报价、在 26.x 经
+  `merchant_predicate` 判 false 被丢弃，报价位由抽中的矿物 + 出售交易填满，每级
+  报价数与池化前一致（2 / 2 / 2 / 2 / 2）。
+- `pool_enabled=false`：门控直接把「池化前的固定矿物」报为活跃（L1 铁+绿宝石、L2 金、
+  L3 钻、L4 / L5 无），八平台精确还原 2.0.x 的固定收购列表，无需改代码路径。
+- 既有村民不受影响：报价只在其升级 / 重载时按新池重建。
+
+**随机箱 / 终端机售卖池（读 `config/csbox/`，新箱自动上架）**
+
+- 村民卖的不是通用固定物品，而是从**服务端实时加载的箱子注册表**里选：L2 卖箱子
+  （`type: "csbox"` 定义池），L4 卖终端机（`type: "terminal"` 定义池）——新加的箱子 / 终端机
+  配置自动进入对应池，无需任何额外配置。每个村民按「UUID 哈希」**确定性选定一台**：
+  种子不含等级，**已解锁开卖的箱子在升级 / 重载 / 重进服务器后不变**；新箱加入只会让
+  哈希竞争胜出的个别村民换卖新箱。
+- 池成员资格：`enabled` 且 `requires` 满足；价格可忠实计算的箱子才上架——内容里有
+  `loot_table` 条目或随机附魔（`item_spec` 的 `l` / `e` 标记）的箱子**不进池**（无法按表价
+  定期望）。没有任何可卖箱子时该交易**直接不出现**（顺带修掉 2.0.0 起「8 点卖空箱」的
+  漏洞——通用 `csgo_box` 无组件时绑定的是空箱）。
+- **箱子定价**：内容表价期望值 = Σ 档位概率 × 物品权重 × 数量区间中值 × 表价区间中值
+  （与 tooltip / JEI / 编辑器 EV 面板同一套 odds 来源），再乘 `box_sell_ratio`（默认 1.0 =
+  零期望利润，买箱开箱不可能套利村民）。全部用中值、不采样，保证同一村民多次求值
+  结果一致。
+- **支付**：价格 ≤ 64 点单输入；超出部分按 key1 / key2 惯例找零金锭（金基价取表价中值），
+  找零超过一组金锭的箱子不进池。26.x 的 datapack 无法表达「可选第二输入」，因此 JSON
+  挂两笔变体交易（`box_sell` 单输入 / `box_sell_change` 带金锭找零），各自用 0 计数自我
+  淘汰——每村民仍只见一笔箱子交易。
+- **终端机定价**：维持 `key0 × terminal_key_ratio`（终端机是商店门面而非价值储存——其内容
+  本就按表价零利润出售），随机只决定卖哪台。
+- 既有村民同样不受影响：售卖报价在其升级 / 重载时按当时注册表重建。
 
 **收购交易的定位（与拆解台 / 直接合成的层级）**
 
@@ -218,20 +261,29 @@
   价格字段引用自定义 loot `NumberProvider` `csgobox:arms_dealer_price`（注册于
   `loot_number_provider_type`，平台类 `ArmsDealerPriceProvider`）：
   - 收购端（矿→点）：`gives.count` 固定，用 `minecraft:set_count` loot function 动态改写点数；
+    每级的 `trade_set` 列出该级完整矿物池，收购交易另挂
+    `merchant_predicate: {condition: "csgobox:pool_member", mineral: "minecraft:…"}`
+    （自定义 loot condition，注册于 `loot_condition_type`，平台类 `ArmsDealerPoolCondition`）
+    实现「随机收购池」的门控（见上）；
   - 出售端（点→key / box / terminal）：`wants.count` / `additional_wants.count` 直接引用 provider；
-  - 每个 JSON 条目携带 `quote_field`（`iron` / `emerald` / `gold` / `diamond` / `key0` /
-    `key1_points` / `key1_gold` / `key2_points` / `key2_diamonds` / `box` / `terminal`）与
-    `fallback`（= 原静态值）。
+    箱子 / 终端机交易另挂 `csgobox:villager_box` loot function（注册于 `loot_function_type`，
+    平台类 `ArmsDealerBoxFunction`）改写交易物品为该村民的注册表选定箱，成本侧用
+    `csgobox:arms_dealer_box_price` provider（平台类 `ArmsDealerBoxPriceProvider`，
+    `part`: `cheap_points` / `change_points` / `change_gold`）按 EV 定价并做双变体自我淘汰；
+  - 每个 JSON 条目携带 `quote_field`（`iron` / `emerald` / `gold` / `diamond` / `coal` /
+    `copper` / `key0` / `key1_points` / `key1_gold` / `key2_points` / `key2_diamonds` /
+    `terminal`）与 `fallback`（= 原静态值）。
 
 **行为**
 
 - 波动频率：村民生成 / 升级 / 数据包重载时重采样（与旧平台 `updateTrades` 时机一致）；
   `restock` 只重置次数不重定价（原版机制）。波动幅度受整数舍入限制：基数小的交易在默认
-  参数下实际不波动（铁 / 金恒 3 点、key0 恒 9 点），可见波动出现在钻（11~13）、箱子（7~9）、
-  终端（16~20）等基数较大的交易上。
-- `enabled=false` 或配置缺失：26.x 回退 JSON 内 `fallback`（3 / 3 / 3 / 12 / 8 / 9 /
+  参数下实际不波动（铁 / 金恒 3 点、key0 恒 9 点），可见波动出现在钻（11~13）、
+  终端（16~20）等基数较大的交易上；箱子售价为 EV 定价，不随 `fluctuation` 波动（见上）。
+- `enabled=false` 或配置缺失：26.x 回退 JSON 内 `fallback`（3 / 3 / 3 / 12 / 1 / 2 / 9 /
   24+1 金 / 18 / 45+1 钻），1.20.1 / 1.21.1 回退等价静态值——平台间数值对齐，且收购端
   静态值与动态默认一致（切换开关不跳价；仅 key1 / key2 因锚价口径不同会在开关间变化）。
+  箱子 / 终端机售卖不受此开关影响：它们由注册表与 `box_sell_ratio` 驱动，无配置即不出现。
 - 配置为懒加载缓存：改动 `_villager_prices.json` 后**重启生效**（26.x 与旧平台一致，未做热重载）。
 
 ### 3.5 默认文件生成

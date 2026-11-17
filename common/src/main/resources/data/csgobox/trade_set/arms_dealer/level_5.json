@@ -1,7 +1,11 @@
 {
-  "amount": 1,
+  "amount": 2,
   "random_sequence": "csgobox:trade_set/arms_dealer/level_5",
   "trades": [
+    "csgobox:arms_dealer/5/iron_points",
+    "csgobox:arms_dealer/5/emerald_points",
+    "csgobox:arms_dealer/5/gold_points",
+    "csgobox:arms_dealer/5/diamond_points",
     "csgobox:arms_dealer/5/points_key2"
   ]
 }
