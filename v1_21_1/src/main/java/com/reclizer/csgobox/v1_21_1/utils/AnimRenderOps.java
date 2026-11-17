@@ -78,7 +78,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -781,6 +781,17 @@ public final class AnimRenderOps {
                 Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
         ITEM_MODEL_BOUNDS.put(model, bounds);
         return bounds;
+    }
+
+    /** Per-axis median of a coordinate sample (mean of the two middle values
+     *  on even counts). Kept for the entity/FIXED probe pivot (see
+     *  {@link #probeBoundsFromVertices}); item models use the raw envelope-box
+     *  centre instead (hollow shells drag the median onto a wall). */
+    private static float median(FloatArrayList values) {
+        float[] sorted = values.toFloatArray();
+        Arrays.sort(sorted);
+        int n = sorted.length;
+        return (n & 1) == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) * 0.5F;
     }
 
     /** Collects every quad vertex position of the model into per-axis lists
@@ -1913,6 +1924,24 @@ public final class AnimRenderOps {
         }
     }
 
+    /** Bounds from the last probe render: the pivot is the per-axis median of
+     *  the raw vertex cloud — **kept for entity/FIXED probes on purpose**:
+     *  their asymmetry is sparse appendage geometry (2026-11-17 winefox maid:
+     *  the tail and legs stretch the envelope downward, a box-centre pivot sat
+     *  ~19% of the model height below the dense body mass), the opposite
+     *  failure from hollow item shells (which the item default path handles
+     *  with the raw envelope-box centre, see {@link #modelBounds}). The span
+     *  stays the AABB largest axis for the auto-fit. */
+    private static ModelBounds probeBoundsFromVertices() {
+        return new ModelBounds(
+                new Vector3f(median(FIXED_CONTEXT_PROBE.vx),
+                        median(FIXED_CONTEXT_PROBE.vy),
+                        median(FIXED_CONTEXT_PROBE.vz)),
+                Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
+                        Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
+                                FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
+    }
+
     /** One uncached probe of an entity's rendered geometry (block units):
      *  entity renderers emit through the same VertexConsumer funnel as item
      *  renderers, so the recorder catches the real draw. */
@@ -1926,18 +1955,7 @@ public final class AnimRenderOps {
             LOGGER.warn("Entity preview size probe failed; keeping the raw preview scale", t);
             rendered = false;
         }
-        ModelBounds bounds = NO_BOUNDS;
-        if (rendered && FIXED_CONTEXT_PROBE.any) {
-            bounds = new ModelBounds(
-                    new Vector3f(
-                            (FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
-                            (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
-                            (FIXED_CONTEXT_PROBE.minZ + FIXED_CONTEXT_PROBE.maxZ) * 0.5F),
-                    Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
-                            Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
-                                    FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
-        }
-        return bounds;
+        return rendered && FIXED_CONTEXT_PROBE.any ? probeBoundsFromVertices() : NO_BOUNDS;
     }
 
     /** The vehicle icon texture for a Superb Warfare EntityType id, or null
@@ -2052,11 +2070,19 @@ public final class AnimRenderOps {
     private static final class FixedContextProbe implements MultiBufferSource, VertexConsumer {
         private float minX, minY, minZ, maxX, maxY, maxZ;
         private boolean any;
+        /** Raw vertex cloud for the pivot median (see
+         *  {@link #probeBoundsFromVertices}); transient, one probe render. */
+        private final FloatArrayList vx = new FloatArrayList();
+        private final FloatArrayList vy = new FloatArrayList();
+        private final FloatArrayList vz = new FloatArrayList();
 
         void reset() {
             minX = minY = minZ = Float.MAX_VALUE;
             maxX = maxY = maxZ = -Float.MAX_VALUE;
             any = false;
+            vx.clear();
+            vy.clear();
+            vz.clear();
         }
 
         @Override
@@ -2072,6 +2098,9 @@ public final class AnimRenderOps {
             maxX = Math.max(maxX, x);
             maxY = Math.max(maxY, y);
             maxZ = Math.max(maxZ, z);
+            vx.add(x);
+            vy.add(y);
+            vz.add(z);
             any = true;
             return this;
         }
@@ -2626,6 +2655,9 @@ public final class AnimRenderOps {
     private static ItemStack maidLoadedStack;
     private static final Map<String, Object> MAID_PREVIEW_BOUNDS = new HashMap<>();
     private static final Set<String> MAID_PREVIEW_LOG = new HashSet<>();
+    /** One-shot guards for the flat-icon degrade reasons (a degrade would
+     *  otherwise be completely silent — the 2026-11-17 L4 gap). */
+    private static final Set<String> MAID_DEGRADE_LOG = new HashSet<>();
 
     /** Namespace + path gate for the two soul slabs. Item presence alone
      *  proves the mod is loaded — no isModLoaded call. Package-private: the
@@ -2645,6 +2677,7 @@ public final class AnimRenderOps {
     static void renderMaidSlabPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
                                       int cx, int cy, Quat rotation, float scale) {
         boolean storedMaid = BuiltInRegistries.ITEM.getKey(item.getItem()).getPath().equals(MAID_SLAB_HAS_MAID_PATH);
+        String degrade = null;
         Entity maid = null;
         // DefaultedRegistry.get falls back to the pig for unknown ids, so
         // existence must go through containsKey.
@@ -2652,29 +2685,46 @@ public final class AnimRenderOps {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(MAID_TYPE_ID);
             maid = type == null ? null : entityPreviewInstance(type, player.level());
         }
-        if (maid != null) {
-            markPreviewMob(maid);
+        if (maid == null) {
+            degrade = "maid entity type unavailable";
+        } else {
             CompoundTag maidTag = null;
             String pick = null;
             if (storedMaid) {
                 maidTag = storedMaidTag(item);
-                if (maidTag != null && maidTag.getString(MAID_NBT_YSM_KEY).isEmpty()) {
+                if (maidTag == null) {
+                    degrade = "stored slab carries no maid_info component (no maid captured into this stack)";
+                } else if (!maidTag.getString(MAID_NBT_YSM_KEY).isEmpty()) {
+                    degrade = "YSM-stored maid but the YSM mod is not installed";
+                } else {
                     pick = maidTag.getString(MAID_NBT_MODEL_KEY);
+                    if (pick.isEmpty()) {
+                        degrade = "stored maid_info has no model id";
+                    }
                 }
             } else {
                 pick = maidSessionPick();
-                if (pick != null) {
+                if (pick == null) {
+                    degrade = "random maid pick unavailable (TLM client model registry unreachable or empty)";
+                } else {
                     maidTag = new CompoundTag();
                     maidTag.putString(MAID_NBT_MODEL_KEY, pick);
                 }
             }
-            if (maidTag != null && pick != null && !pick.isEmpty()) {
+            if (degrade == null) {
+                // Arm the inspect button only once a real maid look is on
+                // show; a flat-degraded slab has no mob to inspect.
+                markPreviewMob(maid);
                 applyMaidSaveTag(maid, item, maidTag, pick);
                 ModelBounds bounds = maidPreviewBounds(pick, maid);
                 if (bounds != NO_BOUNDS && renderEntityPreview(gg, maid, bounds, cx, cy, rotation, scale)) {
                     return;
                 }
+                degrade = "model probe or render unavailable";
             }
+        }
+        if (MAID_DEGRADE_LOG.add(degrade)) {
+            LOGGER.info("[csgobox] maid slab preview: flat degrade - {}", degrade);
         }
         renderItem2DFlat(player, gg, item, cx, cy, scale);
     }
