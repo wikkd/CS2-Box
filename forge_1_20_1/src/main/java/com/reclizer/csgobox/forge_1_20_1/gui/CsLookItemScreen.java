@@ -19,7 +19,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.Entity;
@@ -709,9 +708,13 @@ public class CsLookItemScreen extends Screen {
             return;
         }
         ResourceLocation skin = null;
-        if (this.minecraft != null && this.minecraft.player instanceof AbstractClientPlayer viewer
+        // 1.20.1: Minecraft.player is already a LocalPlayer (an
+        // AbstractClientPlayer); a Java 17 instanceof pattern may not
+        // widen, so use the player reference directly.
+        if (this.minecraft != null && this.minecraft.player != null
                 && this.minecraft.getSkinManager() != null) {
-            skin = this.minecraft.getSkinManager().getInsecureSkinLocation(viewer.getGameProfile());
+            skin = this.minecraft.getSkinManager()
+                    .getInsecureSkinLocation(this.minecraft.player.getGameProfile());
         }
         EpicFightInspect.start(previewPixelX(), previewPixelY(),
                 previewTextureSize(), previewTextureSize(), this.openItem, skin);
