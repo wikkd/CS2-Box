@@ -395,6 +395,17 @@ public final class AnimRenderOps {
             renderSlashBladeRackPreview(gg, item, player, cx, cy, rotation, scale);
             return;
         }
+        // Touhou Little Maid (车万女仆) soul slabs: the INIT slab carries no
+        // model of its own — the mod rolls a random maid at spawn time and
+        // the preview mirrors that with one random id per session; the
+        // stored-maid slab loads its MaidInfo save tag so the preview shows
+        // the exact stored maid. Both draw through the mod's own
+        // EntityMaidRenderer via the shared entity preview path. See
+        // renderMaidSlabPreview.
+        if (isMaidSlabItem(item)) {
+            renderMaidSlabPreview(gg, item, player, cx, cy, rotation, scale);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
@@ -2374,5 +2385,237 @@ public final class AnimRenderOps {
                     cacheKey, bounds == NO_BOUNDS ? "none" : bounds.span());
         }
         return bounds;
+    }
+
+    // ===================== Touhou Little Maid soul slab preview =====================
+
+    /** Touhou Little Maid (车万女仆) soul slab 3D preview. The slab's own look
+     *  is a flat {@code item/generated} icon and the maid models only draw
+     *  through TLM's {@code EntityMaidRenderer} (a vanilla {@code MobRenderer}
+     *  subclass registered for the {@code touhou_little_maid:maid} entity), so
+     *  the 3D pass parks a shared client-side maid entity and lets the mod's
+     *  own renderer draw the model — zero TLM classes referenced; the item-id
+     *  gate alone proves the mod is loaded. The INIT slab carries no model of
+     *  its own: TLM rolls a random maid model at spawn time
+     *  ({@code EntityMaid#finalizeSpawn}, skip-random over the installed model
+     *  id set) and the preview mirrors that — one random id per session, re-
+     *  rolled when a look screen opens (see {@link #clearMaidPreviewPick}).
+     *  The stored-maid slab ({@code smart_slab_has_maid}) instead loads its
+     *  {@code MaidInfo} save tag so the preview shows the exact stored maid.
+     *  Bounds are cached per model id: maid model sizes vary wildly (chibi,
+     *  yukkuri, humanoid), so the per-type entity bounds cache cannot be
+     *  reused. Degrades to the flat icon whenever the entity, the model set,
+     *  or the render itself is unavailable. */
+    private static final String MAID_MOD_ID = "touhou_little_maid";
+    private static final ResourceLocation MAID_TYPE_ID =
+            new ResourceLocation(MAID_MOD_ID, "maid");
+    private static final String MAID_SLAB_INIT_PATH = "smart_slab_init";
+    private static final String MAID_SLAB_HAS_MAID_PATH = "smart_slab_has_maid";
+    /** The maid's model id save key: camel-case {@code ModelId} on this 1.20.1
+     *  line (EntityMaid.MODEL_ID_TAG); the 1.21.1 NeoForge line uses the
+     *  lowercase {@code model_id}. */
+    private static final String MAID_NBT_MODEL_KEY = "ModelId";
+    /** YSM-stored maids need the YSM renderer; without the YSM mod installed
+     *  the shared renderer would fall back to whatever model it drew last, so
+     *  such stacks degrade to the flat icon. */
+    private static final String MAID_NBT_YSM_KEY = "YsmModelId";
+    /** The stored-maid slab's save tag: TLM keeps the full
+     *  {@code maid.saveWithoutId} payload in the item's root NBT under
+     *  {@code MaidInfo} (no data-component system on 1.20.1). */
+    private static final String MAID_INFO_TAG_KEY = "MaidInfo";
+    /** TLM's client model registry: the {@code MAID_MODELS} static on
+     *  {@code client.resource.CustomPackLoader} (a {@code MaidModels}
+     *  singleton). Resolved reflectively once, cached; unreachable registry
+     *  means no random pick and the flat icon degrade. */
+    private static final String MAID_PACK_LOADER_CLASS =
+            "com.github.tartaricacid.touhoulittlemaid.client.resource.CustomPackLoader";
+    private static Object MAID_MODELS_INSTANCE;
+    private static Method MAID_MODEL_SET_METHOD;
+    private static Method MAID_CONTAINS_INFO_METHOD;
+    private static boolean MAID_MODEL_METHODS_RESOLVED;
+    /** The random maid model of the current preview session (null = roll on
+     *  next use). Cleared by the look screen's init hook. */
+    private static String maidSessionPick;
+    private static String maidAppliedPick;
+    private static ItemStack maidLoadedStack;
+    private static final Map<String, Object> MAID_PREVIEW_BOUNDS = new HashMap<>();
+    private static final Set<String> MAID_PREVIEW_LOG = new HashSet<>();
+
+    /** Namespace + path gate for the two soul slabs. Item presence alone
+     *  proves the mod is loaded — no isModLoaded round-trip. Package-private:
+     *  the renderItem3D chain's maid gate. */
+    static boolean isMaidSlabItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return MAID_MOD_ID.equals(id.getNamespace())
+                && (MAID_SLAB_INIT_PATH.equals(id.getPath()) || MAID_SLAB_HAS_MAID_PATH.equals(id.getPath()));
+    }
+
+    /** 3D body of the maid slab preview (see the block comment at
+     *  {@link #MAID_MOD_ID} for the shape). Package-private: the renderItem3D
+     *  chain's maid branch. */
+    static void renderMaidSlabPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                      int cx, int cy, Quat rotation, float scale) {
+        boolean storedMaid = BuiltInRegistries.ITEM.getKey(item.getItem()).getPath().equals(MAID_SLAB_HAS_MAID_PATH);
+        Entity maid = null;
+        // DefaultedRegistry.get falls back to the pig for unknown ids, so
+        // existence must go through containsKey.
+        if (BuiltInRegistries.ENTITY_TYPE.containsKey(MAID_TYPE_ID)) {
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(MAID_TYPE_ID);
+            maid = type == null ? null : entityPreviewInstance(type, player.level());
+        }
+        if (maid != null) {
+            markPreviewMob(maid);
+            CompoundTag maidTag = null;
+            String pick = null;
+            if (storedMaid) {
+                maidTag = storedMaidTag(item);
+                if (maidTag != null && maidTag.getString(MAID_NBT_YSM_KEY).isEmpty()) {
+                    pick = maidTag.getString(MAID_NBT_MODEL_KEY);
+                }
+            } else {
+                pick = maidSessionPick();
+                if (pick != null) {
+                    maidTag = new CompoundTag();
+                    maidTag.putString(MAID_NBT_MODEL_KEY, pick);
+                }
+            }
+            if (maidTag != null && pick != null && !pick.isEmpty()) {
+                applyMaidSaveTag(maid, item, maidTag, pick);
+                ModelBounds bounds = maidPreviewBounds(pick, maid);
+                if (bounds != NO_BOUNDS && renderEntityPreview(gg, maid, bounds, cx, cy, rotation, scale)) {
+                    return;
+                }
+            }
+        }
+        renderItem2DFlat(player, gg, item, cx, cy, scale);
+    }
+
+    /** Drops the session's random maid pick so the next INIT-slab preview
+     *  rolls a fresh random maid (mirrors TLM's own random spawn semantics).
+     *  Package-private: relayed through the {@code MaidSlabPreview} facade. */
+    static void clearMaidPreviewPick() {
+        maidSessionPick = null;
+    }
+
+    /** The stored-maid save tag of a {@code smart_slab_has_maid} stack, read
+     *  from the item's root NBT ({@code MaidInfo} compound). Null when the
+     *  tag is absent or empty. */
+    private static CompoundTag storedMaidTag(ItemStack stack) {
+        if (!stack.hasTag()) {
+            return null;
+        }
+        CompoundTag tag = stack.getTag().getCompound(MAID_INFO_TAG_KEY);
+        return tag.isEmpty() ? null : tag;
+    }
+
+    /** The session's random maid model id, rolled on first use from TLM's
+     *  client model id set — the same skip-random idiom its own spawns use.
+     *  Null (and retried next frame) when the registry is unreachable or no
+     *  valid model is installed. */
+    private static String maidSessionPick() {
+        if (maidSessionPick != null) {
+            return maidSessionPick;
+        }
+        Set<String> ids = maidModelIdSet();
+        if (ids == null || ids.isEmpty()) {
+            return null;
+        }
+        Optional<String> rolled = ids.stream()
+                .filter(AnimRenderOps::maidContainsInfo)
+                .skip(ThreadLocalRandom.current().nextInt(ids.size()))
+                .findFirst();
+        if (!rolled.isPresent()) {
+            // skip landed past the filtered tail — fall back to any valid id
+            rolled = ids.stream().filter(AnimRenderOps::maidContainsInfo).findFirst();
+        }
+        maidSessionPick = rolled.orElse(null);
+        return maidSessionPick;
+    }
+
+    /** The client model registry reflectively: {@code CustomPackLoader.
+     *  MAID_MODELS.getModelIdSet()} + {@code containsInfo(String)} for pick
+     *  validation. One resolve; a failure is remembered and the preview
+     *  degrades to the flat icon. */
+    private static Set<String> maidModelIdSet() {
+        if (!MAID_MODEL_METHODS_RESOLVED) {
+            MAID_MODEL_METHODS_RESOLVED = true;
+            try {
+                Class<?> loader = Class.forName(MAID_PACK_LOADER_CLASS);
+                MAID_MODELS_INSTANCE = loader.getField("MAID_MODELS").get(null);
+                MAID_MODEL_SET_METHOD = MAID_MODELS_INSTANCE.getClass().getMethod("getModelIdSet");
+                MAID_CONTAINS_INFO_METHOD = MAID_MODELS_INSTANCE.getClass().getMethod("containsInfo", String.class);
+            } catch (Throwable t) {
+                LOGGER.warn("Maid slab preview: TLM client model registry unreachable; degrading to the flat icon", t);
+            }
+        }
+        if (MAID_MODELS_INSTANCE == null || MAID_MODEL_SET_METHOD == null) {
+            return null;
+        }
+        try {
+            Object result = MAID_MODEL_SET_METHOD.invoke(MAID_MODELS_INSTANCE);
+            return result instanceof Set<?> set ? (Set<String>) set : null;
+        } catch (Throwable t) {
+            LOGGER.warn("Maid slab preview: reading the model id set failed", t);
+            return null;
+        }
+    }
+
+    /** True when the pick has a registered client model info; on a reflection
+     *  failure the id is accepted (the renderer resolves or keeps its own
+     *  fallback) so an unreachable validator cannot starve the pick. */
+    private static boolean maidContainsInfo(String modelId) {
+        if (MAID_CONTAINS_INFO_METHOD == null || MAID_MODELS_INSTANCE == null) {
+            return true;
+        }
+        try {
+            return (Boolean) MAID_CONTAINS_INFO_METHOD.invoke(MAID_MODELS_INSTANCE, modelId);
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
+    /** Loads the maid save tag onto the shared instance once per (pick,
+     *  stack) pair — identical to the vanilla spawn-data discipline: reloads
+     *  on a re-roll or a different stored-maid stack, skips per-frame repeats
+     *  so the inspect animation state survives. The parked pose is restored
+     *  because {@code Entity.load} may carry Pos/Rotation from a save tag. */
+    private static void applyMaidSaveTag(Entity maid, ItemStack item, CompoundTag tag, String pick) {
+        boolean stackChanged = maidLoadedStack == null || !ItemStack.matches(item, maidLoadedStack);
+        boolean pickChanged = !pick.equals(maidAppliedPick);
+        if (!stackChanged && !pickChanged) {
+            return;
+        }
+        maidLoadedStack = item.copy();
+        maidAppliedPick = pick;
+        try {
+            maid.load(tag);
+            maid.setPos(0.0D, 64.0D, 0.0D);
+            maid.setYRot(180.0F);
+            maid.setXRot(0.0F);
+        } catch (Throwable t) {
+            LOGGER.warn("Maid slab preview: applying the maid save tag failed; keeping the default look", t);
+        }
+    }
+
+    /** Bounds of a maid model, cached per model id (sizes vary wildly between
+     *  model packs). The maid must already carry the model id when probing. */
+    private static ModelBounds maidPreviewBounds(String pick, Entity maid) {
+        Object cached = MAID_PREVIEW_BOUNDS.get(pick);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(maid);
+        MAID_PREVIEW_BOUNDS.put(pick, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        if (MAID_PREVIEW_LOG.add(pick)) {
+            LOGGER.info("[csgobox] maid slab preview: model={} span={}",
+                    pick, bounds == NO_BOUNDS ? "none" : bounds.span());
+        }
+        return bounds == NO_BOUNDS ? NO_BOUNDS : bounds;
     }
 }

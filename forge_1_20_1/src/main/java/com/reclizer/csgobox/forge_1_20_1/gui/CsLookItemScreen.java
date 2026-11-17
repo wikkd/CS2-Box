@@ -10,6 +10,7 @@ import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
+import com.reclizer.csgobox.forge_1_20_1.utils.MaidSlabPreview;
 import com.reclizer.csgobox.forge_1_20_1.utils.SlashBladePreview;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
@@ -650,6 +651,7 @@ public class CsLookItemScreen extends Screen {
         super.init();
         AnimRenderOps.clearPreviewMobInstance();
         SlashBladePreview.clearPreviewBlade();
+        MaidSlabPreview.clearPreviewPick();
         if (!this.sceneryAutoStarted) {
             this.sceneryAutoStarted = true;
             this.beginSceneryPanorama();

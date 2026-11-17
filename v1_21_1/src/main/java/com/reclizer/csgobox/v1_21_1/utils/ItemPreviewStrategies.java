@@ -33,6 +33,10 @@ import java.util.Optional;
  *       do);</li>
  *   <li>SlashBlade: Resharped blades (weapon-rack entity proxy, zero
  *       SlashBlade class references);</li>
+ *   <li>Touhou Little Maid soul slabs (车万女仆 魂符): INIT slab shows a
+ *       random maid model per session, stored-maid slab shows the exact
+ *       stored maid — both through TLM's own EntityMaidRenderer, zero TLM
+ *       class references;</li>
  *   <li>Superb Warfare vehicle summon crates (entity proxy, zero SBW
  *       class references);</li>
  *   <li>Superb Warfare guns (FIXED-context baked render, zero SBW class
@@ -64,6 +68,7 @@ final class ItemPreviewStrategies {
     static final List<ItemPreviewStrategy> ALL = List.of(
             new TaczGunStrategy(),
             new SlashBladeStrategy(),
+            new MaidSlabStrategy(),
             new SbwVehicleStrategy(),
             new SbwGunStrategy(),
             new SpawnEggStrategy(),
@@ -162,6 +167,34 @@ final class ItemPreviewStrategies {
      *  vehicle icon directly (SBW's decorator behaviour); no icon texture
      *  falls through to the crate's own FIXED-context 3D content. Vanilla
      *  registries only — no SBW class touched. */
+    /** Touhou Little Maid soul slabs (车万女仆 魂符): the INIT slab carries no
+     *  model of its own — TLM rolls a random maid at spawn time and the 3D
+     *  pass mirrors that with one random id per session from the client
+     *  model registry; the stored-maid slab loads its {@code maid_info} save
+     *  tag so the preview shows the exact stored maid. Both draw through
+     *  TLM's own EntityMaidRenderer via the shared entity preview path
+     *  (vanilla MobRenderer subclass — the dispatcher renders it), zero TLM
+     *  class references. 2D grids keep the flat slab icon. */
+    private static final class MaidSlabStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return AnimRenderOps.isMaidSlabItem(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderMaidSlabPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
     private static final class SbwVehicleStrategy implements ItemPreviewStrategy {
 
         @Override

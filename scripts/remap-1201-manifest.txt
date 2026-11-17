@@ -43,3 +43,6 @@ local-repo/me/shedaniel/rei/12.1.785/RoughlyEnoughItems-forge-12.1.785.jar	rei-1
 local-repo/com/tiviacz/travelersbackpack/9.1.58/travelersbackpack-forge-1.20.1-9.1.58.jar	travelersbackpack-forge-1.20.1-9.1.58-official.jar	-
 local-repo/net/p3pp3rf1y/sophisticatedbackpacks/3.26.20.2248/sophisticatedbackpacks-1.20.1-3.26.20.2248.jar	sophisticatedbackpacks-1.20.1-3.26.20.2248-official.jar	-
 local-repo/net/p3pp3rf1y/sophisticatedcore/1.5.35.2478/sophisticatedcore-1.20.1-1.5.35.2478.jar	sophisticatedcore-1.20.1-1.5.35.2478-official.jar	-
+
+# ===== 车万女仆（Touhou Little Maid）1.5.3 snapshot（无 jarjar 内包，geckolib3/simplebedrockmodel 为 shade 内嵌）=====
+local-repo/com/tartaricacid/tlm/1.20.1/touhoulittlemaid-1.5.3-forge+mc1.20.1-snapshot.jar	touhoulittlemaid-1.5.3-forge+mc1.20.1-official.jar	-
