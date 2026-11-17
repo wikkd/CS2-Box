@@ -2998,6 +2998,727 @@ window.CSBDATA = {
       "prices": null
     },
     {
+      "key": "create-aeronautics-pack",
+      "name": {
+        "en": "create-aeronautics-pack",
+        "zh": "create-aeronautics-pack"
+      },
+      "files": {
+        "aero_crate.json": {
+          "name": "#44AADD 创造航空军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "aeronautics"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "aeronautics:pearlescent_levitite",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:gyroscopic_propeller_bearing",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:music_disc_cloud_skipper",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "aeronautics:smart_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:levitite",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:mounted_potato_cannon",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "aeronautics:adjustable_burner",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:aviators_goggles",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:steam_vent",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:levitite_blend_bucket",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "aeronautics:propeller_bearing",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:andesite_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:end_stone_powder",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:red_envelope",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "aeronautics:wooden_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:white_envelope",
+              "count": 1
+            }
+          ]
+        },
+        "aero_terminal.json": {
+          "name": "#44AADD 创造航空终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "aeronautics"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "aeronautics:pearlescent_levitite",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:gyroscopic_propeller_bearing",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:music_disc_cloud_skipper",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "aeronautics:smart_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:levitite",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:mounted_potato_cannon",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "aeronautics:adjustable_burner",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:aviators_goggles",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:steam_vent",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:levitite_blend_bucket",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "aeronautics:propeller_bearing",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:andesite_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:end_stone_powder",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:red_envelope",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "aeronautics:wooden_propeller",
+              "count": 1
+            },
+            {
+              "id": "aeronautics:white_envelope",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "aeronautics:adjustable_burner": 900,
+        "aeronautics:andesite_propeller": 800,
+        "aeronautics:aviators_goggles": 800,
+        "aeronautics:end_stone_powder": 300,
+        "aeronautics:gyroscopic_propeller_bearing": 2000,
+        "aeronautics:levitite": 1500,
+        "aeronautics:levitite_blend_bucket": 1000,
+        "aeronautics:music_disc_cloud_skipper": 1000,
+        "aeronautics:mounted_potato_cannon": 1200,
+        "aeronautics:pearlescent_levitite": 4000,
+        "aeronautics:propeller_bearing": 600,
+        "aeronautics:red_envelope": 150,
+        "aeronautics:smart_propeller": 2500,
+        "aeronautics:steam_vent": 700,
+        "aeronautics:white_envelope": 150,
+        "aeronautics:wooden_propeller": 400
+      }
+    },
+    {
+      "key": "create-pack",
+      "name": {
+        "en": "create-pack",
+        "zh": "create-pack"
+      },
+      "files": {
+        "schematic_crate.json": {
+          "name": "#DD8833 机械动力蓝图军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "create"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "create:schematic",
+              "count": 1,
+              "components": {
+                "create:schematic_file": "preview_test.nbt",
+                "create:schematic_owner": "dev"
+              }
+            },
+            {
+              "id": "create:schematic",
+              "count": 1,
+              "components": {
+                "create:schematic_file": "no_such_file.nbt",
+                "create:schematic_owner": "dev"
+              }
+            }
+          ],
+          "grade4": [
+            {
+              "id": "create:precision_mechanism",
+              "count": 1
+            },
+            {
+              "id": "create:mechanical_arm",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "create:deployer",
+              "count": 1
+            },
+            {
+              "id": "create:wrench",
+              "count": 1
+            },
+            {
+              "id": "create:super_glue",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "create:brass_ingot",
+              "count": 1
+            },
+            {
+              "id": "create:zinc_ingot",
+              "count": 1
+            },
+            {
+              "id": "create:crushed_raw_iron",
+              "count": 1
+            },
+            {
+              "id": "create:brass_hand",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "create:andesite_alloy",
+              "count": 1
+            },
+            {
+              "id": "create:electron_tube",
+              "count": 1
+            },
+            {
+              "id": "create:cogwheel",
+              "count": 1
+            },
+            {
+              "id": "create:shaft",
+              "count": 1
+            },
+            {
+              "id": "create:blaze_cake",
+              "count": 1
+            }
+          ]
+        },
+        "schematic_terminal.json": {
+          "name": "#DD8833 机械动力蓝图终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "create"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "create:schematic",
+              "count": 1,
+              "components": {
+                "create:schematic_file": "preview_test.nbt",
+                "create:schematic_owner": "dev"
+              }
+            }
+          ],
+          "grade4": [
+            {
+              "id": "create:precision_mechanism",
+              "count": 1
+            },
+            {
+              "id": "create:mechanical_arm",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "create:deployer",
+              "count": 1
+            },
+            {
+              "id": "create:wrench",
+              "count": 1
+            },
+            {
+              "id": "create:super_glue",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "create:brass_ingot",
+              "count": 1
+            },
+            {
+              "id": "create:zinc_ingot",
+              "count": 1
+            },
+            {
+              "id": "create:crushed_raw_iron",
+              "count": 1
+            },
+            {
+              "id": "create:brass_hand",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "create:andesite_alloy",
+              "count": 1
+            },
+            {
+              "id": "create:electron_tube",
+              "count": 1
+            },
+            {
+              "id": "create:cogwheel",
+              "count": 1
+            },
+            {
+              "id": "create:shaft",
+              "count": 1
+            },
+            {
+              "id": "create:blaze_cake",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "create:andesite_alloy": 80,
+        "create:blaze_cake": 400,
+        "create:brass_hand": 300,
+        "create:brass_ingot": 150,
+        "create:cogwheel": 40,
+        "create:crushed_raw_iron": 60,
+        "create:deployer": 900,
+        "create:electron_tube": 60,
+        "create:mechanical_arm": 1200,
+        "create:precision_mechanism": 2000,
+        "create:schematic": 500,
+        "create:shaft": 20,
+        "create:super_glue": 300,
+        "create:wrench": 500,
+        "create:zinc_ingot": 120
+      }
+    },
+    {
+      "key": "immersive-aircraft-pack",
+      "name": {
+        "en": "immersive-aircraft-pack",
+        "zh": "immersive-aircraft-pack"
+      },
+      "files": {
+        "ia_crate.json": {
+          "name": "#5599CC 沉浸式飞行军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "immersive_aircraft"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "immersive_aircraft:warship",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:cargo_airship",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "immersive_aircraft:gyrodyne",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:biplane",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:airship",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "immersive_aircraft:quadrocopter",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:bamboo_hopper",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:nether_engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:heavy_crossbow",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "immersive_aircraft:engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:eco_engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:enhanced_propeller",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:hull",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:steel_boiler",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:bomb_bay",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:rotary_cannon",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:telescope",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "immersive_aircraft:propeller",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:sail",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:boiler",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:hull_reinforcement",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:industrial_gears",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:improved_landing_gear",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:sturdy_pipes",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope_dials",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope_hud",
+              "count": 1
+            }
+          ]
+        },
+        "ia_terminal.json": {
+          "name": "#5599CC 沉浸式飞行终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "immersive_aircraft"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "immersive_aircraft:warship",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:cargo_airship",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "immersive_aircraft:gyrodyne",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:biplane",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:airship",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "immersive_aircraft:quadrocopter",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:bamboo_hopper",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:nether_engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:heavy_crossbow",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:bomb_bay",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:rotary_cannon",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "immersive_aircraft:engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:eco_engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:enhanced_propeller",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:hull",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:steel_boiler",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:telescope",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:hull_reinforcement",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "immersive_aircraft:propeller",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:sail",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:boiler",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:industrial_gears",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:improved_landing_gear",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:sturdy_pipes",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope_dials",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyroscope_hud",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "immersive_aircraft:airship": 8000,
+        "immersive_aircraft:bamboo_hopper": 3000,
+        "immersive_aircraft:biplane": 9000,
+        "immersive_aircraft:bomb_bay": 1500,
+        "immersive_aircraft:boiler": 400,
+        "immersive_aircraft:cargo_airship": 15000,
+        "immersive_aircraft:eco_engine": 1800,
+        "immersive_aircraft:engine": 1200,
+        "immersive_aircraft:enhanced_propeller": 900,
+        "immersive_aircraft:gyrodyne": 12000,
+        "immersive_aircraft:gyroscope": 900,
+        "immersive_aircraft:gyroscope_dials": 1200,
+        "immersive_aircraft:gyroscope_hud": 1500,
+        "immersive_aircraft:heavy_crossbow": 3000,
+        "immersive_aircraft:hull": 600,
+        "immersive_aircraft:hull_reinforcement": 1000,
+        "immersive_aircraft:improved_landing_gear": 600,
+        "immersive_aircraft:industrial_gears": 700,
+        "immersive_aircraft:nether_engine": 2500,
+        "immersive_aircraft:propeller": 300,
+        "immersive_aircraft:quadrocopter": 6000,
+        "immersive_aircraft:rotary_cannon": 2200,
+        "immersive_aircraft:sail": 250,
+        "immersive_aircraft:steel_boiler": 800,
+        "immersive_aircraft:sturdy_pipes": 500,
+        "immersive_aircraft:telescope": 500,
+        "immersive_aircraft:warship": 18000
+      }
+    },
+    {
       "key": "irons-spells-pack",
       "name": {
         "en": "Iron's Spells compat pack",
@@ -3076,12 +3797,5527 @@ window.CSBDATA = {
       "prices": null
     },
     {
+      "key": "kaleidoscope-bloodwine-pack",
+      "name": {
+        "en": "kaleidoscope-bloodwine-pack",
+        "zh": "kaleidoscope-bloodwine-pack"
+      },
+      "files": {
+        "kbw_crate.json": {
+          "name": "#EE8844 血酒军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_bloodwine"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_bloodwine:courtyard_blood_brew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:eternal_night_crimson",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:sinmark_crimson",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_bloodwine:hunter_drink",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_sakura_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_champagne",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_whiskey",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_grape_wine",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_carignan",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_bucket",
+              "count": 1
+            }
+          ]
+        },
+        "kbw_terminal.json": {
+          "name": "#EE8844 血酒终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_bloodwine"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_bloodwine:courtyard_blood_brew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:eternal_night_crimson",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:sinmark_crimson",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_bloodwine:hunter_drink",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_sakura_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_champagne",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_whiskey",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_grape_wine",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_bloodwine:blood_carignan",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_bloodwine:blood_bucket",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_bloodwine:blood_brandy": 450,
+        "kaleidoscope_bloodwine:blood_bucket": 150,
+        "kaleidoscope_bloodwine:blood_carignan": 300,
+        "kaleidoscope_bloodwine:blood_champagne": 800,
+        "kaleidoscope_bloodwine:blood_grape_wine": 400,
+        "kaleidoscope_bloodwine:blood_sakura_wine": 800,
+        "kaleidoscope_bloodwine:blood_vodka": 300,
+        "kaleidoscope_bloodwine:blood_whiskey": 500,
+        "kaleidoscope_bloodwine:courtyard_blood_brew": 2600,
+        "kaleidoscope_bloodwine:eternal_night_crimson": 2400,
+        "kaleidoscope_bloodwine:hunter_drink": 1000,
+        "kaleidoscope_bloodwine:sinmark_crimson": 2400
+      }
+    },
+    {
+      "key": "kaleidoscope-chinesefood-pack",
+      "name": {
+        "en": "kaleidoscope-chinesefood-pack",
+        "zh": "kaleidoscope-chinesefood-pack"
+      },
+      "files": {
+        "kcf_crate.json": {
+          "name": "#EE8844 国味军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_chinesefood"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_chinesefood:straw_bed",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:enchanted_golden_apple_platter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:golden_apple_platter",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_chinesefood:big_plate_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:yangrou_paomo",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:maocai",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_chinesefood:twice_cooked_pork",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:sichuan_boiled_fish",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:four_joy_meatballs",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:yellow_croaker_spawn_egg",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:kongming_lantern",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_chinesefood:hk_milk_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:dianhong_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:mooncake",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:century_egg_congee",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:couplet",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_chinesefood:salt",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:eggplant",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:douzhi",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:fu_character",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:pumpkin_porridge",
+              "count": 1
+            }
+          ]
+        },
+        "kcf_terminal.json": {
+          "name": "#EE8844 国味终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_chinesefood"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_chinesefood:straw_bed",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:enchanted_golden_apple_platter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:golden_apple_platter",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_chinesefood:big_plate_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:yangrou_paomo",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:maocai",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_chinesefood:twice_cooked_pork",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:sichuan_boiled_fish",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:four_joy_meatballs",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:yellow_croaker_spawn_egg",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:kongming_lantern",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_chinesefood:hk_milk_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:dianhong_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:mooncake",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:century_egg_congee",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:couplet",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_chinesefood:salt",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:eggplant",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:douzhi",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:fu_character",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_chinesefood:pumpkin_porridge",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_chinesefood:big_plate_chicken": 700,
+        "kaleidoscope_chinesefood:century_egg_congee": 300,
+        "kaleidoscope_chinesefood:couplet": 350,
+        "kaleidoscope_chinesefood:dianhong_tea": 300,
+        "kaleidoscope_chinesefood:douzhi": 130,
+        "kaleidoscope_chinesefood:eggplant": 110,
+        "kaleidoscope_chinesefood:enchanted_golden_apple_platter": 3200,
+        "kaleidoscope_chinesefood:four_joy_meatballs": 400,
+        "kaleidoscope_chinesefood:fu_character": 120,
+        "kaleidoscope_chinesefood:golden_apple_platter": 2200,
+        "kaleidoscope_chinesefood:hk_milk_tea": 300,
+        "kaleidoscope_chinesefood:kongming_lantern": 400,
+        "kaleidoscope_chinesefood:maocai": 600,
+        "kaleidoscope_chinesefood:mooncake": 250,
+        "kaleidoscope_chinesefood:pumpkin_porridge": 150,
+        "kaleidoscope_chinesefood:salt": 100,
+        "kaleidoscope_chinesefood:sichuan_boiled_fish": 450,
+        "kaleidoscope_chinesefood:straw_bed": 2000,
+        "kaleidoscope_chinesefood:twice_cooked_pork": 450,
+        "kaleidoscope_chinesefood:yangrou_paomo": 650,
+        "kaleidoscope_chinesefood:yellow_croaker_spawn_egg": 500
+      }
+    },
+    {
+      "key": "kaleidoscope-cookery-pack",
+      "name": {
+        "en": "kaleidoscope-cookery-pack",
+        "zh": "kaleidoscope-cookery-pack"
+      },
+      "files": {
+        "kc_crate.json": {
+          "name": "#EE8844 森罗物语军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_cookery"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_cookery:teapot_3d",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:shawarma_spit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:eight_immortals_table",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_cookery:buddha_jumps_over_the_wall",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:cold_cut_ham_slices_block",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:fruit_basket_full",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_cookery:borscht",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:braised_beef_rice_bowl",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:stockpot_lid_using",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:trash_can",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:scarecrow",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_cookery:baozi_plate",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:beef_noodle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:blaze_lamb_chop",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:candied_potato",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:stockpot_lid_normal",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_cookery:bamboo_tube_rice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:barley_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:biluochun",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:apple_platter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:chair_acacia",
+              "count": 1
+            }
+          ]
+        },
+        "kc_terminal.json": {
+          "name": "#EE8844 森罗物语终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_cookery"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_cookery:teapot_3d",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:shawarma_spit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:eight_immortals_table",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_cookery:buddha_jumps_over_the_wall",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:cold_cut_ham_slices_block",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:fruit_basket_full",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_cookery:borscht",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:braised_beef_rice_bowl",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:stockpot_lid_using",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:trash_can",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:blaze_lamb_chop",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:scarecrow",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_cookery:baozi_plate",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:beef_noodle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:candied_potato",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:stockpot_lid_normal",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:apple_platter",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_cookery:bamboo_tube_rice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:barley_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:biluochun",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:chair_acacia",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_cookery:apple_platter": 300,
+        "kaleidoscope_cookery:bamboo_tube_rice": 250,
+        "kaleidoscope_cookery:baozi_plate": 200,
+        "kaleidoscope_cookery:barley_tea": 150,
+        "kaleidoscope_cookery:beef_noodle": 300,
+        "kaleidoscope_cookery:biluochun": 400,
+        "kaleidoscope_cookery:blaze_lamb_chop": 500,
+        "kaleidoscope_cookery:borscht": 350,
+        "kaleidoscope_cookery:braised_beef_rice_bowl": 400,
+        "kaleidoscope_cookery:buddha_jumps_over_the_wall": 1500,
+        "kaleidoscope_cookery:candied_potato": 250,
+        "kaleidoscope_cookery:chair_acacia": 120,
+        "kaleidoscope_cookery:cold_cut_ham_slices_block": 600,
+        "kaleidoscope_cookery:eight_immortals_table": 5000,
+        "kaleidoscope_cookery:fruit_basket_full": 800,
+        "kaleidoscope_cookery:scarecrow": 1200,
+        "kaleidoscope_cookery:shawarma_spit": 1500,
+        "kaleidoscope_cookery:stockpot_lid_normal": 400,
+        "kaleidoscope_cookery:stockpot_lid_using": 600,
+        "kaleidoscope_cookery:teapot_3d": 2000,
+        "kaleidoscope_cookery:trash_can": 300
+      }
+    },
+    {
+      "key": "kaleidoscope-dim-wine-pack",
+      "name": {
+        "en": "kaleidoscope-dim-wine-pack",
+        "zh": "kaleidoscope-dim-wine-pack"
+      },
+      "files": {
+        "kdw_crate.json": {
+          "name": "#EE8844 次元酒窖军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_dim_wine"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_dim_wine:magma_royal_salute",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:black_bone_lafite",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:divine_embryo_port",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_dim_wine:draconic_blood_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:dragons_breath_brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:crimson_crescendo",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_dim_wine:honeythorn_mead",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:royal_honey_brew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:beeswax_honey_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:ethereal_noble",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:goblins_stash",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_dim_wine:budweiser_beer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:fanta",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:sprite",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:pepsi",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:gingerbread_warmer",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_dim_wine:hop",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:hop_seed",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:crimson_grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:warped_grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:pollen_nectar",
+              "count": 1
+            }
+          ]
+        },
+        "kdw_terminal.json": {
+          "name": "#EE8844 次元酒窖终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_dim_wine"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_dim_wine:magma_royal_salute",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:black_bone_lafite",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:divine_embryo_port",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_dim_wine:draconic_blood_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:dragons_breath_brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:crimson_crescendo",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_dim_wine:honeythorn_mead",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:royal_honey_brew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:beeswax_honey_wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:ethereal_noble",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:goblins_stash",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_dim_wine:budweiser_beer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:fanta",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:sprite",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:pepsi",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:gingerbread_warmer",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_dim_wine:hop",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:hop_seed",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:crimson_grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:warped_grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_dim_wine:pollen_nectar",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_dim_wine:beeswax_honey_wine": 550,
+        "kaleidoscope_dim_wine:black_bone_lafite": 3000,
+        "kaleidoscope_dim_wine:budweiser_beer": 250,
+        "kaleidoscope_dim_wine:crimson_crescendo": 1000,
+        "kaleidoscope_dim_wine:crimson_grape": 140,
+        "kaleidoscope_dim_wine:divine_embryo_port": 2800,
+        "kaleidoscope_dim_wine:draconic_blood_wine": 1200,
+        "kaleidoscope_dim_wine:dragons_breath_brandy": 1100,
+        "kaleidoscope_dim_wine:ethereal_noble": 700,
+        "kaleidoscope_dim_wine:fanta": 200,
+        "kaleidoscope_dim_wine:gingerbread_warmer": 300,
+        "kaleidoscope_dim_wine:goblins_stash": 650,
+        "kaleidoscope_dim_wine:honeythorn_mead": 600,
+        "kaleidoscope_dim_wine:hop": 130,
+        "kaleidoscope_dim_wine:hop_seed": 120,
+        "kaleidoscope_dim_wine:magma_royal_salute": 3200,
+        "kaleidoscope_dim_wine:pepsi": 200,
+        "kaleidoscope_dim_wine:pollen_nectar": 200,
+        "kaleidoscope_dim_wine:royal_honey_brew": 600,
+        "kaleidoscope_dim_wine:sprite": 200,
+        "kaleidoscope_dim_wine:warped_grape": 140
+      }
+    },
+    {
+      "key": "kaleidoscope-doll-pack",
+      "name": {
+        "en": "kaleidoscope-doll-pack",
+        "zh": "kaleidoscope-doll-pack"
+      },
+      "files": {
+        "kd_crate.json": {
+          "name": "#EE8844 森罗玩偶军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_doll"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_doll:doll_machine",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_doll:purple_doll_gift_box",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:green_doll_gift_box",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:yellow_doll_gift_box",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_doll:tweaks_tool",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_doll:doll_entity_item",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_doll:doll_icon",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:computer",
+              "count": 1
+            }
+          ]
+        },
+        "kd_terminal.json": {
+          "name": "#EE8844 森罗玩偶终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_doll"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_doll:doll_machine",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_doll:purple_doll_gift_box",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:green_doll_gift_box",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:yellow_doll_gift_box",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_doll:tweaks_tool",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_doll:doll_entity_item",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_doll:doll_icon",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_doll:computer",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_doll:computer": 300,
+        "kaleidoscope_doll:doll_entity_item": 600,
+        "kaleidoscope_doll:doll_icon": 200,
+        "kaleidoscope_doll:doll_machine": 3000,
+        "kaleidoscope_doll:green_doll_gift_box": 1500,
+        "kaleidoscope_doll:purple_doll_gift_box": 1500,
+        "kaleidoscope_doll:tweaks_tool": 800,
+        "kaleidoscope_doll:yellow_doll_gift_box": 1500
+      }
+    },
+    {
+      "key": "kaleidoscope-end-pack",
+      "name": {
+        "en": "kaleidoscope-end-pack",
+        "zh": "kaleidoscope-end-pack"
+      },
+      "files": {
+        "ke_crate.json": {
+          "name": "#EE8844 森罗末地军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_end"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_end:dark_dragon_egg_stew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_head_with_sauce",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_souffle",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_end:dark_dragon_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:suspicious_dragon_egg",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_egg_ice_cream",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_end:dragon_breath_popping_candy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_tooth_knife",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:end_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:stuffed_void_conch",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:ender_dragon_smithing_template",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_end:stuffed_shulker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:shulker_ice_cream",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:void_conch",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_tooth",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:mint_chorus_mousse",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_end:chorus_petal",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dream_berry",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:ender_mint",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:end_salad",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:void_tea",
+              "count": 1
+            }
+          ]
+        },
+        "ke_terminal.json": {
+          "name": "#EE8844 森罗末地终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_end"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_end:dark_dragon_egg_stew",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_head_with_sauce",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_souffle",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_end:dark_dragon_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:suspicious_dragon_egg",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_egg_ice_cream",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_end:dragon_breath_popping_candy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_tooth_knife",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:end_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:stuffed_void_conch",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:ender_dragon_smithing_template",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_end:stuffed_shulker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:shulker_ice_cream",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:void_conch",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dragon_tooth",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:mint_chorus_mousse",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_end:chorus_petal",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:dream_berry",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:ender_mint",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:end_salad",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_end:void_tea",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_end:chorus_petal": 120,
+        "kaleidoscope_end:dark_dragon_egg_stew": 3000,
+        "kaleidoscope_end:dark_dragon_steak": 1200,
+        "kaleidoscope_end:dragon_breath_popping_candy": 600,
+        "kaleidoscope_end:dragon_egg_ice_cream": 1000,
+        "kaleidoscope_end:dragon_head_with_sauce": 2600,
+        "kaleidoscope_end:dragon_souffle": 2400,
+        "kaleidoscope_end:dragon_tooth": 400,
+        "kaleidoscope_end:dragon_tooth_knife": 800,
+        "kaleidoscope_end:dream_berry": 130,
+        "kaleidoscope_end:end_salad": 150,
+        "kaleidoscope_end:end_stove": 500,
+        "kaleidoscope_end:ender_dragon_smithing_template": 700,
+        "kaleidoscope_end:ender_mint": 120,
+        "kaleidoscope_end:mint_chorus_mousse": 300,
+        "kaleidoscope_end:shulker_ice_cream": 300,
+        "kaleidoscope_end:stuffed_shulker": 350,
+        "kaleidoscope_end:stuffed_void_conch": 550,
+        "kaleidoscope_end:suspicious_dragon_egg": 1500,
+        "kaleidoscope_end:void_conch": 320,
+        "kaleidoscope_end:void_tea": 200
+      }
+    },
+    {
+      "key": "kaleidoscope-grilling-pack",
+      "name": {
+        "en": "kaleidoscope-grilling-pack",
+        "zh": "kaleidoscope-grilling-pack"
+      },
+      "files": {
+        "kg_crate.json": {
+          "name": "#EE8844 森罗烟火军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_grilling"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_grilling:secret_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:mysterious_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:dark_grilling",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_grilling:unfinished_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:pending_seasoning",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:potato_beef_stew",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_grilling:empty_seasoning_bottle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:sour_spicy_noodles",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:houttuynia_stir_fried_pork",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_ender_pearl_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:totem_powder",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_grilling:grilled_lamb_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_beef_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:roasted_sweet_potato",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_golden_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:secret_chili_oil_bucket",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_grilling:grilled_gluten_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_bun_slice_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:canola_seeds",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:onion",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:sweet_potato",
+              "count": 1
+            }
+          ]
+        },
+        "kg_terminal.json": {
+          "name": "#EE8844 森罗烟火终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_grilling"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_grilling:secret_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:mysterious_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:dark_grilling",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_grilling:unfinished_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:pending_seasoning",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:potato_beef_stew",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_grilling:empty_seasoning_bottle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:sour_spicy_noodles",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:houttuynia_stir_fried_pork",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_ender_pearl_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:totem_powder",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_grilling:grilled_lamb_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_beef_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:roasted_sweet_potato",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_golden_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:secret_chili_oil_bucket",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_grilling:grilled_gluten_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:grilled_bun_slice_skewer",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:canola_seeds",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:onion",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_grilling:sweet_potato",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_grilling:canola_seeds": 120,
+        "kaleidoscope_grilling:dark_grilling": 2600,
+        "kaleidoscope_grilling:empty_seasoning_bottle": 500,
+        "kaleidoscope_grilling:grilled_beef_skewer": 350,
+        "kaleidoscope_grilling:grilled_bun_slice_skewer": 150,
+        "kaleidoscope_grilling:grilled_ender_pearl_skewer": 700,
+        "kaleidoscope_grilling:grilled_gluten_skewer": 180,
+        "kaleidoscope_grilling:grilled_golden_skewer": 500,
+        "kaleidoscope_grilling:grilled_lamb_skewer": 350,
+        "kaleidoscope_grilling:houttuynia_stir_fried_pork": 500,
+        "kaleidoscope_grilling:mysterious_skewer": 2200,
+        "kaleidoscope_grilling:onion": 120,
+        "kaleidoscope_grilling:pending_seasoning": 1000,
+        "kaleidoscope_grilling:potato_beef_stew": 800,
+        "kaleidoscope_grilling:roasted_sweet_potato": 300,
+        "kaleidoscope_grilling:secret_chili_oil_bucket": 450,
+        "kaleidoscope_grilling:secret_skewer": 2400,
+        "kaleidoscope_grilling:sour_spicy_noodles": 600,
+        "kaleidoscope_grilling:sweet_potato": 130,
+        "kaleidoscope_grilling:totem_powder": 650,
+        "kaleidoscope_grilling:unfinished_skewer": 1200
+      }
+    },
+    {
+      "key": "kaleidoscope-nether-pack",
+      "name": {
+        "en": "kaleidoscope-nether-pack",
+        "zh": "kaleidoscope-nether-pack"
+      },
+      "files": {
+        "kn_crate.json": {
+          "name": "#EE8844 森罗下界军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_nether"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_nether:forgetfulness_soup",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:everlasting_flame_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:ruby_steak",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_nether:gilded_barbaric_roast",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:soul_glazed_roast",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:poisonous_ghast_roast",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_nether:nether_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:luosifen",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:mapo_tofu",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:couples_lung_slice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:blowgun",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_nether:golden_kabob",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:crimson_kabob",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:lava_roasted_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:spicy_pot",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:chongqing_noodles",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_nether:soul_pepper",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:crimson_fruit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:warped_fruit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:ham_slice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:roujiamo",
+              "count": 1
+            }
+          ]
+        },
+        "kn_terminal.json": {
+          "name": "#EE8844 森罗下界终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_nether"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_nether:forgetfulness_soup",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:everlasting_flame_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:ruby_steak",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_nether:gilded_barbaric_roast",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:soul_glazed_roast",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:poisonous_ghast_roast",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_nether:nether_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:luosifen",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:mapo_tofu",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:couples_lung_slice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:blowgun",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_nether:golden_kabob",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:crimson_kabob",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:lava_roasted_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:spicy_pot",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:chongqing_noodles",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_nether:soul_pepper",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:crimson_fruit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:warped_fruit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:ham_slice",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_nether:roujiamo",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_nether:blowgun": 500,
+        "kaleidoscope_nether:chongqing_noodles": 300,
+        "kaleidoscope_nether:couples_lung_slice": 450,
+        "kaleidoscope_nether:crimson_fruit": 120,
+        "kaleidoscope_nether:crimson_kabob": 350,
+        "kaleidoscope_nether:everlasting_flame_steak": 2600,
+        "kaleidoscope_nether:forgetfulness_soup": 2800,
+        "kaleidoscope_nether:gilded_barbaric_roast": 1000,
+        "kaleidoscope_nether:golden_kabob": 450,
+        "kaleidoscope_nether:ham_slice": 150,
+        "kaleidoscope_nether:lava_roasted_chicken": 400,
+        "kaleidoscope_nether:luosifen": 450,
+        "kaleidoscope_nether:mapo_tofu": 400,
+        "kaleidoscope_nether:nether_stove": 600,
+        "kaleidoscope_nether:poisonous_ghast_roast": 900,
+        "kaleidoscope_nether:roujiamo": 200,
+        "kaleidoscope_nether:ruby_steak": 2400,
+        "kaleidoscope_nether:soul_glazed_roast": 1100,
+        "kaleidoscope_nether:soul_pepper": 130,
+        "kaleidoscope_nether:spicy_pot": 400,
+        "kaleidoscope_nether:warped_fruit": 120
+      }
+    },
+    {
+      "key": "kaleidoscope-tavern-pack",
+      "name": {
+        "en": "kaleidoscope-tavern-pack",
+        "zh": "kaleidoscope-tavern-pack"
+      },
+      "files": {
+        "kt_crate.json": {
+          "name": "#EE8844 森罗酒馆军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_tavern"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_tavern:barrel",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:mystery_cocktail",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:signature_cocktail",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_tavern:nether_special",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:sculk_special",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:champagne",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_tavern:bar_counter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:bar_cabinet",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:shaker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:molotov",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:depth_charge",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_tavern:wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:whiskey",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:rum",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_tavern:grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:empty_glassware",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:empty_bottle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:vinegar",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:red_bar_stool",
+              "count": 1
+            }
+          ]
+        },
+        "kt_terminal.json": {
+          "name": "#EE8844 森罗酒馆终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_tavern"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_tavern:barrel",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:mystery_cocktail",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:signature_cocktail",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_tavern:nether_special",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:sculk_special",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:champagne",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_tavern:bar_counter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:bar_cabinet",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:shaker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:molotov",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:depth_charge",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_tavern:wine",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:whiskey",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:brandy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:rum",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_tavern:grape",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:empty_glassware",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:empty_bottle",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:vinegar",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_tavern:red_bar_stool",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_tavern:bar_cabinet": 600,
+        "kaleidoscope_tavern:bar_counter": 600,
+        "kaleidoscope_tavern:barrel": 3000,
+        "kaleidoscope_tavern:brandy": 300,
+        "kaleidoscope_tavern:champagne": 800,
+        "kaleidoscope_tavern:depth_charge": 600,
+        "kaleidoscope_tavern:empty_bottle": 100,
+        "kaleidoscope_tavern:empty_glassware": 120,
+        "kaleidoscope_tavern:grape": 130,
+        "kaleidoscope_tavern:molotov": 550,
+        "kaleidoscope_tavern:mystery_cocktail": 2200,
+        "kaleidoscope_tavern:nether_special": 900,
+        "kaleidoscope_tavern:red_bar_stool": 150,
+        "kaleidoscope_tavern:rum": 300,
+        "kaleidoscope_tavern:sculk_special": 900,
+        "kaleidoscope_tavern:shaker": 500,
+        "kaleidoscope_tavern:signature_cocktail": 2400,
+        "kaleidoscope_tavern:vinegar": 100,
+        "kaleidoscope_tavern:vodka": 320,
+        "kaleidoscope_tavern:whiskey": 320,
+        "kaleidoscope_tavern:wine": 300
+      }
+    },
+    {
+      "key": "kaleidoscope-twilight-pack",
+      "name": {
+        "en": "kaleidoscope-twilight-pack",
+        "zh": "kaleidoscope-twilight-pack"
+      },
+      "files": {
+        "ktw_crate.json": {
+          "name": "#EE8844 森罗暮色军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_twilight"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_twilight:tomahawk_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:twilight_wellington_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:ice_crystal_hydra_steak",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_twilight:hydra_bolognese",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:salt_baked_naga",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:sauced_snake_feast",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_twilight:fiery_stockpot",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:twilight_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:deer_song",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:lotus_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:keeping_pouch",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_twilight:rainbow_candy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:aurora_ice_cream",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:glacier_cake",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:giant_spirit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:witchcraft_secret_brew",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_twilight:twilight_fern",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:tea_date",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:frozen_bun",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:torchberry_cookie",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:four_leaf_ice_crystal",
+              "count": 1
+            }
+          ]
+        },
+        "ktw_terminal.json": {
+          "name": "#EE8844 森罗暮色终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_twilight"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_twilight:tomahawk_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:twilight_wellington_steak",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:ice_crystal_hydra_steak",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_twilight:hydra_bolognese",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:salt_baked_naga",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:sauced_snake_feast",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_twilight:fiery_stockpot",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:twilight_stove",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:deer_song",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:lotus_chicken",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:keeping_pouch",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_twilight:rainbow_candy",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:aurora_ice_cream",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:glacier_cake",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:giant_spirit",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:witchcraft_secret_brew",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_twilight:twilight_fern",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:tea_date",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:frozen_bun",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:torchberry_cookie",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_twilight:four_leaf_ice_crystal",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_twilight:aurora_ice_cream": 400,
+        "kaleidoscope_twilight:deer_song": 700,
+        "kaleidoscope_twilight:fiery_stockpot": 600,
+        "kaleidoscope_twilight:four_leaf_ice_crystal": 300,
+        "kaleidoscope_twilight:frozen_bun": 140,
+        "kaleidoscope_twilight:giant_spirit": 350,
+        "kaleidoscope_twilight:glacier_cake": 400,
+        "kaleidoscope_twilight:hydra_bolognese": 900,
+        "kaleidoscope_twilight:ice_crystal_hydra_steak": 2200,
+        "kaleidoscope_twilight:keeping_pouch": 600,
+        "kaleidoscope_twilight:lotus_chicken": 500,
+        "kaleidoscope_twilight:rainbow_candy": 350,
+        "kaleidoscope_twilight:salt_baked_naga": 850,
+        "kaleidoscope_twilight:sauced_snake_feast": 900,
+        "kaleidoscope_twilight:tea_date": 130,
+        "kaleidoscope_twilight:tomahawk_steak": 2400,
+        "kaleidoscope_twilight:torchberry_cookie": 150,
+        "kaleidoscope_twilight:twilight_fern": 120,
+        "kaleidoscope_twilight:twilight_stove": 550,
+        "kaleidoscope_twilight:twilight_wellington_steak": 2600,
+        "kaleidoscope_twilight:witchcraft_secret_brew": 450
+      }
+    },
+    {
+      "key": "kaleidoscope-world-liquor-pack",
+      "name": {
+        "en": "kaleidoscope-world-liquor-pack",
+        "zh": "kaleidoscope-world-liquor-pack"
+      },
+      "files": {
+        "kwl_crate.json": {
+          "name": "#EE8844 世界名酒军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "kaleidoscope_world_liquor"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_world_liquor:lafite_1982",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:maotai",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:spiryt_vodka",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_world_liquor:johnnie_walker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:jack_daniel",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:dassai",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_world_liquor:bombay_sapphire_gin",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:bacardi_carta_blanca",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:smirnoff_red_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:absolut_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:skyy_vodka",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_world_liquor:long_island_iced_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:gin_tonic",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:cosmopolitan",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:highball",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:jerk",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_world_liquor:cola",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:sour_plum",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:cool_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:tonic_water",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:oak_bar_cabinet",
+              "count": 1
+            }
+          ]
+        },
+        "kwl_terminal.json": {
+          "name": "#EE8844 世界名酒终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "kaleidoscope_world_liquor"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_world_liquor:lafite_1982",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:maotai",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:spiryt_vodka",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_world_liquor:johnnie_walker",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:jack_daniel",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:dassai",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_world_liquor:bombay_sapphire_gin",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:bacardi_carta_blanca",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:smirnoff_red_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:absolut_vodka",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:skyy_vodka",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_world_liquor:long_island_iced_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:gin_tonic",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:cosmopolitan",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:highball",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:jerk",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_world_liquor:cola",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:sour_plum",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:cool_tea",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:tonic_water",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_world_liquor:oak_bar_cabinet",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "kaleidoscope_world_liquor:absolut_vodka": 600,
+        "kaleidoscope_world_liquor:bacardi_carta_blanca": 650,
+        "kaleidoscope_world_liquor:bombay_sapphire_gin": 700,
+        "kaleidoscope_world_liquor:cola": 120,
+        "kaleidoscope_world_liquor:cool_tea": 130,
+        "kaleidoscope_world_liquor:cosmopolitan": 350,
+        "kaleidoscope_world_liquor:dassai": 1500,
+        "kaleidoscope_world_liquor:gin_tonic": 300,
+        "kaleidoscope_world_liquor:highball": 300,
+        "kaleidoscope_world_liquor:jack_daniel": 1200,
+        "kaleidoscope_world_liquor:jerk": 350,
+        "kaleidoscope_world_liquor:johnnie_walker": 1200,
+        "kaleidoscope_world_liquor:lafite_1982": 4000,
+        "kaleidoscope_world_liquor:long_island_iced_tea": 400,
+        "kaleidoscope_world_liquor:maotai": 3600,
+        "kaleidoscope_world_liquor:oak_bar_cabinet": 200,
+        "kaleidoscope_world_liquor:skyy_vodka": 550,
+        "kaleidoscope_world_liquor:smirnoff_red_vodka": 600,
+        "kaleidoscope_world_liquor:sour_plum": 130,
+        "kaleidoscope_world_liquor:spiryt_vodka": 3200,
+        "kaleidoscope_world_liquor:tonic_water": 110
+      }
+    },
+    {
+      "key": "modular-golems-pack",
+      "name": {
+        "en": "modular-golems-pack",
+        "zh": "modular-golems-pack"
+      },
+      "files": {
+        "mg_crate.json": {
+          "name": "#9966DD 模组傀儡军火箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "requires": [
+            "modulargolems"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_bomb_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite_purple",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "modulargolems:barbaric_vanguard_helmet",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_chestplate",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_boots",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_shinguard",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cauldron_blue",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "modulargolems:battle_axe",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:bell_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cleanse_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:attack_high_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:azure_cube",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:dog_golem_holder",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "modulargolems:bell",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cleanse",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:attack_high",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_bomb",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cauldron",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_cube",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:add_100_slot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "modulargolems:black_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:blue_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:brown_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:add_1_slot",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:beacon_boots",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:beacon_cannon",
+              "count": 1
+            }
+          ]
+        },
+        "mg_terminal.json": {
+          "name": "#9966DD 模组傀儡终端",
+          "type": "terminal",
+          "drop": 0.05,
+          "requires": [
+            "modulargolems"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_bomb_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite_purple",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:add_100_slot",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "modulargolems:barbaric_vanguard_helmet",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_chestplate",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_boots",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:barbaric_vanguard_shinguard",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cauldron_blue",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "modulargolems:battle_axe",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:ancient_remnant_sandstorm",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_plasma",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:bell_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cleanse_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:attack_high_blue",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:azure_cube",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:dog_golem_holder",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "modulargolems:bell",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cleanse",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:attack_high",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:carminite",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_bomb",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:cauldron",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:annihilation_cube",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:add_1_slot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "modulargolems:black_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:blue_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:brown_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:beacon_boots",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:beacon_cannon",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "modulargolems:add_100_slot": 6000,
+        "modulargolems:add_1_slot": 800,
+        "modulargolems:ancient_remnant_sandstorm": 9000,
+        "modulargolems:ancient_remnant_sandstorm_blue": 14000,
+        "modulargolems:ancient_remnant_sandstorm_purple": 20000,
+        "modulargolems:annihilation_bomb": 5000,
+        "modulargolems:annihilation_bomb_blue": 8000,
+        "modulargolems:annihilation_bomb_purple": 12000,
+        "modulargolems:annihilation_cube": 2500,
+        "modulargolems:annihilation_plasma": 6000,
+        "modulargolems:annihilation_plasma_blue": 9000,
+        "modulargolems:annihilation_plasma_purple": 14000,
+        "modulargolems:attack_high": 1800,
+        "modulargolems:attack_high_blue": 3600,
+        "modulargolems:attack_high_purple": 7200,
+        "modulargolems:azure_cube": 2500,
+        "modulargolems:barbaric_vanguard_boots": 2000,
+        "modulargolems:barbaric_vanguard_chestplate": 3500,
+        "modulargolems:barbaric_vanguard_helmet": 2800,
+        "modulargolems:barbaric_vanguard_shinguard": 1800,
+        "modulargolems:battle_axe": 3200,
+        "modulargolems:beacon_boots": 1500,
+        "modulargolems:beacon_cannon": 2200,
+        "modulargolems:bell": 1500,
+        "modulargolems:bell_blue": 3000,
+        "modulargolems:bell_purple": 6000,
+        "modulargolems:black_config_card": 200,
+        "modulargolems:blue_config_card": 200,
+        "modulargolems:brown_config_card": 200,
+        "modulargolems:carminite": 1200,
+        "modulargolems:carminite_blue": 2400,
+        "modulargolems:carminite_purple": 4800,
+        "modulargolems:cauldron": 2000,
+        "modulargolems:cauldron_blue": 4000,
+        "modulargolems:cauldron_purple": 8000,
+        "modulargolems:cleanse": 1600,
+        "modulargolems:cleanse_blue": 3200,
+        "modulargolems:cleanse_purple": 6400,
+        "modulargolems:dog_golem_holder": 1500
+      }
+    },
+    {
+      "key": "preview-test-pack",
+      "name": {
+        "en": "preview-test-pack",
+        "zh": "preview-test-pack"
+      },
+      "files": {
+        "preview_create_packages.json": {
+          "name": "#996633 预览测试·机械动力包裹",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "requires": [
+            "create"
+          ],
+          "grade5": [
+            {
+              "id": "create:cardboard_package_12x12",
+              "count": 1
+            },
+            {
+              "id": "create:rare_creeper_package",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "create:cardboard_package_10x12",
+              "count": 1
+            },
+            {
+              "id": "create:rare_starlotte_package",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "create:cardboard_package_10x8",
+              "count": 1
+            },
+            {
+              "id": "create:cardboard_package_12x10",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "create:packager",
+              "count": 1
+            },
+            {
+              "id": "create:repackager",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "create:package_frogport",
+              "count": 1
+            },
+            {
+              "id": "create:package_filter",
+              "count": 1
+            }
+          ]
+        },
+        "preview_g1_entities.json": {
+          "name": "#FFAA55 预览测试·同id实体约定",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "grade5": [
+            {
+              "id": "minecraft:end_crystal",
+              "count": 1
+            },
+            {
+              "id": "minecraft:trident",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "minecraft:item_frame",
+              "count": 1
+            },
+            {
+              "id": "minecraft:glow_item_frame",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "minecraft:painting",
+              "count": 1
+            },
+            {
+              "id": "minecraft:armor_stand",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "minecraft:oak_boat",
+              "count": 1
+            },
+            {
+              "id": "minecraft:oak_chest_boat",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "minecraft:tnt_minecart",
+              "count": 1
+            },
+            {
+              "id": "minecraft:hopper_minecart",
+              "count": 1
+            }
+          ]
+        },
+        "preview_ia_vehicles.json": {
+          "name": "#55AADD 预览测试·沉浸式载具",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "requires": [
+            "immersive_aircraft"
+          ],
+          "grade5": [
+            {
+              "id": "immersive_aircraft:warship",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:cargo_airship",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "immersive_aircraft:biplane",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:airship",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "immersive_aircraft:quadrocopter",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:gyrodyne",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "immersive_aircraft:bamboo_hopper",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:hull",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "immersive_aircraft:engine",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:propeller",
+              "count": 1
+            }
+          ]
+        },
+        "preview_kc_food.json": {
+          "name": "#66CC99 预览测试·森罗物语",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "requires": [
+            "kaleidoscope_cookery"
+          ],
+          "grade5": [
+            {
+              "id": "kaleidoscope_cookery:scarecrow",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:tomato_platter",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "kaleidoscope_cookery:qingtuan_plate",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:apple_platter",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "kaleidoscope_cookery:shengjian_mantou_plate",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:watermelon_platter",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "kaleidoscope_cookery:zongzi_plate",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:baozi_plate",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "kaleidoscope_cookery:berry_platter",
+              "count": 1
+            },
+            {
+              "id": "kaleidoscope_cookery:sticky_rice_cake_plate",
+              "count": 1
+            }
+          ]
+        },
+        "preview_mg_golems.json": {
+          "name": "#DD8844 预览测试·模块化傀儡",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "requires": [
+            "modulargolems"
+          ],
+          "grade5": [
+            {
+              "id": "modulargolems:dog_golem_holder",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:humanoid_golem_holder",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "modulargolems:metal_golem_holder",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:humanoid_golem_body",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "modulargolems:dog_golem_legs",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:metal_golem_legs",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "modulargolems:netherite_golem_sword",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:iron_golem_spear",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "modulargolems:white_config_card",
+              "count": 1
+            },
+            {
+              "id": "modulargolems:red_config_card",
+              "count": 1
+            }
+          ]
+        }
+      },
+      "prices": {
+        "minecraft:end_crystal": 2400,
+        "minecraft:trident": 3000,
+        "minecraft:item_frame": 150,
+        "minecraft:glow_item_frame": 400,
+        "minecraft:painting": 200,
+        "minecraft:armor_stand": 250,
+        "minecraft:oak_boat": 300,
+        "minecraft:oak_chest_boat": 450,
+        "minecraft:tnt_minecart": 800,
+        "minecraft:hopper_minecart": 750,
+        "create:cardboard_package_10x8": 80,
+        "create:cardboard_package_10x12": 100,
+        "create:cardboard_package_12x10": 110,
+        "create:cardboard_package_12x12": 130,
+        "create:rare_creeper_package": 5000,
+        "create:rare_starlotte_package": 5000,
+        "create:packager": 2200,
+        "create:repackager": 2400,
+        "create:package_frogport": 1500,
+        "create:package_filter": 300,
+        "kaleidoscope_cookery:tomato_platter": 260,
+        "kaleidoscope_cookery:qingtuan_plate": 220,
+        "kaleidoscope_cookery:shengjian_mantou_plate": 280,
+        "kaleidoscope_cookery:watermelon_platter": 240,
+        "kaleidoscope_cookery:zongzi_plate": 220,
+        "kaleidoscope_cookery:berry_platter": 180,
+        "kaleidoscope_cookery:sticky_rice_cake_plate": 200,
+        "modulargolems:dog_golem_holder": 8000,
+        "modulargolems:humanoid_golem_holder": 8000,
+        "modulargolems:metal_golem_holder": 9000,
+        "modulargolems:humanoid_golem_body": 1500,
+        "modulargolems:dog_golem_legs": 900,
+        "modulargolems:metal_golem_legs": 900,
+        "modulargolems:netherite_golem_sword": 2000,
+        "modulargolems:iron_golem_spear": 1200,
+        "modulargolems:white_config_card": 200,
+        "modulargolems:red_config_card": 500,
+        "immersive_aircraft:warship": 9000,
+        "immersive_aircraft:cargo_airship": 8000,
+        "immersive_aircraft:biplane": 5000,
+        "immersive_aircraft:airship": 6000,
+        "immersive_aircraft:quadrocopter": 4000,
+        "immersive_aircraft:gyrodyne": 4500,
+        "immersive_aircraft:bamboo_hopper": 800,
+        "immersive_aircraft:hull": 300,
+        "immersive_aircraft:engine": 600,
+        "immersive_aircraft:propeller": 400
+      }
+    },
+    {
+      "key": "slashblade-resharped-pack",
+      "name": {
+        "en": "slashblade-resharped-pack",
+        "zh": "slashblade-resharped-pack"
+      },
+      "files": {
+        "sb_crate.json": {
+          "name": "#C8447C 拔刀军火箱",
+          "drop": 1.0,
+          "requires": [
+            "slashblade"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "key": "csgobox:csgo_key0",
+          "grade5": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.fox_black",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:piercing",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange_black.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:fox_black"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.fox_white",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:fox_white"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/orotiagito.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yamato",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": true,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yamato.png",
+                  "model": "slashblade:model/named/yamato.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yamato"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yasha_true",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:circle_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yasha/yasha_true.png",
+                  "model": "slashblade:model/named/yasha/yasha_true.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yasha_true"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_trapezohedron",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.agito",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:agito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.doutanuki",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:circle_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:doutanuki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.muramasa",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:muramasa"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.sange",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:void_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:sange"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yuzukitukumo",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_horizontal",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yuzukitukumo"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_sphere",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.koseki",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/dios/dios.png",
+                  "model": "slashblade:model/named/dios/dios.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:koseki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_netherite",
+                  "baseAttackModifier": 8.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_netherite"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.tagayasan",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:tagayasan"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yasha",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:sakura_end",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yasha/yasha.png",
+                  "model": "slashblade:model/named/yasha/yasha.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yasha"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_crystal",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito_sealed",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito_sealed"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_diamond",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_diamond"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.ruby",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:ruby"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_ingot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.agito_rust",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:agito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito_rust",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_golden",
+                  "baseAttackModifier": 2.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_golden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_iron",
+                  "baseAttackModifier": 4.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_iron"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_stone",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_stone"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_wooden",
+                  "baseAttackModifier": 2.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_wooden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.sabigatana",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": true,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:sabigatana"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul",
+              "count": 1
+            },
+            {
+              "id": "slashblade:proudsoul_tiny",
+              "count": 1
+            }
+          ]
+        },
+        "sb_crate_1201.json": {
+          "name": "#C8447C 拔刀军火箱",
+          "drop": 1.0,
+          "requires": [
+            "slashblade"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "key": "csgobox:csgo_key0",
+          "grade5": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:fox_black",
+                "bladeState": {
+                  "translationKey": "item.slashblade.fox_black"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:fox_white",
+                "bladeState": {
+                  "translationKey": "item.slashblade.fox_white"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yamato",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yamato"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yasha_true",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yasha_true"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_trapezohedron",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:agito",
+                "bladeState": {
+                  "translationKey": "item.slashblade.agito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:doutanuki",
+                "bladeState": {
+                  "translationKey": "item.slashblade.doutanuki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:muramasa",
+                "bladeState": {
+                  "translationKey": "item.slashblade.muramasa"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:sange",
+                "bladeState": {
+                  "translationKey": "item.slashblade.sange"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yuzukitukumo",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yuzukitukumo"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_sphere",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:koseki",
+                "bladeState": {
+                  "translationKey": "item.slashblade.koseki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_netherite",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_netherite"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:tagayasan",
+                "bladeState": {
+                  "translationKey": "item.slashblade.tagayasan"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yasha",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yasha"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_crystal",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito_sealed",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito_sealed"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_diamond",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_diamond"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:ruby",
+                "bladeState": {
+                  "translationKey": "item.slashblade.ruby"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_ingot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:agito_rust",
+                "bladeState": {
+                  "translationKey": "item.slashblade.agito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito_rust",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_golden",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_golden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_iron",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_iron"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_stone",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_stone"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_wooden",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_wooden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:sabigatana",
+                "bladeState": {
+                  "translationKey": "item.slashblade.sabigatana"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul",
+              "count": 1
+            },
+            {
+              "id": "slashblade:proudsoul_tiny",
+              "count": 1
+            }
+          ]
+        },
+        "sb_terminal.json": {
+          "name": "#C8447C 拔刀终端",
+          "drop": 0.05,
+          "requires": [
+            "slashblade"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "type": "terminal",
+          "grade5": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.fox_black",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:piercing",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange_black.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:fox_black"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.fox_white",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:fox_white"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/orotiagito.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yamato",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": true,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yamato.png",
+                  "model": "slashblade:model/named/yamato.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yamato"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yasha_true",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:circle_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yasha/yasha_true.png",
+                  "model": "slashblade:model/named/yasha/yasha_true.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yasha_true"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_trapezohedron",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.agito",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:agito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.doutanuki",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:circle_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:doutanuki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.muramasa",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:muramasa"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.sange",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:void_slash",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/sange/sange.png",
+                  "model": "slashblade:model/named/sange/sange.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:sange"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yuzukitukumo",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_horizontal",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yuzukitukumo"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_sphere",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.koseki",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/dios/dios.png",
+                  "model": "slashblade:model/named/dios/dios.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:koseki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_netherite",
+                  "baseAttackModifier": 8.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_netherite"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.tagayasan",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:drive_vertical",
+                  "defaultBewitched": true,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:tagayasan"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.yasha",
+                  "baseAttackModifier": 6.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:sakura_end",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/yasha/yasha.png",
+                  "model": "slashblade:model/named/yasha/yasha.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:yasha"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_crystal",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito_sealed",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:wave_edge",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito_sealed"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_diamond",
+                  "baseAttackModifier": 7.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_diamond"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.ruby",
+                  "baseAttackModifier": 5.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:ruby"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_ingot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.agito_rust",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:agito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.orotiagito_rust",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/agito_false.png",
+                  "model": "slashblade:model/named/agito.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:orotiagito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_golden",
+                  "baseAttackModifier": 2.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_golden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_iron",
+                  "baseAttackModifier": 4.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_iron"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_stone",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_stone"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.rodai_wooden",
+                  "baseAttackModifier": 2.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": false,
+                  "sealed": false,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": []
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:rodai_wooden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "components": {
+                "slashblade:blade_state": {
+                  "translationKey": "item.slashblade.sabigatana",
+                  "baseAttackModifier": 3.0,
+                  "proudSoul": 0,
+                  "killCount": 0,
+                  "refine": 0,
+                  "broken": true,
+                  "sealed": true,
+                  "slashArtsKey": "slashblade:judgement_cut",
+                  "defaultBewitched": false,
+                  "comboRoot": "slashblade:standby",
+                  "specialEffects": [],
+                  "texture": "slashblade:model/named/muramasa/muramasa.png",
+                  "model": "slashblade:model/named/muramasa/muramasa.obj",
+                  "carryType": "PSO2",
+                  "effectColor": 3355647,
+                  "effectColorInverse": false,
+                  "adjust": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "minecraft:custom_data": {
+                  "VariantId": "slashblade:sabigatana"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul",
+              "count": 1
+            },
+            {
+              "id": "slashblade:proudsoul_tiny",
+              "count": 1
+            }
+          ]
+        },
+        "sb_terminal_1201.json": {
+          "name": "#C8447C 拔刀终端",
+          "drop": 0.05,
+          "requires": [
+            "slashblade"
+          ],
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:fox_black",
+                "bladeState": {
+                  "translationKey": "item.slashblade.fox_black"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:fox_white",
+                "bladeState": {
+                  "translationKey": "item.slashblade.fox_white"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yamato",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yamato"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yasha_true",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yasha_true"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_trapezohedron",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:agito",
+                "bladeState": {
+                  "translationKey": "item.slashblade.agito"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:doutanuki",
+                "bladeState": {
+                  "translationKey": "item.slashblade.doutanuki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:muramasa",
+                "bladeState": {
+                  "translationKey": "item.slashblade.muramasa"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:sange",
+                "bladeState": {
+                  "translationKey": "item.slashblade.sange"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yuzukitukumo",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yuzukitukumo"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_sphere",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:koseki",
+                "bladeState": {
+                  "translationKey": "item.slashblade.koseki"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_netherite",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_netherite"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:tagayasan",
+                "bladeState": {
+                  "translationKey": "item.slashblade.tagayasan"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:yasha",
+                "bladeState": {
+                  "translationKey": "item.slashblade.yasha"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_crystal",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito_sealed",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito_sealed"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_diamond",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_diamond"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:ruby",
+                "bladeState": {
+                  "translationKey": "item.slashblade.ruby"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul_ingot",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:agito_rust",
+                "bladeState": {
+                  "translationKey": "item.slashblade.agito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:orotiagito_rust",
+                "bladeState": {
+                  "translationKey": "item.slashblade.orotiagito_rust"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_golden",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_golden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_iron",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_iron"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_stone",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_stone"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:rodai_wooden",
+                "bladeState": {
+                  "translationKey": "item.slashblade.rodai_wooden"
+                }
+              }
+            },
+            {
+              "id": "slashblade:slashblade",
+              "count": 1,
+              "tag": {
+                "VariantId": "slashblade:sabigatana",
+                "bladeState": {
+                  "translationKey": "item.slashblade.sabigatana"
+                }
+              }
+            },
+            {
+              "id": "slashblade:proudsoul",
+              "count": 1
+            },
+            {
+              "id": "slashblade:proudsoul_tiny",
+              "count": 1
+            }
+          ],
+          "type": "terminal"
+        }
+      },
+      "prices": {
+        "slashblade:proudsoul": 120,
+        "slashblade:proudsoul_crystal": 900,
+        "slashblade:proudsoul_ingot": 400,
+        "slashblade:proudsoul_sphere": 1600,
+        "slashblade:proudsoul_tiny": 50,
+        "slashblade:proudsoul_trapezohedron": 2600,
+        "slashblade:slashblade#slashblade:agito": 1800,
+        "slashblade:slashblade#slashblade:agito_rust": 400,
+        "slashblade:slashblade#slashblade:doutanuki": 1900,
+        "slashblade:slashblade#slashblade:fox_black": 3200,
+        "slashblade:slashblade#slashblade:fox_white": 3200,
+        "slashblade:slashblade#slashblade:koseki": 1000,
+        "slashblade:slashblade#slashblade:muramasa": 2000,
+        "slashblade:slashblade#slashblade:orotiagito": 3000,
+        "slashblade:slashblade#slashblade:orotiagito_rust": 400,
+        "slashblade:slashblade#slashblade:orotiagito_sealed": 700,
+        "slashblade:slashblade#slashblade:rodai_diamond": 600,
+        "slashblade:slashblade#slashblade:rodai_golden": 300,
+        "slashblade:slashblade#slashblade:rodai_iron": 250,
+        "slashblade:slashblade#slashblade:rodai_netherite": 900,
+        "slashblade:slashblade#slashblade:rodai_stone": 200,
+        "slashblade:slashblade#slashblade:rodai_wooden": 150,
+        "slashblade:slashblade#slashblade:ruby": 600,
+        "slashblade:slashblade#slashblade:sabigatana": 300,
+        "slashblade:slashblade#slashblade:sange": 1800,
+        "slashblade:slashblade#slashblade:tagayasan": 900,
+        "slashblade:slashblade#slashblade:yamato": 3500,
+        "slashblade:slashblade#slashblade:yasha": 1000,
+        "slashblade:slashblade#slashblade:yasha_true": 3000,
+        "slashblade:slashblade#slashblade:yuzukitukumo": 1900
+      }
+    },
+    {
       "key": "superb-warfare-pack",
       "name": {
         "en": "Superb Warfare compat pack",
         "zh": "卓越前线（Superb Warfare）联动包"
       },
       "files": {
+        "preview_adapt_test.json": {
+          "name": "#55FF88 预览适配测试箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "grade5": [
+            {
+              "id": "create:schematic",
+              "count": 1,
+              "components": {
+                "create:schematic_file": "preview_test.nbt",
+                "create:schematic_owner": "dev"
+              }
+            },
+            {
+              "id": "create:schematic",
+              "count": 1,
+              "components": {
+                "create:schematic_file": "no_such_file.nbt",
+                "create:schematic_owner": "dev"
+              }
+            },
+            {
+              "id": "minecraft:paper",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "id": "minecraft:chest",
+                  "EntityType": "minecraft:pig"
+                }
+              }
+            },
+            {
+              "id": "minecraft:book",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "id": "superbwarfare:container",
+                  "EntityType": "superbwarfare:truck"
+                }
+              }
+            }
+          ],
+          "grade4": [
+            {
+              "id": "immersive_aircraft:gyrodyne",
+              "count": 1
+            },
+            {
+              "id": "minecraft:villager_spawn_egg",
+              "count": 1,
+              "components": {
+                "minecraft:entity_data": {
+                  "id": "minecraft:villager",
+                  "VillagerData": {
+                    "type": "minecraft:swamp",
+                    "profession": "minecraft:nitwit",
+                    "level": 1
+                  }
+                }
+              }
+            },
+            {
+              "id": "minecraft:trident",
+              "count": 1
+            },
+            {
+              "id": "minecraft:minecart",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "minecraft:sheep_spawn_egg",
+              "count": 1,
+              "components": {
+                "minecraft:entity_data": {
+                  "id": "minecraft:sheep",
+                  "Color": 15
+                }
+              }
+            },
+            {
+              "id": "minecraft:diamond_chestplate",
+              "count": 1
+            },
+            {
+              "id": "minecraft:netherite_helmet",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "minecraft:wolf_spawn_egg",
+              "count": 1
+            },
+            {
+              "id": "minecraft:creeper_spawn_egg",
+              "count": 1
+            }
+          ],
+          "grade1": [
+            {
+              "id": "minecraft:iron_helmet",
+              "count": 1
+            },
+            {
+              "id": "immersive_aircraft:engine",
+              "count": 1
+            }
+          ]
+        },
         "sbw_crate.json": {
           "name": "#AA3333 卓越前线军火箱",
           "key": "csgobox:csgo_key3",
@@ -3178,6 +9414,155 @@ window.CSBDATA = {
             {
               "id": "superbwarfare:rifle_ammo",
               "count": 64
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:t_90a",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade1": [
+            {
+              "id": "superbwarfare:glock_17",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_443",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_1911",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:homemade_shotgun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:handgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "superbwarfare:shotgun_ammo",
+              "count": 32
+            },
+            {
+              "id": "minecraft:iron_ingot",
+              "count": 6
+            }
+          ]
+        },
+        "sbw_crate_1201.json": {
+          "name": "#AA3333 卓越前线军火箱",
+          "key": "csgobox:csgo_key3",
+          "drop": 0.02,
+          "random": [
+            625,
+            125,
+            25,
+            6,
+            4
+          ],
+          "requires": [
+            "superbwarfare"
+          ],
+          "grade5": [
+            {
+              "id": "superbwarfare:secondary_cataclysm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:super_star_shooter",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:awm",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:javelin",
+              "count": 1
+            }
+          ],
+          "grade4": [
+            {
+              "id": "superbwarfare:rpg",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:minigun",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_2_hb",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:igla_9k38",
+              "count": 1
+            }
+          ],
+          "grade3": [
+            {
+              "id": "superbwarfare:qbz_191",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:ak_12",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_4",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:hk_416",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:svd",
+              "count": 1
+            }
+          ],
+          "grade2": [
+            {
+              "id": "superbwarfare:ak_47",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:m_870",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:mp_5",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:vector",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rpk",
+              "count": 1
+            },
+            {
+              "id": "superbwarfare:rifle_ammo",
+              "count": 64
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "tag": {
+                "BlockEntityTag": {
+                  "EntityType": "superbwarfare:t_90a",
+                  "id": "superbwarfare:container"
+                }
+              }
             }
           ],
           "grade1": [
@@ -3415,11 +9800,300 @@ window.CSBDATA = {
               "count": 8
             }
           ]
+        },
+        "vehicle_preview_test.json": {
+          "name": "#55AAFF 载具预览测试箱",
+          "key": "csgobox:csgo_key0",
+          "drop": 1.0,
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "requires": [
+            "superbwarfare"
+          ],
+          "grade5": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:t_90a",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:ah_6",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade4": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:a_10a",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:bradley",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade3": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:speedboat",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:truck",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:type_63",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade2": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:mortar",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:sodayo_pick_up",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade1": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:mortar",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:igla_9k38",
+              "count": 1
+            }
+          ]
+        },
+        "vehicle_preview_test_terminal.json": {
+          "name": "#55AAFF 载具预览测试终端",
+          "type": "terminal",
+          "drop": 1.0,
+          "random": [
+            40,
+            30,
+            20,
+            7,
+            3
+          ],
+          "requires": [
+            "superbwarfare"
+          ],
+          "grade5": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:kirov",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:ac_130h",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade4": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:t_90a",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:mi_28",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade3": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:ah_6",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:a_10a",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:bradley",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade2": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:speedboat",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:truck",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:laser_tower",
+                  "id": "superbwarfare:container"
+                }
+              }
+            }
+          ],
+          "grade1": [
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:sodayo_pick_up",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:container",
+              "count": 1,
+              "components": {
+                "minecraft:block_entity_data": {
+                  "EntityType": "superbwarfare:mortar",
+                  "id": "superbwarfare:container"
+                }
+              }
+            },
+            {
+              "id": "superbwarfare:igla_9k38",
+              "count": 1
+            }
+          ]
         }
       },
       "prices": {
+        "minecraft:creeper_spawn_egg": 120,
+        "minecraft:diamond_chestplate": 1600,
         "minecraft:gunpowder": 100,
+        "minecraft:iron_helmet": 150,
         "minecraft:iron_ingot": 150,
+        "minecraft:book": 60,
+        "minecraft:minecart": 100,
+        "minecraft:paper": 50,
+        "minecraft:trident": 3000,
+        "minecraft:netherite_helmet": 2600,
+        "minecraft:sheep_spawn_egg": 100,
+        "minecraft:villager_spawn_egg": 300,
+        "minecraft:wolf_spawn_egg": 200,
         "superbwarfare:ammo_box": 800,
         "superbwarfare:handgun_ammo": 150,
         "superbwarfare:heavy_ammo": 500,
@@ -3430,6 +10104,7 @@ window.CSBDATA = {
         "superbwarfare:ak_47": 1800,
         "superbwarfare:awm": 22000,
         "superbwarfare:bocek": 1500,
+        "superbwarfare:container": 5000,
         "superbwarfare:devotion": 9000,
         "superbwarfare:glock_17": 500,
         "superbwarfare:hk_416": 2500,
