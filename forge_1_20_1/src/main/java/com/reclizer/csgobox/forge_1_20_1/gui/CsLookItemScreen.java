@@ -9,6 +9,7 @@ import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
+import com.reclizer.csgobox.forge_1_20_1.utils.EpicFightInspect;
 import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_1_20_1.utils.MaidSlabPreview;
 import com.reclizer.csgobox.forge_1_20_1.utils.SlashBladePreview;
@@ -18,6 +19,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.Entity;
@@ -335,9 +337,16 @@ public class CsLookItemScreen extends Screen {
             }
         }
         if (!viewportRendered) {
-            GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
-                    previewPixelX(), previewPixelY(),
-                    this.itemDrag.rotation(), openItem, this.player, scale);
+            if (EpicFightInspect.isActive()) {
+                // Epic Fight battle inspect owns the preview area: its own
+                // rigged-figure widget (with camera controls) replaces the
+                // flat item render for EF weapons.
+                EpicFightInspect.render(guiGraphics, mouseX, mouseY, partialTicks);
+            } else {
+                GuiItemMove.renderItemInInventoryFollowsMouse(guiGraphics,
+                        previewPixelX(), previewPixelY(),
+                        this.itemDrag.rotation(), openItem, this.player, scale);
+            }
         }
 
         int btnX = backButtonX();
@@ -368,7 +377,7 @@ public class CsLookItemScreen extends Screen {
             // Inspect (index 0) is the default mode (own 3D drag preview);
             // gloves (index 1) is active only while the TACZ viewport is on.
             boolean active = (i == 0 && !this.taczViewportActive) || (i == 1 && this.taczViewportActive)
-                    || (i == 2 && this.mobAnimMode) || (i == 3 && this.showInfoPanel);
+                    || (i == 2 && (this.mobAnimMode || EpicFightInspect.isActive())) || (i == 3 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
@@ -558,6 +567,11 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        // EF battle inspect: the widget handles its own camera drag inside
+        // its rect; the item drag stays parked while it owns the preview.
+        if (EpicFightInspect.isActive() && EpicFightInspect.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+            return true;
+        }
         // Match the actual rendered crate rectangle (centred horizontally
         // and vertically inside the 16%–92% container). The previous code
         // used width*37% + frameWidth as the centre of an upper-left
@@ -574,7 +588,28 @@ public class CsLookItemScreen extends Screen {
     }
 
     @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // EF battle inspect: let the widget finish its own camera drags.
+        if (EpicFightInspect.isActive() && EpicFightInspect.mouseReleased(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
+        // EF battle inspect zoom lives inside the widget; outside stays vanilla.
+        if (EpicFightInspect.isActive() && EpicFightInspect.mouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (EpicFightInspect.isActive() && EpicFightInspect.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         int btnX = backButtonX();
         int btnY = backButtonY();
         int btnW = backButtonWidth();
@@ -616,11 +651,16 @@ public class CsLookItemScreen extends Screen {
         int modelX = toolbarButtonX(2);
         int modelY = toolbarButtonY() + toolbarEnterRise(2);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, modelX, modelY, infoSize, infoSize)) {
-            // Inspect-character-model button: on living-entity drops this
-            // toggles the mob animation, on SlashBlade blades it flips the
-            // rack pose between the floor rack (horizontal) and the wall
-            // mount (vertical); dead placeholder for other items.
-            if (AnimRenderOps.hasPreviewMobInstance()) {
+            // Inspect-character-model button: on Epic Fight weapons this
+            // toggles the EF battle inspect (their own rigged-figure previewer
+            // playing the weapon's battle hold + attack combo), on
+            // living-entity drops this toggles the mob animation, on
+            // SlashBlade blades it flips the rack pose between the floor rack
+            // (horizontal) and the wall mount (vertical); dead placeholder
+            // for other items.
+            if (EpicFightInspect.availableFor(this.openItem)) {
+                this.toggleEpicFightInspect();
+            } else if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
             } else if (SlashBladePreview.hasPreviewBlade()) {
                 SlashBladePreview.toggleStyle();
@@ -652,10 +692,29 @@ public class CsLookItemScreen extends Screen {
         AnimRenderOps.clearPreviewMobInstance();
         SlashBladePreview.clearPreviewBlade();
         MaidSlabPreview.clearPreviewPick();
+        EpicFightInspect.clear();
         if (!this.sceneryAutoStarted) {
             this.sceneryAutoStarted = true;
             this.beginSceneryPanorama();
         }
+    }
+
+    /** Toggles the Epic Fight battle inspect: starts their own previewer
+     *  widget over the preview area (figure wearing the player's skin,
+     *  holding the weapon) or tears it down again. Reflection failures leave
+     *  the screen untouched. */
+    private void toggleEpicFightInspect() {
+        if (EpicFightInspect.isActive()) {
+            EpicFightInspect.stop();
+            return;
+        }
+        ResourceLocation skin = null;
+        if (this.minecraft != null && this.minecraft.player instanceof AbstractClientPlayer viewer
+                && this.minecraft.getSkinManager() != null) {
+            skin = this.minecraft.getSkinManager().getInsecureSkinLocation(viewer.getGameProfile());
+        }
+        EpicFightInspect.start(previewPixelX(), previewPixelY(),
+                previewTextureSize(), previewTextureSize(), this.openItem, skin);
     }
 
     /** Mounts the render camera onto a rig parked at the player's eye so the
@@ -856,6 +915,7 @@ public class CsLookItemScreen extends Screen {
         }
         AnimRenderOps.resetPreviewMobAnimation();
         this.mobAnimMode = false;
+        EpicFightInspect.clear();
         if (this.sceneryPlayerHidden) {
             if (this.player != null) {
                 this.player.setInvisible(false);
@@ -878,6 +938,7 @@ public class CsLookItemScreen extends Screen {
         if (this.minecraft == null || this.minecraft.player == null) return;
         this.advanceSceneryGlide();
         AnimRenderOps.tickPreviewMobAnimations(this.mobAnimMode);
+        EpicFightInspect.tick();
         if (!this.minecraft.player.isAlive() || this.minecraft.player.isRemoved()) {
             this.onClose();
         }

@@ -46,3 +46,6 @@ local-repo/net/p3pp3rf1y/sophisticatedcore/1.5.35.2478/sophisticatedcore-1.20.1-
 
 # ===== 车万女仆（Touhou Little Maid）1.5.3 snapshot（无 jarjar 内包，geckolib3/simplebedrockmodel 为 shade 内嵌）=====
 local-repo/com/tartaricacid/tlm/1.20.1/touhoulittlemaid-1.5.3-forge+mc1.20.1-snapshot.jar	touhoulittlemaid-1.5.3-forge+mc1.20.1-official.jar	-
+
+# ===== Epic Fight（史诗战斗）20.15.2——1.20.1 线，SRG 生产 jar 重映射（EF 检视预览联测环境）=====
+local-repo/com/epicfight/1.20.1/epicfight-1.20.1-20.15.2.jar	epicfight-1.20.1-20.15.2-official.jar	-
