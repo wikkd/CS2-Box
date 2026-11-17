@@ -45,6 +45,7 @@
 | `plans/`（9 篇） | 2026-08 实施的各项功能计划 | 均已实现，CHANGELOG.md 为权威记录 |
 | `specs/`（13 篇） | 对应设计规格 | 同上 |
 | `archived/`（2 篇） | 已废弃方向的实施计划 | 顶部横幅注明原位置 |
+| `sdd-2026-08/`（19 个文件） | SDD 工作流过程档案（进度账本 / 终审修复报告 / task brief ×8 / report ×8） | 原为根目录未跟踪的 `.superpowers/sdd/`；31 份机器生成的 review diff 包已丢弃（可由 git 历史重建），详见其 `README.md` |
 
 > 仍在途的 2 篇军械库整合包规格（`docs/superpowers/specs/`）不在归档内，随开发线继续更新。
 
