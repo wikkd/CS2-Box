@@ -62,11 +62,6 @@ public class TerminalScreen extends Screen {
     private final TerminalOfferRegion offerRegion = new TerminalOfferRegion();
     private final TerminalBottomRow bottomRow = new TerminalBottomRow();
     private final TerminalConfirmDialog confirmDialog = new TerminalConfirmDialog();
-    /** Right-click "检视" context menu over the offer item. */
-    private final InspectMenu inspectMenu = new InspectMenu();
-    /** The offer item + grade the menu will inspect (set on right-click). */
-    private ItemStack inspectItem = ItemStack.EMPTY;
-    private int inspectGrade = 0;
     private long nowMs;
     private long buyRequestId;
     /** When the buy request was sent — the waiting dialog must not hang forever. */
@@ -295,7 +290,7 @@ public class TerminalScreen extends Screen {
         // previewVisible: the 3D offer preview would occlude anything drawn
         // after it (PIP composites post-frame), so drop it under modal layers
         offerRegion.render(gg, rx0, rty, rx1, ry1, nowMs, model, player, mouseX, mouseY,
-                !confirmDialog.isOpen() && !inspectMenu.isOpen());
+                !confirmDialog.isOpen());
 
         // ---- bottom row (region 9+10+11) ----
         int bx0 = px(0.370), by0 = py(0.875), bx1 = px(0.998), by1 = py(0.988);
@@ -304,9 +299,6 @@ public class TerminalScreen extends Screen {
 
         // ---- trade-confirm dialog (modal overlay) ----
         confirmDialog.render(gg, width, height, player);
-
-        // ---- right-click "检视" context menu (top-most) ----
-        inspectMenu.render(gg, mouseX, mouseY);
     }
 
     /** FormattedCharSequence wrapper for plain strings. */
@@ -331,27 +323,6 @@ public class TerminalScreen extends Screen {
         this.mouseX = (int) mouseX;
         this.mouseY = (int) mouseY;
         long now = worldNowMs();
-        // Right-click on the 3D offer item opens the "检视" context menu.
-        if (button == 1 && !this.inspectMenu.isOpen() && !confirmDialog.isOpen()) {
-            NegotiationModel.Offer offer = model.pending();
-            if (offer != null && offerRegion.hitItem(this.mouseX, this.mouseY)) {
-                ItemStack item = TerminalOfferItems.itemFor(offer);
-                if (!item.isEmpty()) {
-                    this.inspectItem = item.copy();
-                    this.inspectGrade = TerminalOfferItems.gradeFor(offer);
-                    this.inspectMenu.openAt(this.mouseX, this.mouseY);
-                    return true;
-                }
-            }
-        }
-        // While the menu is open every click is captured by it.
-        if (this.inspectMenu.isOpen()) {
-            int action = this.inspectMenu.mouseClicked(button, this.mouseX, this.mouseY);
-            if (action == InspectMenu.INSPECT) {
-                openInspect();
-            }
-            return true;
-        }
         if (confirmDialog.isOpen()) {
             TerminalConfirmDialog.Hit hit = confirmDialog.mouseDown(this.mouseX, this.mouseY, now);
             if (hit == TerminalConfirmDialog.Hit.CONFIRM) {
@@ -373,16 +344,6 @@ public class TerminalScreen extends Screen {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    /** Opens the shared 3D item showcase (the unboxing reward screen) for the
-     *  right-clicked offer item, returning here on close. */
-    private void openInspect() {
-        if (inspectItem == null || inspectItem.isEmpty()) {
-            return;
-        }
-        Minecraft.getInstance().setScreen(
-                new CsLookItemScreen(inspectItem, inspectGrade, this));
     }
 
     @Override
@@ -434,10 +395,6 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { // GLFW_KEY_ESCAPE
-            if (this.inspectMenu.isOpen()) {
-                this.inspectMenu.close();
-                return true;
-            }
             if (confirmDialog.isOpen()) {
                 if (confirmDialog.isWaiting()) {
                     return true; // buy request in flight — never cancel mid-trade

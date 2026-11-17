@@ -241,8 +241,13 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(x, y, 2F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        pose.scale(1.0F, -1.0F, 0F);
-        pose.scale(16.0F * scale, 16.0F * scale, 0F);
+        // Depth restored (v1_21_1 renderItem2DFlat carries the full note): a
+        // Z scale of 0 collapsed every face onto one depth plane, so hollow
+        // open-front models baked their backplate over the front shelving.
+        // Z=1 keeps a thin slab around the z=2 layer — card fills (z=0) stay
+        // under the icon, big 3D previews (z=100+) stay over it.
+        pose.scale(1.0F, -1.0F, 1F);
+        pose.scale(16.0F * scale, 16.0F * scale, 1F);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();
@@ -1284,8 +1289,13 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(x, y, 2F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        pose.scale(1.0F, -1.0F, 0F);
-        pose.scale(16.0F * scale, 16.0F * scale, 0F);
+        // Depth restored (v1_21_1 renderItem2DFlat carries the full note): a
+        // Z scale of 0 collapsed every face onto one depth plane, so hollow
+        // open-front models baked their backplate over the front shelving.
+        // Z=1 keeps a thin slab around the z=2 layer — card fills (z=0) stay
+        // under the icon, big 3D previews (z=100+) stay over it.
+        pose.scale(1.0F, -1.0F, 1F);
+        pose.scale(16.0F * scale, 16.0F * scale, 1F);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();

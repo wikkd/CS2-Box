@@ -17,6 +17,10 @@ import net.minecraft.client.gui.screens.Screen;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
@@ -57,14 +61,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LevelLightEngine;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -117,6 +129,7 @@ public final class AnimRenderOps {
      *  value immediately, so a single static instance is safe on the render
      *  thread and avoids one allocation per 3D item per frame. */
     private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final RandomSource SCRATCH_RANDOM = RandomSource.create();
     /** Sentinel cached for models without usable geometry (custom renderers
      *  or degenerate bounds): distinguishes "not computed" from "nothing to
      *  centre", so those models are not rescanned every frame. */
@@ -340,10 +353,9 @@ public final class AnimRenderOps {
 
     /** 2D item icon centred at (x, y), scaled (16px per block unit).
      *  Custom-renderer models ({@code builtin/entity} — chest-like items
-     *  drawn by a BEWLR) carry real 3D content that the flat icon path
-     *  flattens to zero depth (the Z-scale-0 trick below), rendering
-     *  nothing: those route to the FIXED-context 3D render instead, which
-     *  is what an item frame shows. Skipped under shader mods (Iris/Oculus)
+     *  drawn by a BEWLR) route to the FIXED-context 3D render instead of
+     *  the flat path below: the item-frame perspective is the established
+     *  convention for them here. Skipped under shader mods (Iris/Oculus)
      *  — their GUI interception breaks custom 3D paths, and the flat path
      *  cannot draw them either. */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
@@ -373,8 +385,19 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(x, y, 2F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        pose.scale(1.0F, -1.0F, 0F);
-        pose.scale(16.0F * scale, 16.0F * scale, 0F);
+        // Real depth — vanilla GuiGraphics.renderItem keeps its Z scale at 16
+        // (on its z=150 layer), while a Z scale of 0 here collapsed every face
+        // onto one depth plane and let the model bake order win the depth test:
+        // hollow models with an open front (kaleidoscope_tavern bar cabinet)
+        // painted the interior backplate over the shelving and the 2D icon read
+        // as a sealed cube (2026-11-18 terminal strip report). The Z scale stays
+        // at 1 rather than vanilla's 16 — depth ordering only needs relative
+        // order, and a ~±0.3px slab around the z=2 layer keeps every screen
+        // convention intact: card fills at z=0 stay under the icon, the big 3D
+        // previews at z=100+ stay over it (a full-depth slab here would dip
+        // below the fills and interleave with those previews).
+        pose.scale(1.0F, -1.0F, 1F);
+        pose.scale(16.0F * scale, 16.0F * scale, 1F);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         boolean flat = !model.usesBlockLight();
         if (flat) Lighting.setupForFlatItems();
@@ -657,7 +680,7 @@ public final class AnimRenderOps {
      *  largest axis fills only PREVIEW_FILL of it; everything else keeps the
      *  caller's scale. Same shrink rule as the 26.x PIP path
      *  ({@code targetPixelSize * 0.82 / modelSpan} in Icon3DRenderState). */
-    private static float fitScaleFor(float modelSpan, float scale) {
+    static float fitScaleFor(float modelSpan, float scale) {
         if (modelSpan <= 1.0F || modelSpan <= 0.0F) {
             return scale;
         }
@@ -1653,6 +1676,175 @@ public final class AnimRenderOps {
             pose.popPose();
         }
     }
+
+    // ===================== Prefab blueprint (蓝图) structure preview =====================
+
+    /** Prefab blueprint 3D preview: mirrors the mod's own ghost-preview data
+     *  path (the reflective compute lives in {@link PrefabStructurePreview})
+     *  and renders the resolved block map per frame through the vanilla
+     *  {@code BlockRenderDispatcher} over a tiny {@link BlockAndTintGetter}
+     *  backed by the baked map — full-bright light, no directional shade and
+     *  untinted colors, the same flat look item icons get. Block entities
+     *  (chests/beds/etc.) draw through their own renderers with the client
+     *  level re-parented; any renderer that throws is blacklisted for the
+     *  session, mirroring the Create preview's errored-BE mask. Unresolvable
+     *  bundles (budget/missing structures) degrade to the flat icon inside
+     *  the bundle cache. */
+    static void renderPrefabStructurePreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                             int cx, int cy, Quat rotation, float scale) {
+        PrefabStructurePreview.StructureData bundle = PrefabStructurePreview.bundle(stack, player);
+        if (bundle == null) {
+            renderItem2DFlat(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        float fitScale = fitScaleFor(bundle.span(), scale);
+        PoseStack pose = gg.pose();
+        pose.pushPose();
+        pose.translate(cx, cy, 100.0F);
+        pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
+        pose.scale(1.0F, -1.0F, 1.0F);
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
+        Lighting.setupForEntityInInventory();
+        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
+        Vector3f center = bundle.center();
+        pose.translate(-center.x, -center.y, -center.z);
+        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.mul(pose.last().pose());
+        RenderSystem.applyModelViewMatrix();
+        try {
+            FAKE_STRUCTURE_LEVEL.attach(bundle);
+            PoseStack renderStack = REUSABLE_POSE_STACK;
+            renderStack.setIdentity();
+            Minecraft minecraft = Minecraft.getInstance();
+            BlockRenderDispatcher dispatcher = minecraft.getBlockRenderer();
+            MultiBufferSource.BufferSource buffer = minecraft.renderBuffers().bufferSource();
+            for (Map.Entry<BlockPos, BlockState> entry : bundle.blocks().entrySet()) {
+                BlockPos pos = entry.getKey();
+                BlockState state = entry.getValue();
+                RenderType layer = ItemBlockRenderTypes.getChunkRenderType(state);
+                renderStack.pushPose();
+                renderStack.translate(pos.getX(), pos.getY(), pos.getZ());
+                SCRATCH_RANDOM.setSeed(pos.asLong());
+                dispatcher.renderBatched(state, pos, FAKE_STRUCTURE_LEVEL, renderStack,
+                        buffer.getBuffer(layer), false, SCRATCH_RANDOM, ModelData.EMPTY, layer);
+                renderStack.popPose();
+            }
+            BlockEntityRenderDispatcher beDispatcher = minecraft.getBlockEntityRenderDispatcher();
+            for (Map.Entry<BlockPos, BlockEntity> entry : bundle.blockEntities().entrySet()) {
+                BlockEntity blockEntity = entry.getValue();
+                BlockEntityRenderer<BlockEntity> renderer = beDispatcher.getRenderer(blockEntity);
+                if (renderer == null || ERRORED_BE_TYPES.contains(blockEntity.getType())) {
+                    continue;
+                }
+                renderStack.pushPose();
+                renderStack.translate(entry.getKey().getX(), entry.getKey().getY(), entry.getKey().getZ());
+                try {
+                    renderer.render(blockEntity, 0.0F, renderStack, buffer, 15728880, OverlayTexture.NO_OVERLAY);
+                } catch (Throwable t) {
+                    ERRORED_BE_TYPES.add(blockEntity.getType());
+                    LOGGER.warn("[csgobox] prefab blueprint preview: block entity renderer errored, blacklisting {}",
+                            BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(blockEntity.getType()), t);
+                } finally {
+                    renderStack.popPose();
+                }
+            }
+            buffer.endBatch();
+        } catch (Throwable t) {
+            LOGGER.warn("Prefab blueprint preview render failed; degrading to the icon path", t);
+        } finally {
+            modelViewStack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
+            pose.popPose();
+        }
+    }
+
+    /** Block entities whose renderer threw at least once this session. */
+    private static final Set<BlockEntityType<?>> ERRORED_BE_TYPES = new HashSet<>();
+
+    /** Minimal {@link BlockAndTintGetter} over the baked block map: full
+     *  bright light, no directional shade, untinted block colors — the whole
+     *  structure gets the flat-icon look. The light-engine accessor returns
+     *  null on purpose; every engine-backed default ({@code getBrightness}/
+     *  {@code getRawBrightness}/{@code canSeeSky}) is overridden here, so the
+     *  engine is only reachable from code paths this preview never triggers. */
+    private static final class PrefabStructureLevel implements BlockAndTintGetter {
+        private Map<BlockPos, BlockState> blocks = Map.of();
+        private Map<BlockPos, BlockEntity> blockEntities = Map.of();
+
+        PrefabStructureLevel(PrefabStructurePreview.StructureData bundle) {
+            attach(bundle);
+        }
+
+        void attach(PrefabStructurePreview.StructureData bundle) {
+            this.blocks = bundle.blocks();
+            this.blockEntities = bundle.blockEntities();
+        }
+
+        @Override
+        public int getHeight() {
+            return 4096;
+        }
+
+        @Override
+        public int getMinBuildHeight() {
+            return -2048;
+        }
+
+        @Override
+        public int getMaxBuildHeight() {
+            return 2047;
+        }
+
+        @Override
+        public BlockState getBlockState(BlockPos pos) {
+            BlockState state = this.blocks.get(pos);
+            return state != null ? state : Blocks.AIR.defaultBlockState();
+        }
+
+        @Override
+        public BlockEntity getBlockEntity(BlockPos pos) {
+            return this.blockEntities.get(pos);
+        }
+
+        @Override
+        public FluidState getFluidState(BlockPos pos) {
+            return this.getBlockState(pos).getFluidState();
+        }
+
+        @Override
+        public float getShade(Direction direction, boolean shaded) {
+            return 1.0F;
+        }
+
+        @Override
+        public LevelLightEngine getLightEngine() {
+            return null;
+        }
+
+        @Override
+        public int getBrightness(LightLayer layer, BlockPos pos) {
+            return 15;
+        }
+
+        @Override
+        public int getRawBrightness(BlockPos pos, int amount) {
+            return 15;
+        }
+
+        @Override
+        public int getBlockTint(BlockPos pos, ColorResolver resolver) {
+            return -1;
+        }
+    }
+
+    /** The render-thread fake level; bundles are swapped per frame (render
+     *  thread only — no visibility concerns). */
+    private static final PrefabStructureLevel FAKE_STRUCTURE_LEVEL =
+            new PrefabStructureLevel(new PrefabStructurePreview.StructureData(
+                    Map.of(), Map.of(), new Vector3f(), 1.0F));
 
     /** Cached bundle lookup; {@code null} (with the sentinel cached) marks
      *  "unrenderable, degrade". */

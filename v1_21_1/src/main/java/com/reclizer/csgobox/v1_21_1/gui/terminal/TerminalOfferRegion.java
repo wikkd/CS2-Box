@@ -7,15 +7,13 @@ import com.reclizer.csgobox.utils.Quat;
 import com.reclizer.csgobox.terminal.TerminalAnims;
 import com.reclizer.csgobox.terminal.TerminalPalette;
 import com.reclizer.csgobox.terminal.WearBands;
-import com.reclizer.csgobox.v1_21_1.compat.TaczInspectViewport;
-import com.reclizer.csgobox.v1_21_1.event.FirstPersonInspectHandler;
 import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
+import com.reclizer.csgobox.v1_21_1.gui.CsLookItemScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -24,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Region 8: the offer inspection panel — A name box, B rarity block,
- * C inspect capsule (auto-spin), D 3D item (drag to rotate), E wear tier,
+ * C inspect capsule (opens the item inspect screen), D 3D item (drag to rotate), E wear tier,
  * F five-band wear bar + arrow + scan, G wear value, H meta row.
  *
  * era: decoupled
@@ -44,7 +42,6 @@ public final class TerminalOfferRegion {
     private static final float INITIAL_ROT_X = (float) Math.toRadians(-38);
     private static final float INITIAL_ROT_Y = (float) Math.toRadians(24);
 
-    private boolean inspectOn;
     private boolean dragging;
     private int dragLastX;
     private int dragLastY;
@@ -93,14 +90,14 @@ public final class TerminalOfferRegion {
             // span reads as a balanced showcase inside the halo)
             // The 3D preview draws on top of everything drawn after it
             // (immediate z>0 depth-writes / post-frame PIP composite), so a
-            // modal dialog or context menu layered later would be occluded —
+            // modal dialog layered later would be occluded —
             // skip the preview while one is open. The dialog carries its own
             // item icon, so no information is lost.
             if (previewVisible) {
                 float itemSize = Math.max(14F, wmSize * 0.88F);
                 // The spin composes as an X-axis rotation pre-multiplied onto the
                 // drag orientation (equivalent to the legacy rotY += spinDeg form).
-                float spinDeg = inspectOn ? TerminalAnims.spinDeg(nowMs) : nowMs / 1000F * 3F;
+                float spinDeg = nowMs / 1000F * 3F;
                 Quat spun = Quat.mul(Quat.fromAxisAngle(1, 0, 0, (float) Math.toRadians(spinDeg)),
                         this.itemDrag.rotation());
                 ItemStack stack = offerItem(offer);
@@ -122,20 +119,16 @@ public final class TerminalOfferRegion {
         }
 
         // ---- C: inspect capsule (top-right) ----
-        String inspectText = Component.translatable("gui.csgobox.csgo_box.toolbar.inspect").getString();
+        String inspectText = Component.translatable("gui.csgobox.inspect.open").getString();
         int iw = Math.round(font.width(inspectText) * 0.47F) + Math.round(0.6F * (inspectText.length() - 1)) + 7;
         inspectX = x1 - iw - 4;
         inspectY = y0 + 4;
         inspectW = iw;
         inspectH = 7;
         boolean hover = mx >= inspectX && mx <= inspectX + iw && my >= inspectY && my <= inspectY + 22;
-        int bg = inspectOn ? 0xFFE5C558 : (hover ? TerminalPalette.INSPECT_HOVER : TerminalPalette.INSPECT_BG);
-        int fg = inspectOn ? 0xFF3A3520 : TerminalPalette.INSPECT_TEXT;
+        int bg = hover ? TerminalPalette.INSPECT_HOVER : TerminalPalette.INSPECT_BG;
+        int fg = TerminalPalette.INSPECT_TEXT;
         TerminalChatRegion.drawRounded(gg, inspectX, inspectY, iw, 7, bg, 0xFF000000);
-        if (inspectOn) {
-            AnimRenderOps.blitTextured(gg, TEX_CIRCLE_GLOW, inspectX - 3, inspectY - 3,
-                    iw + 6, 13, 128, 128);
-        }
         int inspectTextW = Math.round(font.width(inspectText) * 0.47F) + Math.round(0.6F * (inspectText.length() - 1));
         RenderFontTool.drawSpacedText(gg, font, inspectText,
                 inspectX + (iw - inspectTextW) / 2F, inspectY + 2, 0.6F, 0.47F, fg);
@@ -260,26 +253,24 @@ public final class TerminalOfferRegion {
     // ---- interaction ----
 
     /**
-     * Click on the inspect capsule. When the offer is a TACZ gun (and TACZ is
-     * loaded) this aligns with the box look screen's TACZ inspect: the capsule
-     * starts the native first-person inspect animation and returns to the
-     * terminal screen ({@code returnScreen}) when it finishes. For every other
-     * item it toggles the 3D auto-spin as before.
+     * Click on the inspect capsule opens the item inspect screen — the shared
+     * 3D showcase ({@code CsLookItemScreen}) for the offered item, returning
+     * to the terminal screen ({@code returnScreen}) when it closes. TACZ guns
+     * reach the native first-person inspect from the showcase's own toolbar.
      */
     public boolean mouseDown(int mx, int my, Screen returnScreen) {
         if (mx >= inspectX && mx <= inspectX + inspectW && my >= inspectY && my <= inspectY + inspectH) {
+            // The capsule opens the shared 3D item showcase for the offered
+            // item (the former right-click "检视" menu's action). TACZ guns
+            // reach their first-person weapon-model inspect from the
+            // showcase's own toolbar button.
             if (currentOffer != null) {
                 ItemStack item = offerItem(currentOffer);
-                Minecraft mc = Minecraft.getInstance();
-                if (!item.isEmpty() && TaczInspectViewport.isAvailable(item)
-                        && mc.player instanceof LocalPlayer lp) {
-                    if (FirstPersonInspectHandler.start(lp, item,
-                            TerminalOfferItems.gradeFor(currentOffer), returnScreen)) {
-                        return true; // TACZ inspect took over; keep auto-spin state
-                    }
+                if (!item.isEmpty()) {
+                    Minecraft.getInstance().setScreen(new CsLookItemScreen(
+                            item, TerminalOfferItems.gradeFor(currentOffer), returnScreen));
                 }
             }
-            inspectOn = !inspectOn;
             return true;
         }
         if (currentOffer == null) {
@@ -299,8 +290,8 @@ public final class TerminalOfferRegion {
 
     /**
      * Right-click hit-test on the 3D offer item itself (same circular region
-     * as the drag detection, minus the capsule) — drives the "检视" context
-     * menu in {@code TerminalScreen}. False while no offer has landed.
+     * as the drag detection, minus the capsule). Kept as a region capability —
+     * the terminal's right-click "检视" context menu was removed (2026-11-18).
      */
     public boolean hitItem(int mx, int my) {
         if (currentOffer == null || itemCx == 0) {
@@ -335,7 +326,6 @@ public final class TerminalOfferRegion {
     }
 
     public void reset() {
-        inspectOn = false;
         this.itemDrag.reset();
     }
 

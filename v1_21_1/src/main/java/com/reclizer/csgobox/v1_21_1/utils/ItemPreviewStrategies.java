@@ -74,7 +74,8 @@ final class ItemPreviewStrategies {
             new SpawnEggStrategy(),
             new ArmorStandStrategy(),
             new EntityContainerStrategy(),
-            new CreateSchematicStrategy());
+            new CreateSchematicStrategy(),
+            new PrefabBlueprintStrategy());
 
     /** One mod-specific preview override. Rendering delegates back into
      *  {@link AnimRenderOps} (package-private bodies, one pose convention). */
@@ -373,6 +374,31 @@ final class ItemPreviewStrategies {
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
             AnimRenderOps.renderCreateSchematicPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Prefab blueprints ({@code prefab:item_*} blueprint family): the 3D
+     *  pass renders the blueprint's whole building — the mod's gz-packed
+     *  structure JSON deserialized through its own ghost-preview flow,
+     *  reflectively (see {@link PrefabStructurePreview}). Missing/over-budget
+     *  structures degrade to the flat icon; 2D grids keep the flat icon. */
+    private static final class PrefabBlueprintStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return PrefabStructurePreview.isPrefabBlueprint(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderPrefabStructurePreview(gg, stack, player, cx, cy, rotation, scale);
         }
 
         @Override
