@@ -260,7 +260,7 @@ public final class TerminalOfferRegion {
             if (currentOffer != null) {
                 ItemStack item = TerminalOfferItems.itemFor(currentOffer);
                 if (!item.isEmpty()) {
-                    Minecraft.getInstance().setScreen(new CsLookItemScreen(
+                    Minecraft.getInstance().setScreenAndShow(new CsLookItemScreen(
                             item, TerminalOfferItems.gradeFor(currentOffer), returnScreen));
                 }
             }
