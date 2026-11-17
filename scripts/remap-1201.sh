@@ -190,7 +190,14 @@ PYEOF
     fi
 
     # ---- deploy (diff-checked) ----
-    if [[ ! -f "$MODS_DIR/$deploy_name" ]] || ! cmp -s "$OUT" "$MODS_DIR/$deploy_name"; then
+    # A "!"-prefixed deploy name marks a classpath-only artifact (the KFF dev
+    # set): build + gate as usual, but never copy into run/mods — the mods
+    # folder would double-register kffmod while its language provider is only
+    # discoverable on the FG7 dev classpath (no build.gradle wiring shipped;
+    # dormant until the KFF Gradle plugin lands).
+    if [[ "$deploy_name" == "!"* ]]; then
+        echo "no-deploy (classpath artifact): ${deploy_name#!}"
+    elif [[ ! -f "$MODS_DIR/$deploy_name" ]] || ! cmp -s "$OUT" "$MODS_DIR/$deploy_name"; then
         cp "$OUT" "$MODS_DIR/$deploy_name"
         echo "deployed: $deploy_name"
         deployed=$((deployed + 1))
