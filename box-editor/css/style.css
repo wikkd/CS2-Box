@@ -732,14 +732,19 @@ input[type="checkbox"]:indeterminate { accent-color: var(--warn); }
 .price-table tbody tr:nth-child(even) td { background: rgba(255, 255, 255, .012); }
 .price-table tr { transition: background .12s ease; }
 .price-table tr:hover td { background: rgba(61, 139, 255, .06); }
-.status-cell { display: inline-flex; align-items: center; gap: 5px; }
+/* Keep the td a real table cell: display:inline-flex here collapsed the
+   column and squeezed the CJK badge into per-character wrapping. The dot is
+   an inline-block pseudo-element; nowrap keeps the badge on one line. */
+.status-cell { white-space: nowrap; }
 .status-cell::before {
   content: "";
+  display: inline-block;
   width: 6px; height: 6px;
+  margin-right: 5px;
+  vertical-align: middle;
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0 6px currentColor;
-  flex: none;
 }
 .key-cell { font-variant-numeric: tabular-nums; }
 .price-input { transition: border-color .15s ease, box-shadow .15s ease; }
