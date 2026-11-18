@@ -8,6 +8,7 @@ on:
       - 'scripts/sync-box-editor-data.py'
       - 'docs/box-schema/**'
       - 'docs/examples/**'
+      - 'compat-packs/**'
       - '.github/workflows/box-editor-pages.yml'
   workflow_dispatch:
 

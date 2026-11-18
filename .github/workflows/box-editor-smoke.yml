@@ -8,6 +8,7 @@ on:
       - 'scripts/sync-box-editor-data.py'
       - 'docs/box-schema/**'
       - 'docs/examples/**'
+      - 'compat-packs/**'
       - '.github/workflows/box-editor-smoke.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'scripts/sync-box-editor-data.py'
       - 'docs/box-schema/**'
       - 'docs/examples/**'
+      - 'compat-packs/**'
       - '.github/workflows/box-editor-smoke.yml'
   workflow_dispatch:
 
