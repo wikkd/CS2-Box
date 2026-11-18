@@ -92,6 +92,10 @@
   let advanced = false;
   let previewTimer = null;
   let saveTimer = null;
+  // True while a render is replaying another tab's storage write (see the
+  // storage listener in boot): such echo renders must not schedule a save,
+  // or two open tabs ping-pong storage events forever.
+  let storageSyncRender = false;
   let gradeOpen = [true, true, true, true, true];
   const history = { undo: [], redo: [] };
   let pasteContext = null; // { mode: 'items'|'prices', grade?: number }
@@ -152,13 +156,23 @@
     });
     window.addEventListener('storage', (e) => {
       if (e.key && e.key !== LS_STATE && e.key !== LS_VER && e.key !== LS_LANG && e.key !== LS_ADV && e.key !== LS_FILES) return;
-      loadPrefs();
-      if (e.key === LS_FILES || e.key === null) {
-        const reloaded = loadFilesStore();
-        if (reloaded || e.key === null) filesStore = reloaded;
-        renderFileBar();
+      // Cross-tab sync: re-render from what the other tab wrote, but do NOT
+      // let this render schedule its own debounced save. saveState() bumps
+      // entry.savedAt, so the write-back always serializes differently from
+      // what we just read and fires the next storage wave — with 2+ tabs open
+      // that ping-pongs forever (every tab re-rendering every ~300ms).
+      storageSyncRender = true;
+      try {
+        loadPrefs();
+        if (e.key === LS_FILES || e.key === null) {
+          const reloaded = loadFilesStore();
+          if (reloaded || e.key === null) filesStore = reloaded;
+          renderFileBar();
+        }
+        if (!loadState()) renderAll();
+      } finally {
+        storageSyncRender = false;
       }
-      if (!loadState()) renderAll();
     });
     schedulePreview(0);
   }
@@ -3951,6 +3965,7 @@
   }
 
   function saveStateDebounced() {
+    if (storageSyncRender) return; // echo render of another tab's write — nothing to persist
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveState, 300);
   }
