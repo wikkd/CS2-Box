@@ -316,9 +316,10 @@ public final class TerminalOfferRegion {
         if (dx == 0 && dy == 0) {
             return true;
         }
-        // This region's legacy mapping was dx -> X-axis, dy -> Y-axis (the
-        // box screens are the opposite); accumulate(dy, dx) preserves that.
-        this.itemDrag.accumulate(dy, dx);
+        // Same axis mapping as the box/look screens (horizontal drag spins
+        // the vertical axis); the swapped legacy form made vertical drags
+        // read as horizontal spins.
+        this.itemDrag.accumulate(dx, dy);
         return true;
     }
 
