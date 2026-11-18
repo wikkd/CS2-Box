@@ -54,6 +54,9 @@ jobs:
 
       - name: Run UI smoke tests
         working-directory: box-editor
+        # shell: bash enables `-o pipefail` — without it `| tee` masks the
+        # smoke script's exit code and a failing suite reports success.
+        shell: bash
         run: node tests/smoke.mjs 2>&1 | tee smoke.log
 
       - name: Upload smoke log on failure

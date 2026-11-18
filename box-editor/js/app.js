@@ -743,12 +743,34 @@
     }
   }
 
-  /** Cheap label refresh while typing in the file-name field (no structural
+  /** Sidebar label parts for one saved draft: the player-defined box name
+   *  (state.meta.name, in-game '#RRGGBB ' colour prefix stripped — the sidebar
+   *  has its own palette) plus the file name that becomes
+   *  config/csbox/<file>.json. Empty box names fall back to the file name. */
+  function fileLabelParts(st) {
+    const s = st || {};
+    const file = String(s.fileName || '').trim() || 'my_box';
+    const title = String((s.meta && s.meta.name) || '')
+      .replace(/^#[0-9a-fA-F]{6}(\s|$)/, '').trim();
+    return { title, file };
+  }
+
+  /** Two-line label: box display name on top, box id (file name) below in a
+   *  muted mono line when the two differ; single mono line otherwise. */
+  function fileLabelHtml(st) {
+    const { title, file } = fileLabelParts(st);
+    const twoLine = !!title && title !== file;
+    return '<span class="file-title' + (twoLine ? '' : ' plain') + '">' +
+      esc(twoLine ? title : file) + '</span>' +
+      (twoLine ? '<span class="file-sub">' + esc(file) + '</span>' : '');
+  }
+
+  /** Cheap label refresh while typing the box name / file name (no structural
    *  re-render — would eat clicks on the hover actions). */
   function syncFileBarLabels() {
     if (!filesStore) return;
     const el = document.querySelector('.file-item.active .file-name');
-    if (el && el.textContent !== state.fileName) el.textContent = state.fileName;
+    if (el) el.innerHTML = fileLabelHtml(state); /* esc-exempt: helper escapes every part */
   }
 
   function renderFileBar() {
@@ -764,7 +786,8 @@
       return (v.label && (v.label[I18N.lang] || v.label.zh)) || v.key;
     };
     list.innerHTML = filesStore.files.map((f) => {
-      const name = (f.payload && f.payload.state && f.payload.state.fileName) || 'my_box';
+      const parts = fileLabelParts(f.payload && f.payload.state);
+      const name = parts.title || parts.file;
       const active = f.id === filesStore.activeId;
       const slot = f.payload && f.payload.slot;
       let tag = '';
@@ -777,8 +800,12 @@
         tag = '<span class="file-tag">' + (src || 'pack') + '</span>';
         tip = t('files.slotTitle', { name: slot.name }) + (ago ? ' · ' + ago : '');
       }
-      return '<div class="file-item' + (active ? ' active' : '') + '" data-file-id="' + esc(f.id) + '" title="' + esc(tip || name) + '">' +
-        '<span class="file-name">' + esc(name) + '</span>' + tag +
+      // Tooltip: box display name, box id when it differs, pack provenance.
+      const tipParts = [name];
+      if (parts.title && parts.title !== parts.file) tipParts.push(parts.file);
+      if (tip) tipParts.push(tip);
+      return '<div class="file-item' + (active ? ' active' : '') + '" data-file-id="' + esc(f.id) + '" title="' + esc(tipParts.join(' · ')) + '">' +
+        '<span class="file-name">' + fileLabelHtml(f.payload && f.payload.state) + '</span>' + tag +
         '<span class="file-actions">' +
         '<button class="file-btn" data-file-action="rename" title="' + esc(t('files.rename')) + '">✎</button>' +
         '<button class="file-btn" data-file-action="dup" title="' + esc(t('files.dup')) + '">⧉</button>' +
@@ -855,7 +882,8 @@
     if (!dlg || !filesStore) return;
     const entry = filesStore.files.find((f) => f.id === id);
     if (!entry) return;
-    const name = (entry.payload && entry.payload.state && entry.payload.state.fileName) || 'my_box';
+    const parts = fileLabelParts(entry.payload && entry.payload.state);
+    const name = parts.file;
     fileDialogMode = mode;
     fileDialogId = id;
     $('#file-dialog-title').textContent = t(mode === 'rename' ? 'files.renameTitle' : 'files.deleteTitle');
@@ -866,7 +894,13 @@
       $('#file-dialog-input').hidden = false;
       $('#file-dialog-do').textContent = t('files.renameDo');
     } else {
-      hint.textContent = t('files.deleteHint', { name });
+      // Delete confirmation names the draft the way the sidebar does: the box
+      // display name with its file id in parentheses (file id alone when the
+      // two are the same or the box has no name yet).
+      const label = parts.title && parts.title !== parts.file
+        ? parts.title + ' (' + parts.file + ')'
+        : parts.file;
+      hint.textContent = t('files.deleteHint', { name: label });
       $('#file-dialog-input').hidden = true;
       $('#file-dialog-do').textContent = t('files.deleteDo');
     }

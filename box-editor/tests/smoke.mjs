@@ -129,6 +129,15 @@ try {
   check('color picker writes #RRGGBB prefix',
     /^#00aa66\s/.test(nameAfterPick), nameAfterPick.slice(0, 24));
 
+  // filebar mirrors the player-defined box name (colour prefix stripped) and
+  // keeps the box id (= exported file name) on a second line
+  await page.fill('[data-f="meta.name"]', '#00aa66 测试箱名');
+  await page.waitForTimeout(250);
+  const barTitle = ((await page.locator('.file-item.active .file-title').textContent()) || '').trim();
+  const barSub = ((await page.locator('.file-item.active .file-sub').textContent()) || '').trim();
+  check('filebar shows the box display name', barTitle === '测试箱名', 'title=' + barTitle);
+  check('filebar keeps the box id on a second line', barSub === 'weapon_dealer', 'id=' + barSub);
+
   // top-bar "Advanced" toggle gates the custom-icon (icon) field
   const advToggle = page.locator('#advanced-toggle');
   check('top bar has Advanced toggle', (await advToggle.count()) === 1);
@@ -219,10 +228,14 @@ try {
   await page.click('#btn-example');
   await page.waitForSelector('#example-list .example-group');
   const compatBtns = await page.locator('#example-list [data-action="load-compat"]').count();
+  // The catalogue grows with compat-packs/ — compare against the baked data
+  // instead of a hard-coded count so new packs never fail the smoke job.
+  const bakedPacks = await page.evaluate(() =>
+    (window.CSBDATA && window.CSBDATA.compatPacks ? window.CSBDATA.compatPacks.length : 0));
   check('examples dialog lists the official compat-pack templates',
-    compatBtns === 4 &&
+    bakedPacks > 0 && compatBtns === bakedPacks &&
     ((await page.locator('#example-list .example-group').textContent()) || '').trim().length > 0,
-    'packs=' + compatBtns);
+    'packs=' + compatBtns + '/' + bakedPacks);
   await page.click('#example-close');
   check('read-from-game button wired up',
     (await page.locator('#btn-read-game').count()) === 1 &&
@@ -488,7 +501,8 @@ try {
     !/"key"/.test(legacyPreview) && !/"price"/.test(legacyPreview),
     'preview ok=' + /"type": "terminal"/.test(legacyPreview));
   check('legacy import migrates inline prices',
-    /迁移|Migrated/.test(legacyToast) && /2|two/i.test(legacyToast),
+    // i18n wording differs per language ("迁移" / "migrated") — match both.
+    /迁移|migrated/i.test(legacyToast) && /2|two/i.test(legacyToast),
     'toast=' + (legacyToast || '').slice(0, 50));
 
   // pasting (no file name) a legacy crate stays a crate
@@ -649,9 +663,11 @@ try {
     check('pack link imports both box files as drafts', packDrafts === 2, 'items=' + packDrafts);
     const packActive = await page.locator('[data-f="meta.fileName"]').inputValue();
     check('pack import activates the first imported draft', packActive === 'pack_alpha', 'fn=' + packActive);
-    const packSecond = await page.locator('.file-item').nth(1).locator('.file-name').textContent();
-    check('pack import lists the second imported draft', (packSecond || '').trim() === 'pack_beta',
-      'name=' + packSecond);
+    const packSecond = ((await page.locator('.file-item').nth(1).locator('.file-title').textContent()) || '').trim();
+    const packSecondId = ((await page.locator('.file-item').nth(1).locator('.file-sub').textContent()) || '').trim();
+    check('pack import lists the second imported draft',
+      packSecond === 'Pack Beta' && packSecondId === 'pack_beta',
+      'title=' + packSecond + ' id=' + packSecondId);
     const badgeTxt = ((await page.locator('.file-item .file-tag').first().textContent()) || '').trim();
     check('imported draft shows the pack version badge', badgeTxt === '26.2', 'badge=' + badgeTxt);
     const fileTip = await page.locator('.file-item').first().getAttribute('title');
@@ -865,9 +881,12 @@ try {
   await page.waitForTimeout(300);
   check('filebar lists first draft', (await page.locator('.file-item').count()) >= 1,
     'items=' + (await page.locator('.file-item').count()));
-  const firstDraftName = await page.locator('.file-item.active .file-name').textContent();
-  check('filebar shows box id as draft name', !!firstDraftName && firstDraftName.trim().length > 0,
-    'name=' + firstDraftName);
+  const firstDraftName = ((await page.locator('.file-item.active .file-title').textContent()) || '').trim();
+  const firstDraftId = ((await page.locator('.file-item.active .file-sub').textContent()) || '').trim();
+  check('filebar labels the draft with its box name',
+    firstDraftName.length > 0 && firstDraftName !== firstDraftId,
+    'title=' + firstDraftName + ' id=' + firstDraftId);
+  check('filebar keeps the box id on a second line', firstDraftId === 'weapon_dealer', 'id=' + firstDraftId);
   await page.click('#file-add');
   await page.waitForTimeout(300);
   check('filebar create adds a draft', (await page.locator('.file-item').count()) === 2);

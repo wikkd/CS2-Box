@@ -1617,10 +1617,20 @@ summary:focus-visible,
 }
 .file-name {
   flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.file-title {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 12.5px;
+  font-size: 12.5px; line-height: 1.3;
+}
+/* No box display name yet → the file id is the label (mono, like before). */
+.file-title.plain { font-family: var(--mono); }
+.file-sub {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10.5px; line-height: 1.15; color: var(--muted);
   font-family: var(--mono);
 }
+.file-item.active .file-sub { font-weight: 400; }
 .file-actions { display: none; gap: 2px; }
 .file-item:hover .file-actions, .file-item.active:hover .file-actions { display: inline-flex; }
 .file-btn {
