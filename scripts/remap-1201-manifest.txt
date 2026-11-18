@@ -52,3 +52,4 @@ local-repo/com/tartaricacid/tlm/1.20.1/touhoulittlemaid-1.5.3-forge+mc1.20.1-sna
 
 # ===== Epic Fight（史诗战斗）20.15.2——1.20.1 线，SRG 生产 jar 重映射（EF 检视预览联测环境）=====
 local-repo/com/epicfight/1.20.1/epicfight-1.20.1-20.15.2.jar	epicfight-1.20.1-20.15.2-official.jar	-
+local-repo/com/prefab/prefab/1.10.0.2/prefab-1.10.0.2.jar	prefab-1.10.0.2-official.jar	-
