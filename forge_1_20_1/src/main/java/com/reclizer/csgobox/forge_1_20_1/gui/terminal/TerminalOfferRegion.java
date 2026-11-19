@@ -115,6 +115,16 @@ public final class TerminalOfferRegion {
             }
         }
 
+        // The offer preview renders in-frame with real depth (z>0 for the 3D
+        // path, a z≈2 slab for the flat fallback), so every later z=0 fill/
+        // text fails the depth test against its pixels — the inspect
+        // capsule, name box and wear bar vanished under a large/tilted item
+        // (2026-11-19 report). Both preview paths flush themselves, so
+        // clearing the depth now lets the corner UI paint over the item.
+        if (offer != null && previewVisible) {
+            AnimRenderOps.clearDepth(gg);
+        }
+
         // ---- C: inspect capsule (top-right) ----
         String inspectText = Component.translatable("gui.csgobox.inspect.open").getString();
         int iw = Math.round(font.width(inspectText) * 0.47F) + Math.round(0.6F * (inspectText.length() - 1)) + 7;

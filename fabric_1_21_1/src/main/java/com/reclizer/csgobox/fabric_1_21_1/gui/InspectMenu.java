@@ -64,6 +64,12 @@ public final class InspectMenu {
         }
         Font font = Minecraft.getInstance().font;
         boolean hover = isInside(mx, my, this.x, this.y, this.w, this.h);
+        // Tooltip convention (z=400): the menu floats above the page's item
+        // renders, which keep a real-depth slab at z≈2 that would otherwise
+        // occlude the pill and its "检视" label wherever they overlap
+        // (2026-11-19 preview-page report).
+        gg.pose().pushPose();
+        gg.pose().translate(0, 0, 400);
         // Small rounded black pill, white text.
         TerminalChatRegion.drawRounded(gg, this.x, this.y, this.w, this.h,
                 hover ? 0xFF2A2A30 : 0xFF16161A, 0xFF000000);
@@ -74,6 +80,7 @@ public final class InspectMenu {
         float textX = this.x + (this.w - font.width(fcs) * scale) / 2.0F;
         float textY = this.y + (this.h - font.lineHeight * scale) / 2.0F + 1;
         RenderFontTool.drawString(gg, font, fcs, textX, textY, 0, 0, scale, 0xFFFFFFFF);
+        gg.pose().popPose();
     }
 
     /**

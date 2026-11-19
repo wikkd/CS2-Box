@@ -1,9 +1,11 @@
 package com.reclizer.csgobox.fabric_1_21_1.utils;
 
+import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
+import com.mojang.math.Axis;
 import com.reclizer.csgobox.utils.Quat;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
@@ -216,6 +218,19 @@ public final class AnimRenderOps {
         gg.flush();
     }
 
+    /** Clears the depth buffer so UI drawn after a 3D preview paints over
+     *  it: in-frame 3D previews write real depth (z>0), and every later
+     *  z=0 fill/text fails the depth test against those pixels (2026-11-19
+     *  terminal report: the tilted offer item covered the wear bar and the
+     *  inspect capsule). Flushes the shared buffer first so the clear lands
+     *  between the preview's pixels and the overlay — anything still queued
+     *  (the background, the watermark circle) belongs UNDER the preview and
+     *  must not be re-drawn on top of it after the clear. */
+    public static void clearDepth(GuiGraphics gg) {
+        gg.flush();
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+    }
+
     public static void renderBlurredBackground(Screen screen, GuiGraphics gg, float partialTicks) {
         try {
             SCREEN_RENDER_BLURRED_BACKGROUND.invoke(screen, partialTicks);
@@ -226,17 +241,29 @@ public final class AnimRenderOps {
 
     /** 2D item icon centred at (x, y), scaled (16px per block unit). */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
-        // TACZ guns without a loaded display instance have no model to draw;
-        // their custom renderer falls back to the missing-texture slot icon,
-        // painting a magenta checkerboard across the card. Skip the draw so
-        // the card frame alone shows until the display is available. The
-        // isLoaded gate keeps instanceof IGun from ever executing (and thus
-        // from class-loading TACZ) when the optional dependency is absent.
-        if (FabricLoader.getInstance().isModLoaded(TACZ_MOD_ID)
-                && stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
-            return;
+        // TACZ guns: without a loaded display instance the BEWLR paints the
+        // missing-texture slot icon (a magenta checkerboard across the card) —
+        // skip the draw so the card frame alone shows until the display is
+        // available. With one loaded, degrade to the inventory-style flat
+        // slot icon (2026-11-20 preview-page report): the fitted
+        // identity-rotation gun model reads as a tiny muzzle-up stick at cell
+        // scale, while the flat icon is exactly what vanilla inventories
+        // show. The flat body below draws it — the TACZ branch just falls
+        // through. The real 3D model stays on the 3D drag preview
+        // (renderItem3D), which renders it with a proper rotation. The
+        // isModLoaded gate keeps instanceof IGun from ever executing (and
+        // thus from class-loading TACZ) when the optional dependency is
+        // absent.
+        if (FabricLoader.getInstance().isModLoaded(TACZ_MOD_ID) && stack.getItem() instanceof IGun) {
+            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(stack);
+            if (display.isEmpty()) {
+                return;
+            }
+            if (display.get().getGunModel() == null) {
+                return;
+            }
         }
+        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(x, y, 2F);
@@ -900,6 +927,19 @@ public final class AnimRenderOps {
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        // TACZ lays the gun out per display context with a "positioning node"
+        // bone inside the bedrock model: GunItemRendererWrapper's
+        // applyPositioningNodeTransform walks that bone path (leaf -> root)
+        // stacking its rotations for the FIXED/item-frame perspective — that
+        // is what makes guns sit horizontal in item frames. Drawing the model
+        // directly skipped it, so the 3D preview showed the raw authored pose
+        // (muzzle up, 2026-11-20 report). Replicate the same rotation walk
+        // under the drag rotation; the walk's translations and the display's
+        // fixed scale are skipped — this preview re-centres on the envelope
+        // centre and rescales via fitScaleFor, so only the orientation
+        // matters (a translation never contributes rotation, and the uniform
+        // fixed scale is absorbed by the fit).
+        applyGunOriginPathRotation(pose, gunModel);
         pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
         // the gun's root node sits far from its geometry, so a pivot at the
@@ -927,6 +967,28 @@ public final class AnimRenderOps {
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             pose.popPose();
+        }
+    }
+
+    /** Stacks the gun's FIXED-context positioning-node bone rotations
+     *  (leaf -> root, negative-axis quaternions) exactly like TACZ's
+     *  {@code GunItemRendererWrapper.applyPositioningNodeTransform} does for
+     *  the item-frame perspective. The walk's translations are skipped: they
+     *  only place the model relative to the node origin, which this preview
+     *  replaces with its own envelope-centre centring — and a translation
+     *  never contributes rotation. Guns whose bedrock model defines no
+     *  positioning node keep the raw authored pose (same as TACZ's own
+     *  null guard). */
+    private static void applyGunOriginPathRotation(PoseStack pose, BedrockGunModel gunModel) {
+        List<BedrockPart> originPath = gunModel.getFixedOriginPath();
+        if (originPath == null) {
+            return;
+        }
+        for (int i = originPath.size() - 1; i >= 0; i--) {
+            BedrockPart bone = originPath.get(i);
+            pose.mulPose(Axis.XN.rotation(bone.xRot));
+            pose.mulPose(Axis.YN.rotation(bone.yRot));
+            pose.mulPose(Axis.ZN.rotation(bone.zRot));
         }
     }
 

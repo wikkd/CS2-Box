@@ -95,7 +95,7 @@ screenY = 253 + fbY/2        # 253 = 225(窗口顶) + 28(标题栏)
 |---|---|---|---|
 | A | 开箱界面面板 | `(139,139,139)` 采样 | 面板区 px > 100 |
 | B | 绿色"开启"按钮 | 区域内 `g>120, r<120, b<120` @fb(1243,923)±50 | > 10 px |
-| C | 检视屏工具栏 | 底部 6 图标列 + ⓘ + ✖ 的固定 x 列亮度特征（按 UI-SPEC 锁定） | 待首次成功后固化 |
+| C | 检视屏工具栏 | 底部 4 图标列（检视/ⓘ/风景/更多）+ ✖ 的固定 x 列亮度特征（按 UI-SPEC 锁定；2026-11-19 手套/模型两钮并入检视钮后为 4 列） | 待首次成功后固化 |
 | D | 快捷栏选中槽 | 槽内白框像素（选中=50，物品=12-22） | =50 |
 | E | 主世界 HUD | 快捷栏 9 槽 x(500..1220) y882-950 结构 | 亮段≥9 |
 
@@ -161,7 +161,7 @@ python3 scripts/test_animation_aesthetics.py        # 聚光灯/透镜审美断�
 - [ ] 3D 物品拖拽（CsboxBulkOverviewScreen）：鼠标拖拽旋转手感不变（GuiItemMove 委托后 angleX/angleY 方向正确）
 - [ ] 背景模糊：进度屏背景 `renderBlurredBackground` 反射桥接后仍有模糊效果（防回归点 3）
 - [ ] ESC 退出、hideGui 恢复、音效节奏（每卡片"嗒"声、8Hz 节流）不变
-- [ ] TACZ 环境：TACZ 枪默认走自家可拖拽 3D 渲染（`renderItem3D`→`renderGunModel3D`）；手套按钮进入/重播 TACZ 第一人称检视动画（TaczInspectViewport 独立路径未被误伤）
+- [ ] TACZ 环境：TACZ 枪默认走自家可拖拽 3D 渲染（`renderItem3D`→`renderGunModel3D`）；检视按钮（index 0，工具栏唯一检视入口）点击进入/重播 TACZ 第一人称检视动画（TaczInspectViewport 独立路径未被误伤）
 - [ ] Blur 适配·无 Blur 模组：5 屏（主屏/出货/批量总览/批量结果/确认）背景为半透明主题灰，模糊世界透出（2.0.0 起背景固定为半透明主题灰，`backgroundStyle` 配置项已移除，无 OPAQUE 开关）
 - [ ] Blur 适配·装 Blur 模组：5 屏背景带淡入动画、半径遵循 Blur 配置；进度屏模糊同样淡入（26.x 走 super 分支）
 - [ ] Blur 适配·关闭模糊：`menuBackgroundBlurriness=0` 时 5 屏半透明背景无模糊（世界直接透出），进度屏仍强制模糊（无 Blur 时）

@@ -4,7 +4,10 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   'use strict';
 
   const DATA = window.CSBDATA;
-  const VARIANT_RE = /\b(GunId|AmmoId)\b\s*[:=]\s*"?([A-Za-z0-9_.:+-]+)"?/;
+  /** Variant marker in a tag SNBT string: TACZ guns (GunId), TACZ ammo
+   *  (AmmoId), and the any-mod generic marker (VariantId, e.g. SlashBlade
+   *  Resharped blades) — mirrors the runtime's PriceTable VARIANT_FIELD_RE. */
+  const VARIANT_RE = /\b(GunId|AmmoId|VariantId)\b\s*[:=]\s*"?([A-Za-z0-9_.:+-]+)"?/;
 
   function numOrEmpty(v) {
     if (v === undefined || v === null || v === '') return '';
@@ -178,7 +181,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     return base;
   }
 
-  /** Extract GunId/AmmoId from a legacy tag string (mirrors Java PriceTable). */
+  /** Extract GunId/AmmoId/VariantId from a legacy tag string (mirrors Java
+   *  PriceTable). */
   function extractVariant(tagStr) {
     if (typeof tagStr !== 'string') return null;
     const m = VARIANT_RE.exec(tagStr);
@@ -186,6 +190,174 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const variant = m[2].trim();
     if (!variant) return null;
     return { field: m[1], id: variant };
+  }
+
+  /** Parse a tag string as a JSON object first, then as SNBT (the two string
+   *  forms the tag field round-trips; the SNBT side lives in js/snbt.js).
+   *  Returns the compound object or null when neither grammar accepts it. */
+  function parseTagObject(raw) {
+    try {
+      const p = JSON.parse(raw);
+      if (p && typeof p === 'object' && !Array.isArray(p)) return p;
+    } catch (e) { /* SNBT below */ }
+    try {
+      const p = NS.parseSnbt(raw);
+      if (p && typeof p === 'object' && !Array.isArray(p)) return p;
+    } catch (e) { /* malformed */ }
+    return null;
+  }
+
+  /** Variant marker from a tag STRING: full SNBT parse (single-quoted
+   *  strings, spacing, escapes — shapes the regex cannot see) with the
+   *  regex as a lenient fallback for slightly-malformed strings. */
+  function snbtVariant(tagStr) {
+    const obj = parseTagObject(tagStr);
+    if (obj) {
+      const v = variantFieldOf(obj);
+      if (v) return v;
+    }
+    return extractVariant(tagStr);
+  }
+
+  /** The variant marker of a serialized item entry ({id, tag?, components?}),
+   *  covering all three shapes the runtime's PriceTable.variantId knows: a
+   *  tag SNBT string, a JSON-object tag (NBT eras), and
+   *  components.minecraft:custom_data (1.21+). Returns {field, id} or null —
+   *  the paste flow uses it to suggest id#variant price keys. */
+  function variantFromEntry(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    if (typeof obj.tag === 'string' && obj.tag) {
+      const v = snbtVariant(obj.tag);
+      if (v) return v;
+    } else if (obj.tag && typeof obj.tag === 'object') {
+      const v = variantFieldOf(obj.tag);
+      if (v) return v;
+    }
+    if (obj.components && typeof obj.components === 'object') {
+      const v = variantFieldOf(obj.components['minecraft:custom_data']);
+      if (v) return v;
+    }
+    return null;
+  }
+
+  /** GunId / AmmoId / VariantId from a flat string-field compound, in that
+   *  priority order (TACZ guns, TACZ ammo, generic any-mod marker). */
+  function variantFieldOf(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    for (const f of ['GunId', 'AmmoId', 'VariantId']) {
+      const v = obj[f];
+      if (typeof v === 'string' && v.trim()) return { field: f, id: v.trim() };
+    }
+    return null;
+  }
+
+  /** Whether the form-conversion button has anything to work on: a JSON
+   *  object on either side (components object, or a tagRaw that parses as a
+   *  JSON object or an SNBT compound — js/snbt.js provides the grammar). */
+  function canConvertItemForm(it) {
+    const comp = (it.components || '').trim();
+    if (comp) {
+      try {
+        const p = JSON.parse(comp);
+        if (p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p).length) return true;
+      } catch (e) { /* nope */ }
+    }
+    const raw = (it.tagRaw || '').trim();
+    if (raw.startsWith('{') && parseTagObject(raw)) return true;
+    return false;
+  }
+
+  /** One-shot known-mod form conversion for one item: moves identity data   *  between the components era (minecraft:custom_data /
+   *  minecraft:block_entity_data / slashblade:blade_state) and the NBT-era
+   *  tag shapes ({GunId:...} / {BlockEntityTag:{...}} / {bladeState:{...},
+   *  all three verified against the shipped compat-packs). The target side
+   *  follows `compsEra` (the selected game version). The NBT-era tag accepts
+   *  both JSON-object and hand-written SNBT-string forms (parsed by
+   *  parseTagObject) and is re-emitted as canonical SNBT — numeric type
+   *  suffixes collapse to plain numbers, the same documented approximation
+   *  the runtime's tagToJson makes. Returns the list of moved keys, or null
+   *  when nothing recognizable is present. */
+  function convertItemForm(it, compsEra) {
+    const comp = (it.components || '').trim();
+    let compObj = null;
+    if (comp) {
+      try {
+        const p = JSON.parse(comp);
+        if (p && typeof p === 'object' && !Array.isArray(p)) compObj = p;
+      } catch (e) { compObj = null; }
+    }
+    const raw = (it.tagRaw || '').trim();
+    const tagObj = raw.startsWith('{') ? parseTagObject(raw) : null;
+    if (!compObj && !tagObj) return null;
+
+    const moves = [];
+    let outComp = compObj ? Object.assign({}, compObj) : null;
+    let outTag = tagObj ? Object.assign({}, tagObj) : null;
+
+    if (compsEra) {
+      if (tagObj) {
+        if (!outComp) outComp = {};
+        const custom = customDataOf(outComp);
+        for (const f of ['GunId', 'AmmoId', 'VariantId']) {
+          if (typeof tagObj[f] === 'string' && tagObj[f].trim()) {
+            custom[f] = tagObj[f].trim();
+            delete outTag[f];
+            moves.push(f);
+          }
+        }
+        if (moves.length) outComp['minecraft:custom_data'] = custom;
+        if (tagObj.BlockEntityTag && typeof tagObj.BlockEntityTag === 'object') {
+          outComp['minecraft:block_entity_data'] = tagObj.BlockEntityTag;
+          delete outTag.BlockEntityTag;
+          moves.push('BlockEntityTag');
+        }
+        if (tagObj.bladeState && typeof tagObj.bladeState === 'object') {
+          outComp['slashblade:blade_state'] = tagObj.bladeState;
+          delete outTag.bladeState;
+          moves.push('bladeState');
+        }
+      }
+    } else if (compObj) {
+      if (!outTag) outTag = {};
+      const custom = compObj['minecraft:custom_data'];
+      let customMoved = false;
+      if (custom && typeof custom === 'object' && !Array.isArray(custom)) {
+        for (const f of ['GunId', 'AmmoId', 'VariantId']) {
+          if (typeof custom[f] === 'string' && custom[f].trim()) {
+            outTag[f] = custom[f].trim();
+            moves.push(f);
+            customMoved = true;
+          }
+        }
+        if (customMoved) {
+          const remaining = Object.assign({}, custom);
+          for (const f of ['GunId', 'AmmoId', 'VariantId']) delete remaining[f];
+          if (Object.keys(remaining).length) outComp['minecraft:custom_data'] = remaining;
+          else delete outComp['minecraft:custom_data'];
+        }
+      }
+      const bed = compObj['minecraft:block_entity_data'];
+      if (bed && typeof bed === 'object' && !Array.isArray(bed)) {
+        outTag.BlockEntityTag = bed;
+        delete outComp['minecraft:block_entity_data'];
+        moves.push('BlockEntityTag');
+      }
+      const bs = compObj['slashblade:blade_state'];
+      if (bs && typeof bs === 'object' && !Array.isArray(bs)) {
+        outTag.bladeState = bs;
+        delete outComp['slashblade:blade_state'];
+        moves.push('bladeState');
+      }
+    }
+    if (!moves.length) return null;
+    // Write back: components keep their pretty JSON form, the tag re-emits
+    // as canonical SNBT (the tag field's native string form, accepted by
+    // every loader era).
+    it.components = (outComp && Object.keys(outComp).length)
+      ? JSON.stringify(outComp, null, 2) : '';
+    it.tagRaw = (outTag && Object.keys(outTag).length)
+      ? NS.stringifySnbt(outTag) : '';
+    return moves;
   }
 
   /** Collect price-table rows, merging auto keys from pool items with the
@@ -221,9 +393,23 @@ window.CSBoxEdit = window.CSBoxEdit || {};
 
   /* ------------------------------ building ------------------------------ */
 
+  /** Capability flags of the selected game version ({components: bool, …}). */
+  function versionCapsOf(state) {
+    return (DATA.versions && DATA.versions.find((v) => v.key === state.versionKey)) || {};
+  }
+
+  /** The minecraft:custom_data object of a components map (a safe copy), or
+   *  an empty object when absent. */
+  function customDataOf(compObj) {
+    const c = compObj && compObj['minecraft:custom_data'];
+    return (c && typeof c === 'object' && !Array.isArray(c)) ? Object.assign({}, c) : {};
+  }
+
   /** Build one item object. `verbose` = emit explicit defaults (count 1,
-   *  weight 1) instead of omitting them (the "精简输出" toggle). */
-  function buildItem(it, verbose) {
+   *  weight 1) instead of omitting them (the "精简输出" toggle). `compsEra`
+   *  routes the TACZ/VariantId marker to components.minecraft:custom_data
+   *  (1.21+/26.x) instead of the NBT-era tag SNBT string. */
+  function buildItem(it, verbose, compsEra) {
     const value = (it.value || '').trim();
     if (!value) return null;
     const o = {};
@@ -276,20 +462,32 @@ window.CSBoxEdit = window.CSBoxEdit || {};
 
     const variant = (it.variant || '').trim();
     const rawTag = (it.tagRaw || '').trim();
-    if (variant) {
-      const field = it.variantField === 'AmmoId' ? 'AmmoId' : 'GunId';
-      o.tag = '{' + field + ':\\"' + variant + '\\"}';
-    } else if (rawTag) {
-      o.tag = rawTag;
-    }
-
     const comp = (it.components || '').trim();
+    let compObj = null;
     if (comp) {
       try {
         const parsed = JSON.parse(comp);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) o.components = parsed;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) compObj = parsed;
       } catch (e) { /* validator reports */ }
     }
+    if (variant) {
+      const field = it.variantField === 'AmmoId' ? 'AmmoId'
+        : (it.variantField === 'VariantId' ? 'VariantId' : 'GunId');
+      if (compsEra) {
+        // 1.21+/26.x write the marker into minecraft:custom_data (the home
+        // TACZ guns / SlashBlade blades read it from themselves); merging
+        // into an existing custom_data object keeps hand-written keys.
+        const custom = customDataOf(compObj || {});
+        custom[field] = variant;
+        compObj = Object.assign({}, compObj || {}, { 'minecraft:custom_data': custom });
+      } else {
+        o.tag = NS.stringifySnbt({ [field]: variant });
+      }
+    } else if (rawTag) {
+      o.tag = rawTag;
+    }
+    if (compObj && Object.keys(compObj).length) o.components = compObj;
+
     return o;
   }
 
@@ -417,11 +615,12 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     // skipped exactly like the in-game loader does.
     if (Array.isArray(state.tiers) && state.tiers.length) {
       const arr = [];
+      const compsEra = !!versionCapsOf(state).components;
       for (let ti = 0; ti < state.tiers.length; ti++) {
         const t = state.tiers[ti] || {};
         const items = [];
         for (const it of (state.grades[ti] || [])) {
-          const o = buildItem(it, verbose);
+          const o = buildItem(it, verbose, compsEra);
           if (o) items.push(o);
         }
         if (!items.length) continue;
@@ -439,10 +638,11 @@ window.CSBoxEdit = window.CSBoxEdit || {};
       }
       if (arr.length) obj.grades = arr;
     } else {
+      const compsEra = !!versionCapsOf(state).components;
       for (let gi = 1; gi <= 5; gi++) {
         const items = [];
         for (const it of state.grades[gi - 1]) {
-          const o = buildItem(it, verbose);
+          const o = buildItem(it, verbose, compsEra);
           if (o) items.push(o);
         }
         if (items.length) obj['grade' + gi] = items;
@@ -482,8 +682,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     } else if (typeof obj.tag === 'string' && obj.tag) {
       tagStr = obj.tag; // legacy NBT tag (kept for variant extraction / raw)
     } else if (obj.tag && typeof obj.tag === 'object') {
-      tagStr = JSON.stringify(obj.tag);
-      tagStr = tagStr.replace(/,/g, ', '); // light formatting
+      // Canonical SNBT display (the tag field's native string form); every
+      // loader era accepts the string form.
+      tagStr = NS.stringifySnbt(obj.tag);
     }
     if (typeof obj.loot_table === 'string' && obj.loot_table) {
       it.source = 'loot_table';
@@ -534,7 +735,7 @@ window.CSBoxEdit = window.CSBoxEdit || {};
 
     // legacy tag → variant or raw
     if (tagStr) {
-      const v = extractVariant(tagStr);
+      const v = snbtVariant(tagStr);
       if (v) {
         it.variant = v.id;
         it.variantField = v.field;
@@ -1192,6 +1393,9 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   NS.priceKeyOf = priceKeyOf;
   NS.parsePriceInput = parsePriceInput;
   NS.extractVariant = extractVariant;
+  NS.variantFromEntry = variantFromEntry;
+  NS.canConvertItemForm = canConvertItemForm;
+  NS.convertItemForm = convertItemForm;
   NS.legacyBaseName = legacyBaseName;
   NS.weightOrderIsReversed = weightOrderIsReversed;
   NS.collectPriceRows = collectPriceRows;

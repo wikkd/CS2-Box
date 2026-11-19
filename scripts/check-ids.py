@@ -306,6 +306,45 @@ def check_item(item, where, errors, infos, ns_counts, registry):
         if not ok:
             errors.append(f"{where}.enchant: 需要 true 或对象 {{id?, level?}}，得到 {e!r}")
 
+    if "components" in item:
+        check_components(item["components"], where + ".components", errors, infos)
+
+
+COMPONENT_KEY_RE = re.compile(r"^[a-z0-9_.-]+:[a-z0-9_./-]+$")
+VARIANT_FIELDS = ("GunId", "AmmoId", "VariantId")
+
+
+def check_components(comps, where, errors, infos):
+    """components（1.21+/26.x 数据组件透传）：键 = ns:path 组件 id、值 =
+    对象或 null（null = 移除组件）。轻查两类已知硬门：
+    - minecraft:block_entity_data / entity_data 必须带字符串 "id" 键
+      （vanilla 组件 codec 硬要求，缺了整个组件被丢弃且只有聊天告警）；
+    - minecraft:custom_data 带变体标记（GunId/AmmoId/VariantId）时提示
+      核对 _prices.json 的 id#variant 价键（跨文件不强校验）。"""
+    if not isinstance(comps, dict):
+        errors.append(f"{where}: 应为对象（组件 id → 值，null = 移除）")
+        return
+    for key, value in comps.items():
+        if not COMPONENT_KEY_RE.fullmatch(key):
+            errors.append(f"{where}.{key}: 组件键应为 ns:path 形态")
+            continue
+        if key in ("minecraft:block_entity_data", "minecraft:entity_data"):
+            if not (isinstance(value, dict) and isinstance(value.get("id"), str)
+                    and value["id"].strip()):
+                errors.append(
+                    f"{where}.{key}: 缺少字符串 \"id\" 键——游戏会丢弃整个组件"
+                    f"（预览/召唤行为失效）")
+        if key == "minecraft:custom_data" and isinstance(value, dict):
+            marker = next(
+                (f for f in VARIANT_FIELDS
+                 if isinstance(value.get(f), str) and value[f].strip()), None)
+            if marker:
+                infos.append(
+                    f"{where}.{key}: 变体标记 {marker}={value[marker]}——"
+                    f"确认 _prices.json 有对应 id#变体 价键")
+    if comps:
+        infos.append(f"{where}: components 已校验键形态（{len(comps)} 个组件）")
+
 
 # ---------------------------------------------------------------------------
 # 文件分析

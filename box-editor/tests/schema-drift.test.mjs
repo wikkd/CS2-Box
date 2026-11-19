@@ -21,6 +21,7 @@ const load = (p) => (0, eval)(readFileSync(path.join(root, p), 'utf8'));
 
 globalThis.window = globalThis;
 load('js/data.js');
+load('js/snbt.js'); // model.js parses/serializes SNBT tags through it
 load('js/model.js');
 load('js/validator.js');
 const NS = globalThis.CSBoxEdit;

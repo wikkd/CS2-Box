@@ -157,8 +157,24 @@ it out of the box scan. Format is a flat map of **item id → non-negative integ
   the recycler pays 0, and a box containing an unpriced id item refuses to
   load (add the price to `_prices.json` first).
 - NBT-distinguished items (e.g. TACZ guns/ammo) use an `id#variant` sub-key:
-  the loader reads `GunId` / `AmmoId` from the entry's legacy `tag` string.
-  A variant lookup prefers the variant key, then falls back to the plain id.
+  the loader reads `GunId` / `AmmoId` (TACZ) or the generic `VariantId` marker
+  (any mod, e.g. SlashBlade) from the entry — across all three serialized
+  shapes: the legacy `tag` string/object (1.20.x) and
+  `components.minecraft:custom_data` (1.21+). A variant lookup prefers the
+  variant key, then falls back to the plain id.
+- **No hand-assembling price keys**: hold a variant-priced item and run
+  `/csbox nbt hand` — the output ends with a clickable `_prices.json` price-key
+  snippet (e.g. `{"tacz:modern_kinetic_gun#tacz:ak47": 0}`); click to copy and
+  merge it into the table (`0` is a placeholder, edit to the real price). The
+  web editor also generates these keys automatically when such entries are
+  pasted.
+- Blocks with block-entity data (e.g. SBW vehicle summon crates): aim the
+  crosshair at the placed block and run `/csbox nbt look` — it prints the
+  block as a ready-to-paste items entry (the block's item id plus its
+  block-entity data in the era-native slot:
+  `components.minecraft:block_entity_data` on 1.21+, `tag.BlockEntityTag` on
+  1.20.x), and always appends a plain-id `_prices.json` price-key line (blocks
+  are priced by id; `0` is a placeholder, edit to the real price).
 - The mod never creates an empty table, but legacy (v2.0.x) `price` fields
   still sitting in box JSONs are **auto-migrated** into this table on the next
   `/csbox reload` (or hot reload / restart), and the `price` field is stripped
@@ -229,6 +245,36 @@ Right-click the terminal to open the terminal UI instead of the crate screen.
   skipped.
 - The loader tolerates extra unknown top-level keys; they are ignored without warning.
 - A `name` that contains a malformed `#RRGGBB ` prefix is preserved verbatim and used as the plain name (no color). See [Box name colors](#box-name-colors).
+
+## Configuring with an AI agent (prompt template)
+
+If you use an AI coding assistant that can read and write local files (ZCode, Claude Code, Cursor, ...), paste the template below as-is and let it write the configs for you. Replace the "My requirement" line with what you want, and point the assistant's working directory at the game instance root (the `.minecraft` / modpack folder that contains `config/`).
+
+```text
+Please help me configure CS2-Box mod boxes / terminals.
+
+Config location: config/csbox/ under the current working directory.
+- Each *.json file is one box: the file name without .json is the box id (my_custom_box.json → csgobox:my_custom_box).
+- _prices.json is the global price table (item id → non-negative integer Armory Points price), not a box.
+
+My requirement: <e.g. a military-themed crate with these guns in grade4/grade5; a terminal selling these building blocks, price ranges...>
+
+Follow these steps:
+1. First read the existing JSONs in config/csbox/ to learn the format; authoritative field definitions (download the schemas if online):
+   Box schema: https://raw.githubusercontent.com/wikkd/CS2-Box/main/docs/box-schema/box.schema.json
+   Price table schema: https://raw.githubusercontent.com/wikkd/CS2-Box/main/docs/box-schema/prices.schema.json
+   Gitee mirror: https://gitee.com/hou-xiangling/CS2-Box/raw/main/docs/box-schema/
+   Official examples: https://github.com/wikkd/CS2-Box/tree/main/docs/examples
+   If you cannot reach the network, base the format on the existing files and never invent fields.
+2. Hard rules (violations make boxes refuse to load or lose items):
+   - Every item id used in a box's grade lists must have a price entry in _prices.json first, or the whole box refuses to load.
+   - Price keys are ns:path; items priced by NBT variants (e.g. TACZ guns) use ns:path#variant sub-keys; values are non-negative integers.
+   - Item ids must really exist (vanilla or an installed mod); list any id you are not sure about instead of guessing.
+   - Terminal boxes ("type": "terminal") need no key and every entry must be priced; newly added terminal config files require a game restart to take effect.
+3. When done, report which files you created or changed and how to obtain each thing (/csbox give <player> <box id>),
+   then remind me to run /csbox reload in game and check /csbox validate and /csbox info error for load errors.
+   I can also verify visually in the web editor: https://wikkd.github.io/CS2-Box/
+```
 
 ## Troubleshooting
 

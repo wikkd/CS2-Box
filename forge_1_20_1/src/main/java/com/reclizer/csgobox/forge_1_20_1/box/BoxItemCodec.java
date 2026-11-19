@@ -11,11 +11,14 @@ import com.reclizer.csgobox.forge_1_20_1.item.ItemCsgoBox;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
@@ -784,12 +787,68 @@ public final class BoxItemCodec {
         CompoundTag tag = stack.getTag();
         if (tag != null && !tag.isEmpty()) {
             try {
-                obj.addProperty("tag", tag.toString());
+                // JSON-object tag, not the SNBT string: the paste target
+                // (box JSON "tag" field, the box-editor entry UI) accepts
+                // the object form natively — zero quote-escaping for the
+                // author. applyLegacyTag parses this exact shape back.
+                obj.add("tag", tagToJson(tag));
             } catch (Exception e) {
                 CsgoBox.LOGGER.warn("Failed to serialize NBT tag for item: {}", itemId, e.getMessage());
             }
         }
 
         return obj;
+    }
+
+    /** NBT compound → JSON element (the inverse of {@link #jsonToTag}):
+     *  compounds recurse into objects, lists and the three array tags become
+     *  JSON arrays, numeric tags map to JSON numbers, strings stay strings.
+     *  Bytes keep their numeric form (NBT has no boolean; jsonToTag's
+     *  boolean→byte coercion is one-directional). A long beyond the int
+     *  range round-trips through double — a documented approximation; exact
+     *  SNBT still exists for such fields via the {@code tag} string form. */
+    public static JsonElement tagToJson(Tag tag) {
+        if (tag instanceof CompoundTag compound) {
+            JsonObject obj = new JsonObject();
+            for (String key : compound.getAllKeys()) {
+                Tag value = compound.get(key);
+                if (value != null) {
+                    obj.add(key, tagToJson(value));
+                }
+            }
+            return obj;
+        }
+        if (tag instanceof ListTag list) {
+            JsonArray arr = new JsonArray();
+            for (Tag element : list) {
+                arr.add(tagToJson(element));
+            }
+            return arr;
+        }
+        if (tag instanceof ByteArrayTag bytes) {
+            JsonArray arr = new JsonArray();
+            for (byte b : bytes.getAsByteArray()) {
+                arr.add(b);
+            }
+            return arr;
+        }
+        if (tag instanceof IntArrayTag ints) {
+            JsonArray arr = new JsonArray();
+            for (int i : ints.getAsIntArray()) {
+                arr.add(i);
+            }
+            return arr;
+        }
+        if (tag instanceof LongArrayTag longs) {
+            JsonArray arr = new JsonArray();
+            for (long l : longs.getAsLongArray()) {
+                arr.add(l);
+            }
+            return arr;
+        }
+        if (tag instanceof NumericTag numeric) {
+            return new JsonPrimitive(numeric.getAsNumber());
+        }
+        return new JsonPrimitive(tag.getAsString());
     }
 }

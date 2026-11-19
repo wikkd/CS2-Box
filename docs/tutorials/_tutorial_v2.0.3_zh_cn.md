@@ -153,8 +153,19 @@ v2.0.1 起，所有终端机的物品成交价（武库点数）统一放在 **`
 - 同一物品 id 在所有终端机同价（没有箱子级覆盖）。没写进表的物品**没有价格**：
   终端机不会报价、拆解回收为 0，且包含未定价 id 物品的箱子会被拒绝加载（必须先在
   价格表补价，无默认价回退）。
-- 靠 NBT 区分不同价格的物品（如 TACZ 枪械/弹药）用 `id#变体` 子键：加载器会读物品
-  条目旧版 `tag` 里的 `GunId` / `AmmoId` 拼键。查价优先变体键，没有就回退纯 id 价。
+- 靠 NBT 区分不同价格的物品（如 TACZ 枪械/弹药）用 `id#变体` 子键：加载器读物品
+  条目里的 `GunId` / `AmmoId`（TACZ）或通用 `VariantId` 标记（任意模组，如拔刀剑）
+  拼键——三种来源都认：旧版 `tag` 字符串/对象（1.20.x）、
+  `components.minecraft:custom_data`（1.21+）。查价优先变体键，没有就回退纯 id 价。
+- **价键不用手拼**：手持变体定价物品跑 `/csbox nbt hand`，输出末尾会附一行可点击的
+  `_prices.json` 价键片段（如 `{"tacz:modern_kinetic_gun#tacz:ak47": 0}`），点击复制、
+  合并进价格表即可（`0` 为占位价，请改成实际价格）。网页编辑器粘贴这类条目时也会
+  自动生成对应价键行。
+- 带方块实体数据的方块（如 SBW 载具召唤箱）：准星指向已放置的方块跑
+  `/csbox nbt look`，输出可直接粘贴进箱子 items 的条目（方块物品 id + 方块实体数据，
+  按时代写入 `components.minecraft:block_entity_data`（1.21+）或
+  `tag.BlockEntityTag`（1.20.x）），末尾总是附一行纯 id 的 `_prices.json` 价键
+  （方块按 id 定价；`0` 为占位价，请改成实际价格）。
 - 模组不会自动创建一张空表；但旧版（v2.0.x）写在箱子 JSON 里的 `price` 会在下次
   `/csbox reload`（或热重载/重启）时**自动迁移**进这张表，并把箱子里的 `price`
   字段一并删掉（幂等，不会反复改写）。同一物品在不同箱子价格不同时，按平均值
@@ -206,6 +217,36 @@ v2.0.1 起，所有终端机的物品成交价（武库点数）统一放在 **`
 - `_prices.json` 里的键必须是 `ns:path`（可选 `#变体`），值必须是非负整数；非法条目会报错并被跳过。
 - 加载器容忍未知的顶层字段，会被静默忽略，不报警告。
 - `name` 包含格式不合法的 `#RRGGBB ` 前缀时，整串会作为无色名称保留。见 [箱子名称颜色](#箱子名称颜色)。
+
+## 用 AI Agent 配置（提示模板）
+
+如果你在用能读写本地文件的 AI 编程助手（ZCode、Claude Code、Cursor 等），可以把下面的提示模板整段复制给它，让它替你写配置。用之前把「我的需求」一行替换成你想要的内容，并让助手把工作目录定位到游戏实例根目录（`.minecraft` 或整合包目录，即包含 `config/` 的那一层）。
+
+```text
+请帮我配置 CS2-Box 模组的箱子 / 终端机。
+
+配置位置：当前工作目录下的 config/csbox/。
+- 每个 *.json 文件是一个箱子：文件名去掉 .json 就是箱子 id（my_custom_box.json → csgobox:my_custom_box）。
+- _prices.json 是全局价格表（物品 id → 非负整数武库点价），不是箱子。
+
+我的需求：<例如：一个军事主题宝箱，grade4/grade5 放这几把武器；再配一个出售这些建筑方块的终端机，价格区间…>
+
+请按以下步骤做：
+1. 先读 config/csbox/ 里已有的 JSON 熟悉格式；权威字段定义看 JSON Schema（可联网时下载）：
+   箱子 schema：https://gitee.com/hou-xiangling/CS2-Box/raw/main/docs/box-schema/box.schema.json
+   价格表 schema：https://gitee.com/hou-xiangling/CS2-Box/raw/main/docs/box-schema/prices.schema.json
+   GitHub 镜像目录：https://raw.githubusercontent.com/wikkd/CS2-Box/main/docs/box-schema/
+   官方示例：https://gitee.com/hou-xiangling/CS2-Box/tree/main/docs/examples
+   联不上网就以已有配置文件为格式基准，不要凭空编造字段。
+2. 硬性规则（违反会导致箱子拒绝加载或物品丢失）：
+   - 箱子各档位里出现的每个物品 id，必须先在 _prices.json 有价格条目，否则整个箱子拒绝加载。
+   - 价格键是 ns:path；靠 NBT 变体区分价格的物品（如 TACZ 枪械）用 ns:path#变体 子键；价格值是非负整数。
+   - 物品 id 必须真实存在（原版或已安装模组）；拿不准的 id 列出来问我，不要猜。
+   - 终端机箱子（"type": "terminal"）不需要 key，全部条目必须已定价；新增终端机配置文件后要重启游戏才生效。
+3. 写完后汇报：新增/修改了哪些文件、每件东西怎么取得（/csbox give <玩家> <箱子id>），
+   并提醒我进游戏跑 /csbox reload，用 /csbox validate 和 /csbox info error 检查加载错误。
+   也可以打开网页编辑器可视化核对：https://wikkd.github.io/CS2-Box/
+```
 
 ## 故障排查
 

@@ -6,8 +6,8 @@
 - **`tag` NBT 直写**（1.18.2 无数据组件系统，物品数据走 ItemStack NBT）：
   「1.18 NBT 测试剑」（Unbreakable + 金色自定义名）、
   `{Potion: ...}` 药剂与药箭——`tag` 用 SNBT 字符串（tacz-pack 同款写法）；
-  装载器也接受 JSON 对象形式（自动转 NBT，布尔转 byte），但
-  `scripts/check-ids.py` 目前只认字符串形式，故本包统一用 SNBT；
+  装载器与 `scripts/check-ids.py` 也都接受 JSON 对象形式（自动转 NBT，
+  布尔转 byte），本包为与其它 1.20.x 包对齐统一用 SNBT；
 - **`format_version: 2`** 新 schema 标记；
 - **`#minecraft:wool` 物品标签展开**：16 色羊毛与 1.21.1 成员完全一致，
   价格表整组定价，可与其他版本测试包对照；

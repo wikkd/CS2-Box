@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.forge_1_18_2.utils;
 
+import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -141,6 +142,18 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
 
     /** 1.18.2 renders in immediate mode — nothing to flush. */
     public static void flush(PoseStack pose) {
+    }
+
+    /** Clears the depth buffer so UI drawn after a 3D preview paints over
+     *  it: in-frame 3D previews write real depth (z>0), and every later
+     *  z=0 fill/text fails the depth test against those pixels (2026-11-19
+     *  terminal report: the tilted offer item covered the wear bar and the
+     *  inspect capsule). 1.18.2's flat fills draw immediately, but the item
+     *  preview paths go through the shared buffer source — end it first so
+     *  the clear lands between the preview's pixels and the overlay. */
+    public static void clearDepth(PoseStack pose) {
+        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
     }
 
     /** MC 1.18.2 has no menu blur (added in 1.20.2+) — silent no-op. */

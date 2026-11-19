@@ -1329,36 +1329,44 @@
     return /(truncated|截断|过长)/i.test(text);
   }
 
+  /** Parses pasted item text into editor entries. Returns {list, docs}:
+   *  `list` mirrors the per-position parse result (null = unparsable line),
+   *  `docs` keeps the raw JSON objects so the paste flow can extract
+   *  id#variant price keys (NS.variantFromEntry) that NS.parseItem drops. */
   function parsePasteItems(text) {
-    const out = [];
+    const list = [];
+    const docs = [];
     const trimmed = text.trim();
-    if (!trimmed) return out;
+    if (!trimmed) return { list, docs };
+    const push = (obj) => {
+      docs.push(obj);
+      list.push(obj && typeof obj === 'object' ? NS.parseItem(obj, []) : null);
+    };
     try {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed)) {
-        for (const o of parsed) {
-          out.push(o && typeof o === 'object' ? NS.parseItem(o, []) : null);
-        }
+        for (const o of parsed) push(o && typeof o === 'object' ? o : null);
       } else if (parsed && typeof parsed === 'object') {
-        out.push(NS.parseItem(parsed, []));
+        push(parsed);
       } else {
-        out.push(null);
+        push(null);
       }
-      return out;
+      return { list, docs };
     } catch (e) { /* not whole-JSON -> try chat output, then line mode */ }
     // /csbox nbt hand chat output: header / copy-button decoration lines
     // around one or more JSON objects — ignore decoration, parse every object.
     const objects = extractHandJsonObjects(trimmed);
     if (objects.length) {
-      for (const o of objects) out.push(NS.parseItem(o, []));
-      return out;
+      for (const o of objects) push(o);
+      return { list, docs };
     }
     for (const line of trimmed.split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
-      out.push(/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(s) ? NS.parseItem({ id: s }, []) : null);
+      if (/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(s)) push({ id: s });
+      else { docs.push(null); list.push(null); }
     }
-    return out;
+    return { list, docs };
   }
 
   function parsePastePrices(text) {
@@ -1395,14 +1403,36 @@
     if (!pasteContext || !text.trim()) { pasteContext = null; return; }
     if (pasteContext.mode === 'items') {
       const parsed = parsePasteItems(text);
-      const bad = parsed.filter((x) => x === null).length;
-      const items = parsed.filter((x) => x !== null);
+      const bad = parsed.list.filter((x) => x === null).length;
+      const items = parsed.list.filter((x) => x !== null);
       if (items.length) {
         pushHistory();
         for (const it of items) state.grades[pasteContext.grade].push(it);
+        // Variant-priced items (TACZ guns/ammo, SlashBlade blades): suggest
+        // the id#variant price keys right away — an unpriced variant entry
+        // rejects the whole box in-game, so the author should not have to
+        // assemble the keys by hand. Existing price rows win (never
+        // overwritten); 0 is a visible placeholder to edit.
+        const priceKeys = [];
+        for (const doc of parsed.docs) {
+          const v = NS.variantFromEntry(doc);
+          if (!v) continue;
+          const idField = doc && typeof doc.id === 'string' ? doc.id.trim() : '';
+          if (!idField) continue;
+          const key = idField + '#' + v.id;
+          if (!state.priceRows[key] && !priceKeys.some((k) => k.key === key)) {
+            priceKeys.push({ key, price: '0' });
+          }
+        }
+        if (priceKeys.length) {
+          for (const k of priceKeys) state.priceRows[k.key] = { price: k.price, pinned: false };
+        }
         rebuildGrade(pasteContext.grade);
+        if (priceKeys.length) rebuildPrices();
         schedulePreview();
-        toast(t('toast.pastedItems', { n: items.length }));
+        toast(priceKeys.length
+          ? t('toast.pastedItemsWithKeys', { n: items.length, keys: priceKeys.length })
+          : t('toast.pastedItems', { n: items.length }));
       }
       if (bad) {
         if (looksTruncatedHandJson(text)) toast(t('toast.handTruncated'), true);
@@ -2383,8 +2413,26 @@
           const ii = Number(btn.dataset.index);
           const it = state.grades[gi] && state.grades[gi][ii];
           if (!it) break;
-          const obj = NS.buildItem(it) || { id: it.value || '' };
+          const obj = NS.buildItem(it, false, !!version().components) || { id: it.value || '' };
           copyText(JSON.stringify(obj, null, 2), t('item.copied'));
+          break;
+        }
+        case 'convert-item-form': {
+          const gi = Number(btn.dataset.grade);
+          const ii = Number(btn.dataset.index);
+          const it = state.grades[gi] && state.grades[gi][ii];
+          if (!it) break;
+          if (!NS.canConvertItemForm(it)) {
+            toast(t('toast.itemConvertNone'), true);
+            break;
+          }
+          pushHistory();
+          const moves = NS.convertItemForm(it, !!version().components);
+          if (moves) {
+            rebuildGrade(gi);
+            schedulePreview();
+            toast(t('toast.itemConverted', { keys: moves.join(', ') }));
+          }
           break;
         }
         case 'paste-items': {
@@ -3071,11 +3119,11 @@
         ? '<div class="row inline">' +
           '<label class="mini" data-help="item.variantHelp">' + esc(t('item.variant')) + '<input data-f="' + esc(p + 'variant') + '" value="' + esc(it.variant) + '" placeholder="tacz:ak47" class="w14"></label>' +
           '<label class="mini" data-help="item.variantFieldHelp">' + esc(t('item.variantField')) + ' ' +
-          select(p + 'variantField', [['GunId', 'GunId'], ['AmmoId', 'AmmoId']], it.variantField) + '</label>' +
+          select(p + 'variantField', [['GunId', 'GunId'], ['AmmoId', 'AmmoId'], ['VariantId', 'VariantId']], it.variantField) + '</label>' +
           '</div>'
         : '') +
 
-      ((advanced && taczVisible()) || v.components || !!(it.components || '').trim() ? advancedBlock(it, p, v) : '') +
+      ((advanced && taczVisible()) || v.components || !!(it.components || '').trim() ? advancedBlock(it, p, v, gi, ii) : '') +
       '</div>';
 
     return '<div class="item-card">' + header + body + '</div>';
@@ -3085,7 +3133,7 @@
    *  collapsible block so casual builders are not confronted with it. It stays
    *  expanded and labelled once a value is present (e.g. pasted from
    *  /csbox nbt hand), so nothing silently disappears. */
-  function advancedBlock(it, p, v) {
+  function advancedBlock(it, p, v, gi, ii) {
     const has = !!((it.tagRaw || '').trim() || (it.components || '').trim());
     let inner = '';
     if (advanced && taczVisible()) {
@@ -3098,6 +3146,17 @@
         '<textarea data-f="' + esc(p + 'components') + '" placeholder="' + esc(t('item.componentsHelp')) + '" rows="2" class="grow">' + esc(it.components) + '</textarea></label></div>';
     } else if (it.components) {
       inner += '<div class="row"><span class="help">' + esc(t('v.componentsIgnored')) + '</span></div>';
+    }
+    if (gi !== undefined && ii !== undefined) {
+      // Known-mod form conversion (TACZ / SBW crate / SlashBlade): one click
+      // rewrites the entry into the selected version's native shape. Inert
+      // (disabled) when neither side carries a convertible JSON form.
+      const canConv = NS.canConvertItemForm(it);
+      inner += '<div class="row">' +
+        '<button class="btn small" data-action="convert-item-form" data-grade="' + gi + '" data-index="' + ii + '"' +
+        (canConv ? '' : ' disabled') + ' data-help="item.convertFormHint">' +
+        esc(t('item.convertForm')) + '</button>' +
+        '<span class="help">' + esc(t('item.convertFormHint')) + '</span></div>';
     }
     return '<details class="item-adv"' + (has ? ' open' : '') + '>' +
       '<summary>' + esc(t('item.adv')) +

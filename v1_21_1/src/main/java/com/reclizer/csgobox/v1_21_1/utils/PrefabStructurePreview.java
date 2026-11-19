@@ -1,6 +1,7 @@
 package com.reclizer.csgobox.v1_21_1.utils;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,13 +37,14 @@ import java.util.Map;
  * class is compiled against, and the item id gate ({@link #isPrefabBlueprint})
  * proves the mod is loaded before any class name here is resolved.
  *
- * <p>The item → structure mapping is the mod's own GUI defaults (the first
- * style/option entry of each blueprint family, read off the enum constant
- * tables of Prefab 1.0.9): the house family keeps dedicated structure/config
- * classes, all other blueprints route through {@code StructureBasic} +
- * {@code BasicStructureConfiguration} whose structure file matches the item
- * path (the multi-style families farm/villager/modern take their first
- * option's file).</p>
+ * <p>Each item maps to every style its GUI offers (enum constant tables of
+ * Prefab 1.0.9, declaration order); one is picked at random per preview
+ * session — opening a preview again re-rolls, while dragging keeps the same
+ * building. The house family keeps dedicated structure/config classes, all
+ * other blueprints route through {@code StructureBasic} +
+ * {@code BasicStructureConfiguration}. A style that fails to resolve (block
+ * budget, missing resource) falls through to the next candidate so the
+ * preview degrades per style, not per item.</p>
  *
  * <p>Positions come from the mod's own {@code PositionOffset.getRelativePos
  * ition} (side-offset coordinates → block positions, re-oriented by the
@@ -59,18 +62,28 @@ public final class PrefabStructurePreview {
      *  shipped default = aqua_base_improved at ~12.7k blocks). */
     private static final int BLOCK_BUDGET = 32768;
 
-    /** {@code item path → structure resource + concrete classes}. The house
-     *  family uses dedicated predefined structures; everything else is a
+    /** {@code item path → candidate structure resources + concrete classes}.
+     *  Multi-style items carry every style the mod offers (enum declaration
+     *  order); one candidate is picked per preview session. The house family
+     *  uses dedicated predefined structures, everything else is a
      *  {@code StructureBasic}. Locations are Prefab 1.0.9 jar resources. */
     private static final Map<String, BlueprintSpec> BLUEPRINTS = Map.ofEntries(
-            Map.entry("item_house", new BlueprintSpec("assets/prefab/structures/house_basic.gz",
-                    "com.prefab.structures.predefined.StructureHouse", "com.prefab.structures.config.HouseConfiguration")),
-            Map.entry("item_house_improved", new BlueprintSpec("assets/prefab/structures/house_improved_spruce.gz",
-                    "com.prefab.structures.predefined.StructureHouseImproved", "com.prefab.structures.config.HouseImprovedConfiguration")),
-            Map.entry("item_house_advanced", new BlueprintSpec("assets/prefab/structures/house_advanced_manor.gz",
-                    "com.prefab.structures.predefined.StructureHouseAdvanced", "com.prefab.structures.config.HouseAdvancedConfiguration")),
-            Map.entry("item_instant_bridge", new BlueprintSpec("assets/prefab/structures/instant_bridge.gz",
-                    "com.prefab.structures.predefined.StructureInstantBridge", "com.prefab.structures.config.InstantBridgeConfiguration")),
+            houseSpec("item_house", "com.prefab.structures.predefined.StructureHouse",
+                    "com.prefab.structures.config.HouseConfiguration",
+                    "house_basic", "house_ranch", "house_loft", "house_hobbit", "house_desert",
+                    "house_snow", "house_desert_2", "house_sub_aqua", "house_modern", "house_campsite",
+                    "house_izba", "house_tower", "house_cabin", "house_tree", "house_mushroom"),
+            houseSpec("item_house_improved", "com.prefab.structures.predefined.StructureHouseImproved",
+                    "com.prefab.structures.config.HouseImprovedConfiguration",
+                    "house_improved_spruce", "house_improved_acacia", "house_improved_earthen",
+                    "house_improved_jungle", "house_improved_nether", "house_improved_mountain",
+                    "house_improved_acacia_2", "house_improved_modern", "house_improved_crimson",
+                    "house_improved_tower", "house_improved_hobbit", "house_improved_cottage"),
+            houseSpec("item_house_advanced", "com.prefab.structures.predefined.StructureHouseAdvanced",
+                    "com.prefab.structures.config.HouseAdvancedConfiguration",
+                    "house_advanced_manor", "house_advanced_workshop", "house_advanced_estate"),
+            houseSpec("item_instant_bridge", "com.prefab.structures.predefined.StructureInstantBridge",
+                    "com.prefab.structures.config.InstantBridgeConfiguration", "instant_bridge"),
             basicSpec("item_machinery_tower", "machinery_tower"),
             basicSpec("item_defense_bunker", "defense_bunker"),
             basicSpec("item_mineshaft_entrance", "mineshaft_entrance"),
@@ -78,32 +91,55 @@ public final class PrefabStructurePreview {
             basicSpec("item_aqua_base", "aqua_base"),
             basicSpec("item_grassy_plain", "grassy_plain"),
             basicSpec("item_magic_temple", "magic_temple"),
-            basicSpec("item_watch_tower", "watch_tower"),
+            basicSpec("item_watch_tower", "watch_tower", "watch_tower_2", "watch_tower_dark"),
             basicSpec("item_welcome_center", "welcome_center"),
             basicSpec("item_jail", "jail"),
             basicSpec("item_saloon", "saloon"),
             basicSpec("item_ski_lodge", "ski_lodge"),
             basicSpec("item_wind_mill", "wind_mill"),
             basicSpec("item_town_hall", "town_hall"),
-            basicSpec("item_nether_gate", "nether_gate"),
+            basicSpec("item_nether_gate", "nether_gate", "nether_gate_tree"),
             basicSpec("item_aqua_base_improved", "aqua_base_improved"),
-            basicSpec("item_villager_houses", "villager_house_flat"),
+            basicSpec("item_villager_houses", "villager_house_flat", "villager_house_angled",
+                    "villager_house_fenced", "villager_house_blacksmith", "villager_house_long"),
             basicSpec("item_warehouse", "warehouse"),
             basicSpec("item_warehouse_improved", "warehouse_improved"),
-            basicSpec("item_modern_buildings", "modern_hipster_fruit_stand"),
-            basicSpec("item_farm", "beef_farm"),
-            basicSpec("item_farm_improved", "chicken_coop_improved"),
-            basicSpec("item_farm_advanced", "automated_bamboo_farm"),
-            basicSpec("item_modern_buildings_improved", "modern_mall_store"),
-            basicSpec("item_modern_buildings_advanced", "modern_tree_house"));
+            basicSpec("item_modern_buildings", "modern_hipster_fruit_stand", "modern_cinema",
+                    "modern_apartment", "modern_mini_hotel", "modern_cottage", "modern_restaurant",
+                    "modern_juice_shop"),
+            basicSpec("item_farm", "beef_farm", "berry_farm", "cactus_farm", "chicken_coop",
+                    "horse_stable", "elevated_farm", "multi_level_farm", "rabbit_hutch"),
+            basicSpec("item_farm_improved", "chicken_coop_improved", "automated_farm", "fish_pond",
+                    "bee_farm", "sugar_cane_farm", "mushroom_farm", "barn_improved",
+                    "green_house_improved"),
+            basicSpec("item_farm_advanced", "automated_bamboo_farm", "automated_melon_farm",
+                    "barn_advanced", "green_house_advanced", "horse_stable_advanced", "monster_masher",
+                    "produce_farm", "tree_farm"),
+            basicSpec("item_modern_buildings_improved", "modern_mall_store", "modern_water_park",
+                    "modern_construction_site", "modern_library", "modern_house", "modern_gas_station",
+                    "modern_bank", "modern_railway_station"),
+            basicSpec("item_modern_buildings_advanced", "modern_tree_house", "modern_walled_villa"));
 
-    private static Map.Entry<String, BlueprintSpec> basicSpec(String itemPath, String structureName) {
-        return Map.entry(itemPath, new BlueprintSpec("assets/prefab/structures/" + structureName + ".gz",
+    private static Map.Entry<String, BlueprintSpec> basicSpec(String itemPath, String... structureNames) {
+        return Map.entry(itemPath, new BlueprintSpec(locations(structureNames),
                 "com.prefab.structures.predefined.StructureBasic",
                 "com.prefab.structures.config.BasicStructureConfiguration"));
     }
 
-    private record BlueprintSpec(String location, String structureClass, String configClass) {
+    private static Map.Entry<String, BlueprintSpec> houseSpec(String itemPath, String structureClass,
+                                                              String configClass, String... structureNames) {
+        return Map.entry(itemPath, new BlueprintSpec(locations(structureNames), structureClass, configClass));
+    }
+
+    private static List<String> locations(String... structureNames) {
+        List<String> out = new ArrayList<>(structureNames.length);
+        for (String name : structureNames) {
+            out.add("assets/prefab/structures/" + name + ".gz");
+        }
+        return List.copyOf(out);
+    }
+
+    private record BlueprintSpec(List<String> locations, String structureClass, String configClass) {
     }
 
     /** Fully resolved preview payload for one blueprint: baked block map +
@@ -113,11 +149,16 @@ public final class PrefabStructurePreview {
                          Vector3f center, float span) {
     }
 
-    /** Per-item resolved bundles; values are {@code StructureData} or the
+    /** Per-location resolved bundles; values are {@code StructureData} or the
      *  {@link #FAILED} sentinel. Strong refs on purpose (the WeakHashMap
      *  lesson: string keys get GC'd and silently recompute). */
     private static final Map<String, Object> BUNDLE_CACHE = new HashMap<>();
     private static final Object FAILED = new Object();
+
+    /** Preview-session re-roll state: the screen identity change marks a new
+     *  open, the seed then picks each item's style independently. */
+    private static Object lastScreen;
+    private static long sessionSeed = System.nanoTime();
 
     /** One-shot degrade log keys, mirrors the maid preview pattern. */
     private static final Map<String, Boolean> DEGRADE_LOGGED = new HashMap<>();
@@ -158,22 +199,52 @@ public final class PrefabStructurePreview {
         return BLUEPRINTS.containsKey(itemId.getPath());
     }
 
-    /** Cached bundle lookup; {@code null} marks "unrenderable, degrade". */
+    /** Picks a style for this preview session and returns its cached bundle;
+     *  {@code null} marks "unrenderable, degrade". A style that fails to
+     *  resolve falls through to the next candidate — over-budget and missing
+     *  resources are per style, not per item. */
     static StructureData bundle(ItemStack stack, LivingEntity player) {
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        Object cached = BUNDLE_CACHE.get(path);
-        if (cached instanceof StructureData data) {
-            return data;
-        }
-        if (cached == FAILED) {
+        BlueprintSpec spec = BLUEPRINTS.get(path);
+        if (spec == null || spec.locations().isEmpty()) {
             return null;
         }
-        StructureData data = buildBundle(path, player);
-        BUNDLE_CACHE.put(path, data == null ? FAILED : data);
-        if (data == null) {
-            logDegradeOnce(path);
+        List<String> locations = spec.locations();
+        int start = sessionStart(path, locations.size());
+        for (int i = 0; i < locations.size(); i++) {
+            String location = locations.get((start + i) % locations.size());
+            Object cached = BUNDLE_CACHE.get(location);
+            if (cached instanceof StructureData data) {
+                return data;
+            }
+            if (cached == FAILED) {
+                continue;
+            }
+            StructureData data = buildBundle(path, spec, location, player);
+            BUNDLE_CACHE.put(location, data == null ? FAILED : data);
+            if (data != null) {
+                return data;
+            }
+            logDegradeOnce(location);
         }
-        return data;
+        return null;
+    }
+
+    /** Random style offset for one preview session: a screen identity change
+     *  re-rolls, so reopening a preview shows another style while dragging
+     *  inside one screen keeps the current building stable. The item path is
+     *  mixed in so several items on one screen pick independently. */
+    private static int sessionStart(String itemPath, int count) {
+        Object screen = Minecraft.getInstance().screen;
+        if (screen != lastScreen) {
+            lastScreen = screen;
+            sessionSeed = System.nanoTime() * 0x9E3779B97F4A7C15L;
+        }
+        long h = sessionSeed ^ ((long) itemPath.hashCode() * 0x9E3779B97F4A7C15L);
+        h ^= h >>> 33;
+        h *= 0xFF51AFD7ED558CCDL;
+        h ^= h >>> 33;
+        return Math.floorMod((int) h, count);
     }
 
     private static void logDegradeOnce(String path) {
@@ -191,14 +262,14 @@ public final class PrefabStructurePreview {
      *  water/ground checks). Sub blocks (door upper halves etc.) ride along
      *  on their own {@code blockPos}. Block entities are deserialized from
      *  the per-tile SNBT and re-parented to the client level. */
-    private static StructureData buildBundle(String path, LivingEntity player) {
+    private static StructureData buildBundle(String path, BlueprintSpec spec, String location,
+                                             LivingEntity player) {
         try {
             if (!API_RESOLVED) {
                 resolveApi();
             }
-            BlueprintSpec spec = BLUEPRINTS.get(path);
             Object structure = CREATE_INSTANCE.invoke(null,
-                    spec.location(), Class.forName(spec.structureClass()));
+                    location, Class.forName(spec.structureClass()));
             Object config = Class.forName(spec.configClass()).getDeclaredConstructor().newInstance();
             CONFIG_POS_FIELD.set(config, BlockPos.ZERO);
             CONFIG_FACING_FIELD.set(config, Direction.NORTH);
@@ -285,8 +356,14 @@ public final class PrefabStructurePreview {
 
     private static BlockPos relativePosition(Object blockOrTile, Object config, Object structure,
                                              Object shapeDirection) throws Exception {
+        // Blocks and tile entities both carry a PositionOffset, but each has
+        // its own getter — BuildTileEntity is not a BuildBlock subclass, so
+        // invoking the BuildBlock method on a tile entity fails on JDK 17
+        // (dev) as an opaque "IllegalArgumentException: ClassCastException@…".
+        Method getter = TE_GET_STARTING_POSITION.getDeclaringClass().isInstance(blockOrTile)
+                ? TE_GET_STARTING_POSITION : GET_STARTING_POSITION;
         return (BlockPos) GET_RELATIVE_POSITION.invoke(
-                GET_STARTING_POSITION.invoke(blockOrTile),
+                getter.invoke(blockOrTile),
                 CONFIG_POS_FIELD.get(config),
                 shapeDirection,
                 CONFIG_FACING_FIELD.get(config));

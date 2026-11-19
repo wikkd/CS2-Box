@@ -48,4 +48,14 @@ public final class GuiItemMove {
     ) {
         AnimRenderOps.renderItem3D(guiGraphics, item, player, x, y, rotation, scale);
     }
+
+    /** 检视页方块特效（BE 动画 + 粒子）会话 begin/end 转发：AnimRenderOps 侧
+     *  保持包私有（不进公开 op 表面），跨包入口走这里。 */
+    public static void beginInspectEffects(ItemStack item) {
+        AnimRenderOps.beginInspectEffects(item);
+    }
+
+    public static void endInspectEffects() {
+        AnimRenderOps.endInspectEffects();
+    }
 }

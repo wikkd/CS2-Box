@@ -156,6 +156,13 @@ public final class AnimRenderOps {
     public static void flush(GuiGraphicsExtractor gg) {
     }
 
+    /** 26.x previews composite through the PIP pipeline, clipped to their
+     *  own rect (the offer preview can never spill onto the corner UI), so
+     *  there is no in-frame preview depth to clear. Documented no-op so the
+     *  cross-platform op set stays aligned with the legacy eras. */
+    public static void clearDepth(GuiGraphicsExtractor gg) {
+    }
+
     /** 26.1.2 screens blur via the extractBlurredBackground stratum hook;
      *  the facade forwards to it. */
     public static void renderBlurredBackground(GuiGraphicsExtractor gg) {

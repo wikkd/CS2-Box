@@ -47,19 +47,23 @@ cp compat-packs/tacz-pack/*.json config/csbox/
    小差异自动修复或仅告警，不会整条作废；`GunId` 指向未加载的枪包只告警不拒绝。
 
 - **v1_21_1（1.21.1，DataComponent）**：TACZ 键位于 `minecraft:custom_data` 内层，
-  配置里用 `components` 字段，**不要用 `tag`**（顶层 `{GunId:...}` 会被当组件名解析，
-  开出来是裸枪）：
+  推荐用 `components` 字段书写（规范形态）：
   ```json
   { "id": "tacz:modern_kinetic_gun", "count": 1,
     "components": { "minecraft:custom_data": { "GunId": "tacz:ak47" } } }
   ```
+  顶层 `tag` 写法（`tag: {GunId:"tacz:ak47"}`）在装载时会被加载器自动迁入
+  `minecraft:custom_data`，同样可用——推荐直接写 `components`，少一层隐式迁移。
+  （直接把 `GunId` 写进 `components` 的顶层键位才是错的——那不是 custom_data。）
 
 - **枪械 id 以 TACZ 注册表为准**（1.20.1 官方内置 54 把，如 `tacz:ak47`、
   `tacz:m4a1`、`tacz:ai_awp`、`tacz:deagle`、`tacz:hk_mp5a5`、`tacz:vector45`、`tacz:rpg7`；
   弹药 id 如 `tacz:9mm` / `tacz:45acp` / `tacz:556x45` / `tacz:762x39` / `tacz:12g`）。
   想要自定义皮肤/附件/火控，推荐工作流：TACZ 里组装好枪 → `/csbox nbt hand`
   复制序列化片段 → 原样粘贴，**不要手改键名**（`GunId` / `GunFireMode` /
-  `GunCurrentAmmoCount` / `AmmoId` / 附件键大小写严格）。
+  `GunCurrentAmmoCount` / `AmmoId` / 附件键大小写严格）。变体定价物品的输出末尾
+  会附一行可点击的 `_prices.json` 价键片段（`id#GunId`），点击复制后合并进价格表
+  （`0` 为占位价，请改成实际价格——未定价的变体条目会整箱拒载）。
 
 - 开出的枪在 `v1_21_1` / `forge_1_20_1` 可进检视视口（`CsLookItemScreen` 内 3D 检视；
   终端机报价面板「检视」胶囊对 TACZ 枪同样触发第一人称检视）。

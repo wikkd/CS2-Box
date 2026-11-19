@@ -49,10 +49,6 @@ public class CsLookItemScreen extends Screen {
 
     private static final Identifier ICON_INSPECT =
             Identifier.parse("csgobox:textures/gui/toolbar/inspect.png");
-    private static final Identifier ICON_GLOVES =
-            Identifier.parse("csgobox:textures/gui/toolbar/gloves.png");
-    private static final Identifier ICON_MODEL =
-            Identifier.parse("csgobox:textures/gui/toolbar/model.png");
     private static final Identifier ICON_INFO =
             Identifier.parse("csgobox:textures/gui/toolbar/info.png");
     private static final Identifier ICON_STICKER =
@@ -62,17 +58,22 @@ public class CsLookItemScreen extends Screen {
 
 
     /** Content bounding box (px in the 32x32 texture) per icon, kept in
-     *  sync with the artwork: inspect 30x29, gloves 30x20, model 28x30,
-     *  info 26x26, sticker 30x23, more 7x27. */
-    private static final int[] ICON_CONTENT_W = {30, 30, 28, 26, 30, 7};
-    private static final int[] ICON_CONTENT_H = {29, 20, 30, 26, 23, 27};
+     *  sync with the artwork: inspect 30x29, info 26x26, sticker 30x23,
+     *  more 7x27. */
+    private static final int[] ICON_CONTENT_W = {30, 26, 30, 7};
+    private static final int[] ICON_CONTENT_H = {29, 26, 23, 27};
 
-    /** Tooltip lang keys per toolbar button. */
+    /** Tooltip lang keys per toolbar button (shipment toolbar, with wear). */
     private static final String[] TOOLTIP_KEYS = {
             "gui.csgobox.csgo_box.toolbar.inspect",
-            "gui.csgobox.csgo_box.toolbar.gloves",
-            "gui.csgobox.csgo_box.toolbar.model",
             "gui.csgobox.csgo_box.toolbar.info",
+            "gui.csgobox.csgo_box.toolbar.sticker",
+            "gui.csgobox.csgo_box.toolbar.more"
+    };
+    /** Tooltip keys for the compact inspect toolbar (no wear button: the
+     *  right-click inspect flow confirms nothing about an item's wear). */
+    private static final String[] TOOLTIP_KEYS_INSPECT = {
+            "gui.csgobox.csgo_box.toolbar.inspect",
             "gui.csgobox.csgo_box.toolbar.sticker",
             "gui.csgobox.csgo_box.toolbar.more"
     };
@@ -135,9 +136,9 @@ public class CsLookItemScreen extends Screen {
      *  (skipped when already invisible, e.g. an invisibility potion). */
     private boolean sceneryPlayerHidden;
     /** Inspect-button animation mode: cached living-entity previews (mob
-     *  drops) walk in place while on; toggled by the inspect-character-model
-     *  toolbar button (index 2),
-     *  which is armed only when the current item renders as a living entity. */
+     *  drops) walk in place while on; toggled by the inspect toolbar button
+     *  (index 0, the single inspect entry), armed only when the current item
+     *  renders as a living entity. */
     private boolean mobAnimMode = false;
 
 
@@ -175,6 +176,15 @@ public class CsLookItemScreen extends Screen {
                 player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
             }
         }
+    }
+
+    /** True when this screen presents a confirmed shipment (unboxing result
+     *  or terminal post-buy showcase): only then is wear viewable — the wear
+     *  panel's skin/pattern/wear card is the drop's own generated metadata.
+     *  The right-click inspect flow ({@code previousScreen} set) confirms
+     *  nothing about an item's wear, so the wear button is hidden there. */
+    private boolean showsShipment() {
+        return this.previousScreen == null;
     }
 
     private int backButtonWidth() {
@@ -320,7 +330,13 @@ public class CsLookItemScreen extends Screen {
     private void renderToolbar(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int size = toolbarButtonSize();
         int y = toolbarButtonY();
-        Identifier[] icons = {ICON_INSPECT, ICON_GLOVES, ICON_MODEL, ICON_INFO, ICON_STICKER, ICON_MORE};
+        // The wear (ⓘ) button ships only in shipment flows; the inspect
+        // toolbar is compact [inspect, sticker, more] with no dead slot.
+        boolean shipment = this.showsShipment();
+        Identifier[] icons = shipment
+                ? new Identifier[]{ICON_INSPECT, ICON_INFO, ICON_STICKER, ICON_MORE}
+                : new Identifier[]{ICON_INSPECT, ICON_STICKER, ICON_MORE};
+        String[] tooltips = shipment ? TOOLTIP_KEYS : TOOLTIP_KEYS_INSPECT;
         this.hoveredButton = -1;
         for (int i = 0; i < icons.length; i++) {
             int x = toolbarButtonX(i);
@@ -331,14 +347,18 @@ public class CsLookItemScreen extends Screen {
             if (hover) {
                 this.hoveredButton = i;
             }
-            boolean active = (i == 3 && this.showInfoPanel) || (i == 2 && this.mobAnimMode);
+            // Inspect (index 0) is the single inspect entry: always on as the
+            // default mode (own 3D drag preview); its underline turns green
+            // while the mob-animation inspect mode is active.
+            boolean specialInspect = this.mobAnimMode;
+            boolean active = i == 0 || (i == 1 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
             guiGraphics.fill(x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
                 guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size,
-                        (alpha << 24) | (i == 2 ? 0x54FF54 : 0xFFFFFF));
+                        (alpha << 24) | (i == 0 && specialInspect ? 0x54FF54 : 0xFFFFFF));
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
             int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
@@ -356,14 +376,14 @@ public class CsLookItemScreen extends Screen {
                 iconColor = 0xFF000000 | ((int) (0xFF * b) << 16) | ((int) (0xFF * b) << 8) | (int) (0xFF * b);
             }
             iconColor = (alpha << 24) | (iconColor & 0xFFFFFF);
-            if (i == 5) {
+            if (i == icons.length - 1) {
                 renderMoreDots(guiGraphics, x, by, size, iconColor);
             } else {
                 guiGraphics.blit(RenderPipelines.GUI_TEXTURED, icons[i],
                     iconX, iconY, u, v, screenW, screenH,
                     ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
             }        }
-        renderToolbarTooltip(guiGraphics, mouseX, mouseY);
+        renderToolbarTooltip(guiGraphics, mouseX, mouseY, tooltips);
     }
 
     private void renderMoreDots(GuiGraphicsExtractor guiGraphics, int btnX, int btnY, int size, int color) {
@@ -381,12 +401,12 @@ public class CsLookItemScreen extends Screen {
     }
 
 
-    private void renderToolbarTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+    private void renderToolbarTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, String[] tooltips) {
         if (this.hoveredButton < 0 || this.toolbarGlow < 0.05F) return;
         int size = toolbarButtonSize();
         int x = toolbarButtonX(this.hoveredButton);
         int y = toolbarButtonY() + toolbarEnterRise(this.hoveredButton);
-        int textW = this.font.width(Component.translatable(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText());
+        int textW = this.font.width(Component.translatable(tooltips[this.hoveredButton]).getVisualOrderText());
         int tooltipW = (int) (textW * 0.7F) + 8;
         int tooltipH = (int) (this.font.lineHeight * 0.7F) + 4;
         int tipX = x + (size - tooltipW) / 2;
@@ -397,7 +417,7 @@ public class CsLookItemScreen extends Screen {
         guiGraphics.fill(tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
         int textAlpha = (int) (0xFF * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
         renderText(guiGraphics,
-                Component.translatable(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText(),
+                Component.translatable(tooltips[this.hoveredButton]).getVisualOrderText(),
                 tipX + 4, tipY + 2, 0.7F, (textAlpha << 24) | 0xCCCCCC);
     }
 
@@ -430,7 +450,7 @@ public class CsLookItemScreen extends Screen {
         }
         int cardW = maxRowW + padX * 2;
         int cardH = labelKeys.length * rowH + padY * 2;
-        int anchorX = toolbarButtonX(3) + toolbarButtonSize() / 2;
+        int anchorX = toolbarButtonX(1) + toolbarButtonSize() / 2;
         int cardX = anchorX - cardW / 2;
         cardX = Math.max(2, Math.min(cardX, this.width - cardW - 2));
         int cardBottom = toolbarButtonY() - 8;
@@ -549,31 +569,30 @@ public class CsLookItemScreen extends Screen {
             return true;
         }
         int infoSize = toolbarButtonSize();
+        // Inspect button (index 0) is the single inspect entry: it toggles the
+        // mob-animation inspect mode for living-entity drops (dead placeholder
+        // for other items, which keep our own 3D drag preview).
         int inspectX = toolbarButtonX(0);
         int inspectY = toolbarButtonY() + toolbarEnterRise(0);
         if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), inspectX, inspectY, infoSize, infoSize)) {
-            return true;
-        }
-        int modelX = toolbarButtonX(2);
-        int modelY = toolbarButtonY() + toolbarEnterRise(2);
-        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), modelX, modelY, infoSize, infoSize)) {
-            // Inspect-character-model button: on living-entity drops this
-            // toggles the mob animation (dead placeholder for other items).
             if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
             }
             return true;
         }
-        int infoX = toolbarButtonX(3);
-
-
-        int infoY = toolbarButtonY() + toolbarEnterRise(3);
-        if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), infoX, infoY, infoSize, infoSize)) {
-            this.showInfoPanel = !this.showInfoPanel;
-            return true;
+        // Wear (ⓘ, slot 1) exists in shipment flows only: the inspect flow
+        // (previousScreen set) confirms nothing, so wear stays unviewable.
+        if (this.showsShipment()) {
+            int infoX = toolbarButtonX(1);
+            int infoY = toolbarButtonY() + toolbarEnterRise(1);
+            if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), infoX, infoY, infoSize, infoSize)) {
+                this.showInfoPanel = !this.showInfoPanel;
+                return true;
+            }
         }
-        int stickerX = toolbarButtonX(4);
-        int stickerY = toolbarButtonY() + toolbarEnterRise(4);
+        int stickerSlot = this.showsShipment() ? 2 : 1;
+        int stickerX = toolbarButtonX(stickerSlot);
+        int stickerY = toolbarButtonY() + toolbarEnterRise(stickerSlot);
         if (event.button() == 0 && ButtonPalette.isInside(event.x(), event.y(), stickerX, stickerY, infoSize, infoSize)) {
             this.randomizeScenery();
             return true;

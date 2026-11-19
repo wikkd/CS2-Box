@@ -52,6 +52,10 @@ public final class FirstPersonInspectHandler {
          *  look screen is then reopened). Non-null when started from the
          *  terminal offer panel so the negotiation screen comes back. */
         Screen returnScreen;
+        /** The look screen's own previousScreen (right-click inspect context),
+         *  handed back to {@link CsLookItemScreen#openQuietly} so the reopen
+         *  keeps the inspect context (no wear button for non-shipment views). */
+        Screen lookPreviousScreen;
         int ticks;
         int doneStreak;
         boolean inspectTriggered;
@@ -68,7 +72,7 @@ public final class FirstPersonInspectHandler {
      * keeps the GUI).
      */
     public static boolean start(LocalPlayer player, ItemStack item, int grade) {
-        return start(player, item, grade, null);
+        return start(player, item, grade, null, null);
     }
 
     /**
@@ -78,6 +82,17 @@ public final class FirstPersonInspectHandler {
      * Returns false if it could not start (caller keeps the GUI).
      */
     public static boolean start(LocalPlayer player, ItemStack item, int grade, Screen returnScreen) {
+        return start(player, item, grade, returnScreen, null);
+    }
+
+    /**
+     * Full form. {@code lookPreviousScreen} carries the look screen's own
+     * previousScreen (right-click inspect context) through the session so the
+     * reopen keeps the same toolbar (no wear button for non-shipment views).
+     * Returns false if it could not start (caller keeps the GUI).
+     */
+    public static boolean start(LocalPlayer player, ItemStack item, int grade,
+                                Screen returnScreen, Screen lookPreviousScreen) {
         if (player == null || item == null || item.isEmpty() || pending != null) {
             return false;
         }
@@ -85,6 +100,7 @@ public final class FirstPersonInspectHandler {
         s.item = item.copy();
         s.grade = grade;
         s.returnScreen = returnScreen;
+        s.lookPreviousScreen = lookPreviousScreen;
         s.restoreHand = player.getMainHandItem().copy();
         if (!TaczInspectViewport.startFirstPersonInspect(s.item, player)) {
             return false;
@@ -166,7 +182,7 @@ public final class FirstPersonInspectHandler {
         if (s.returnScreen != null) {
             mc.setScreen(s.returnScreen);
         } else {
-            CsLookItemScreen.openQuietly(s.item, s.grade, mc);
+            CsLookItemScreen.openQuietly(s.item, s.grade, s.lookPreviousScreen, mc);
         }
     }
 

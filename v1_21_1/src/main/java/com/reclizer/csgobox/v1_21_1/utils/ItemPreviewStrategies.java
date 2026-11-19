@@ -69,6 +69,8 @@ final class ItemPreviewStrategies {
             new TaczGunStrategy(),
             new SlashBladeStrategy(),
             new MaidSlabStrategy(),
+            new TlmGarageKitStrategy(),
+            new TlmChairStrategy(),
             new SbwVehicleStrategy(),
             new SbwGunStrategy(),
             new SpawnEggStrategy(),
@@ -126,10 +128,26 @@ final class ItemPreviewStrategies {
         @Override
         public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
                                 float x, float y, float scale) {
+            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(stack);
             // Without a loaded display the custom renderer paints the
             // missing-texture checkerboard across the card; suppress the draw
             // so the card frame alone shows until the display is available.
-            return TimelessAPI.getGunDisplay(stack).isEmpty();
+            if (display.isEmpty()) {
+                return true;
+            }
+            if (display.get().getGunModel() == null) {
+                return true;
+            }
+            // Loaded guns: degrade to the inventory-style flat slot icon
+            // (2026-11-20 preview-page report) — the fitted identity-rotation
+            // gun model reads as a tiny muzzle-up stick at cell scale, while
+            // the flat icon is exactly what vanilla inventories show. TACZ's
+            // BedrockModel also draws via the global buffer source and ignores
+            // the generic FIXED-context probe, so the 3D route here could
+            // never fit correctly anyway. The real 3D model stays on the 3D
+            // drag preview, which renders it with a proper rotation.
+            AnimRenderOps.renderItem2DFlat(entity, gg, stack, x, y, scale);
+            return true;
         }
     }
 
@@ -187,6 +205,54 @@ final class ItemPreviewStrategies {
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
             AnimRenderOps.renderMaidSlabPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Touhou Little Maid garage kits (车万女仆 手办): the stored entity (a
+     *  maid by default, any entity for crafted kits) renders through the
+     *  shared entity preview path so the figure fills the preview square like
+     *  the soul slabs do. Zero TLM class references. 2D grids keep the mod's
+     *  own fixed-context icon (the generic BEWLR reroute). */
+    private static final class TlmGarageKitStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return AnimRenderOps.isTlmGarageKitItem(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderTlmGarageKitPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Touhou Little Maid chairs (车万女仆 坐垫): the ModelId-selected cushion
+     *  model renders through the mod's own parked chair entity. Zero TLM class
+     *  references. 2D grids keep the mod's own fixed-context icon. */
+    private static final class TlmChairStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return AnimRenderOps.isTlmChairItem(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderTlmChairPreview(gg, stack, player, cx, cy, rotation, scale);
         }
 
         @Override

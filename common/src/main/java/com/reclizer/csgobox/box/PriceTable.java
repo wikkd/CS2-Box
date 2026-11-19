@@ -202,11 +202,15 @@ public final class PriceTable {
     }
 
     /**
-     * Extracts the NBT variant id of a box item entry from its legacy
-     * {@code "tag"} string ({@code GunId} / {@code AmmoId}, see TACZ).
-     * Returns empty for entries without a variant field — the caller then
-     * prices by the plain item id. Does not touch the Minecraft NBT API, so
-     * it works identically on every platform.
+     * Extracts the NBT variant id of a box item entry ({@code GunId} /
+     * {@code AmmoId} for TACZ, generic {@code VariantId} for any mod) from
+     * any of its three serialized shapes: a legacy {@code "tag"} SNBT string,
+     * a JSON-object {@code "tag"} (NBT eras), or
+     * {@code components.minecraft:custom_data} (1.21+). Returns empty for
+     * entries without a variant field — the caller then prices by the plain
+     * item id. Does not touch the Minecraft NBT API, so it works identically
+     * on every platform; {@code /csbox nbt hand} reuses it to suggest the
+     * {@code id#variant} price key of the serialized stack.
      */
     public static Optional<String> variantId(JsonObject entry) {
         if (entry == null) {
@@ -223,28 +227,46 @@ public final class PriceTable {
                     }
                 }
             } else if (tag.isJsonObject()) {
-                // JSON-object NBT form (NBT eras): a plain VariantId string
-                // field rides alongside the real NBT payload.
-                Optional<String> v = stringField(tag.getAsJsonObject(), "VariantId");
+                // JSON-object NBT form (NBT eras): TACZ writes GunId/AmmoId
+                // as plain string fields of the item's root tag, other mods
+                // ride the generic VariantId marker alongside the payload.
+                Optional<String> v = variantField(tag.getAsJsonObject());
                 if (v.isPresent()) {
                     return v;
                 }
             }
         }
-        // Components era (1.21+): minecraft:custom_data.VariantId.
+        // Components era (1.21+): minecraft:custom_data carries GunId
+        // (TACZ guns), AmmoId (TACZ ammo) or the generic VariantId marker.
         if (entry.has("components")
                 && entry.get("components").isJsonObject()) {
             JsonObject components = entry.getAsJsonObject("components");
             if (components.has("minecraft:custom_data")
                     && components.get("minecraft:custom_data").isJsonObject()) {
-                Optional<String> v = stringField(
-                        components.getAsJsonObject("minecraft:custom_data"), "VariantId");
+                Optional<String> v = variantField(
+                        components.getAsJsonObject("minecraft:custom_data"));
                 if (v.isPresent()) {
                     return v;
                 }
             }
         }
         return Optional.empty();
+    }
+
+    /** The variant marker of a flat string-field compound: {@code GunId} /
+     *  {@code AmmoId} / {@code VariantId}, in that priority order — mirrors
+     *  the platform-side stack readers (TACZ guns, then TACZ ammo, then the
+     *  any-mod generic marker). */
+    private static Optional<String> variantField(JsonObject obj) {
+        Optional<String> v = stringField(obj, "GunId");
+        if (v.isPresent()) {
+            return v;
+        }
+        v = stringField(obj, "AmmoId");
+        if (v.isPresent()) {
+            return v;
+        }
+        return stringField(obj, "VariantId");
     }
 
     /** A non-blank string member of {@code obj}, or empty. */

@@ -1,0 +1,185 @@
+{
+  "name": "#DDAA55 Prefab 蓝图军火箱",
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "requires": [
+    "prefab"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "grade5": [
+    {
+      "id": "prefab:item_magic_temple",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_saloon",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_wind_mill",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_aqua_base_improved",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_town_hall",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_swift_blade_netherite",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "prefab:item_ski_lodge",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_villager_houses",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_jail",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_watch_tower",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_warehouse_improved",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_modern_buildings_advanced",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_swift_blade_obsidian",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "prefab:item_house_advanced",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_farm_advanced",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_machinery_tower",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_mineshaft_entrance",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_modern_buildings_improved",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_compressed_chest",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_swift_blade_diamond",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_swift_blade_steel",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "prefab:item_house_improved",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_farm",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_farm_improved",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_modern_buildings",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_defense_bunker",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_warehouse",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_wooden_crate",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_sickle_diamond",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_swift_blade_iron",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "prefab:item_house",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_grassy_plain",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_instant_bridge",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_upgrade",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_sickle_wood",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_sickle_stone",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_sickle_gold",
+      "count": 1
+    },
+    {
+      "id": "prefab:item_sickle_iron",
+      "count": 1
+    },
+    {
+      "id": "prefab:block_compressed_stone",
+      "count": 1
+    },
+    {
+      "id": "prefab:block_quartz_crete_chiseled",
+      "count": 1
+    }
+  ]
+}

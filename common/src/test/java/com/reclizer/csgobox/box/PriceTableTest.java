@@ -182,6 +182,30 @@ final class PriceTableTest {
     }
 
     @Test
+    @DisplayName("TACZ GunId/AmmoId are read from a JSON-object tag and custom_data too")
+    void variantIdTaczObjectForms() {
+        // JSON-object tag (NBT eras, e.g. forge_1_20_1 /csbox nbt hand output)
+        JsonObject tagObject = JsonParser.parseString("""
+                {"id": "tacz:modern_kinetic_gun", "tag": {"GunId": "tacz:ak47",
+                        "GunCurrentAmmoCount": 30}}
+                """).getAsJsonObject();
+        assertEquals("tacz:ak47", PriceTable.variantId(tagObject).orElseThrow());
+
+        JsonObject ammoObject = JsonParser.parseString("""
+                {"id": "tacz:ammo", "tag": {"AmmoId": "tacz:762x39", "AmmoCount": 60}}
+                """).getAsJsonObject();
+        assertEquals("tacz:762x39", PriceTable.variantId(ammoObject).orElseThrow());
+
+        // components.custom_data (1.21+), GunId preferred over VariantId
+        JsonObject componentsForm = JsonParser.parseString("""
+                {"id": "tacz:modern_kinetic_gun", "components": {
+                        "minecraft:custom_data": {"GunId": "tacz:m4a1",
+                                "VariantId": "ignored"}}}
+                """).getAsJsonObject();
+        assertEquals("tacz:m4a1", PriceTable.variantId(componentsForm).orElseThrow());
+    }
+
+    @Test
     @DisplayName("hash is stable for the same content and changes on edits")
     void hashStability() {
         List<String> issuesA = new ArrayList<>();

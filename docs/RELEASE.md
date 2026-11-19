@@ -78,3 +78,11 @@ done
 - 更新 `docs/` 下相关文档（`ARCHITECTURE.md` / `CONFIGURATION.md` 若涉及变更）
 - 教程内容更新（如有）：直接更新 `docs/tutorials/` 在线版并推送到 Gitee 公开仓库（`gitee.com/hou-xiangling/CS2-Box/docs/tutorials/`）——仅维护者需要；包内不再内置教程，教程内容与 `mod_version` 解耦
 - 打 tag：`git tag v<mod_version> && git push origin v<mod_version>`
+
+## 6. box-editor 网站同步（版本耦合改动随发布上线）
+
+铁律见 `AGENTS.md`「版本号管理 → 网站提交铁律」。要点：
+
+- **模组新版本对应的网站功能必须与该版本同步亮相**：`js/data.js` 版本元数据 / schema 变更 / 新玩法字段的编辑器支持（先例：v2.0.1 价格表页与终端机、v2.0.4 玩法扩展区）随对应版本的发布 commit 一起 commit+push，平时保留在工作区。任何 main push 都会触发 `box-editor-pages.yml` 自动部署 Pages——「push 即上线」，版本耦合改动不得提前单独推。
+- **与版本无关的网站修复正常 commit+push**（单独触发 Pages 部署属预期）；拿不准是否版本耦合时先问维护者。
+- 发布时跑一次 `npm run test:smoke`（CI `box-editor smoke` 同步把关）；打 tag 前确认 `box-editor/` 的全部预期改动已进入发布 commit。

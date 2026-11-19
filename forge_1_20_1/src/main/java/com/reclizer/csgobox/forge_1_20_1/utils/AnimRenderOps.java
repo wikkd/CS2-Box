@@ -1,5 +1,7 @@
 package com.reclizer.csgobox.forge_1_20_1.utils;
 
+import com.mojang.blaze3d.platform.GlConst;
+import com.mojang.math.Axis;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -54,6 +56,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -63,6 +66,41 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.ticks.BlackholeTickAccess;
+import net.minecraft.world.ticks.LevelTickAccess;
+// 检视页方块特效（2026-11-20）：BE 动画 + 粒子
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.Tesselator;
+import net.minecraft.Util;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.AbortableIterationConsumer;
+import net.minecraft.util.profiling.InactiveProfiler;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.chunk.ChunkSource;
+import net.minecraft.world.level.entity.EntityTypeTest;
+import net.minecraft.world.level.entity.LevelEntityGetter;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.Scoreboard;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.UUID;
 import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.fml.ModList;
 import org.joml.Matrix4f;
@@ -243,6 +281,19 @@ public final class AnimRenderOps {
         gg.flush();
     }
 
+    /** Clears the depth buffer so UI drawn after a 3D preview paints over
+     *  it: in-frame 3D previews write real depth (z>0), and every later
+     *  z=0 fill/text fails the depth test against those pixels (2026-11-19
+     *  terminal report: the tilted offer item covered the wear bar and the
+     *  inspect capsule). Flushes the shared buffer first so the clear lands
+     *  between the preview's pixels and the overlay — anything still queued
+     *  (the background, the watermark circle) belongs UNDER the preview and
+     *  must not be re-drawn on top of it after the clear. */
+    public static void clearDepth(GuiGraphics gg) {
+        gg.flush();
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+    }
+
     public static void renderBlurredBackground(GuiGraphics gg) {
         // 1.20.1 has no menu backdrop blur API (added in 1.20.2) — no-op.
     }
@@ -258,14 +309,27 @@ public final class AnimRenderOps {
      *  — their GUI interception breaks custom 3D paths, and the flat path
      *  cannot draw them either. */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
-        // TACZ guns without a loaded display instance have no model to draw;
-        // their custom renderer falls back to the missing-texture slot icon,
-        // painting a magenta checkerboard across the card. Skip the draw so
-        // the card frame alone shows until the display is available. The
-        // isLoaded gate keeps instanceof IGun from ever executing (and thus
-        // from class-loading TACZ) when the optional dependency is absent.
-        if (ModList.get().isLoaded(TACZ_MOD_ID)
-                && stack.getItem() instanceof IGun && TimelessAPI.getGunDisplay(stack).isEmpty()) {
+        // TACZ guns: without a loaded display instance the BEWLR paints the
+        // missing-texture slot icon (a magenta checkerboard across the card) —
+        // skip the draw so the card frame alone shows until the display is
+        // available. With one loaded, degrade to the inventory-style flat slot
+        // icon (2026-11-20 preview-page report): the fitted identity-rotation
+        // gun model reads as a tiny muzzle-up stick at cell scale, while the
+        // flat icon is exactly what vanilla inventories show and needs no
+        // per-gun rotation tuning. The real 3D model stays on the 3D drag
+        // preview (renderItem3D), which renders it with a proper rotation.
+        // The isLoaded gate keeps instanceof IGun from ever executing (and
+        // thus from class-loading TACZ) when the optional dependency is
+        // absent.
+        if (ModList.get().isLoaded(TACZ_MOD_ID) && stack.getItem() instanceof IGun) {
+            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(stack);
+            if (display.isEmpty()) {
+                return;
+            }
+            if (display.get().getGunModel() == null) {
+                return;
+            }
+            renderItem2DFlat(entity, gg, stack, x, y, scale);
             return;
         }
         // Superb Warfare summon crates: the 2D grids have no 3D pass, so the
@@ -442,6 +506,22 @@ public final class AnimRenderOps {
             renderMaidSlabPreview(gg, item, player, cx, cy, rotation, scale);
             return;
         }
+        // Touhou Little Maid garage kits (手办): the stored entity (a maid by
+        // default, any entity for crafted kits) renders through the shared
+        // entity preview path instead of the item's own BEWLR, so the figure
+        // fills the preview square like the soul slabs do. See
+        // renderTlmGarageKitPreview.
+        if (isTlmGarageKitItem(item)) {
+            renderTlmGarageKitPreview(gg, item, player, cx, cy, rotation, scale);
+            return;
+        }
+        // Touhou Little Maid chairs (坐垫): the ModelId NBT selects one of the
+        // mod's resource-pack cushion models; park the mod's own chair entity
+        // and let its renderer draw the model. See renderTlmChairPreview.
+        if (isTlmChairItem(item)) {
+            renderTlmChairPreview(gg, item, player, cx, cy, rotation, scale);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
@@ -476,8 +556,13 @@ public final class AnimRenderOps {
         }
         // Auto-fit: a model that projects beyond the preview square (oversized
         // datapack models) is shrunk to stay inside it; normal items (span <=
-        // 1 block) keep the caller's scale unchanged.
-        float fitScale = fitScaleFor(itemModelSpan(renderModel), scale);
+        // 1 block) keep the caller's scale unchanged. On the inspect page the
+        // block's own BlockEntity renderer (enchanting book, spawner cage, ...)
+        // is probed offline and unioned into the envelope, so the drawn extent
+        // — model + BE visuals — drives both the fit and the pivot.
+        ModelBounds effectBounds = inspectEffectBounds(mc, item, renderModel);
+        float fitScale = fitScaleFor(
+                effectBounds != NO_BOUNDS ? effectBounds.span() : itemModelSpan(renderModel), scale);
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
@@ -492,7 +577,9 @@ public final class AnimRenderOps {
         // origin pivot would swing the box around a point outside its body.
         // Same convention as the TACZ gun branch: translate(-centre) in block
         // units AFTER the 16px scale.
-        Vector3f center = previewPivot(renderModel, renderModel != model);
+        Vector3f center = effectBounds != NO_BOUNDS
+                ? effectBounds.center()
+                : previewPivot(renderModel, renderModel != model);
         if (center != null) {
             pose.translate(-center.x, -center.y, -center.z);
         }
@@ -514,8 +601,18 @@ public final class AnimRenderOps {
         // (SBW gun, BEWLR reroute), which probe in the context they render.
         mc.getItemRenderer().render(item, ItemDisplayContext.GUI, false,
                 renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, renderModel);
+        // 检视页方块特效：BER 动画进主 batch（identity pose → 预览变换在
+        // modelview 上，与物品 quads 同空间），粒子在 batch 落屏后 tesselator
+        // 直绘（同样吃到 modelview）。非检视页（标志未设）零改动。
+        boolean inspectEffects = INSPECT_ACTIVE && !INSPECT_DISABLED && INSPECT_STATE != null;
+        if (inspectEffects) {
+            renderInspectBlockEntity(mc, renderStack, bufferSource);
+        }
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
+        if (inspectEffects) {
+            renderInspectParticles(mc);
+        }
         if (flat) Lighting.setupFor3DItems();
         pose.popPose();
         modelViewStack.popPose();
@@ -1301,6 +1398,19 @@ public final class AnimRenderOps {
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        // TACZ lays the gun out per display context with a "positioning node"
+        // bone inside the bedrock model: GunItemRendererWrapper's
+        // applyPositioningNodeTransform walks that bone path (leaf -> root)
+        // stacking its rotations for the FIXED/item-frame perspective — that
+        // is what makes guns sit horizontal in item frames. Drawing the model
+        // directly skipped it, so the 3D preview showed the raw authored pose
+        // (muzzle up, 2026-11-20 report). Replicate the same rotation walk
+        // under the drag rotation; the walk's translations and the display's
+        // fixed scale are skipped — this preview re-centres on the envelope
+        // centre and rescales via fitScaleFor, so only the orientation
+        // matters (a translation never contributes rotation, and the uniform
+        // fixed scale is absorbed by the fit).
+        applyGunOriginPathRotation(pose, gunModel);
         pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
         // the gun's root node sits far from its geometry, so a pivot at the
@@ -1328,6 +1438,28 @@ public final class AnimRenderOps {
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             pose.popPose();
+        }
+    }
+
+    /** Stacks the gun's FIXED-context positioning-node bone rotations
+     *  (leaf -> root, negative-axis quaternions) exactly like TACZ's
+     *  {@code GunItemRendererWrapper.applyPositioningNodeTransform} does for
+     *  the item-frame perspective. The walk's translations are skipped: they
+     *  only place the model relative to the node origin, which this preview
+     *  replaces with its own envelope-centre centring — and a translation
+     *  never contributes rotation. Guns whose bedrock model defines no
+     *  positioning node keep the raw authored pose (same as TACZ's own
+     *  null guard). */
+    private static void applyGunOriginPathRotation(PoseStack pose, BedrockGunModel gunModel) {
+        List<BedrockPart> originPath = gunModel.getFixedOriginPath();
+        if (originPath == null) {
+            return;
+        }
+        for (int i = originPath.size() - 1; i >= 0; i--) {
+            BedrockPart bone = originPath.get(i);
+            pose.mulPose(Axis.XN.rotation(bone.xRot));
+            pose.mulPose(Axis.YN.rotation(bone.yRot));
+            pose.mulPose(Axis.ZN.rotation(bone.zRot));
         }
     }
 
@@ -2911,9 +3043,907 @@ public final class AnimRenderOps {
         ModelBounds bounds = probeEntityBounds(maid);
         MAID_PREVIEW_BOUNDS.put(pick, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
         if (MAID_PREVIEW_LOG.add(pick)) {
-            LOGGER.info("[csgobox] maid slab preview: model={} span={}",
+            LOGGER.info("[csgobox] maid preview: model={} span={}",
                     pick, bounds == NO_BOUNDS ? "none" : bounds.span());
         }
         return bounds == NO_BOUNDS ? NO_BOUNDS : bounds;
+    }
+
+    // ===================== Touhou Little Maid garage kit / chair preview =====================
+
+    /** Touhou Little Maid (车万女仆) garage kits (手办) and chairs (坐垫). Both
+     *  items are {@code builtin/entity} BEWLR items whose 2D/3D generic reroute
+     *  draws the mod's own fixed-context icon — small, framed like a vanilla
+     *  slot icon, and sized off one probe shared by every maid/cushion variant.
+     *  The dedicated previews park the mod's own entity (a maid for garage
+     *  kits, the chair entity for cushions) and render it through the shared
+     *  entity preview path, so the figure fills the preview square like the
+     *  soul slabs do, with bounds cached per model id (cushion/maid packs vary
+     *  wildly in size). Zero TLM classes referenced — the item-id gate proves
+     *  the mod is loaded, the entity save tags drive the content, and the
+     *  renderers are resolved by the vanilla dispatcher.
+     *
+     *  <p>Storage, per era: 1.20.1 keeps the garage kit's full entity save
+     *  payload in the root NBT under {@code EntityInfo} ({@code id} +
+     *  {@code ModelId}, TLM's {@code ItemGarageKit.getMaidData}) with a bare
+     *  stack falling back to its default maid (hakurei reimu); the chair keeps
+     *  {@code ModelId} on the root NBT, defaulting to {@code cushion}. See
+     *  {@link #renderTlmGarageKitPreview} / {@link #renderTlmChairPreview}.</p> */
+    private static final String MAID_GARAGE_KIT_PATH = "garage_kit";
+    private static final String MAID_CHAIR_PATH = "chair";
+    private static final String MAID_GARAGE_KIT_TAG_KEY = "EntityInfo";
+    private static final String MAID_ENTITY_ID_KEY = "id";
+    private static final String MAID_DEFAULT_TYPE_ID = MAID_MOD_ID + ":maid";
+    private static final String MAID_DEFAULT_MODEL_ID = "touhou_little_maid:hakurei_reimu";
+    private static final ResourceLocation MAID_CHAIR_TYPE_ID =
+            new ResourceLocation(MAID_MOD_ID, "chair");
+    private static final String MAID_CHAIR_DEFAULT_MODEL_ID = "touhou_little_maid:cushion";
+    /** The chair's entity save key equals the item NBT key on this line
+     *  ({@code EntityChair.MODEL_ID_TAG}). */
+    private static final Map<String, ModelBounds> CHAIR_PREVIEW_BOUNDS = new HashMap<>();
+    private static final Set<String> CHAIR_PREVIEW_LOG = new HashSet<>();
+    /** One-shot guards for the flat-icon degrade reasons (both previews would
+     *  otherwise degrade completely silently). */
+    private static final Set<String> MAID_DECOR_DEGRADE_LOG = new HashSet<>();
+    /** Chair load guard: reloads on a different stack or model id, skips
+     *  per-frame repeats so the parked pose survives (same discipline as
+     *  {@link #applyMaidSaveTag}). */
+    private static ItemStack chairLoadedStack;
+    private static String chairAppliedModel;
+
+    /** Namespace + path gate for the garage kit item. Package-private: the
+     *  renderItem3D chain's garage kit gate. */
+    static boolean isTlmGarageKitItem(ItemStack stack) {
+        return maidItemWithPath(stack, MAID_GARAGE_KIT_PATH);
+    }
+
+    /** Namespace + path gate for the chair item. Package-private: the
+     *  renderItem3D chain's chair gate. */
+    static boolean isTlmChairItem(ItemStack stack) {
+        return maidItemWithPath(stack, MAID_CHAIR_PATH);
+    }
+
+    private static boolean maidItemWithPath(ItemStack stack, String path) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return MAID_MOD_ID.equals(id.getNamespace()) && path.equals(id.getPath());
+    }
+
+    /** 3D body of the garage kit preview (see the block comment at
+     *  {@link #MAID_GARAGE_KIT_PATH} for the shape). Maid content renders
+     *  through the slab pipeline (per-model-id bounds, inspect button armed);
+     *  any other stored entity goes through the generic entity preview with
+     *  the whole save payload as its spawn tag. */
+    static void renderTlmGarageKitPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                          int cx, int cy, Quat rotation, float scale) {
+        CompoundTag entityInfo = garageKitEntityInfo(item);
+        String degrade = null;
+        String typeId = entityInfo.getString(MAID_ENTITY_ID_KEY);
+        ResourceLocation typeRl = typeId.isEmpty() ? null : ResourceLocation.tryParse(typeId);
+        EntityType<?> type = typeRl != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeRl)
+                ? BuiltInRegistries.ENTITY_TYPE.get(typeRl) : null;
+        Entity entity = type == null ? null : entityPreviewInstance(type, player.level());
+        if (type == null) {
+            degrade = "entity type not registered: " + (typeId.isEmpty() ? "<none>" : typeId);
+        } else if (entity == null) {
+            degrade = "preview entity instance unavailable";
+        } else if (MAID_TYPE_ID.equals(typeRl)) {
+            degrade = renderGarageKitMaid(gg, item, player, cx, cy, rotation, scale, entity, entityInfo);
+            if (degrade == null) {
+                return;
+            }
+        } else {
+            // Non-maid figurine (any entity a kit was crafted from): the
+            // generic path applies the full save payload and renders it.
+            renderEntityPreviewForType(gg, item, player, cx, cy, rotation, scale, type, entityInfo);
+            return;
+        }
+        if (MAID_DECOR_DEGRADE_LOG.add(degrade)) {
+            LOGGER.info("[csgobox] garage kit preview: flat degrade - {}", degrade);
+        }
+        renderItem2DFlat(player, gg, item, cx, cy, scale);
+    }
+
+    /** Maid-content body of the garage kit preview. Returns null on success,
+     *  else the degrade reason (flat icon follows). */
+    private static String renderGarageKitMaid(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                              int cx, int cy, Quat rotation, float scale,
+                                              Entity maid, CompoundTag entityInfo) {
+        String pick = entityInfo.getString(MAID_NBT_MODEL_KEY);
+        if (pick.isEmpty()) {
+            return "maid entity info has no model id";
+        }
+        if (!entityInfo.getString(MAID_NBT_YSM_KEY).isEmpty()) {
+            return "YSM-stored maid but the YSM mod is not installed";
+        }
+        // Arm the inspect button once a real maid look is on show.
+        markPreviewMob(maid);
+        applyMaidSaveTag(maid, item, entityInfo, pick);
+        ModelBounds bounds = maidPreviewBounds(pick, maid);
+        if (bounds == NO_BOUNDS || !renderEntityPreview(gg, maid, bounds, cx, cy, rotation, scale)) {
+            return "model probe or render unavailable";
+        }
+        return null;
+    }
+
+    /** The garage kit's entity save payload: the {@code EntityInfo} root-NBT
+     *  compound when present, else TLM's own default-maid shape
+     *  ({@code ItemGarageKit.getDefaultData} — maid / hakurei reimu). */
+    private static CompoundTag garageKitEntityInfo(ItemStack stack) {
+        CompoundTag tag = stack.hasTag() ? stack.getTag().getCompound(MAID_GARAGE_KIT_TAG_KEY) : new CompoundTag();
+        if (!tag.isEmpty()) {
+            return tag;
+        }
+        CompoundTag defaults = new CompoundTag();
+        defaults.putString(MAID_ENTITY_ID_KEY, MAID_DEFAULT_TYPE_ID);
+        defaults.putString(MAID_NBT_MODEL_KEY, MAID_DEFAULT_MODEL_ID);
+        return defaults;
+    }
+
+    /** 3D body of the chair preview (see the block comment at
+     *  {@link #MAID_CHAIR_PATH} for the shape). */
+    static void renderTlmChairPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                      int cx, int cy, Quat rotation, float scale) {
+        String modelId = item.hasTag() && item.getTag().contains(MAID_NBT_MODEL_KEY)
+                ? item.getTag().getString(MAID_NBT_MODEL_KEY)
+                : MAID_CHAIR_DEFAULT_MODEL_ID;
+        String degrade = null;
+        Entity chair = null;
+        if (!BuiltInRegistries.ENTITY_TYPE.containsKey(MAID_CHAIR_TYPE_ID)) {
+            degrade = "chair entity type unavailable";
+        } else {
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(MAID_CHAIR_TYPE_ID);
+            chair = type == null ? null : entityPreviewInstance(type, player.level());
+            if (chair == null) {
+                degrade = "chair entity instance unavailable";
+            }
+        }
+        if (degrade == null) {
+            applyChairModelTag(chair, item, modelId);
+            ModelBounds bounds = chairPreviewBounds(modelId, chair);
+            if (bounds == NO_BOUNDS || !renderEntityPreview(gg, chair, bounds, cx, cy, rotation, scale)) {
+                degrade = "model probe or render unavailable";
+            }
+        }
+        if (degrade != null) {
+            if (MAID_DECOR_DEGRADE_LOG.add(degrade)) {
+                LOGGER.info("[csgobox] chair preview: flat degrade - {}", degrade);
+            }
+            renderItem2DFlat(player, gg, item, cx, cy, scale);
+        }
+    }
+
+    /** Loads the chair's model id onto the shared instance once per (stack,
+     *  model id) pair — {@code Entity.load} with the entity's own save key.
+     *  The parked pose is restored after the load for the same reason as the
+     *  maid path. */
+    private static void applyChairModelTag(Entity chair, ItemStack item, String modelId) {
+        boolean stackChanged = chairLoadedStack == null || !ItemStack.matches(item, chairLoadedStack);
+        boolean modelChanged = !modelId.equals(chairAppliedModel);
+        if (!stackChanged && !modelChanged) {
+            return;
+        }
+        chairLoadedStack = item.copy();
+        chairAppliedModel = modelId;
+        try {
+            CompoundTag tag = new CompoundTag();
+            tag.putString(MAID_NBT_MODEL_KEY, modelId);
+            chair.load(tag);
+            chair.setPos(0.0D, 64.0D, 0.0D);
+            chair.setYRot(180.0F);
+            chair.setXRot(0.0F);
+        } catch (Throwable t) {
+            LOGGER.warn("Chair preview: applying the model id failed; keeping the default look", t);
+        }
+    }
+
+    /** Bounds of a chair model, cached per model id (cushion packs vary in
+     *  size). The chair must already carry the model id when probing. */
+    private static ModelBounds chairPreviewBounds(String modelId, Entity chair) {
+        Object cached = CHAIR_PREVIEW_BOUNDS.get(modelId);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(chair);
+        CHAIR_PREVIEW_BOUNDS.put(modelId, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        if (CHAIR_PREVIEW_LOG.add(modelId)) {
+            LOGGER.info("[csgobox] chair preview: model={} span={}",
+                    modelId, bounds == NO_BOUNDS ? "none" : bounds.span());
+        }
+        return bounds == NO_BOUNDS ? NO_BOUNDS : bounds;
+    }
+
+    // ===== 检视页方块特效（2026-11-20）：BE 动画 + 粒子 =====
+    // 点击检视页（CsLookItemScreen）的 G0 默认路径增强层，补上烘焙模型画不出来的
+    // 两块内容。只在检视页（begin/end 包裹）生效；拖拽页/网格/终端机路径不设
+    // active 标志，行为逐帧不变。
+    //   1. 方块动画：EntityBlock 建 BE（默认态）+ client ticker 每 50ms 推进
+    //      （与游戏 tick 同拍），BER 每帧经 identity pose 渲染——预览变换整体在
+    //      modelViewStack 上，与物品 quads 同一空间，跟随拖拽旋转。
+    //   2. 粒子：假世界 addParticle 全捕获（BE ticker 与 block.animateTick 的
+    //      level.addParticle 都落进来），反射 ParticleEngine.makeParticle
+    //      （按形状匹配，SRG 生产运行时免疫）造粒子实例——不进世界粒子引擎、
+    //      不污染场景；四标准 ParticleRenderType 分组 tesselator 直绘，
+    //      modelview 仍带预览变换 → 粒子随拖拽一起转。
+    //   3. 包络：BER 顶点离线探测并入烘焙模型 raw 顶点 → fit/枢轴随真实绘制
+    //      范围（附魔台的书浮出模型顶，必须并入包络）。探针 span 超限
+    //      （信标光柱一类无界 BER）→ BER 整段跳过 + 一次性日志。
+    //   4. 降级：任何 Throwable → 本会话禁用 + 一次性 warn；模型渲染不受影响。
+    // 已知边界：BE 用 defaultBlockState（物品 NBT 变体如饰纹陶罐 sherds 不进
+    // BE）；声音一律静音；BER 内部走全局 bufferSource 的模组（TACZ 同类）探针
+    // 抓不到 → 走零顶点跳过分支回落模型自身包络。
+    private static final int INSPECT_LIGHT = 15728880;
+    private static final long INSPECT_TICK_NANOS = 50_000_000L;
+    private static final float INSPECT_BER_SPAN_LIMIT = 3.5F;
+    private static final BlockPos INSPECT_POS = BlockPos.ZERO;
+    private static final ParticleRenderType[] INSPECT_PARTICLE_SHEETS = {
+            ParticleRenderType.TERRAIN_SHEET, ParticleRenderType.PARTICLE_SHEET_OPAQUE,
+            ParticleRenderType.PARTICLE_SHEET_LIT, ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT};
+    private static final Scoreboard INSPECT_SCOREBOARD = new Scoreboard();
+    private static boolean INSPECT_ACTIVE;
+    private static boolean INSPECT_DISABLED;
+    private static ItemStack INSPECT_ITEM = ItemStack.EMPTY;
+    private static BlockState INSPECT_STATE;
+    private static BlockEntity INSPECT_BE;
+    private static BlockEntityTicker<BlockEntity> INSPECT_TICKER;
+    private static boolean INSPECT_BER_SKIPPED;
+    private static long INSPECT_LAST_TICK_NANOS;
+    private static long INSPECT_TICK_COUNT;
+    private static final RandomSource INSPECT_RANDOM = RandomSource.create();
+    private static final Camera INSPECT_CAMERA = new Camera();
+    private static boolean INSPECT_CAMERA_SET;
+    private static final List<InspectLiveParticle> INSPECT_PARTICLES = new ArrayList<>();
+    private static final List<InspectParticleSpawn> INSPECT_PENDING = new ArrayList<>();
+    private static final Map<BakedModel, ModelBounds> INSPECT_EFFECT_BOUNDS = new HashMap<>();
+    private static Method INSPECT_MAKE_PARTICLE;
+    private static boolean INSPECT_MAKE_PARTICLE_SEARCHED;
+    private static InspectEffectLevel INSPECT_LEVEL;
+
+    /** 检视特效待生成粒子：捕获的 addParticle 调用，等下一拍落地。 */
+    private record InspectParticleSpawn(ParticleOptions options, double x, double y, double z,
+                                        double vx, double vy, double vz) {}
+
+    /** 存活粒子槽：{@code Particle.removed}/{@code age} 是 protected（无公共
+     *  读口），死亡判定用自计拍数 vs {@link Particle#getLifetime()}——与本会话
+     *  20Hz 拍同频推进，语义等价；提前自毁的少数粒子按寿命收尾（幽灵帧上界 =
+     *  剩余寿命）。 */
+    private static final class InspectLiveParticle {
+        final Particle particle;
+        int ageTicks;
+
+        InspectLiveParticle(Particle particle) {
+            this.particle = particle;
+        }
+    }
+
+    /** 检视页 begin（CsLookItemScreen 每帧包裹 3D 渲染调用）：换物品即重置会话。 */
+    static void beginInspectEffects(ItemStack item) {
+        INSPECT_ACTIVE = true;
+        if (INSPECT_DISABLED || ItemStack.isSameItemSameTags(item, INSPECT_ITEM)) {
+            return;
+        }
+        resetInspectSession(item);
+    }
+
+    /** 检视页 end：只撤 active 标志；会话保留（同一物品下帧复用 BE/粒子池）。 */
+    static void endInspectEffects() {
+        INSPECT_ACTIVE = false;
+    }
+
+    private static void resetInspectSession(ItemStack item) {
+        INSPECT_ITEM = item;
+        INSPECT_PENDING.clear();
+        INSPECT_PARTICLES.clear();
+        INSPECT_BE = null;
+        INSPECT_TICKER = null;
+        INSPECT_STATE = null;
+        INSPECT_BER_SKIPPED = false;
+        INSPECT_LAST_TICK_NANOS = 0L;
+        INSPECT_EFFECT_BOUNDS.clear();
+        if (INSPECT_DISABLED || !(item.getItem() instanceof BlockItem blockItem)) {
+            return;
+        }
+        InspectEffectLevel level = inspectLevel();
+        if (level == null) {
+            disableInspectOnce("client level unavailable");
+            return;
+        }
+        BlockState state = blockItem.getBlock().defaultBlockState();
+        INSPECT_STATE = state;
+        level.attach(state, null);
+        if (blockItem.getBlock() instanceof EntityBlock entityBlock) {
+            try {
+                BlockEntity be = entityBlock.newBlockEntity(INSPECT_POS, state);
+                be.setLevel(level);
+                be.clearRemoved();
+                INSPECT_BE = be;
+                level.attach(state, be);
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                BlockEntityTicker<BlockEntity> ticker = (BlockEntityTicker<BlockEntity>)
+                        entityBlock.getTicker(level, state, (BlockEntityType) be.getType());
+                INSPECT_TICKER = ticker;
+            } catch (Throwable t) {
+                INSPECT_BE = null;
+                level.attach(state, null);
+                disableInspectOnce("block entity attach failed: " + t);
+            }
+        }
+    }
+
+    private static InspectEffectLevel inspectLevel() {
+        if (INSPECT_LEVEL != null) {
+            return INSPECT_LEVEL;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.level == null) {
+            return null;
+        }
+        INSPECT_LEVEL = new InspectEffectLevel(mc);
+        return INSPECT_LEVEL;
+    }
+
+    private static void disableInspectOnce(String reason) {
+        INSPECT_DISABLED = true;
+        LOGGER.warn("[csgobox] inspect block effects disabled for the session: {}", reason);
+    }
+
+    /** 检视特效包络：烘焙模型 raw 顶点 ∪ BER 探针顶点，经 gui 链映射，规则同
+     *  {@link #modelBounds}。无 BE / 探针超限 / 探针失败 → {@link #NO_BOUNDS}
+     *  回落 {@link #previewPivot}。按模型缓存——探针渲染每帧跑不起。 */
+    private static ModelBounds inspectEffectBounds(Minecraft mc, ItemStack item, BakedModel renderModel) {
+        if (!INSPECT_ACTIVE || INSPECT_DISABLED || INSPECT_BE == null) {
+            return NO_BOUNDS;
+        }
+        ModelBounds cached = INSPECT_EFFECT_BOUNDS.get(renderModel);
+        if (cached != null) {
+            return cached;
+        }
+        ModelBounds bounds = computeInspectEffectBounds(mc, renderModel);
+        INSPECT_EFFECT_BOUNDS.put(renderModel, bounds);
+        return bounds;
+    }
+
+    private static ModelBounds computeInspectEffectBounds(Minecraft mc, BakedModel renderModel) {
+        BlockEntityRenderer<BlockEntity> ber = mc.getBlockEntityRenderDispatcher().getRenderer(INSPECT_BE);
+        if (ber == null) {
+            INSPECT_BER_SKIPPED = true;
+            return NO_BOUNDS;
+        }
+        FloatArrayList xs = new FloatArrayList();
+        FloatArrayList ys = new FloatArrayList();
+        FloatArrayList zs = new FloatArrayList();
+        collectRawVertices(renderModel, xs, ys, zs);
+        REUSABLE_POSE_STACK.setIdentity();
+        FIXED_CONTEXT_PROBE.reset();
+        try {
+            ber.render(INSPECT_BE, 0.0F, REUSABLE_POSE_STACK, FIXED_CONTEXT_PROBE,
+                    INSPECT_LIGHT, OverlayTexture.NO_OVERLAY);
+        } catch (Throwable t) {
+            ERRORED_BE_TYPES.add(INSPECT_BE.getType());
+            LOGGER.warn("[csgobox] inspect preview: block entity probe errored, blacklisting {}",
+                    BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(INSPECT_BE.getType()), t);
+            return NO_BOUNDS;
+        }
+        if (!FIXED_CONTEXT_PROBE.any) {
+            // BER 不画东西 → 模型自身包络足矣（回落 previewPivot）。
+            INSPECT_BER_SKIPPED = true;
+            return NO_BOUNDS;
+        }
+        xs.addAll(FIXED_CONTEXT_PROBE.vx);
+        ys.addAll(FIXED_CONTEXT_PROBE.vy);
+        zs.addAll(FIXED_CONTEXT_PROBE.vz);
+        if (xs.isEmpty()) {
+            return NO_BOUNDS;
+        }
+        float rawMinX = Float.MAX_VALUE, rawMinY = Float.MAX_VALUE, rawMinZ = Float.MAX_VALUE;
+        float rawMaxX = -Float.MAX_VALUE, rawMaxY = -Float.MAX_VALUE, rawMaxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < xs.size(); i++) {
+            rawMinX = Math.min(rawMinX, xs.getFloat(i));
+            rawMinY = Math.min(rawMinY, ys.getFloat(i));
+            rawMinZ = Math.min(rawMinZ, zs.getFloat(i));
+            rawMaxX = Math.max(rawMaxX, xs.getFloat(i));
+            rawMaxY = Math.max(rawMaxY, ys.getFloat(i));
+            rawMaxZ = Math.max(rawMaxZ, zs.getFloat(i));
+        }
+        Matrix4f gui = guiRenderMatrix(renderModel);
+        // 枢轴 = raw 包络盒中心经 gui 链映射（2026-11-16 定版规则）。
+        Vector3f center = new Vector3f((rawMinX + rawMaxX) * 0.5F,
+                (rawMinY + rawMaxY) * 0.5F, (rawMinZ + rawMaxZ) * 0.5F);
+        center.mulPosition(gui);
+        Vector3f v = new Vector3f();
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < xs.size(); i++) {
+            v.set(xs.getFloat(i), ys.getFloat(i), zs.getFloat(i));
+            v.mulPosition(gui);
+            minX = Math.min(minX, v.x());
+            minY = Math.min(minY, v.y());
+            minZ = Math.min(minZ, v.z());
+            maxX = Math.max(maxX, v.x());
+            maxY = Math.max(maxY, v.y());
+            maxZ = Math.max(maxZ, v.z());
+        }
+        float span = Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ));
+        if (span <= 0.0F) {
+            return NO_BOUNDS;
+        }
+        if (span > INSPECT_BER_SPAN_LIMIT) {
+            // 信标光柱一类的无界 BER：整段跳过，模型自身包络继续。
+            INSPECT_BER_SKIPPED = true;
+            LOGGER.info("[csgobox] inspect preview: block entity visuals span {} blocks, skipping the BER",
+                    String.format("%.2f", span));
+            return NO_BOUNDS;
+        }
+        return new ModelBounds(center, span);
+    }
+
+    /** 检视页 BER 渲染：identity pose 进主 batch，与物品 quads 一次 endBatch
+     *  一起落屏；错误按 BE 类型拉黑（与蓝图路径同一张黑名单）。 */
+    private static void renderInspectBlockEntity(Minecraft mc, PoseStack renderStack,
+                                                 MultiBufferSource.BufferSource bufferSource) {
+        BlockEntity be = INSPECT_BE;
+        if (be == null || INSPECT_BER_SKIPPED || ERRORED_BE_TYPES.contains(be.getType())) {
+            return;
+        }
+        BlockEntityRenderer<BlockEntity> ber = mc.getBlockEntityRenderDispatcher().getRenderer(be);
+        if (ber == null) {
+            return;
+        }
+        try {
+            ber.render(be, 0.0F, renderStack, bufferSource, INSPECT_LIGHT, OverlayTexture.NO_OVERLAY);
+        } catch (Throwable t) {
+            ERRORED_BE_TYPES.add(be.getType());
+            LOGGER.warn("[csgobox] inspect preview: block entity render errored, blacklisting {}",
+                    BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()), t);
+        }
+    }
+
+    /** 检视页粒子：每 50ms 一拍推进（ticker → animateTick → 待生成落地 → 粒子
+     *  tick），每帧按标准 ParticleRenderType 分组 tesselator 直绘。 */
+    private static void renderInspectParticles(Minecraft mc) {
+        if (INSPECT_STATE == null || INSPECT_DISABLED || INSPECT_LEVEL == null) {
+            return;
+        }
+        float partial = inspectAdvanceTick();
+        if (partial < 0.0F) {
+            return;
+        }
+        Tesselator tesselator = Tesselator.getInstance();
+        for (ParticleRenderType type : INSPECT_PARTICLE_SHEETS) {
+            boolean any = false;
+            for (InspectLiveParticle live : INSPECT_PARTICLES) {
+                if (live.particle.getRenderType() == type) {
+                    any = true;
+                    break;
+                }
+            }
+            if (!any) {
+                continue;
+            }
+            try {
+                type.begin(tesselator.getBuilder(), mc.getTextureManager());
+                for (InspectLiveParticle live : INSPECT_PARTICLES) {
+                    if (live.particle.getRenderType() != type) {
+                        continue;
+                    }
+                    try {
+                        live.particle.render(tesselator.getBuilder(), INSPECT_CAMERA, partial);
+                    } catch (Throwable t) {
+                        live.particle.remove();
+                        live.ageTicks = Integer.MAX_VALUE - 1;
+                    }
+                }
+            } catch (Throwable t) {
+                disableInspectOnce("particle sheet render failed: " + t);
+                return;
+            } finally {
+                try {
+                    type.end(tesselator);
+                } catch (Throwable ignored) {
+                    // 缓冲状态已不可靠，下一帧重新 begin
+                }
+            }
+        }
+    }
+
+    /** 20Hz 会话拍：BE client ticker（动画字段推进）→ block.animateTick（环境
+     *  粒子）→ 待生成粒子落地 → 粒子 tick；返回本帧渲染 partial（拍内平滑插值）。
+     *  会话禁用返回 -1。 */
+    private static float inspectAdvanceTick() {
+        if (INSPECT_DISABLED) {
+            return -1.0F;
+        }
+        long now = Util.getNanos();
+        if (INSPECT_LAST_TICK_NANOS == 0L) {
+            INSPECT_LAST_TICK_NANOS = now;
+        }
+        if (now - INSPECT_LAST_TICK_NANOS >= INSPECT_TICK_NANOS) {
+            INSPECT_LAST_TICK_NANOS = now;
+            INSPECT_TICK_COUNT++;
+            tickInspectSources();
+            spawnInspectPending();
+            advanceInspectParticles();
+        }
+        return Math.min(1.0F, (now - INSPECT_LAST_TICK_NANOS) / (float) INSPECT_TICK_NANOS);
+    }
+
+    private static void tickInspectSources() {
+        if (INSPECT_TICKER != null && INSPECT_BE != null && INSPECT_LEVEL != null) {
+            try {
+                INSPECT_TICKER.tick(INSPECT_LEVEL, INSPECT_POS, INSPECT_STATE, INSPECT_BE);
+            } catch (Throwable t) {
+                INSPECT_TICKER = null;
+                LOGGER.warn("[csgobox] inspect preview: block entity ticker errored, ticking off", t);
+            }
+        }
+        if (INSPECT_STATE != null && INSPECT_LEVEL != null) {
+            try {
+                INSPECT_STATE.getBlock().animateTick(INSPECT_STATE, INSPECT_LEVEL, INSPECT_POS, INSPECT_RANDOM);
+            } catch (Throwable t) {
+                LOGGER.warn("[csgobox] inspect preview: animateTick errored, particle source off", t);
+            }
+        }
+    }
+
+    /** 捕获的 addParticle 落地：反射 makeParticle（按形状）直接造实例，不进
+     *  世界粒子引擎、不污染场景。 */
+    private static void spawnInspectPending() {
+        if (INSPECT_PENDING.isEmpty()) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        Method makeParticle = inspectMakeParticleMethod();
+        if (makeParticle == null) {
+            INSPECT_PENDING.clear();
+            return;
+        }
+        int failures = 0;
+        for (InspectParticleSpawn spawn : INSPECT_PENDING) {
+            try {
+                Particle particle = (Particle) makeParticle.invoke(mc.particleEngine,
+                        spawn.options(), spawn.x(), spawn.y(), spawn.z(),
+                        spawn.vx(), spawn.vy(), spawn.vz());
+                if (particle != null) {
+                    INSPECT_PARTICLES.add(new InspectLiveParticle(particle));
+                    if (INSPECT_PARTICLES.size() > 128) {
+                        INSPECT_PARTICLES.remove(0);
+                    }
+                }
+            } catch (Throwable t) {
+                failures++;
+            }
+        }
+        INSPECT_PENDING.clear();
+        if (failures > 32) {
+            disableInspectOnce("particle spawn kept failing: " + failures);
+        }
+    }
+
+    /** {@code ParticleEngine.makeParticle} 按形状解析（ParticleOptions + 6 个
+     *  double → Particle；方法名不参与匹配，SRG 生产运行时免疫）；null =
+     *  粒子降级不出。 */
+    private static Method inspectMakeParticleMethod() {
+        if (INSPECT_MAKE_PARTICLE_SEARCHED) {
+            return INSPECT_MAKE_PARTICLE;
+        }
+        INSPECT_MAKE_PARTICLE_SEARCHED = true;
+        try {
+            for (Method method : ParticleEngine.class.getDeclaredMethods()) {
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 7 && params[0] == ParticleOptions.class
+                        && params[1] == double.class && params[2] == double.class
+                        && params[3] == double.class && params[4] == double.class
+                        && params[5] == double.class && params[6] == double.class
+                        && method.getReturnType() == Particle.class) {
+                    method.setAccessible(true);
+                    INSPECT_MAKE_PARTICLE = method;
+                    return method;
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("[csgobox] inspect preview: ParticleEngine.makeParticle unreachable", t);
+        }
+        LOGGER.warn("[csgobox] inspect preview: makeParticle not found by shape, particles degrade");
+        return null;
+    }
+
+    private static void advanceInspectParticles() {
+        if (INSPECT_PARTICLES.isEmpty()) {
+            return;
+        }
+        for (Iterator<InspectLiveParticle> it = INSPECT_PARTICLES.iterator(); it.hasNext(); ) {
+            InspectLiveParticle live = it.next();
+            live.ageTicks++;
+            try {
+                live.particle.tick();
+            } catch (Throwable t) {
+                it.remove();
+                continue;
+            }
+            int lifetime = live.particle.getLifetime();
+            if (lifetime > 0 && live.ageTicks >= lifetime) {
+                it.remove();
+            }
+        }
+    }
+
+    private static void captureInspectParticle(ParticleOptions options, double x, double y, double z,
+                                               double vx, double vy, double vz) {
+        if (INSPECT_PENDING.size() < 256) {
+            INSPECT_PENDING.add(new InspectParticleSpawn(options, x, y, z, vx, vy, vz));
+        }
+    }
+
+    /** 检视特效假世界：isClientSide 恒真（EntityBlock.getTicker 才会给出 client
+     *  ticker）、addParticle 全捕获、声音与方块更新静默、getGameTime 走 20Hz
+     *  会话时钟（驱动 gameTime 依赖的 BER 动画，如刷怪笼旋转）。 */
+    private static final class InspectEffectLevel extends Level {
+        private BlockState state = Blocks.AIR.defaultBlockState();
+        private BlockEntity blockEntity;
+        private final Minecraft mc;
+
+        InspectEffectLevel(Minecraft mc) {
+            super(new ClientLevel.ClientLevelData(Difficulty.PEACEFUL, false, false),
+                    Level.OVERWORLD, mc.level.registryAccess(), mc.level.dimensionTypeRegistration(),
+                    () -> InactiveProfiler.INSTANCE, true, false, 0L, 8);
+            this.mc = mc;
+            ensureInspectCamera();
+        }
+
+        void attach(BlockState state, BlockEntity blockEntity) {
+            this.state = state;
+            this.blockEntity = blockEntity;
+        }
+
+        @Override
+        public BlockState getBlockState(BlockPos pos) {
+            return INSPECT_POS.equals(pos) ? this.state : Blocks.AIR.defaultBlockState();
+        }
+
+        @Override
+        public BlockEntity getBlockEntity(BlockPos pos) {
+            return INSPECT_POS.equals(pos) ? this.blockEntity : null;
+        }
+
+        // BlockAndTintGetter 桩集与 PrefabStructureLevel 同款：全亮、无方向
+        // 阴影、不染色、光引擎不触达。
+        @Override
+        public FluidState getFluidState(BlockPos pos) {
+            return this.getBlockState(pos).getFluidState();
+        }
+
+        @Override
+        public float getShade(Direction direction, boolean shaded) {
+            return 1.0F;
+        }
+
+        @Override
+        public LevelLightEngine getLightEngine() {
+            return null;
+        }
+
+        @Override
+        public int getBrightness(LightLayer layer, BlockPos pos) {
+            return 15;
+        }
+
+        @Override
+        public int getRawBrightness(BlockPos pos, int amount) {
+            return 15;
+        }
+
+        @Override
+        public int getBlockTint(BlockPos pos, ColorResolver resolver) {
+            return -1;
+        }
+
+        @Override
+        public void addParticle(ParticleOptions options, double x, double y, double z,
+                                double vx, double vy, double vz) {
+            captureInspectParticle(options, x, y, z, vx, vy, vz);
+        }
+
+        @Override
+        public void addParticle(ParticleOptions options, boolean force, double x, double y, double z,
+                                double vx, double vy, double vz) {
+            captureInspectParticle(options, x, y, z, vx, vy, vz);
+        }
+
+        @Override
+        public void addAlwaysVisibleParticle(ParticleOptions options, double x, double y, double z,
+                                             double vx, double vy, double vz) {
+            captureInspectParticle(options, x, y, z, vx, vy, vz);
+        }
+
+        @Override
+        public void addAlwaysVisibleParticle(ParticleOptions options, boolean force, double x, double y,
+                                             double z, double vx, double vy, double vz) {
+            captureInspectParticle(options, x, y, z, vx, vy, vz);
+        }
+
+        @Override
+        public long getGameTime() {
+            return INSPECT_TICK_COUNT;
+        }
+
+        @Override
+        public void sendBlockUpdated(BlockPos pos, BlockState oldState, BlockState newState, int flags) {
+        }
+
+        @Override
+        public void gameEvent(GameEvent event, Vec3 pos, GameEvent.Context context) {
+        }
+
+        @Override
+        public void levelEvent(Player player, int eventId, BlockPos pos, int data) {
+        }
+
+        @Override
+        public ChunkSource getChunkSource() {
+            return null;
+        }
+
+        @Override
+        public LevelTickAccess<Block> getBlockTicks() {
+            return BlackholeTickAccess.emptyLevelList();
+        }
+
+        @Override
+        public LevelTickAccess<Fluid> getFluidTicks() {
+            return BlackholeTickAccess.emptyLevelList();
+        }
+
+        @Override
+        public java.util.List<? extends Player> players() {
+            return List.of();
+        }
+
+        @Override
+        public net.minecraft.world.flag.FeatureFlagSet enabledFeatures() {
+            return net.minecraft.world.flag.FeatureFlagSet.of();
+        }
+
+        @Override
+        public Holder<net.minecraft.world.level.biome.Biome> getUncachedNoiseBiome(int x, int y, int z) {
+            return this.mc.level.getUncachedNoiseBiome(x, y, z);
+        }
+
+        @Override
+        public void playSeededSound(Player player, double x, double y, double z,
+                                    Holder<SoundEvent> sound, SoundSource source, float volume, float pitch, long seed) {
+        }
+
+        @Override
+        public void playSeededSound(Player player, Entity entity, Holder<SoundEvent> sound,
+                                    SoundSource source, float volume, float pitch, long seed) {
+        }
+
+        @Override
+        public void playSound(Entity source, BlockPos pos, SoundEvent sound, SoundSource src, float volume, float pitch) {
+        }
+
+        @Override
+        public void playSound(Player player, BlockPos pos, SoundEvent sound, SoundSource source, float volume, float pitch) {
+        }
+
+        @Override
+        public void playSound(Player player, double x, double y, double z, SoundEvent sound,
+                              SoundSource source, float volume, float pitch) {
+        }
+
+        @Override
+        public void playSound(Player player, Entity entity, SoundEvent sound, SoundSource source, float volume, float pitch) {
+        }
+
+        @Override
+        public void playLocalSound(BlockPos pos, SoundEvent sound, SoundSource source, float volume, float pitch, boolean loop) {
+        }
+
+        @Override
+        public void playLocalSound(double x, double y, double z, SoundEvent sound, SoundSource source, float volume, float pitch, boolean loop) {
+        }
+
+        @Override
+        public void globalLevelEvent(int eventId, BlockPos pos, int data) {
+        }
+
+        @Override
+        public String gatherChunkSourceStats() {
+            return "csgobox inspect preview";
+        }
+
+        @Override
+        public Entity getEntity(int id) {
+            return null;
+        }
+
+        @Override
+        public MapItemSavedData getMapData(String mapId) {
+            return null;
+        }
+
+        @Override
+        public void setMapData(String mapId, MapItemSavedData data) {
+        }
+
+        @Override
+        public int getFreeMapId() {
+            return 0;
+        }
+
+        @Override
+        public void destroyBlockProgress(int breakerId, BlockPos pos, int progress) {
+        }
+
+        @Override
+        public Scoreboard getScoreboard() {
+            return INSPECT_SCOREBOARD;
+        }
+
+        @Override
+        public RecipeManager getRecipeManager() {
+            return null;
+        }
+
+        @Override
+        protected LevelEntityGetter<Entity> getEntities() {
+            return INSPECT_EMPTY_ENTITIES;
+        }
+    }
+
+    private static final LevelEntityGetter<Entity> INSPECT_EMPTY_ENTITIES = new LevelEntityGetter<>() {
+        @Override
+        public Entity get(int id) {
+            return null;
+        }
+
+        @Override
+        public Entity get(UUID uuid) {
+            return null;
+        }
+
+        @Override
+        public Iterable<Entity> getAll() {
+            return List.of();
+        }
+
+        @Override
+        public <U extends Entity> void get(EntityTypeTest<Entity, U> type, AbortableIterationConsumer<U> consumer) {
+        }
+
+        @Override
+        public void get(AABB box, java.util.function.Consumer<Entity> consumer) {
+        }
+
+        @Override
+        public <U extends Entity> void get(EntityTypeTest<Entity, U> type, AABB box,
+                                           AbortableIterationConsumer<U> consumer) {
+        }
+    };
+
+    /** {@code Camera.setPosition(Vec3)} 按形状解析一次（SRG 免疫）：把预览相机
+     *  钉在世界原点，粒子顶点即块坐标；失败回落构造器默认（同为 Vec3.ZERO）。 */
+    private static void ensureInspectCamera() {
+        if (INSPECT_CAMERA_SET) {
+            return;
+        }
+        INSPECT_CAMERA_SET = true;
+        try {
+            for (Method method : Camera.class.getDeclaredMethods()) {
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 1 && params[0] == Vec3.class) {
+                    method.setAccessible(true);
+                    method.invoke(INSPECT_CAMERA, Vec3.ZERO);
+                    return;
+                }
+            }
+        } catch (Throwable ignored) {
+            // 构造器默认即 Vec3.ZERO，失败不致命
+        }
     }
 }

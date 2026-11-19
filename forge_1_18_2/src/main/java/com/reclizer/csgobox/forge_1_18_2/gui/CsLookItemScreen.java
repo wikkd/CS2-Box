@@ -41,7 +41,8 @@ public class CsLookItemScreen extends Screen {
 
     /** Wear panel visibility, toggled by the info (ⓘ) toolbar button. */
     private boolean showInfoPanel = false;
-    /** TACZ inspect viewport visibility, toggled by the gloves toolbar button. */
+    /** TACZ inspect viewport visibility; vestigial opt-in render path, exited
+     *  by the inspect toolbar button when armed. */
     private boolean taczViewportActive = false;
     /** Skips the entry finish chime when the screen is reopened by
      *  {@link #openQuietly} right after a first-person inspect finishes. */
@@ -53,10 +54,6 @@ public class CsLookItemScreen extends Screen {
 
     private static final ResourceLocation ICON_INSPECT =
             new ResourceLocation("csgobox:textures/gui/toolbar/inspect.png");
-    private static final ResourceLocation ICON_GLOVES =
-            new ResourceLocation("csgobox:textures/gui/toolbar/gloves.png");
-    private static final ResourceLocation ICON_MODEL =
-            new ResourceLocation("csgobox:textures/gui/toolbar/model.png");
     private static final ResourceLocation ICON_INFO =
             new ResourceLocation("csgobox:textures/gui/toolbar/info.png");
     private static final ResourceLocation ICON_STICKER =
@@ -66,17 +63,22 @@ public class CsLookItemScreen extends Screen {
 
 
     /** Content bounding box (px in the 32x32 texture) per icon, kept in
-     *  sync with the artwork: inspect 30x29, gloves 30x20, model 28x30,
-     *  info 26x26, sticker 30x23, more 7x27. */
-    private static final int[] ICON_CONTENT_W = {30, 30, 28, 26, 30, 7};
-    private static final int[] ICON_CONTENT_H = {29, 20, 30, 26, 23, 27};
+     *  sync with the artwork: inspect 30x29, info 26x26, sticker 30x23,
+     *  more 7x27. */
+    private static final int[] ICON_CONTENT_W = {30, 26, 30, 7};
+    private static final int[] ICON_CONTENT_H = {29, 26, 23, 27};
 
-    /** Tooltip lang keys per toolbar button. */
+    /** Tooltip lang keys per toolbar button (shipment toolbar, with wear). */
     private static final String[] TOOLTIP_KEYS = {
             "gui.csgobox.csgo_box.toolbar.inspect",
-            "gui.csgobox.csgo_box.toolbar.gloves",
-            "gui.csgobox.csgo_box.toolbar.model",
             "gui.csgobox.csgo_box.toolbar.info",
+            "gui.csgobox.csgo_box.toolbar.sticker",
+            "gui.csgobox.csgo_box.toolbar.more"
+    };
+    /** Tooltip keys for the compact inspect toolbar (no wear button: the
+     *  right-click inspect flow confirms nothing about an item's wear). */
+    private static final String[] TOOLTIP_KEYS_INSPECT = {
+            "gui.csgobox.csgo_box.toolbar.inspect",
             "gui.csgobox.csgo_box.toolbar.sticker",
             "gui.csgobox.csgo_box.toolbar.more"
     };
@@ -139,9 +141,9 @@ public class CsLookItemScreen extends Screen {
      *  (skipped when already invisible, e.g. an invisibility potion). */
     private boolean sceneryPlayerHidden;
     /** Inspect-button animation mode: cached living-entity previews (mob
-     *  drops) walk in place while on; toggled by the inspect-character-model
-     *  toolbar button (index 2),
-     *  which is armed only when the current item renders as a living entity. */
+     *  drops) walk in place while on; toggled by the inspect toolbar button
+     *  (index 0, the single inspect entry), armed only when the current item
+     *  renders as a living entity. */
     private boolean mobAnimMode = false;
 
 
@@ -187,9 +189,24 @@ public class CsLookItemScreen extends Screen {
      * Reopen this screen without the entry finish chime, used after a
      * first-person inspect finishes so the return doesn't replay the chime.
      */
-    public static void openQuietly(ItemStack item, int grade, Minecraft mc) {
+    /**
+     * Reopen this screen without the entry finish chime, used after a
+     * first-person inspect finishes so the return doesn't replay the chime.
+     * {@code previousScreen} carries the inspect context through the session
+     * (null in shipment flows) so the reopen shows the same toolbar.
+     */
+    public static void openQuietly(ItemStack item, int grade, Screen previousScreen, Minecraft mc) {
         quietReopen = true;
-        mc.setScreen(new CsLookItemScreen(item, grade));
+        mc.setScreen(new CsLookItemScreen(item, grade, previousScreen));
+    }
+
+    /** True when this screen presents a confirmed shipment (unboxing result or
+     *  terminal post-buy showcase): only then is wear viewable — the wear
+     *  panel's skin/pattern/wear card is the drop's own generated metadata.
+     *  The right-click inspect flow ({@code previousScreen} set) confirms
+     *  nothing about an item's wear, so the wear button is hidden there. */
+    private boolean showsShipment() {
+        return this.previousScreen == null;
     }
 
     private int backButtonWidth() {
@@ -318,10 +335,9 @@ public class CsLookItemScreen extends Screen {
         // uses the same previewPixelX/Y/size so drag-detection matches what
         // the user sees.
         // TACZ guns default to our own 3D render path (AnimRenderOps.renderItem3D
-        // -> renderGunModel3D), which supports drag rotation. The TACZ inspect
-        // viewport is opt-in via the gloves toolbar button ("First-Person
-        // Inspect Animation"); it uses TACZ's fixed-pose renderer and does
-        // not follow mouse drag.
+        // -> renderGunModel3D), which supports drag rotation. TACZ's native
+        // first-person inspect animation is opt-in via the inspect toolbar
+        // button's mode cycle (see mouseClicked).
         boolean viewportRendered = false;
         if (this.taczViewportActive && this.minecraft != null && this.minecraft.player != null) {
             viewportRendered = TaczInspectViewport.renderViewport(pose, openItem,
@@ -353,7 +369,13 @@ public class CsLookItemScreen extends Screen {
     private void renderToolbar(PoseStack pose, int mouseX, int mouseY) {
         int size = toolbarButtonSize();
         int y = toolbarButtonY();
-        ResourceLocation[] icons = {ICON_INSPECT, ICON_GLOVES, ICON_MODEL, ICON_INFO, ICON_STICKER, ICON_MORE};
+        // The wear (ⓘ) button ships only in shipment flows; the inspect
+        // toolbar is compact [inspect, sticker, more] with no dead slot.
+        boolean shipment = this.showsShipment();
+        ResourceLocation[] icons = shipment
+                ? new ResourceLocation[]{ICON_INSPECT, ICON_INFO, ICON_STICKER, ICON_MORE}
+                : new ResourceLocation[]{ICON_INSPECT, ICON_STICKER, ICON_MORE};
+        String[] tooltips = shipment ? TOOLTIP_KEYS : TOOLTIP_KEYS_INSPECT;
         this.hoveredButton = -1;
         for (int i = 0; i < icons.length; i++) {
             int x = toolbarButtonX(i);
@@ -364,17 +386,18 @@ public class CsLookItemScreen extends Screen {
             if (hover) {
                 this.hoveredButton = i;
             }
-            // Inspect (index 0) is the default mode (own 3D drag preview);
-            // gloves (index 1) is active only while the TACZ viewport is on.
-            boolean active = (i == 0 && !this.taczViewportActive) || (i == 1 && this.taczViewportActive)
-                    || (i == 2 && this.mobAnimMode) || (i == 3 && this.showInfoPanel);
+            // Inspect (index 0) is the single inspect entry: always on as the
+            // default mode (own 3D drag preview); its underline turns green
+            // while the mob-animation inspect mode is active.
+            boolean specialInspect = this.mobAnimMode;
+            boolean active = i == 0 || (i == 1 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
             fill(pose, x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
             fill(pose, x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
             if (active) {
                 fill(pose, x + 2, by + size - 2, x + size - 2, by + size,
-                        (alpha << 24) | (i == 2 ? 0x54FF54 : 0xFFFFFF));
+                        (alpha << 24) | (i == 0 && specialInspect ? 0x54FF54 : 0xFFFFFF));
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
             int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
@@ -392,14 +415,14 @@ public class CsLookItemScreen extends Screen {
                 iconColor = 0xFF000000 | ((int) (0xFF * b) << 16) | ((int) (0xFF * b) << 8) | (int) (0xFF * b);
             }
             iconColor = (alpha << 24) | (iconColor & 0xFFFFFF);
-            if (i == 5) {
+            if (i == icons.length - 1) {
                 renderMoreDots(pose, x, by, size, iconColor);
             } else {
                 AnimRenderOps.blitTextured(pose, icons[i],
                     iconX, iconY, screenW, screenH, u, v,
                     ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
             }        }
-        renderToolbarTooltip(pose, mouseX, mouseY);
+        renderToolbarTooltip(pose, mouseX, mouseY, tooltips);
     }
 
     private void renderMoreDots(PoseStack pose, int btnX, int btnY, int size, int color) {
@@ -417,12 +440,12 @@ public class CsLookItemScreen extends Screen {
     }
 
 
-    private void renderToolbarTooltip(PoseStack pose, int mouseX, int mouseY) {
+    private void renderToolbarTooltip(PoseStack pose, int mouseX, int mouseY, String[] tooltips) {
         if (this.hoveredButton < 0 || this.toolbarGlow < 0.05F) return;
         int size = toolbarButtonSize();
         int x = toolbarButtonX(this.hoveredButton);
         int y = toolbarButtonY() + toolbarEnterRise(this.hoveredButton);
-        int textW = this.font.width(new TranslatableComponent(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText());
+        int textW = this.font.width(new TranslatableComponent(tooltips[this.hoveredButton]).getVisualOrderText());
         int tooltipW = (int) (textW * 0.7F) + 8;
         int tooltipH = (int) (this.font.lineHeight * 0.7F) + 4;
         int tipX = x + (size - tooltipW) / 2;
@@ -433,7 +456,7 @@ public class CsLookItemScreen extends Screen {
         fill(pose, tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
         int textAlpha = (int) (0xFF * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
         renderText(pose,
-                new TranslatableComponent(TOOLTIP_KEYS[this.hoveredButton]).getVisualOrderText(),
+                new TranslatableComponent(tooltips[this.hoveredButton]).getVisualOrderText(),
                 tipX + 4, tipY + 2, 0.7F, (textAlpha << 24) | 0xCCCCCC);
     }
 
@@ -466,7 +489,7 @@ public class CsLookItemScreen extends Screen {
         }
         int cardW = maxRowW + padX * 2;
         int cardH = labelKeys.length * rowH + padY * 2;
-        int anchorX = toolbarButtonX(3) + toolbarButtonSize() / 2;
+        int anchorX = toolbarButtonX(1) + toolbarButtonSize() / 2;
         int cardX = anchorX - cardW / 2;
         cardX = Math.max(2, Math.min(cardX, this.width - cardW - 2));
         int cardBottom = toolbarButtonY() - 8;
@@ -583,54 +606,45 @@ public class CsLookItemScreen extends Screen {
             return true;
         }
         int infoSize = toolbarButtonSize();
-        // Inspect button (index 0) is the default mode: our own 3D drag
-        // preview. Clicking it while the TACZ viewport is active returns to
-        // the default preview (exits the first-person inspect viewport).
+        // Inspect button (index 0) is the single inspect entry: it cycles the
+        // inspect modes available for this item — mob animation, TACZ
+        // first-person inspect — falling back to our own 3D drag preview once
+        // nothing special is on.
         int inspectX = toolbarButtonX(0);
         int inspectY = toolbarButtonY() + toolbarEnterRise(0);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, inspectX, inspectY, infoSize, infoSize)) {
             if (this.taczViewportActive) {
                 TaczInspectViewport.exit(this.openItem);
                 this.taczViewportActive = false;
+                return true;
             }
-            return true;
-        }
-        // The inspect viewport belongs to the gloves button ("First-Person
-        // Inspect Animation"), matching v1_21_1: the inspect icon is the
-        // static weapon-model slot and carries no viewport behaviour.
-        int glovesX = toolbarButtonX(1);
-        int glovesY = toolbarButtonY() + toolbarEnterRise(1);
-        if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, glovesX, glovesY, infoSize, infoSize)) {
-            // First-person inspect: close the GUI first, then let TACZ play its
-            // native first-person inspect behind a transparent input-lock
-            // screen; FirstPersonInspectHandler reopens this screen when the
-            // animation finishes or the player presses Esc.
-            if (this.minecraft != null && this.minecraft.player != null
-                    && TaczInspectViewport.isAvailable(this.openItem)) {
-                this.onClose();
-                FirstPersonInspectHandler.start(this.minecraft.player, this.openItem, this.grade);
-            }
-            return true;
-        }
-        int modelX = toolbarButtonX(2);
-        int modelY = toolbarButtonY() + toolbarEnterRise(2);
-        if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, modelX, modelY, infoSize, infoSize)) {
-            // Inspect-character-model button: on living-entity drops this
-            // toggles the mob animation (dead placeholder for other items).
             if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
+            } else if (this.minecraft != null && this.minecraft.player != null
+                    && TaczInspectViewport.isAvailable(this.openItem)) {
+                // First-person inspect: close the GUI first, then let TACZ play
+                // its native first-person inspect behind a transparent
+                // input-lock screen; FirstPersonInspectHandler reopens this
+                // screen when the animation finishes or the player presses Esc.
+                this.onClose();
+                FirstPersonInspectHandler.start(this.minecraft.player, this.openItem, this.grade,
+                        null, this.previousScreen);
             }
             return true;
         }
-        int infoX = toolbarButtonX(3);
-
-        int infoY = toolbarButtonY() + toolbarEnterRise(3);
-        if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, infoX, infoY, infoSize, infoSize)) {
-            this.showInfoPanel = !this.showInfoPanel;
-            return true;
+        // Wear (ⓘ, slot 1) exists in shipment flows only: the inspect flow
+        // (previousScreen set) confirms nothing, so wear stays unviewable.
+        if (this.showsShipment()) {
+            int infoX = toolbarButtonX(1);
+            int infoY = toolbarButtonY() + toolbarEnterRise(1);
+            if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, infoX, infoY, infoSize, infoSize)) {
+                this.showInfoPanel = !this.showInfoPanel;
+                return true;
+            }
         }
-        int stickerX = toolbarButtonX(4);
-        int stickerY = toolbarButtonY() + toolbarEnterRise(4);
+        int stickerSlot = this.showsShipment() ? 2 : 1;
+        int stickerX = toolbarButtonX(stickerSlot);
+        int stickerY = toolbarButtonY() + toolbarEnterRise(stickerSlot);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, stickerX, stickerY, infoSize, infoSize)) {
             this.randomizeScenery();
             return true;

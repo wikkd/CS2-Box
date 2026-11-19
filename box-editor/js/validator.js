@@ -8,6 +8,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
   const ID_RE = /^[a-z0-9_.-]+:[a-z0-9_./-]+$/;
   const KEY_RE = /^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$/;
   const FILE_RE = /^[a-z0-9_.\/-]+$/;
+  /** Data-component key shape: a plain ns:path id (no #variant suffix). */
+  const COMPONENT_KEY_RE = /^[a-z0-9_.-]+:[a-z0-9_./-]+$/;
 
   function add(issues, level, path, key, vars) {
     issues.push({ level, path, key, vars: vars || undefined });
@@ -41,6 +43,37 @@ window.CSBoxEdit = window.CSBoxEdit || {};
     const reg = NS.gameRegistry;
     if (!reg || !reg[list] || !reg[list].size) return false;
     return !reg[list].has(id);
+  }
+
+  /** Per-key validation of a components object (1.21+/26.x): keys must be
+   *  ns:path ids; the entity-payload components hard-require their string
+   *  "id" member in vanilla's component codecs — missing it drops the whole
+   *  component (and with it the preview/summon behavior) with only a chat
+   *  warning in-game, so the editor surfaces it up front; a custom_data
+   *  variant marker (GunId/AmmoId/VariantId) hints at the matching
+   *  id#variant price key. */
+  function validateComponents(comps, path, issues) {
+    for (const key of Object.keys(comps)) {
+      if (!COMPONENT_KEY_RE.test(key)) {
+        add(issues, 'error', path + '.components.' + key, 'v.badComponentKey', { key });
+        continue;
+      }
+      const payload = comps[key];
+      if (key === 'minecraft:block_entity_data' || key === 'minecraft:entity_data') {
+        const hasId = payload && typeof payload === 'object' && !Array.isArray(payload)
+          && typeof payload.id === 'string' && payload.id.trim();
+        if (!hasId) add(issues, 'error', path + '.components.' + key, 'v.entityDataMissingId');
+      }
+      if (key === 'minecraft:custom_data' && payload
+          && typeof payload === 'object' && !Array.isArray(payload)) {
+        const marker = ['GunId', 'AmmoId', 'VariantId'].find(
+          (f) => typeof payload[f] === 'string' && payload[f].trim());
+        if (marker) {
+          add(issues, 'info', path + '.components.' + key, 'v.customDataVariantHint',
+            { field: marker, value: payload[marker].trim() });
+        }
+      }
+    }
   }
 
   function validate(state, versionKey) {
@@ -300,6 +333,23 @@ window.CSBoxEdit = window.CSBoxEdit || {};
         if (variant && !ID_RE.test(variant)) add(issues, 'error', path + '.variant', 'v.badVariant');
         if (variant && rawTag) add(issues, 'error', path + '.tag', 'v.variantConflict');
         if (!variant && rawTag && !rawTag.startsWith('{')) add(issues, 'error', path + '.tag', 'v.badTag');
+        if (!variant && rawTag && rawTag.startsWith('{')) {
+          // JSON-object or SNBT string — must parse as one of the two. The
+          // in-game loaders silently drop unparseable tags, so surface the
+          // syntax error (with the parser's position) up front.
+          let tagOk = false;
+          try {
+            const p = JSON.parse(rawTag);
+            tagOk = !!(p && typeof p === 'object' && !Array.isArray(p));
+          } catch (e) { /* SNBT below */ }
+          if (!tagOk) {
+            try { NS.parseSnbt(rawTag); tagOk = true; }
+            catch (e2) {
+              add(issues, 'error', path + '.tag', 'v.badTagSnbt',
+                { msg: String((e2 && e2.message) || e2) });
+            }
+          }
+        }
 
         // components
         const comp = (it.components || '').trim();
@@ -310,6 +360,8 @@ window.CSBoxEdit = window.CSBoxEdit || {};
             add(issues, 'error', path + '.components', 'v.badComponents');
           } else if (!version.components) {
             add(issues, 'warn', path + '.components', 'v.componentsIgnored');
+          } else {
+            validateComponents(parsed, path, issues);
           }
         }
 

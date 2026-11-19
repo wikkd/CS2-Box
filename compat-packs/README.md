@@ -27,6 +27,7 @@ python scripts/merge-prices.py compat-packs/<pack>/_prices.json config/csbox/_pr
 | `slashblade-resharped-pack/` | SlashBlade:Resharped（拔刀剑·重锻） | `v1_21_1`（NeoForge 2.1.9 线）/ `forge_1_20_1`（Forge 1.9.65 线） | 24 把数据驱动名刀（`blade_state` 身份字段 + `VariantId` 变体定价）+ 耀魂材料，双版本条目形态分文件，含终端机 |
 | `immersive-aircraft-pack/` | Immersive Aircraft | `v1_21_1`（1.7.0 NF）/ `forge_1_20_1`（1.5.0 Forge）/ `fabric_1_21_1`（1.7.0）/ `v26_1_2` + `v26_2`（1.7.0 NF，唯一有 26.x 构建的模组） | 7 种载具（实体代理 3D 预览）+ 全套升级零件，含终端机 |
 | `modular-golems-pack/` | Modular Golems | `v1_21_1` / `forge_1_20_1`（2.7.x） | 升级卡白/蓝/紫三档 + 先锋甲四件套，含终端机 |
+| `prefab-pack/` | Prefab（预制建筑） | `v1_21_1`（1.0.9 NF）/ `forge_1_20_1`（1.10.0.2） | 蓝图建筑（整栋结构 3D 预览：29 个专属结构映射）+ 镰刀/迅捷军刀/压缩方块，含终端机 |
 | `kaleidoscope-cookery-pack/` | Kaleidoscope Cookery | `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` | A 类零适配代表：8 个带 `elements` 几何的 3D 食物/器具 + 平面料理，含终端机 |
 | `kaleidoscope-grilling-pack/` | Kaleidoscope Grilling（森罗物语：烟火） | `v1_21_1` / `forge_1_20_1` | 烧烤菜系：烤串/调料/农产（6 个 `elements` 真 3D），含终端机 |
 | `kaleidoscope-tavern-pack/` | Kaleidoscope Tavern（森罗物语：酒馆） | `v1_21_1` / `forge_1_20_1` | 酒馆家具 + 基酒/鸡尾酒（酒桶真 3D），含终端机 |
@@ -69,7 +70,7 @@ python scripts/merge-prices.py compat-packs/<pack>/_prices.json config/csbox/_pr
 ## 诚实声明
 
 这些包是**联动机制演示**。2026-11 后新增的包（superb-warfare / immersive-aircraft /
-modular-golems / kaleidoscope-cookery / create-aeronautics / create，及森罗物语系列
+modular-golems / prefab / kaleidoscope-cookery / create-aeronautics / create，及森罗物语系列
 10 个附属包 grilling / tavern / world-liquor / chinesefood / doll / end / nether /
 twilight / dim-wine / bloodwine）物品 id 均以对应发布 jar 的 `assets/*/models/item/`
 清单 × `zh_cn` lang 键交叉实测抽取（森罗系列另核对了 1.21.1 与 1.20.1 双线共有集，

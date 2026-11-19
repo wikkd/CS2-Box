@@ -1,5 +1,6 @@
 package com.reclizer.csgobox.v1_21_1.utils;
 
+import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,6 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -341,6 +343,19 @@ public final class AnimRenderOps {
 
     public static void flush(GuiGraphics gg) {
         gg.flush();
+    }
+
+    /** Clears the depth buffer so UI drawn after a 3D preview paints over
+     *  it: in-frame 3D previews write real depth (z>0), and every later
+     *  z=0 fill/text fails the depth test against those pixels (2026-11-19
+     *  terminal report: the tilted offer item covered the wear bar and the
+     *  inspect capsule). Flushes the shared buffer first so the clear lands
+     *  between the preview's pixels and the overlay — anything still queued
+     *  (the background, the watermark circle) belongs UNDER the preview and
+     *  must not be re-drawn on top of it after the clear. */
+    public static void clearDepth(GuiGraphics gg) {
+        gg.flush();
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
     }
 
     public static void renderBlurredBackground(Screen screen, GuiGraphics gg, float partialTicks) {
@@ -2385,6 +2400,19 @@ public final class AnimRenderOps {
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        // TACZ lays the gun out per display context with a "positioning node"
+        // bone inside the bedrock model: GunItemRendererWrapper's
+        // applyPositioningNodeTransform walks that bone path (leaf -> root)
+        // stacking its rotations for the FIXED/item-frame perspective — that
+        // is what makes guns sit horizontal in item frames. Drawing the model
+        // directly skipped it, so the 3D preview showed the raw authored pose
+        // (muzzle up, 2026-11-20 report). Replicate the same rotation walk
+        // under the drag rotation; the walk's translations and the display's
+        // fixed scale are skipped — this preview re-centres on the envelope
+        // centre and rescales via fitScaleFor, so only the orientation
+        // matters (a translation never contributes rotation, and the uniform
+        // fixed scale is absorbed by the fit).
+        applyGunOriginPathRotation(pose, gunModel);
         pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
         // the gun's root node sits far from its geometry, so a pivot at the
@@ -2412,6 +2440,28 @@ public final class AnimRenderOps {
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             pose.popPose();
+        }
+    }
+
+    /** Stacks the gun's FIXED-context positioning-node bone rotations
+     *  (leaf -> root, negative-axis quaternions) exactly like TACZ's
+     *  {@code GunItemRendererWrapper.applyPositioningNodeTransform} does for
+     *  the item-frame perspective. The walk's translations are skipped: they
+     *  only place the model relative to the node origin, which this preview
+     *  replaces with its own envelope-centre centring — and a translation
+     *  never contributes rotation. Guns whose bedrock model defines no
+     *  positioning node keep the raw authored pose (same as TACZ's own
+     *  null guard). */
+    private static void applyGunOriginPathRotation(PoseStack pose, BedrockGunModel gunModel) {
+        List<BedrockPart> originPath = gunModel.getFixedOriginPath();
+        if (originPath == null) {
+            return;
+        }
+        for (int i = originPath.size() - 1; i >= 0; i--) {
+            BedrockPart bone = originPath.get(i);
+            pose.mulPose(Axis.XN.rotation(bone.xRot));
+            pose.mulPose(Axis.YN.rotation(bone.yRot));
+            pose.mulPose(Axis.ZN.rotation(bone.zRot));
         }
     }
 
@@ -2933,15 +2983,23 @@ public final class AnimRenderOps {
      *  (a vanilla {@code CustomData}) without touching TLM classes. Null when
      *  the component is absent or empty. */
     private static CompoundTag storedMaidTag(ItemStack stack) {
+        CustomData data = maidInfoData(stack);
+        return data == null ? null : data.copyTag();
+    }
+
+    /** The raw {@code touhou_little_maid:maid_info} component value. Shared
+     *  by the stored-maid slab and the garage kit (1.21 keeps both the captured
+     *  maid and the kit's entity save in this one component, per TLM's
+     *  {@code ItemGarageKit.getMaidData}). Null when absent or empty. */
+    private static CustomData maidInfoData(ItemStack stack) {
         ResourceLocation infoId = ResourceLocation.fromNamespaceAndPath(MAID_MOD_ID, "maid_info");
         if (!BuiltInRegistries.DATA_COMPONENT_TYPE.containsKey(infoId)) {
             return null;
         }
         DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.get(infoId);
         Object value = type == null ? null : stack.get(type);
-        if (value instanceof CustomData data) {
-            CompoundTag tag = data.copyTag();
-            return tag.isEmpty() ? null : tag;
+        if (value instanceof CustomData data && !data.isEmpty()) {
+            return data;
         }
         return null;
     }
@@ -3048,8 +3106,229 @@ public final class AnimRenderOps {
         ModelBounds bounds = probeEntityBounds(maid);
         MAID_PREVIEW_BOUNDS.put(pick, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
         if (MAID_PREVIEW_LOG.add(pick)) {
-            LOGGER.info("[csgobox] maid slab preview: model={} span={}",
+            LOGGER.info("[csgobox] maid preview: model={} span={}",
                     pick, bounds == NO_BOUNDS ? "none" : bounds.span());
+        }
+        return bounds == NO_BOUNDS ? NO_BOUNDS : bounds;
+    }
+
+    // ===================== Touhou Little Maid garage kit / chair preview =====================
+
+    /** Touhou Little Maid (车万女仆) garage kits (手办) and chairs (坐垫). Both
+     *  items are {@code builtin/entity} BEWLR items whose generic 2D/3D reroute
+     *  draws the mod's own fixed-context icon — small, framed like a vanilla
+     *  slot icon, and sized off one probe shared by every maid/cushion variant.
+     *  The dedicated previews park the mod's own entity (a maid for garage
+     *  kits, the chair entity for cushions) and render it through the shared
+     *  entity preview path, so the figure fills the preview square like the
+     *  soul slabs do, with bounds cached per model id (cushion/maid packs vary
+     *  wildly in size). Zero TLM classes referenced — the item-id gate proves
+     *  the mod is loaded, the entity save tags drive the content, and the
+     *  renderers are resolved by the vanilla dispatcher.
+     *
+     *  <p>Storage on this 1.21.1 line (TLM's data components): the garage kit
+     *  keeps its entity save in the same {@code touhou_little_maid:maid_info}
+     *  component the stored-maid slab uses ({@code ItemGarageKit.getMaidData},
+     *  inner keys {@code id} / {@code model_id}), with a bare stack falling
+     *  back to the default maid (hakurei reimu); the chair's model id lives in
+     *  the top-level {@code touhou_little_maid:model_id} string component,
+     *  defaulting to {@code cushion}. The chair entity's save key is the same
+     *  lowercase {@code model_id} ({@code EntityChair.readAdditionalSaveData}).
+     *  See {@link #renderTlmGarageKitPreview} / {@link #renderTlmChairPreview}.</p> */
+    private static final String MAID_GARAGE_KIT_PATH = "garage_kit";
+    private static final String MAID_CHAIR_PATH = "chair";
+    private static final String MAID_ENTITY_ID_KEY = "id";
+    private static final String MAID_DEFAULT_TYPE_ID = MAID_MOD_ID + ":maid";
+    private static final String MAID_DEFAULT_MODEL_ID = "touhou_little_maid:hakurei_reimu";
+    /** The chair item's model-id component ({@code InitDataComponent.
+     *  MODEL_ID_TAG}) — a top-level string, separate from the maid_info
+     *  component. */
+    private static final String MAID_CHAIR_MODEL_COMPONENT = "model_id";
+    private static final ResourceLocation MAID_CHAIR_TYPE_ID =
+            ResourceLocation.fromNamespaceAndPath(MAID_MOD_ID, "chair");
+    private static final String MAID_CHAIR_DEFAULT_MODEL_ID = "touhou_little_maid:cushion";
+    private static final Map<String, ModelBounds> CHAIR_PREVIEW_BOUNDS = new HashMap<>();
+    private static final Set<String> CHAIR_PREVIEW_LOG = new HashSet<>();
+    /** One-shot guards for the flat-icon degrade reasons (both previews would
+     *  otherwise degrade completely silently). */
+    private static final Set<String> MAID_DECOR_DEGRADE_LOG = new HashSet<>();
+    /** Chair load guard: reloads on a different stack or model id, skips
+     *  per-frame repeats so the parked pose survives (same discipline as
+     *  {@link #applyMaidSaveTag}). */
+    private static ItemStack chairLoadedStack;
+    private static String chairAppliedModel;
+
+    /** Namespace + path gate for the garage kit item. Package-private: the
+     *  strategy chain's garage kit match. */
+    static boolean isTlmGarageKitItem(ItemStack stack) {
+        return maidItemWithPath(stack, MAID_GARAGE_KIT_PATH);
+    }
+
+    /** Namespace + path gate for the chair item. Package-private: the
+     *  strategy chain's chair match. */
+    static boolean isTlmChairItem(ItemStack stack) {
+        return maidItemWithPath(stack, MAID_CHAIR_PATH);
+    }
+
+    private static boolean maidItemWithPath(ItemStack stack, String path) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return MAID_MOD_ID.equals(id.getNamespace()) && path.equals(id.getPath());
+    }
+
+    /** 3D body of the garage kit preview strategy (see the block comment at
+     *  {@link #MAID_GARAGE_KIT_PATH} for the shape). Maid content renders
+     *  through the slab pipeline (per-model-id bounds, inspect button armed);
+     *  any other stored entity goes through the generic entity preview with
+     *  the maid_info payload as its spawn data. */
+    static void renderTlmGarageKitPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                          int cx, int cy, Quat rotation, float scale) {
+        CustomData stored = maidInfoData(item);
+        CompoundTag entityInfo = stored != null ? stored.copyTag() : garageKitDefaults();
+        String degrade = null;
+        String typeId = entityInfo.getString(MAID_ENTITY_ID_KEY);
+        ResourceLocation typeRl = typeId.isEmpty() ? null : ResourceLocation.tryParse(typeId);
+        EntityType<?> type = typeRl != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeRl)
+                ? BuiltInRegistries.ENTITY_TYPE.get(typeRl) : null;
+        Entity entity = type == null ? null : entityPreviewInstance(type, player.level());
+        if (type == null) {
+            degrade = "entity type not registered: " + (typeId.isEmpty() ? "<none>" : typeId);
+        } else if (entity == null) {
+            degrade = "preview entity instance unavailable";
+        } else if (MAID_TYPE_ID.equals(typeRl)) {
+            degrade = renderGarageKitMaid(gg, item, player, cx, cy, rotation, scale, entity, entityInfo);
+            if (degrade == null) {
+                return;
+            }
+        } else {
+            // Non-maid figurine (any entity a kit was crafted from): the
+            // generic path applies the maid_info payload and renders it.
+            renderEntityPreviewForType(gg, item, player, cx, cy, rotation, scale, type, stored);
+            return;
+        }
+        if (MAID_DECOR_DEGRADE_LOG.add(degrade)) {
+            LOGGER.info("[csgobox] garage kit preview: flat degrade - {}", degrade);
+        }
+        renderItem2DFlat(player, gg, item, cx, cy, scale);
+    }
+
+    /** Maid-content body of the garage kit preview. Returns null on success,
+     *  else the degrade reason (flat icon follows). */
+    private static String renderGarageKitMaid(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                              int cx, int cy, Quat rotation, float scale,
+                                              Entity maid, CompoundTag entityInfo) {
+        String pick = entityInfo.getString(MAID_NBT_MODEL_KEY);
+        if (pick.isEmpty()) {
+            return "maid entity info has no model id";
+        }
+        if (!entityInfo.getString(MAID_NBT_YSM_KEY).isEmpty()) {
+            return "YSM-stored maid but the YSM mod is not installed";
+        }
+        // Arm the inspect button once a real maid look is on show.
+        markPreviewMob(maid);
+        applyMaidSaveTag(maid, item, entityInfo, pick);
+        ModelBounds bounds = maidPreviewBounds(pick, maid);
+        if (bounds == NO_BOUNDS || !renderEntityPreview(gg, maid, bounds, cx, cy, rotation, scale)) {
+            return "model probe or render unavailable";
+        }
+        return null;
+    }
+
+    /** TLM's own default garage kit payload ({@code ItemGarageKit.
+     *  getDefaultData} — a bare stack renders the default maid). */
+    private static CompoundTag garageKitDefaults() {
+        CompoundTag defaults = new CompoundTag();
+        defaults.putString(MAID_ENTITY_ID_KEY, MAID_DEFAULT_TYPE_ID);
+        defaults.putString(MAID_NBT_MODEL_KEY, MAID_DEFAULT_MODEL_ID);
+        return defaults;
+    }
+
+    /** 3D body of the chair preview strategy (see the block comment at
+     *  {@link #MAID_CHAIR_PATH} for the shape). */
+    static void renderTlmChairPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                      int cx, int cy, Quat rotation, float scale) {
+        String modelId = chairModelId(item);
+        String degrade = null;
+        Entity chair = null;
+        if (!BuiltInRegistries.ENTITY_TYPE.containsKey(MAID_CHAIR_TYPE_ID)) {
+            degrade = "chair entity type unavailable";
+        } else {
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(MAID_CHAIR_TYPE_ID);
+            chair = type == null ? null : entityPreviewInstance(type, player.level());
+            if (chair == null) {
+                degrade = "chair entity instance unavailable";
+            }
+        }
+        if (degrade == null) {
+            applyChairModelTag(chair, item, modelId);
+            ModelBounds bounds = chairPreviewBounds(modelId, chair);
+            if (bounds == NO_BOUNDS || !renderEntityPreview(gg, chair, bounds, cx, cy, rotation, scale)) {
+                degrade = "model probe or render unavailable";
+            }
+        }
+        if (degrade != null) {
+            if (MAID_DECOR_DEGRADE_LOG.add(degrade)) {
+                LOGGER.info("[csgobox] chair preview: flat degrade - {}", degrade);
+            }
+            renderItem2DFlat(player, gg, item, cx, cy, scale);
+        }
+    }
+
+    /** The chair item's model id: the top-level {@code model_id} string
+     *  component, falling back to TLM's default cushion when absent. */
+    private static String chairModelId(ItemStack stack) {
+        ResourceLocation idRl = ResourceLocation.fromNamespaceAndPath(MAID_MOD_ID, MAID_CHAIR_MODEL_COMPONENT);
+        if (BuiltInRegistries.DATA_COMPONENT_TYPE.containsKey(idRl)) {
+            DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.get(idRl);
+            Object value = type == null ? null : stack.get(type);
+            if (value instanceof String modelId && !modelId.isEmpty()) {
+                return modelId;
+            }
+        }
+        return MAID_CHAIR_DEFAULT_MODEL_ID;
+    }
+
+    /** Loads the chair's model id onto the shared instance once per (stack,
+     *  model id) pair — {@code Entity.load} with the entity's own save key
+     *  (lowercase {@code model_id} on this line). The parked pose is restored
+     *  after the load for the same reason as the maid path. */
+    private static void applyChairModelTag(Entity chair, ItemStack item, String modelId) {
+        boolean stackChanged = chairLoadedStack == null || !ItemStack.matches(item, chairLoadedStack);
+        boolean modelChanged = !modelId.equals(chairAppliedModel);
+        if (!stackChanged && !modelChanged) {
+            return;
+        }
+        chairLoadedStack = item.copy();
+        chairAppliedModel = modelId;
+        try {
+            CompoundTag tag = new CompoundTag();
+            tag.putString(MAID_NBT_MODEL_KEY, modelId);
+            chair.load(tag);
+            chair.setPos(0.0D, 64.0D, 0.0D);
+            chair.setYRot(180.0F);
+            chair.setXRot(0.0F);
+        } catch (Throwable t) {
+            LOGGER.warn("Chair preview: applying the model id failed; keeping the default look", t);
+        }
+    }
+
+    /** Bounds of a chair model, cached per model id (cushion packs vary in
+     *  size). The chair must already carry the model id when probing. */
+    private static ModelBounds chairPreviewBounds(String modelId, Entity chair) {
+        Object cached = CHAIR_PREVIEW_BOUNDS.get(modelId);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(chair);
+        CHAIR_PREVIEW_BOUNDS.put(modelId, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        if (CHAIR_PREVIEW_LOG.add(modelId)) {
+            LOGGER.info("[csgobox] chair preview: model={} span={}",
+                    modelId, bounds == NO_BOUNDS ? "none" : bounds.span());
         }
         return bounds == NO_BOUNDS ? NO_BOUNDS : bounds;
     }

@@ -17,16 +17,26 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.reclizer.csgobox.box.BoxDefaults;
+import com.reclizer.csgobox.box.PriceTable;
 import com.reclizer.csgobox.forge_1_18_2.CsgoBox;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxDefinition;
 import com.reclizer.csgobox.forge_1_18_2.box.BoxItemCodec;
@@ -59,6 +69,15 @@ public final class CsboxCommand {
     );
     private static final SimpleCommandExceptionType NBT_EMPTY = new SimpleCommandExceptionType(
             new TranslatableComponent("commands.csgobox.nbt.hand.empty")
+    );
+    private static final SimpleCommandExceptionType NBT_LOOK_NO_TARGET = new SimpleCommandExceptionType(
+            new TranslatableComponent("commands.csgobox.nbt.look.no_target")
+    );
+    private static final SimpleCommandExceptionType NBT_LOOK_NO_BLOCK_ENTITY = new SimpleCommandExceptionType(
+            new TranslatableComponent("commands.csgobox.nbt.look.no_block_entity")
+    );
+    private static final SimpleCommandExceptionType NBT_LOOK_NO_ITEM = new SimpleCommandExceptionType(
+            new TranslatableComponent("commands.csgobox.nbt.look.no_item")
     );
 
     private static final int MAX_NBT_CHARS = 20000;
@@ -104,7 +123,9 @@ public final class CsboxCommand {
                         .executes(CsboxCommand::upgradeBox))
                 .then(Commands.literal("nbt")
                         .then(Commands.literal("hand")
-                                .executes(CsboxCommand::showHandNbt)));
+                                .executes(CsboxCommand::showHandNbt))
+                        .then(Commands.literal("look")
+                                .executes(CsboxCommand::showLookNbt)));
         dispatcher.register(csbox);
     }
 
@@ -505,7 +526,8 @@ public final class CsboxCommand {
         source.sendSuccess(new TranslatableComponent("commands.csgobox.nbt.hand.header",
                 item.getHoverName().getString()), false);
         try {
-            String json = BoxItemCodec.gson().toJson(BoxItemCodec.serializeItemStack(item));
+            JsonObject serialized = BoxItemCodec.serializeItemStack(item);
+            String json = BoxItemCodec.gson().toJson(serialized);
             if (json.length() > MAX_NBT_CHARS) {
                 source.sendSuccess(copyable(new TextComponent(json.substring(0, MAX_NBT_CHARS)), json), false);
                 source.sendSuccess(copyable(new TranslatableComponent("commands.csgobox.nbt.hand.truncated",
@@ -517,6 +539,17 @@ public final class CsboxCommand {
                     new TranslatableComponent("commands.csgobox.nbt.hand.copy_button")
                             .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
                     json), false);
+            PriceTable.variantId(serialized).ifPresent(variant -> {
+                String itemId = serialized.getAsJsonPrimitive("id").getAsString();
+                JsonObject priceKey = new JsonObject();
+                priceKey.addProperty(itemId + "#" + variant, 0);
+                String priceJson = BoxItemCodec.gson().toJson(priceKey);
+                source.sendSuccess(copyable(
+                        new TranslatableComponent("commands.csgobox.nbt.hand.price_key", itemId + "#" + variant)
+                                .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                        priceJson,
+                        new TranslatableComponent("commands.csgobox.nbt.hand.price_key.click_copy")), false);
+            });
         } catch (Exception e) {
             source.sendSuccess(new TranslatableComponent("commands.csgobox.nbt.hand.error",
                     e.getMessage()), false);
@@ -524,11 +557,82 @@ public final class CsboxCommand {
         return Command.SINGLE_SUCCESS;
     }
 
+    /** Any player; serializes the crosshair-targeted block into a paste-ready
+     *  items entry: the block's item id plus its block-entity data in
+     *  tag.BlockEntityTag (the NBT-era slot; 1.21+ uses the
+     *  minecraft:block_entity_data component instead). Vanilla middle-click
+     *  pick-block captures the same data — this mirrors it server-side without
+     *  needing the item in hand. A plain _prices.json price-key line is always
+     *  appended: unpriced ids reject the whole box on load. */
+    private static int showLookNbt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        ServerPlayer player = source.getPlayerOrException();
+        HitResult hit = player.pick(6.0D, 0.0F, false);
+        if (hit.getType() != HitResult.Type.BLOCK) {
+            throw NBT_LOOK_NO_TARGET.create();
+        }
+        BlockPos pos = ((BlockHitResult) hit).getBlockPos();
+        ServerLevel level = source.getLevel();
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null) {
+            throw NBT_LOOK_NO_BLOCK_ENTITY.create();
+        }
+        Item item = level.getBlockState(pos).getBlock().asItem();
+        if (item == Items.AIR) {
+            throw NBT_LOOK_NO_ITEM.create();
+        }
+        String itemId = ForgeRegistries.ITEMS.getKey(item).toString();
+        source.sendSuccess(new TranslatableComponent("commands.csgobox.nbt.look.header",
+                level.getBlockState(pos).getBlock().getName().getString()), false);
+        try {
+            CompoundTag beTag = be.saveWithoutMetadata();
+            JsonElement beJson = BoxItemCodec.tagToJson(beTag);
+            JsonObject tagObj = new JsonObject();
+            tagObj.add("BlockEntityTag", beJson);
+            JsonObject serialized = new JsonObject();
+            serialized.addProperty("id", itemId);
+            serialized.addProperty("count", 1);
+            serialized.add("tag", tagObj);
+
+            String json = BoxItemCodec.gson().toJson(serialized);
+            if (json.length() > MAX_NBT_CHARS) {
+                source.sendSuccess(copyable(new TextComponent(json.substring(0, MAX_NBT_CHARS)), json), false);
+                source.sendSuccess(copyable(new TranslatableComponent("commands.csgobox.nbt.hand.truncated",
+                        String.valueOf(json.length())), json), false);
+            } else {
+                source.sendSuccess(copyable(new TextComponent(json), json), false);
+            }
+            source.sendSuccess(copyable(
+                    new TranslatableComponent("commands.csgobox.nbt.hand.copy_button")
+                            .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                    json), false);
+            JsonObject priceKey = new JsonObject();
+            priceKey.addProperty(itemId, 0);
+            String priceJson = BoxItemCodec.gson().toJson(priceKey);
+            source.sendSuccess(copyable(
+                    new TranslatableComponent("commands.csgobox.nbt.look.price_key", itemId)
+                            .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                    priceJson,
+                    new TranslatableComponent("commands.csgobox.nbt.hand.price_key.click_copy")), false);
+        } catch (Exception e) {
+            source.sendSuccess(new TranslatableComponent("commands.csgobox.nbt.look.error",
+                    e.getMessage()), false);
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** Wraps a chat component so clicking it copies {@code clipboard} to the player's clipboard. */
     private static Component copyable(Component component, String clipboard) {
+        return copyable(component, clipboard,
+                new TranslatableComponent("commands.csgobox.nbt.hand.click_copy"));
+    }
+
+    /** Same copy-on-click wrapper with a custom hover label (the price-key
+     *  fragment copies a different payload than the full item JSON). */
+    private static Component copyable(Component component, String clipboard, Component hover) {
         return component.copy().withStyle(s -> s
                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, clipboard))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        new TranslatableComponent("commands.csgobox.nbt.hand.click_copy"))));
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover)));
     }
 
     private static BoxDefinition getBoxOrThrow(ResourceLocation boxId) throws CommandSyntaxException {
