@@ -204,44 +204,6 @@ public final class CsboxCommand {
         return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
-    /**
-     * v2.0.1: hands out a box definition. Registry entries are a fixed set now
-     * (a box is data, not an item id), so this is the supported way to obtain
-     * a box — it picks the fixed item when the id ships with the mod and the
-     * generic {@code csgo_box} / {@code terminal} item otherwise, then stamps
-     * {@code csgobox:box_id} into the data component.
-     */
-    private static int giveBox(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
-        CommandSourceStack source = ctx.getSource();
-        Identifier boxId = IdentifierArgument.getId(ctx, "box");
-        BoxDefinition def = BoxRegistry.get(boxId);
-        if (def == null) {
-            throw BOX_NOT_FOUND.create(boxId.toString());
-        }
-        Item item = ModItems.itemForBox(boxId, def.isTerminal());
-        ItemStack stack = new ItemStack(item, count);
-        ItemCsgoBox.setBoxId(boxId, stack);
-        Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "targets");
-        for (ServerPlayer player : players) {
-            // Hand out legal stacks only: count can exceed maxStackSize (6400
-            // cap in the command tree), so split into per-slot stacks like the
-            // vanilla /give does instead of producing one oversized stack.
-            int remaining = count;
-            int maxStack = Math.max(1, item.getMaxStackSize(stack));
-            while (remaining > 0) {
-                int n = Math.min(remaining, maxStack);
-                ItemStack give = stack.copyWithCount(n);
-                if (!player.getInventory().add(give)) {
-                    player.drop(give, false);
-                }
-                remaining -= n;
-            }
-        }
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.give.success",
-                String.valueOf(count), boxId.toString(), String.valueOf(players.size())), true);
-        return players.size();
-    }
-
     /** Help is visible to everyone; carries clickable links to the web editor and the online tutorial mirror. */
     private static int showHelp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
@@ -525,6 +487,41 @@ public final class CsboxCommand {
             source.sendSuccess(err::toChatMessage, false);
         }
         return 0;
+    }
+
+    /**
+     * v2.0.1: hands out a box definition. Registry entries are a fixed set now
+     * (a box is data, not an item id), so this is the supported way to obtain
+     * a box — it picks the fixed item when the id ships with the mod and the
+     * generic {@code csgo_box} / {@code terminal} item otherwise, then stamps
+     * {@code csgobox:box_id} onto the stack.
+     */
+    private static int giveBox(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        Identifier boxId = IdentifierArgument.getId(ctx, "box");
+        BoxDefinition def = getBoxOrThrow(boxId);
+        Item item = ModItems.itemForBox(boxId, def.isTerminal());
+        ItemStack stack = new ItemStack(item, count);
+        ItemCsgoBox.setBoxId(boxId, stack);
+        Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "targets");
+        for (ServerPlayer player : players) {
+            // Hand out legal stacks only: count can exceed maxStackSize (6400
+            // cap in the command tree), so split into per-slot stacks like the
+            // vanilla /give does instead of producing one oversized stack.
+            int remaining = count;
+            int maxStack = Math.max(1, item.getMaxStackSize(stack));
+            while (remaining > 0) {
+                int n = Math.min(remaining, maxStack);
+                ItemStack give = stack.copyWithCount(n);
+                if (!player.getInventory().add(give)) {
+                    player.drop(give, false);
+                }
+                remaining -= n;
+            }
+        }
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.give.success",
+                String.valueOf(count), boxId.toString(), String.valueOf(players.size())), true);
+        return players.size();
     }
 
     // --- Item tool ---
