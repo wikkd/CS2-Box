@@ -158,8 +158,19 @@ public final class AnimRenderOps {
      *  space) of each baked item model's geometry. Models are stable
      *  instances owned by the model manager and are replaced on resource
      *  reload, so a WeakHashMap lets old models go. */
-    /** Package-private: shared by the preview strategies for bounds checks. */
-    record ModelBounds(Vector3f center, float span) {
+    /** Package-private: shared by the preview strategies for bounds checks.
+     *  Framing centre + drag hub + largest-axis span. Entity previews keep
+     *  the two pivots separate (2026-11-21, Alex's Mobs): the framing centre
+     *  is the envelope-box centre so the model sits symmetric in the preview
+     *  square, while the drag hub is the reconstructed cube mass centre — a
+     *  single point cannot serve both (the median hub sat up to ~22% of the
+     *  span off the envelope centre and clipped the far side; the envelope
+     *  hub rotated around thin appendages instead of the body). Paths that
+     *  never pivot separately pass the centre as the hub via {@link #of}. */
+    record ModelBounds(Vector3f center, Vector3f hub, float span) {
+        private static ModelBounds of(Vector3f center, float span) {
+            return new ModelBounds(center, center, span);
+        }
     }
 
     private static final Map<BakedModel, Object> ITEM_MODEL_BOUNDS = new WeakHashMap<>();
@@ -385,7 +396,7 @@ public final class AnimRenderOps {
             }
         }
         if (model.isCustomRenderer() && !isShaderModActive()) {
-            renderFixedContextModel3D(gg, stack, entity, x, y, Quat.IDENTITY, scale);
+            renderFixedContextModel3D(gg, stack, entity, x, y, Quat.IDENTITY, scale, null);
             return;
         }
         renderItem2DFlat(entity, gg, stack, x, y, scale);
@@ -465,7 +476,7 @@ public final class AnimRenderOps {
         // does, so the probe-based auto-fit and centring apply to whatever
         // the BEWLR draws.
         if (model.isCustomRenderer()) {
-            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale);
+            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale, null);
             return;
         }
         // Block-backed flat sprites (mod food plates and the like): the item
@@ -705,7 +716,7 @@ public final class AnimRenderOps {
     /** Sentinel bounds for models without usable geometry (custom renderers
      *  or degenerate quads): unit span keeps the caller's scale untouched.
      *  Package-private: entity-preview strategies gate on it. */
-    static final ModelBounds NO_BOUNDS = new ModelBounds(new Vector3f(), 1.0F);
+    static final ModelBounds NO_BOUNDS = ModelBounds.of(new Vector3f(), 1.0F);
 
     /** The exact model matrix {@code ItemRenderer.render} applies for the GUI
      *  context: the model's gui {@link ItemTransform} (translate(translation)
@@ -815,16 +826,17 @@ public final class AnimRenderOps {
         Vector3f center = new Vector3f((rMinX + rMaxX) * 0.5F,
                 (rMinY + rMaxY) * 0.5F, (rMinZ + rMaxZ) * 0.5F);
         renderer.transformPosition(center);
-        ModelBounds bounds = new ModelBounds(center,
+        ModelBounds bounds = ModelBounds.of(center,
                 Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
         ITEM_MODEL_BOUNDS.put(model, bounds);
         return bounds;
     }
 
     /** Per-axis median of a coordinate sample (mean of the two middle values
-     *  on even counts). Kept for the entity/FIXED probe pivot (see
-     *  {@link #probeBoundsFromVertices}); item models use the raw envelope-box
-     *  centre instead (hollow shells drag the median onto a wall). */
+     *  on even counts). The fallback drag hub when an entity probe yields no
+     *  reconstructable cube (see {@link #entityProbeHub}); item models use
+     *  the raw envelope-box centre instead (hollow shells drag the median
+     *  onto a wall). */
     private static float median(FloatArrayList values) {
         float[] sorted = values.toFloatArray();
         Arrays.sort(sorted);
@@ -1114,7 +1126,7 @@ public final class AnimRenderOps {
             renderVehicleIcon(gg, icon, cx, cy, scale);
             return;
         }
-        renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale);
+        renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale, null);
     }
 
     /** The real 3D entity draw: same pose convention as every other 3D
@@ -1126,20 +1138,39 @@ public final class AnimRenderOps {
     static boolean renderEntityPreview(GuiGraphics gg, Entity entity, ModelBounds bounds,
                                        int cx, int cy, Quat rotation, float scale) {
         float fitScale = fitScaleFor(bounds.span(), scale);
+        if (bounds.span() > PREVIEW_FILL) {
+            // The shared helper passes spans <= 1 block through at the caller's
+            // scale (an item's natural size), but the vehicle boost below then
+            // pushes exactly-square models past the preview square — the
+            // ferrouslime probe measured span exactly 1.0 and rendered ~130%
+            // of the square (2026-11-21). Target the same fill the shrink path
+            // uses, so every entity caps at PREVIEW_FILL * SBW_FIT_BOOST.
+            fitScale = scale * PREVIEW_FILL / bounds.span();
+        }
         fitScale *= SBW_FIT_BOOST;
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
+        // Framing and drag hub are decoupled (2026-11-21, Alex's Mobs): the
+        // envelope-box centre must sit on the viewport centre (a single mass
+        // pivot ran up to ~22% of the span off-centre and clipped the far
+        // side of the preview square), while the drag rotation pivots on the
+        // reconstructed cube mass centre. The offset is applied BEFORE the
+        // drag quaternion, so it shifts the framing without rotating with
+        // the drag — at rest the model sits symmetric, and dragging turns
+        // the body in place.
+        float s16 = 16.0F * fitScale;
+        Vector3f center = bounds.center();
+        Vector3f hub = bounds.hub();
+        pose.translate(s16 * (hub.x - center.x), s16 * (hub.y - center.y),
+                s16 * (hub.z - center.z));
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
-        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
-        // Rotate around the vehicle's geometric centre, not its origin (same
-        // convention as every other 3D branch).
-        Vector3f center = bounds.center();
-        pose.translate(-center.x, -center.y, -center.z);
+        pose.scale(s16, s16, s16);
+        pose.translate(-hub.x, -hub.y, -hub.z);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
@@ -2131,28 +2162,302 @@ public final class AnimRenderOps {
         }
     }
 
-    /** Bounds from the last probe render: the pivot is the per-axis median of
-     *  the raw vertex cloud — **kept for entity/FIXED probes on purpose**:
-     *  their asymmetry is sparse appendage geometry (2026-11-17 winefox maid:
-     *  the tail and legs stretch the envelope downward, a box-centre pivot sat
-     *  ~19% of the model height below the dense body mass), the opposite
-     *  failure from hollow item shells (which the item default path handles
-     *  with the raw envelope-box centre, see {@link #modelBounds}). The span
-     *  stays the AABB largest axis for the auto-fit. */
-    private static ModelBounds probeBoundsFromVertices() {
+    /** Entity-probe bounds from the last probe render: the framing centre is
+     *  the raw envelope-box centre (symmetric margins in the preview square),
+     *  and the drag hub is the volume-weighted cube mass centre via
+     *  {@link #volumeWeightedCubeCenter}, falling back to the per-axis median
+     *  when no cube can be reconstructed. The two pivots are separate because
+     *  one point cannot serve both: the median weights every emitted cube
+     *  equally, so the 5-9 detail cubes of an Alex's Mobs head zone (2026-11-21
+     *  gorilla report; offline rebakes of gorilla/tiger/orca/elephant put the
+     *  median 10-22% of the span off the torso) pulled the pivot onto the
+     *  head, while the envelope centre follows sparse appendages instead
+     *  (2026-11-17 winefox maid: tail and legs dragged it ~19% of the model
+     *  height below the dense body mass). The span stays the AABB largest
+     *  axis for the auto-fit. A non-null {@code hubOverride} replaces the
+     *  vertex-derived hub entirely (maid doll previews, see
+     *  {@link #entityHitboxHub}). */
+    private static ModelBounds entityProbeBoundsFromVertices(Vector3f hubOverride) {
         return new ModelBounds(
-                new Vector3f(median(FIXED_CONTEXT_PROBE.vx),
-                        median(FIXED_CONTEXT_PROBE.vy),
-                        median(FIXED_CONTEXT_PROBE.vz)),
+                new Vector3f((FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
+                        (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
+                        (FIXED_CONTEXT_PROBE.minZ + FIXED_CONTEXT_PROBE.maxZ) * 0.5F),
+                hubOverride != null ? hubOverride : entityProbeHub(),
                 Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
                         Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
                                 FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
+    }
+
+    /** The drag hub for an entity probe: reconstructed cube mass centre, or
+     *  the per-axis median when the stream yields no box (exotic renderers
+     *  keep the pre-2026-11-21 pivot behaviour). */
+    private static Vector3f entityProbeHub() {
+        Vector3f hub = volumeWeightedCubeCenter();
+        return hub != null ? hub
+                : new Vector3f(median(FIXED_CONTEXT_PROBE.vx),
+                        median(FIXED_CONTEXT_PROBE.vy),
+                        median(FIXED_CONTEXT_PROBE.vz));
+    }
+
+    /** Relative shape tolerance for the cube reconstruction below: corner
+     *  sets from one transformed cube agree far tighter than this, while
+     *  vertices of different cubes differ by whole cube sizes. */
+    private static final float CUBE_SHAPE_TOL = 0.02F;
+
+    /** Volume-weighted centroid of the cubes reconstructed from the raw
+     *  vertex stream (2026-11-21, Alex's Mobs entity previews): cube volume
+     *  resists both known pivot failure modes at once — detail cubes (dense
+     *  head zones) and thin appendages (long tails) weigh little, the torso
+     *  dominates. The stream carries no cube identity, so cubes are rebuilt
+     *  structurally: 4 consecutive samples form one quad, six consecutive
+     *  quads whose 8 distinct corners share one circumsphere and pass the
+     *  additive edge test below form one rectangular box (any orientation —
+     *  bones rest-rotate and animate; corners dedupe exactly, which holds
+     *  for vanilla/GeckoLib/Citadel cube emission). Lone quads (shadow
+     *  planes, held items) and exotic geometry never complete a box and are
+     *  skipped; {@code null} when no box is found so the caller can fall
+     *  back to the per-axis median. */
+    private static Vector3f volumeWeightedCubeCenter() {
+        int quads = FIXED_CONTEXT_PROBE.vx.size() / 4;
+        if (quads < 6) {
+            return null;
+        }
+        float[] px = FIXED_CONTEXT_PROBE.vx.elements();
+        float[] py = FIXED_CONTEXT_PROBE.vy.elements();
+        float[] pz = FIXED_CONTEXT_PROBE.vz.elements();
+        double accX = 0.0D;
+        double accY = 0.0D;
+        double accZ = 0.0D;
+        double accVol = 0.0D;
+        int cubes = 0;
+        int q = 0;
+        while (q + 6 <= quads) {
+            float[] box = rectangularBoxCenterAndVolume(px, py, pz, q * 4);
+            if (box != null) {
+                accX += (double) box[0] * box[3];
+                accY += (double) box[1] * box[3];
+                accZ += (double) box[2] * box[3];
+                accVol += box[3];
+                cubes++;
+                q += 6;
+            } else {
+                // resync one quad: lone quads and partial windows realign on
+                // the next cube boundary
+                q++;
+            }
+        }
+        if (cubes == 0 || accVol <= 0.0D) {
+            return null;
+        }
+        return new Vector3f((float) (accX / accVol), (float) (accY / accVol),
+                (float) (accZ / accVol));
+    }
+
+    /** Centre + volume ({@code x, y, z, volume}) of one rectangular box
+     *  spanning the 6 consecutive quads starting at sample index
+     *  {@code start}, or {@code null} when those 24 samples are not a box:
+     *  wrong unique-corner count, corners off the circumsphere, edges not
+     *  additive, or degenerate extent. All checks are shape tests (rotation
+     *  and uniform scale invariant), never position tests. */
+    private static float[] rectangularBoxCenterAndVolume(float[] px, float[] py, float[] pz,
+                                                         int start) {
+        // exact-corner dedupe (shared corners are emitted bitwise-identical)
+        float[] ux = new float[8];
+        float[] uy = new float[8];
+        float[] uz = new float[8];
+        int n = 0;
+        for (int i = 0; i < 24; i++) {
+            float x = px[start + i];
+            float y = py[start + i];
+            float z = pz[start + i];
+            int j = 0;
+            while (j < n && (ux[j] != x || uy[j] != y || uz[j] != z)) {
+                j++;
+            }
+            if (j == n) {
+                if (n == 8) {
+                    return null;
+                }
+                ux[n] = x;
+                uy[n] = y;
+                uz[n] = z;
+                n++;
+            }
+        }
+        if (n != 8) {
+            return null;
+        }
+        float cx = 0.0F;
+        float cy = 0.0F;
+        float cz = 0.0F;
+        for (int i = 0; i < 8; i++) {
+            cx += ux[i];
+            cy += uy[i];
+            cz += uz[i];
+        }
+        cx *= 0.125F;
+        cy *= 0.125F;
+        cz *= 0.125F;
+        // circumsphere: all corners equidistant from the centroid (forces
+        // pairwise-orthogonal edges for a parallelepiped)
+        float rMaxSq = 0.0F;
+        float rMinSq = Float.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            float d = distSq(ux[i] - cx, uy[i] - cy, uz[i] - cz);
+            rMaxSq = Math.max(rMaxSq, d);
+            rMinSq = Math.min(rMinSq, d);
+        }
+        if (rMinSq <= 1.0e-12F) {
+            return null;
+        }
+        if ((float) Math.sqrt(rMaxSq) - (float) Math.sqrt(rMinSq)
+                > CUBE_SHAPE_TOL * (float) Math.sqrt(rMaxSq)) {
+            return null;
+        }
+        // body diagonal: p0 and its antipode; the 6 remaining points give the
+        // candidate edge/sum vectors from p0
+        int pm = -1;
+        float bestSq = -1.0F;
+        for (int i = 1; i < 8; i++) {
+            float d = distSq(ux[i] - ux[0], uy[i] - uy[0], uz[i] - uz[0]);
+            if (d > bestSq) {
+                bestSq = d;
+                pm = i;
+            }
+        }
+        if (bestSq <= 1.0e-12F) {
+            return null;
+        }
+        float ax = 2.0F * cx - ux[0];
+        float ay = 2.0F * cy - uy[0];
+        float az = 2.0F * cz - uz[0];
+        if (distSq(ux[pm] - ax, uy[pm] - ay, uz[pm] - az) > CUBE_SHAPE_TOL * CUBE_SHAPE_TOL * bestSq) {
+            return null;
+        }
+        float[] vx = new float[6];
+        float[] vy = new float[6];
+        float[] vz = new float[6];
+        float[] vl = new float[6];
+        int m = 0;
+        for (int i = 1; i < 8; i++) {
+            if (i == pm) {
+                continue;
+            }
+            vx[m] = ux[i] - ux[0];
+            vy[m] = uy[i] - uy[0];
+            vz[m] = uz[i] - uz[0];
+            vl[m] = (float) Math.sqrt(distSq(vx[m], vy[m], vz[m]));
+            m++;
+        }
+        // insertion sort by length (6 elements)
+        for (int i = 1; i < 6; i++) {
+            float l = vl[i];
+            float x = vx[i];
+            float y = vy[i];
+            float z = vz[i];
+            int j = i - 1;
+            while (j >= 0 && vl[j] > l) {
+                vl[j + 1] = vl[j];
+                vx[j + 1] = vx[j];
+                vy[j + 1] = vy[j];
+                vz[j + 1] = vz[j];
+                j--;
+            }
+            vl[j + 1] = l;
+            vx[j + 1] = x;
+            vy[j + 1] = y;
+            vz[j + 1] = z;
+        }
+        if (vl[0] <= 1.0e-5F || vl[1] <= 1.0e-5F) {
+            return null;
+        }
+        // u1, u2 = the two shortest; u1+u2 is present among the remaining
+        // four; the third edge is the shortest of the last three (edge sums
+        // of orthogonal edges are strictly longer than their summands)
+        float sumTol = CUBE_SHAPE_TOL * (vl[0] + vl[1]);
+        int sumIdx = -1;
+        float sX = vx[0] + vx[1];
+        float sY = vy[0] + vy[1];
+        float sZ = vz[0] + vz[1];
+        for (int i = 2; i < 6; i++) {
+            if (Math.abs(vx[i] - sX) <= sumTol && Math.abs(vy[i] - sY) <= sumTol
+                    && Math.abs(vz[i] - sZ) <= sumTol) {
+                sumIdx = i;
+                break;
+            }
+        }
+        if (sumIdx < 0) {
+            return null;
+        }
+        int u3 = -1;
+        for (int i = 2; i < 6; i++) {
+            if (i == sumIdx) {
+                continue;
+            }
+            if (u3 < 0 || vl[i] < vl[u3]) {
+                u3 = i;
+            }
+        }
+        if (u3 < 0 || vl[u3] <= 1.0e-5F) {
+            return null;
+        }
+        // the two leftovers must be u1+u3 and u2+u3
+        float[] sumsX = {vx[0] + vx[u3], vx[1] + vx[u3]};
+        float[] sumsY = {vy[0] + vy[u3], vy[1] + vy[u3]};
+        float[] sumsZ = {vz[0] + vz[u3], vz[1] + vz[u3]};
+        float sumTol3 = CUBE_SHAPE_TOL * (vl[0] + vl[u3] + vl[1]);
+        boolean[] hit = new boolean[2];
+        for (int i = 2; i < 6; i++) {
+            if (i == sumIdx || i == u3) {
+                continue;
+            }
+            for (int s = 0; s < 2; s++) {
+                if (!hit[s] && Math.abs(vx[i] - sumsX[s]) <= sumTol3
+                        && Math.abs(vy[i] - sumsY[s]) <= sumTol3
+                        && Math.abs(vz[i] - sumsZ[s]) <= sumTol3) {
+                    hit[s] = true;
+                }
+            }
+        }
+        if (!hit[0] || !hit[1]) {
+            return null;
+        }
+        // orthogonality (implied by the circumsphere test; checked again as
+        // the volume formula's premise)
+        if (Math.abs(vx[0] * vx[1] + vy[0] * vy[1] + vz[0] * vz[1])
+                > CUBE_SHAPE_TOL * vl[0] * vl[1]
+                || Math.abs(vx[0] * vx[u3] + vy[0] * vy[u3] + vz[0] * vz[u3])
+                        > CUBE_SHAPE_TOL * vl[0] * vl[u3]
+                || Math.abs(vx[1] * vx[u3] + vy[1] * vy[u3] + vz[1] * vz[u3])
+                        > CUBE_SHAPE_TOL * vl[1] * vl[u3]) {
+            return null;
+        }
+        float vol = Math.abs(
+                vx[0] * (vy[1] * vz[u3] - vz[1] * vy[u3])
+                        + vy[0] * (vz[1] * vx[u3] - vx[1] * vz[u3])
+                        + vz[0] * (vx[1] * vy[u3] - vy[1] * vx[u3]));
+        if (vol <= 1.0e-7F) {
+            return null;
+        }
+        return new float[] {cx, cy, cz, vol};
+    }
+
+    private static float distSq(float dx, float dy, float dz) {
+        return dx * dx + dy * dy + dz * dz;
     }
 
     /** One uncached probe of an entity's rendered geometry (block units):
      *  entity renderers emit through the same VertexConsumer funnel as item
      *  renderers, so the recorder catches the real draw. */
     private static ModelBounds probeEntityBounds(Entity entity) {
+        return probeEntityBounds(entity, null);
+    }
+
+    /** Hub-override variant: {@code hubOverride} (preview space — the parked
+     *  entity's feet sit at the origin) replaces the vertex-derived drag hub
+     *  for model families whose rendered geometry lies about the body centre,
+     *  e.g. the TLM posé dolls (see {@link #entityHitboxHub}). */
+    private static ModelBounds probeEntityBounds(Entity entity, Vector3f hubOverride) {
         FIXED_CONTEXT_PROBE.reset();
         boolean rendered = true;
         try {
@@ -2162,7 +2467,19 @@ public final class AnimRenderOps {
             LOGGER.warn("Entity preview size probe failed; keeping the raw preview scale", t);
             rendered = false;
         }
-        return rendered && FIXED_CONTEXT_PROBE.any ? probeBoundsFromVertices() : NO_BOUNDS;
+        return rendered && FIXED_CONTEXT_PROBE.any
+                ? entityProbeBoundsFromVertices(hubOverride) : NO_BOUNDS;
+    }
+
+    /** Drag hub pinned to the entity's collision-box cube centre (preview
+     *  space: the dispatcher renders the parked entity with its feet at the
+     *  origin, so the box centre is x/z=0, y=height/2). The TLM maid previews
+     *  use this (2026-11-21 maintainer call): every maid shares one humanoid
+     *  hitbox, and the posé dolls' vertex clouds — dense hair/hat cubes,
+     *  skirt volume — drag both the reconstructed-cube hub and its median
+     *  fallback off the body. */
+    private static Vector3f entityHitboxHub(Entity entity) {
+        return new Vector3f(0.0F, entity.getBbHeight() * 0.5F, 0.0F);
     }
 
     /** The vehicle icon texture for a Superb Warfare EntityType id, or null
@@ -2216,10 +2533,14 @@ public final class AnimRenderOps {
      *  #fixedContextBounds}): oversized guns shrink to the preview square via
      *  {@link #fitScaleFor} and rotate around their rendered centre, exactly
      *  like the vanilla and TACZ branches. A renderer failure degrades to the
-     *  2D icon. Package-private: the SBW gun preview strategy's 3D body, and
-     *  the generic custom-renderer branch of renderItem2D. */
+     *  2D icon. {@code restPose} is an optional model-space pose applied under
+     *  the drag quaternion (per-mod rest orientations, e.g. the Sophisticated
+     *  Backpacks pocket-face flip; null = none). Package-private: the SBW gun
+     *  and SBP shell preview strategies' 3D body, and the generic
+     *  custom-renderer branch of renderItem2D. */
     static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
-                                                  float cx, float cy, Quat rotation, float scale) {
+                                                  float cx, float cy, Quat rotation, float scale,
+                                                  Quaternionf restPose) {
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         ModelBounds bounds = fixedContextBounds(item, model);
         float fitScale = fitScaleFor(bounds.span(), scale);
@@ -2233,6 +2554,13 @@ public final class AnimRenderOps {
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        if (restPose != null) {
+            // Optional rest pose (see the shell strategy): conjugated UNDER
+            // the drag quat (model space) so dragging keeps rotating around
+            // the screen axes; envelope centres are symmetric under it, so
+            // fit and centring are untouched.
+            pose.mulPose(restPose);
+        }
         Lighting.setupForEntityInInventory();
         pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
@@ -2277,11 +2605,23 @@ public final class AnimRenderOps {
     private static final class FixedContextProbe implements MultiBufferSource, VertexConsumer {
         private float minX, minY, minZ, maxX, maxY, maxZ;
         private boolean any;
-        /** Raw vertex cloud for the pivot median (see
-         *  {@link #probeBoundsFromVertices}); transient, one probe render. */
+        /** Raw vertex cloud for the drag hub (cube reconstruction, see
+         *  {@link #entityProbeHub}); transient, one probe render. */
         private final FloatArrayList vx = new FloatArrayList();
         private final FloatArrayList vy = new FloatArrayList();
         private final FloatArrayList vz = new FloatArrayList();
+
+        /** Sibling view of a primary probe (see {@link #getBuffer}): every
+         *  record routes into the primary's shared cloud. */
+        private final FixedContextProbe shared;
+
+        private FixedContextProbe() {
+            this.shared = null;
+        }
+
+        private FixedContextProbe(FixedContextProbe shared) {
+            this.shared = shared;
+        }
 
         void reset() {
             minX = minY = minZ = Float.MAX_VALUE;
@@ -2292,13 +2632,25 @@ public final class AnimRenderOps {
             vz.clear();
         }
 
+        /** Distinct consumer per getBuffer call: VertexMultiConsumer
+         *  compositing (the held-item glint path — cataclysm the_harbinger,
+         *  2026-11-21) throws "Duplicate delegates" when both delegates are
+         *  the same instance, which killed the whole probe. Every view
+         *  records into this primary's shared cloud, so the measured
+         *  geometry is unchanged. */
         @Override
         public VertexConsumer getBuffer(RenderType renderType) {
-            return this;
+            if (shared != null) {
+                return shared.getBuffer(renderType);
+            }
+            return new FixedContextProbe(this);
         }
 
         @Override
         public VertexConsumer addVertex(float x, float y, float z) {
+            if (shared != null) {
+                return shared.addVertex(x, y, z);
+            }
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             minZ = Math.min(minZ, z);
@@ -2369,7 +2721,7 @@ public final class AnimRenderOps {
         }
         ModelBounds bounds = NO_BOUNDS;
         if (rendered && FIXED_CONTEXT_PROBE.any) {
-            bounds = new ModelBounds(
+            bounds = ModelBounds.of(
                     new Vector3f(
                             (FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
                             (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
@@ -2398,8 +2750,18 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        // Mirror-conjugated drag (negate the quat's x/z components) to pair
+        // with the cancelling flip below: without it every drag would spin
+        // the gun inverted relative to every other preview item.
+        SCRATCH_QUAT.set(-rotation.x(), rotation.y(), -rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        // Cancel the GUI y-flip for the bedrock mesh. Vanilla-baked item quads
+        // and entity models arrive pre-flipped for the GUI convention, but
+        // TACZ's bedrock gun content does not — the outer flip alone rendered
+        // the vertical mirror of TACZ's item-frame pose (grip up, 2026-11-21
+        // report). With the flip pair the net image is exactly the walk's own
+        // result: grip down, item-frame orientation.
+        pose.scale(1.0F, -1.0F, 1.0F);
         // TACZ lays the gun out per display context with a "positioning node"
         // bone inside the bedrock model: GunItemRendererWrapper's
         // applyPositioningNodeTransform walks that bone path (leaf -> root)
@@ -2485,7 +2847,7 @@ public final class AnimRenderOps {
     private static ModelBounds gunBounds(BedrockGunModel model) {
         Vector3f cached = GUN_MODEL_CENTERS.get(model);
         if (cached instanceof Vector3f) {
-            return new ModelBounds(cached, GUN_MODEL_SPANS.getOrDefault(model, 1.0F));
+            return ModelBounds.of(cached, GUN_MODEL_SPANS.getOrDefault(model, 1.0F));
         }
         float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
@@ -2497,7 +2859,7 @@ public final class AnimRenderOps {
         if (min[0] == Float.MAX_VALUE) {
             bounds = NO_BOUNDS;
         } else {
-            bounds = new ModelBounds(
+            bounds = ModelBounds.of(
                     new Vector3f((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2),
                     Math.max(max[0] - min[0], Math.max(max[1] - min[1], max[2] - min[2])));
         }
@@ -2596,7 +2958,9 @@ public final class AnimRenderOps {
      *  shader packs intercept/ignore custom GUI 3D paths, so 3D previews
      *  degrade to 2D for correctness (probabilities/gameplay unaffected).
      *  Modern UI is intentionally excluded — see supports3D(). */
-    private static boolean isShaderModActive() {
+    /** Package-private: the SBP shell strategy's 2D pass mirrors the generic
+     *  custom-renderer guard (shader packs keep the flat icon). */
+    static boolean isShaderModActive() {
         return ModList.get().isLoaded("iris") || ModList.get().isLoaded("oculus");
     }
 
@@ -3094,7 +3458,10 @@ public final class AnimRenderOps {
     }
 
     /** Bounds of a maid model, cached per model id (sizes vary wildly between
-     *  model packs). The maid must already carry the model id when probing. */
+     *  model packs). The maid must already carry the model id when probing.
+     *  The drag hub is pinned to the maid's collision-box cube centre (see
+     *  {@link #entityHitboxHub}) — posé doll geometry pulls the vertex-derived
+     *  hub off the body; the framing centre stays the envelope centre. */
     private static ModelBounds maidPreviewBounds(String pick, Entity maid) {
         Object cached = MAID_PREVIEW_BOUNDS.get(pick);
         if (cached instanceof ModelBounds bounds) {
@@ -3103,7 +3470,7 @@ public final class AnimRenderOps {
         if (cached == NO_BOUNDS) {
             return NO_BOUNDS;
         }
-        ModelBounds bounds = probeEntityBounds(maid);
+        ModelBounds bounds = probeEntityBounds(maid, entityHitboxHub(maid));
         MAID_PREVIEW_BOUNDS.put(pick, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
         if (MAID_PREVIEW_LOG.add(pick)) {
             LOGGER.info("[csgobox] maid preview: model={} span={}",

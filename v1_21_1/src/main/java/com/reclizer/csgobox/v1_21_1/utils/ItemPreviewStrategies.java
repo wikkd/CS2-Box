@@ -5,7 +5,9 @@ import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.resource.GunDisplayInstance;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.fml.ModList;
+import org.joml.Quaternionf;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +44,8 @@ import java.util.Optional;
  *       class references);</li>
  *   <li>Superb Warfare guns (FIXED-context baked render, zero SBW class
  *       references);</li>
+ *   <li>Sophisticated Backpacks shells (FIXED-context baked render with a
+ *       rest yaw showing the pocket face; zero SBP class references);</li>
  *   <li>Vanilla + modded spawn eggs (mob model via SpawnEggItem.getType);</li>
  *   <li>Armor pieces (invisible armor stand proxy);</li>
  *   <li>Generic summon containers ({@code minecraft:block_entity_data}
@@ -73,6 +78,7 @@ final class ItemPreviewStrategies {
             new TlmChairStrategy(),
             new SbwVehicleStrategy(),
             new SbwGunStrategy(),
+            new SbpShellStrategy(),
             new SpawnEggStrategy(),
             new ArmorStandStrategy(),
             new EntityContainerStrategy(),
@@ -304,12 +310,65 @@ final class ItemPreviewStrategies {
         @Override
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
-            AnimRenderOps.renderFixedContextModel3D(gg, stack, player, cx, cy, rotation, scale);
+            AnimRenderOps.renderFixedContextModel3D(gg, stack, player, cx, cy, rotation, scale, null);
         }
 
         @Override
         public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
                                 float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Sophisticated Backpacks (精妙背包) shells: the mod's parent-less model
+     *  JSON declares its own fixed display with rotation [0,0,0] — overriding
+     *  vanilla block/block's [0,180,0] — so the FIXED context (item frames and
+     *  this preview alike) presents the strap face (strap side = +z in the
+     *  base geometry). This strategy hands {@link AnimRenderOps
+     *  #renderFixedContextModel3D} a rest yaw so the shell shows its pocket
+     *  face at rest, matching the gui perspective's front view; the yaw is
+     *  conjugated under the drag quaternion (model space) so dragging keeps
+     *  rotating around the screen axes, and the envelope centre is symmetric
+     *  under the yaw, so fit and centring are untouched. (2026-11-21
+     *  maintainer call.) The stock jar's shell model is a builtin/entity
+     *  BEWLR (BackpackDynamicModel$BackpackBakedModel#isCustomRenderer is the
+     *  sole {@code true}, javap-verified 2026-11-21) — the 2D pass mirrors the
+     *  generic custom-renderer branch (shader guard included) with the same
+     *  rest pose, so grid cells match the 3D preview. */
+    private static final class SbpShellStrategy implements ItemPreviewStrategy {
+
+        /** SBP item namespace: a registered item's namespace proves the mod
+         *  is loaded and no SBP class is ever referenced. Only the backpack
+         *  shells reach this strategy — every upgrade item bakes as a plain
+         *  model and takes the default quads path. */
+        private static final String SOPHISTICATED_BACKPACKS_MOD_ID = "sophisticatedbackpacks";
+
+        /** Rest pose: turn the shell from its strap face (the mod's own fixed
+         *  display) to the pocket face. */
+        private static final Quaternionf FRONT_REST_YAW =
+                new Quaternionf().rotationY((float) Math.PI);
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return !stack.isEmpty() && SOPHISTICATED_BACKPACKS_MOD_ID.equals(
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace());
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderFixedContextModel3D(gg, stack, player, cx, cy, rotation, scale, FRONT_REST_YAW);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            BakedModel model = Minecraft.getInstance().getItemRenderer()
+                    .getModel(stack, entity.level(), entity, 0);
+            if (model.isCustomRenderer() && !AnimRenderOps.isShaderModActive()) {
+                AnimRenderOps.renderFixedContextModel3D(gg, stack, entity, x, y, Quat.IDENTITY, scale, FRONT_REST_YAW);
+                return true;
+            }
             return false;
         }
     }

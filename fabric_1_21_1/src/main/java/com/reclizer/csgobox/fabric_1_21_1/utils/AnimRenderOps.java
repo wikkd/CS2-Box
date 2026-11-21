@@ -46,7 +46,6 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -69,7 +68,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -85,7 +83,8 @@ public final class AnimRenderOps {
      *  every TACZ class reference below must be reachable only after a
      *  FabricLoader gate, or clients without the mod crash with
      *  NoClassDefFoundError (see the 2.0.1 TerminalScreen rendering crash). */
-    private static final String TACZ_MOD_ID = "tacz";
+    /** Package-private so the TACZ preview strategy gates on the same id. */
+    static final String TACZ_MOD_ID = "tacz";
     /** Superb Warfare (卓越前线, Superb Warfare ReFabricated on this platform)
      *  item namespace. Unlike TACZ no loader gate is needed: the 3D branch
      *  only matches a registered item's namespace, and such an item cannot
@@ -122,7 +121,18 @@ public final class AnimRenderOps {
      *  space) of each baked item model's geometry. Models are stable
      *  instances owned by the model manager and are replaced on resource
      *  reload, so a WeakHashMap lets old models go. */
-    private record ModelBounds(Vector3f center, float span) {
+    /** Framing centre + drag hub + largest-axis span. Entity previews keep
+     *  the two pivots separate (2026-11-21, Alex's Mobs): the framing centre
+     *  is the envelope-box centre so the model sits symmetric in the preview
+     *  square, while the drag hub is the reconstructed cube mass centre — a
+     *  single point cannot serve both (the median hub sat up to ~22% of the
+     *  span off the envelope centre and clipped the far side; the envelope
+     *  hub rotated around thin appendages instead of the body). Paths that
+     *  never pivot separately pass the centre as the hub via {@link #of}. */
+    private record ModelBounds(Vector3f center, Vector3f hub, float span) {
+        private static ModelBounds of(Vector3f center, float span) {
+            return new ModelBounds(center, center, span);
+        }
     }
 
     private static final Map<BakedModel, Object> ITEM_MODEL_BOUNDS = new WeakHashMap<>();
@@ -239,59 +249,20 @@ public final class AnimRenderOps {
         }
     }
 
-    /** 2D item icon centred at (x, y), scaled (16px per block unit). */
+    /** 2D item icon centred at (x, y), scaled (16px per block unit).
+     *  Mod-specific overrides are ordered strategies in
+     *  {@link ItemPreviewStrategies}; unmatched items take the flat icon —
+     *  this platform's 2D pass has no custom-renderer reroute, so
+     *  builtin/entity items keep the flat grid cell. */
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
-        // TACZ guns: without a loaded display instance the BEWLR paints the
-        // missing-texture slot icon (a magenta checkerboard across the card) —
-        // skip the draw so the card frame alone shows until the display is
-        // available. With one loaded, degrade to the inventory-style flat
-        // slot icon (2026-11-20 preview-page report): the fitted
-        // identity-rotation gun model reads as a tiny muzzle-up stick at cell
-        // scale, while the flat icon is exactly what vanilla inventories
-        // show. The flat body below draws it — the TACZ branch just falls
-        // through. The real 3D model stays on the 3D drag preview
-        // (renderItem3D), which renders it with a proper rotation. The
-        // isModLoaded gate keeps instanceof IGun from ever executing (and
-        // thus from class-loading TACZ) when the optional dependency is
-        // absent.
-        if (FabricLoader.getInstance().isModLoaded(TACZ_MOD_ID) && stack.getItem() instanceof IGun) {
-            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(stack);
-            if (display.isEmpty()) {
-                return;
-            }
-            if (display.get().getGunModel() == null) {
+        // Mod-specific overrides first: the first matching strategy owns the
+        // cell (TACZ suppress while a display is loading, else the flat icon).
+        for (ItemPreviewStrategies.ItemPreviewStrategy strategy : ItemPreviewStrategies.ALL) {
+            if (strategy.matches(stack) && strategy.render2D(entity, gg, stack, x, y, scale)) {
                 return;
             }
         }
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
-        PoseStack pose = gg.pose();
-        pose.pushPose();
-        pose.translate(x, y, 2F);
-        pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
-        // Depth restored (v1_21_1 renderItem2DFlat carries the full note): a
-        // Z scale of 0 collapsed every face onto one depth plane, so hollow
-        // open-front models baked their backplate over the front shelving.
-        // Z=1 keeps a thin slab around the z=2 layer — card fills (z=0) stay
-        // under the icon, big 3D previews (z=100+) stay over it.
-        pose.scale(1.0F, -1.0F, 1F);
-        pose.scale(16.0F * scale, 16.0F * scale, 1F);
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        boolean flat = !model.usesBlockLight();
-        if (flat) Lighting.setupForFlatItems();
-        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.mul(pose.last().pose());
-        RenderSystem.applyModelViewMatrix();
-        PoseStack renderStack = REUSABLE_POSE_STACK;
-        renderStack.setIdentity();
-        Minecraft.getInstance().getItemRenderer().render(stack, ItemDisplayContext.GUI, false,
-                renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, model);
-        bufferSource.endBatch();
-        RenderSystem.enableDepthTest();
-        if (flat) Lighting.setupFor3DItems();
-        pose.popPose();
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
+        renderItem2DFlat(entity, gg, stack, x, y, scale);
     }
 
     /** 3D rotating item preview (drag-to-rotate). The raw quaternion from
@@ -308,63 +279,17 @@ public final class AnimRenderOps {
             renderItem2D(player, gg, item, cx, cy, scale);
             return;
         }
-        // Optional-dependency gate: without it the instanceof below would
-        // class-load TACZ and crash clients that don't have it installed.
-        if (FabricLoader.getInstance().isModLoaded(TACZ_MOD_ID)
-                && item.getItem() instanceof IGun) {
-            Optional<GunDisplayInstance> display = TimelessAPI.getGunDisplay(item);
-            // No loaded display -> nothing to draw (TACZ would fall back to the
-            // missing-texture slot icon, painting a magenta checkerboard).
-            if (display.isEmpty()) {
+        // Mod-specific previews: the first matching strategy owns the item
+        // (TACZ gun model, SBW FIXED-context gun, SBP shell rest pose, spawn
+        // eggs, armor stands, summon containers). Unmatched items fall
+        // through to the vanilla baked-model path below; see
+        // ItemPreviewStrategies for the chain and the TACZ class-loading
+        // gate discipline.
+        for (ItemPreviewStrategies.ItemPreviewStrategy strategy : ItemPreviewStrategies.ALL) {
+            if (strategy.matches(item)) {
+                strategy.render3D(gg, item, player, cx, cy, rotation, scale);
                 return;
             }
-            BedrockGunModel gunModel = display.get().getGunModel();
-            if (gunModel == null) {
-                return;
-            }
-            renderGunModel3D(gg, item, cx, cy, rotation, scale, gunModel, display.get());
-            return;
-        }
-        // Superb Warfare keeps its 3D gun model out of the GUI perspective
-        // (separate-transforms routes gui -> flat icon); every other context
-        // renders the real model — exactly what an item frame shows. See
-        // renderFixedContextModel3D.
-        if (isSuperbWarfareItem(item)) {
-            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale);
-            return;
-        }
-        // Vanilla + modded spawn eggs: the egg's mob model via the shared
-        // entity preview path (the egg's entity_data variant is re-applied
-        // every frame, so sheep colours / villager professions render like
-        // the spawned mob).
-        if (item.getItem() instanceof SpawnEggItem) {
-            EntityType<?> eggType = null;
-            try {
-                eggType = ((SpawnEggItem) item.getItem()).getType(item);
-            } catch (Throwable t) {
-                eggType = null;
-            }
-            if (eggType != null) {
-                renderEntityPreviewForType(gg, item, player, cx, cy, rotation, scale, eggType, entityDataOf(item));
-                return;
-            }
-        }
-        // Armor pieces: humanoid slots on the shared armor stand — the worn
-        // model lives in the humanoid armor layers, never in the GUI item
-        // model; pieces whose mod registers no armor-stand layer render
-        // nothing and degrade via the empty probe.
-        if (item.getItem() instanceof ArmorItem) {
-            renderArmorStandPreview(gg, item, player, cx, cy, rotation, scale);
-            return;
-        }
-        // Generic summon-container convention: any item whose
-        // minecraft:block_entity_data carries a resolvable EntityType string
-        // (the SBW summon-crate shape, also matched for addon mods in their
-        // own namespaces — SBW's own tuned crate preview stays above).
-        EntityType<?> summon = summonContainerEntityType(item);
-        if (summon != null) {
-            renderEntityPreviewForType(gg, item, player, cx, cy, rotation, scale, summon, null);
-            return;
         }
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         // Custom renderers (builtin/entity BEWLR items — vanilla shield,
@@ -374,7 +299,7 @@ public final class AnimRenderOps {
         // probe-based auto-fit and centring apply to whatever the BEWLR
         // draws.
         if (model.isCustomRenderer()) {
-            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale);
+            renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale, null);
             return;
         }
         // Block-backed flat sprites (mod food plates and the like): the item
@@ -605,7 +530,7 @@ public final class AnimRenderOps {
 
     /** Sentinel bounds for models without usable geometry (custom renderers
      *  or degenerate quads): unit span keeps the caller's scale untouched. */
-    private static final ModelBounds NO_BOUNDS = new ModelBounds(new Vector3f(), 1.0F);
+    private static final ModelBounds NO_BOUNDS = ModelBounds.of(new Vector3f(), 1.0F);
 
     /** The exact model matrix {@code ItemRenderer.render} applies for the GUI
      *  context: the model's gui {@link ItemTransform} (translate(translation)
@@ -706,7 +631,7 @@ public final class AnimRenderOps {
         Vector3f center = new Vector3f((rMinX + rMaxX) * 0.5F,
                 (rMinY + rMaxY) * 0.5F, (rMinZ + rMaxZ) * 0.5F);
         renderer.transformPosition(center);
-        ModelBounds bounds = new ModelBounds(center,
+        ModelBounds bounds = ModelBounds.of(center,
                 Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ)));
         ITEM_MODEL_BOUNDS.put(model, bounds);
         return bounds;
@@ -738,8 +663,9 @@ public final class AnimRenderOps {
 
     /** True for any Superb Warfare (卓越前线) item. The namespace check alone
      *  proves the optional mod is loaded, and no Superb Warfare class is
-     *  touched, so unlike the TACZ gate there is nothing to gate against. */
-    private static boolean isSuperbWarfareItem(ItemStack stack) {
+     *  touched, so unlike the TACZ gate there is nothing to gate against.
+     *  Package-private: the SBW gun preview strategy gates on it. */
+    static boolean isSuperbWarfareItem(ItemStack stack) {
         return !stack.isEmpty() && SUPERB_WARFARE_MOD_ID.equals(
                 BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace());
     }
@@ -755,12 +681,17 @@ public final class AnimRenderOps {
      *  #fixedContextBounds}): oversized guns shrink to the preview square via
      *  {@link #fitScaleFor} and rotate around their rendered centre, exactly
      *  like the vanilla and TACZ branches. A renderer failure degrades to the
-     *  2D icon.
+     *  2D icon. {@code restPose} is an optional model-space pose applied under
+     *  the drag quaternion (per-mod rest orientations, e.g. the Sophisticated
+     *  Backpacks pocket-face flip; null = none).
      *  The ReFabricated port's model wiring is not separately verified: for
      *  plain (non-separate-transforms) items FIXED renders like GUI, so the
-     *  worst case on that build is the unchanged flat-icon look. */
-    private static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
-                                                  int cx, int cy, Quat rotation, float scale) {
+     *  worst case on that build is the unchanged flat-icon look.
+     *  Package-private: the SBW gun and SBP shell preview strategies' 3D
+     *  body, and the generic custom-renderer branch of renderItem3D. */
+    static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                          int cx, int cy, Quat rotation, float scale,
+                                          Quaternionf restPose) {
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         ModelBounds bounds = fixedContextBounds(item, model);
         float fitScale = fitScaleFor(bounds.span(), scale);
@@ -774,6 +705,13 @@ public final class AnimRenderOps {
         pose.scale(1.0F, -1.0F, 1.0F);
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        if (restPose != null) {
+            // Optional rest pose (see the shell strategy): conjugated UNDER
+            // the drag quat (model space) so dragging keeps rotating around
+            // the screen axes; envelope centres are symmetric under it, so
+            // fit and centring are untouched.
+            pose.mulPose(restPose);
+        }
         Lighting.setupForEntityInInventory();
         pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
         // Rotate around the model's geometric centre, not the model origin:
@@ -816,26 +754,61 @@ public final class AnimRenderOps {
     private static final class FixedContextProbe implements MultiBufferSource, VertexConsumer {
         private float minX, minY, minZ, maxX, maxY, maxZ;
         private boolean any;
+        /** Raw vertex cloud for the drag hub (cube reconstruction, see
+         *  {@link #entityProbeHub}); transient, one probe render. */
+        private final FloatArrayList vx = new FloatArrayList();
+        private final FloatArrayList vy = new FloatArrayList();
+        private final FloatArrayList vz = new FloatArrayList();
+
+        /** Sibling view of a primary probe (see {@link #getBuffer}): every
+         *  record routes into the primary's shared cloud. */
+        private final FixedContextProbe shared;
+
+        private FixedContextProbe() {
+            this.shared = null;
+        }
+
+        private FixedContextProbe(FixedContextProbe shared) {
+            this.shared = shared;
+        }
 
         void reset() {
             minX = minY = minZ = Float.MAX_VALUE;
             maxX = maxY = maxZ = -Float.MAX_VALUE;
             any = false;
+            vx.clear();
+            vy.clear();
+            vz.clear();
         }
 
+        /** Distinct consumer per getBuffer call: VertexMultiConsumer
+         *  compositing (the held-item glint path — cataclysm the_harbinger,
+         *  2026-11-21) throws "Duplicate delegates" when both delegates are
+         *  the same instance, which killed the whole probe. Every view
+         *  records into this primary's shared cloud, so the measured
+         *  geometry is unchanged. */
         @Override
         public VertexConsumer getBuffer(RenderType renderType) {
-            return this;
+            if (shared != null) {
+                return shared.getBuffer(renderType);
+            }
+            return new FixedContextProbe(this);
         }
 
         @Override
         public VertexConsumer addVertex(float x, float y, float z) {
+            if (shared != null) {
+                return shared.addVertex(x, y, z);
+            }
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             minZ = Math.min(minZ, z);
             maxX = Math.max(maxX, x);
             maxY = Math.max(maxY, y);
             maxZ = Math.max(maxZ, z);
+            vx.add(x);
+            vy.add(y);
+            vz.add(z);
             any = true;
             return this;
         }
@@ -897,7 +870,7 @@ public final class AnimRenderOps {
         }
         ModelBounds bounds = NO_BOUNDS;
         if (rendered && FIXED_CONTEXT_PROBE.any) {
-            bounds = new ModelBounds(
+            bounds = ModelBounds.of(
                     new Vector3f(
                             (FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
                             (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
@@ -913,8 +886,9 @@ public final class AnimRenderOps {
     /** TACZ gun 3D render: same pose convention as the vanilla branch, but
      *  the model is a {@link BedrockGunModel} drawn on an identity stack via
      *  RenderSystem's model-view matrix — the vanilla ItemRenderer path only
-     *  draws the flat slot texture. */
-    private static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
+     *  draws the flat slot texture. Package-private: the TACZ gun preview
+     *  strategy's 3D body. */
+    static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
         // Auto-fit: gun models routinely span 2-3 blocks; shrink so the
@@ -925,8 +899,18 @@ public final class AnimRenderOps {
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
-        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        // Mirror-conjugated drag (negate the quat's x/z components) to pair
+        // with the cancelling flip below: without it every drag would spin
+        // the gun inverted relative to every other preview item.
+        SCRATCH_QUAT.set(-rotation.x(), rotation.y(), -rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
+        // Cancel the GUI y-flip for the bedrock mesh. Vanilla-baked item quads
+        // and entity models arrive pre-flipped for the GUI convention, but
+        // TACZ's bedrock gun content does not — the outer flip alone rendered
+        // the vertical mirror of TACZ's item-frame pose (grip up, 2026-11-21
+        // report). With the flip pair the net image is exactly the walk's own
+        // result: grip down, item-frame orientation.
+        pose.scale(1.0F, -1.0F, 1.0F);
         // TACZ lays the gun out per display context with a "positioning node"
         // bone inside the bedrock model: GunItemRendererWrapper's
         // applyPositioningNodeTransform walks that bone path (leaf -> root)
@@ -1012,7 +996,7 @@ public final class AnimRenderOps {
     private static ModelBounds gunBounds(BedrockGunModel model) {
         Vector3f cached = GUN_MODEL_CENTERS.get(model);
         if (cached instanceof Vector3f) {
-            return new ModelBounds(cached, GUN_MODEL_SPANS.getOrDefault(model, 1.0F));
+            return ModelBounds.of(cached, GUN_MODEL_SPANS.getOrDefault(model, 1.0F));
         }
         float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
@@ -1024,7 +1008,7 @@ public final class AnimRenderOps {
         if (min[0] == Float.MAX_VALUE) {
             bounds = NO_BOUNDS;
         } else {
-            bounds = new ModelBounds(
+            bounds = ModelBounds.of(
                     new Vector3f((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2),
                     Math.max(max[0] - min[0], Math.max(max[1] - min[1], max[2] - min[2])));
         }
@@ -1333,8 +1317,9 @@ public final class AnimRenderOps {
 
     /** Spawn-egg entity data ({@code minecraft:entity_data}); applied onto
      *  the shared preview instance every frame so variants (sheep colour,
-     *  villager profession) render like the spawned mob. */
-    private static CustomData entityDataOf(ItemStack stack) {
+     *  villager profession) render like the spawned mob. Package-private:
+     *  the spawn-egg preview strategy's payload fetch. */
+    static CustomData entityDataOf(ItemStack stack) {
         try {
             return stack.getOrDefault(DataComponents.ENTITY_DATA, CustomData.EMPTY);
         } catch (Throwable t) {
@@ -1449,16 +1434,303 @@ public final class AnimRenderOps {
         }
         ModelBounds bounds = NO_BOUNDS;
         if (rendered && FIXED_CONTEXT_PROBE.any) {
-            bounds = new ModelBounds(
-                    new Vector3f(
-                            (FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
-                            (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
-                            (FIXED_CONTEXT_PROBE.minZ + FIXED_CONTEXT_PROBE.maxZ) * 0.5F),
-                    Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
-                            Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
-                                    FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
+            bounds = entityProbeBoundsFromVertices();
         }
         return bounds;
+    }
+
+    /** Entity-probe bounds from the last probe render: the framing centre is
+     *  the raw envelope-box centre (symmetric margins in the preview square),
+     *  and the drag hub is the volume-weighted cube mass centre via
+     *  {@link #volumeWeightedCubeCenter}, falling back to the per-axis median
+     *  when no cube can be reconstructed. The two pivots are separate because
+     *  one point cannot serve both: the median weights every emitted cube
+     *  equally, so the 5-9 detail cubes of an Alex's Mobs head zone (2026-11-21
+     *  gorilla report; offline rebakes of gorilla/tiger/orca/elephant put the
+     *  median 10-22% of the span off the torso) pulled the pivot onto the
+     *  head, while the envelope centre follows sparse appendages instead
+     *  (2026-11-17 winefox maid: tail and legs dragged it ~19% of the model
+     *  height below the dense body mass). The span stays the AABB largest
+     *  axis for the auto-fit. */
+    private static ModelBounds entityProbeBoundsFromVertices() {
+        return new ModelBounds(
+                new Vector3f((FIXED_CONTEXT_PROBE.minX + FIXED_CONTEXT_PROBE.maxX) * 0.5F,
+                        (FIXED_CONTEXT_PROBE.minY + FIXED_CONTEXT_PROBE.maxY) * 0.5F,
+                        (FIXED_CONTEXT_PROBE.minZ + FIXED_CONTEXT_PROBE.maxZ) * 0.5F),
+                entityProbeHub(),
+                Math.max(FIXED_CONTEXT_PROBE.maxX - FIXED_CONTEXT_PROBE.minX,
+                        Math.max(FIXED_CONTEXT_PROBE.maxY - FIXED_CONTEXT_PROBE.minY,
+                                FIXED_CONTEXT_PROBE.maxZ - FIXED_CONTEXT_PROBE.minZ)));
+    }
+
+    /** The drag hub for an entity probe: reconstructed cube mass centre, or
+     *  the per-axis median when the stream yields no box (exotic renderers
+     *  keep the pre-2026-11-21 pivot behaviour). */
+    private static Vector3f entityProbeHub() {
+        Vector3f hub = volumeWeightedCubeCenter();
+        return hub != null ? hub
+                : new Vector3f(median(FIXED_CONTEXT_PROBE.vx),
+                        median(FIXED_CONTEXT_PROBE.vy),
+                        median(FIXED_CONTEXT_PROBE.vz));
+    }
+
+    /** Per-axis median of a coordinate sample (mean of the two middle values
+     *  on even counts). The fallback drag hub when an entity probe yields no
+     *  reconstructable cube (see {@link #entityProbeHub}); item models use
+     *  the raw envelope-box centre instead (hollow shells drag the median
+     *  onto a wall). */
+    private static float median(FloatArrayList values) {
+        float[] sorted = values.toFloatArray();
+        java.util.Arrays.sort(sorted);
+        int n = sorted.length;
+        return (n & 1) == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) * 0.5F;
+    }
+
+    /** Relative shape tolerance for the cube reconstruction below: corner
+     *  sets from one transformed cube agree far tighter than this, while
+     *  vertices of different cubes differ by whole cube sizes. */
+    private static final float CUBE_SHAPE_TOL = 0.02F;
+
+    /** Volume-weighted centroid of the cubes reconstructed from the raw
+     *  vertex stream (2026-11-21, Alex's Mobs entity previews): cube volume
+     *  resists both known pivot failure modes at once — detail cubes (dense
+     *  head zones) and thin appendages (long tails) weigh little, the torso
+     *  dominates. The stream carries no cube identity, so cubes are rebuilt
+     *  structurally: 4 consecutive samples form one quad, six consecutive
+     *  quads whose 8 distinct corners share one circumsphere and pass the
+     *  additive edge test below form one rectangular box (any orientation —
+     *  bones rest-rotate and animate; corners dedupe exactly, which holds
+     *  for vanilla/GeckoLib/Citadel cube emission). Lone quads (shadow
+     *  planes, held items) and exotic geometry never complete a box and are
+     *  skipped; {@code null} when no box is found so the caller can fall
+     *  back to the per-axis median. */
+    private static Vector3f volumeWeightedCubeCenter() {
+        int quads = FIXED_CONTEXT_PROBE.vx.size() / 4;
+        if (quads < 6) {
+            return null;
+        }
+        float[] px = FIXED_CONTEXT_PROBE.vx.elements();
+        float[] py = FIXED_CONTEXT_PROBE.vy.elements();
+        float[] pz = FIXED_CONTEXT_PROBE.vz.elements();
+        double accX = 0.0D;
+        double accY = 0.0D;
+        double accZ = 0.0D;
+        double accVol = 0.0D;
+        int cubes = 0;
+        int q = 0;
+        while (q + 6 <= quads) {
+            float[] box = rectangularBoxCenterAndVolume(px, py, pz, q * 4);
+            if (box != null) {
+                accX += (double) box[0] * box[3];
+                accY += (double) box[1] * box[3];
+                accZ += (double) box[2] * box[3];
+                accVol += box[3];
+                cubes++;
+                q += 6;
+            } else {
+                // resync one quad: lone quads and partial windows realign on
+                // the next cube boundary
+                q++;
+            }
+        }
+        if (cubes == 0 || accVol <= 0.0D) {
+            return null;
+        }
+        return new Vector3f((float) (accX / accVol), (float) (accY / accVol),
+                (float) (accZ / accVol));
+    }
+
+    /** Centre + volume ({@code x, y, z, volume}) of one rectangular box
+     *  spanning the 6 consecutive quads starting at sample index
+     *  {@code start}, or {@code null} when those 24 samples are not a box:
+     *  wrong unique-corner count, corners off the circumsphere, edges not
+     *  additive, or degenerate extent. All checks are shape tests (rotation
+     *  and uniform scale invariant), never position tests. */
+    private static float[] rectangularBoxCenterAndVolume(float[] px, float[] py, float[] pz,
+                                                         int start) {
+        // exact-corner dedupe (shared corners are emitted bitwise-identical)
+        float[] ux = new float[8];
+        float[] uy = new float[8];
+        float[] uz = new float[8];
+        int n = 0;
+        for (int i = 0; i < 24; i++) {
+            float x = px[start + i];
+            float y = py[start + i];
+            float z = pz[start + i];
+            int j = 0;
+            while (j < n && (ux[j] != x || uy[j] != y || uz[j] != z)) {
+                j++;
+            }
+            if (j == n) {
+                if (n == 8) {
+                    return null;
+                }
+                ux[n] = x;
+                uy[n] = y;
+                uz[n] = z;
+                n++;
+            }
+        }
+        if (n != 8) {
+            return null;
+        }
+        float cx = 0.0F;
+        float cy = 0.0F;
+        float cz = 0.0F;
+        for (int i = 0; i < 8; i++) {
+            cx += ux[i];
+            cy += uy[i];
+            cz += uz[i];
+        }
+        cx *= 0.125F;
+        cy *= 0.125F;
+        cz *= 0.125F;
+        // circumsphere: all corners equidistant from the centroid (forces
+        // pairwise-orthogonal edges for a parallelepiped)
+        float rMaxSq = 0.0F;
+        float rMinSq = Float.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            float d = distSq(ux[i] - cx, uy[i] - cy, uz[i] - cz);
+            rMaxSq = Math.max(rMaxSq, d);
+            rMinSq = Math.min(rMinSq, d);
+        }
+        if (rMinSq <= 1.0e-12F) {
+            return null;
+        }
+        if ((float) Math.sqrt(rMaxSq) - (float) Math.sqrt(rMinSq)
+                > CUBE_SHAPE_TOL * (float) Math.sqrt(rMaxSq)) {
+            return null;
+        }
+        // body diagonal: p0 and its antipode; the 6 remaining points give the
+        // candidate edge/sum vectors from p0
+        int pm = -1;
+        float bestSq = -1.0F;
+        for (int i = 1; i < 8; i++) {
+            float d = distSq(ux[i] - ux[0], uy[i] - uy[0], uz[i] - uz[0]);
+            if (d > bestSq) {
+                bestSq = d;
+                pm = i;
+            }
+        }
+        if (bestSq <= 1.0e-12F) {
+            return null;
+        }
+        float ax = 2.0F * cx - ux[0];
+        float ay = 2.0F * cy - uy[0];
+        float az = 2.0F * cz - uz[0];
+        if (distSq(ux[pm] - ax, uy[pm] - ay, uz[pm] - az) > CUBE_SHAPE_TOL * CUBE_SHAPE_TOL * bestSq) {
+            return null;
+        }
+        float[] vx = new float[6];
+        float[] vy = new float[6];
+        float[] vz = new float[6];
+        float[] vl = new float[6];
+        int m = 0;
+        for (int i = 1; i < 8; i++) {
+            if (i == pm) {
+                continue;
+            }
+            vx[m] = ux[i] - ux[0];
+            vy[m] = uy[i] - uy[0];
+            vz[m] = uz[i] - uz[0];
+            vl[m] = (float) Math.sqrt(distSq(vx[m], vy[m], vz[m]));
+            m++;
+        }
+        // insertion sort by length (6 elements)
+        for (int i = 1; i < 6; i++) {
+            float l = vl[i];
+            float x = vx[i];
+            float y = vy[i];
+            float z = vz[i];
+            int j = i - 1;
+            while (j >= 0 && vl[j] > l) {
+                vl[j + 1] = vl[j];
+                vx[j + 1] = vx[j];
+                vy[j + 1] = vy[j];
+                vz[j + 1] = vz[j];
+                j--;
+            }
+            vl[j + 1] = l;
+            vx[j + 1] = x;
+            vy[j + 1] = y;
+            vz[j + 1] = z;
+        }
+        if (vl[0] <= 1.0e-5F || vl[1] <= 1.0e-5F) {
+            return null;
+        }
+        // u1, u2 = the two shortest; u1+u2 is present among the remaining
+        // four; the third edge is the shortest of the last three (edge sums
+        // of orthogonal edges are strictly longer than their summands)
+        float sumTol = CUBE_SHAPE_TOL * (vl[0] + vl[1]);
+        int sumIdx = -1;
+        float sX = vx[0] + vx[1];
+        float sY = vy[0] + vy[1];
+        float sZ = vz[0] + vz[1];
+        for (int i = 2; i < 6; i++) {
+            if (Math.abs(vx[i] - sX) <= sumTol && Math.abs(vy[i] - sY) <= sumTol
+                    && Math.abs(vz[i] - sZ) <= sumTol) {
+                sumIdx = i;
+                break;
+            }
+        }
+        if (sumIdx < 0) {
+            return null;
+        }
+        int u3 = -1;
+        for (int i = 2; i < 6; i++) {
+            if (i == sumIdx) {
+                continue;
+            }
+            if (u3 < 0 || vl[i] < vl[u3]) {
+                u3 = i;
+            }
+        }
+        if (u3 < 0 || vl[u3] <= 1.0e-5F) {
+            return null;
+        }
+        // the two leftovers must be u1+u3 and u2+u3
+        float[] sumsX = {vx[0] + vx[u3], vx[1] + vx[u3]};
+        float[] sumsY = {vy[0] + vy[u3], vy[1] + vy[u3]};
+        float[] sumsZ = {vz[0] + vz[u3], vz[1] + vz[u3]};
+        float sumTol3 = CUBE_SHAPE_TOL * (vl[0] + vl[u3] + vl[1]);
+        boolean[] hit = new boolean[2];
+        for (int i = 2; i < 6; i++) {
+            if (i == sumIdx || i == u3) {
+                continue;
+            }
+            for (int s = 0; s < 2; s++) {
+                if (!hit[s] && Math.abs(vx[i] - sumsX[s]) <= sumTol3
+                        && Math.abs(vy[i] - sumsY[s]) <= sumTol3
+                        && Math.abs(vz[i] - sumsZ[s]) <= sumTol3) {
+                    hit[s] = true;
+                }
+            }
+        }
+        if (!hit[0] || !hit[1]) {
+            return null;
+        }
+        // orthogonality (implied by the circumsphere test; checked again as
+        // the volume formula's premise)
+        if (Math.abs(vx[0] * vx[1] + vy[0] * vy[1] + vz[0] * vz[1])
+                > CUBE_SHAPE_TOL * vl[0] * vl[1]
+                || Math.abs(vx[0] * vx[u3] + vy[0] * vy[u3] + vz[0] * vz[u3])
+                        > CUBE_SHAPE_TOL * vl[0] * vl[u3]
+                || Math.abs(vx[1] * vx[u3] + vy[1] * vy[u3] + vz[1] * vz[u3])
+                        > CUBE_SHAPE_TOL * vl[1] * vl[u3]) {
+            return null;
+        }
+        float vol = Math.abs(
+                vx[0] * (vy[1] * vz[u3] - vz[1] * vy[u3])
+                        + vy[0] * (vz[1] * vx[u3] - vx[1] * vz[u3])
+                        + vz[0] * (vx[1] * vy[u3] - vy[1] * vx[u3]));
+        if (vol <= 1.0e-7F) {
+            return null;
+        }
+        return new float[] {cx, cy, cz, vol};
+    }
+
+    private static float distSq(float dx, float dy, float dz) {
+        return dx * dx + dy * dy + dz * dz;
     }
 
     /** The dispatcher's private shadow switch ({@code shouldRenderShadow}),
@@ -1517,20 +1789,39 @@ public final class AnimRenderOps {
     static boolean renderEntityPreview(GuiGraphics gg, Entity entity, ModelBounds bounds,
                                        int cx, int cy, Quat rotation, float scale) {
         float fitScale = fitScaleFor(bounds.span(), scale);
+        if (bounds.span() > PREVIEW_FILL) {
+            // The shared helper passes spans <= 1 block through at the caller's
+            // scale (an item's natural size), but the vehicle boost below then
+            // pushes exactly-square models past the preview square — the
+            // ferrouslime probe measured span exactly 1.0 and rendered ~130%
+            // of the square (2026-11-21). Target the same fill the shrink path
+            // uses, so every entity caps at PREVIEW_FILL * SBW_FIT_BOOST.
+            fitScale = scale * PREVIEW_FILL / bounds.span();
+        }
         fitScale *= SBW_FIT_BOOST;
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
         pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
         pose.scale(1.0F, -1.0F, 1.0F);
+        // Framing and drag hub are decoupled (2026-11-21, Alex's Mobs): the
+        // envelope-box centre must sit on the viewport centre (a single mass
+        // pivot ran up to ~22% of the span off-centre and clipped the far
+        // side of the preview square), while the drag rotation pivots on the
+        // reconstructed cube mass centre. The offset is applied BEFORE the
+        // drag quaternion, so it shifts the framing without rotating with
+        // the drag — at rest the model sits symmetric, and dragging turns
+        // the body in place.
+        float s16 = 16.0F * fitScale;
+        Vector3f center = bounds.center();
+        Vector3f hub = bounds.hub();
+        pose.translate(s16 * (hub.x - center.x), s16 * (hub.y - center.y),
+                s16 * (hub.z - center.z));
         SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
         pose.mulPose(SCRATCH_QUAT);
         Lighting.setupForEntityInInventory();
-        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
-        // Rotate around the entity's geometric centre, not its origin (same
-        // convention as every other 3D branch).
-        Vector3f center = bounds.center();
-        pose.translate(-center.x, -center.y, -center.z);
+        pose.scale(s16, s16, s16);
+        pose.translate(-hub.x, -hub.y, -hub.z);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
@@ -2013,8 +2304,9 @@ public final class AnimRenderOps {
      *  model — it lives in the humanoid armor layers, which the stand's
      *  renderer carries; pieces whose mod registers no armor-stand layer
      *  render nothing and degrade via the empty probe. Animal armor (wolf/
-     *  horse) uses its own renderer and is not covered. */
-    private static void renderArmorStandPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+     *  horse) uses its own renderer and is not covered. Package-private: the
+     *  armor preview strategy's 3D body. */
+    static void renderArmorStandPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
                                                 int cx, int cy, Quat rotation, float scale) {
         Entity entity = entityPreviewInstance(EntityType.ARMOR_STAND, player.level());
         if (entity instanceof ArmorStand stand) {
