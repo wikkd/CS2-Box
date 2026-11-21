@@ -161,11 +161,16 @@ v2.0.1 起，所有终端机的物品成交价（武库点数）统一放在 **`
   `_prices.json` 价键片段（如 `{"tacz:modern_kinetic_gun#tacz:ak47": 0}`），点击复制、
   合并进价格表即可（`0` 为占位价，请改成实际价格）。网页编辑器粘贴这类条目时也会
   自动生成对应价键行。
-- 带方块实体数据的方块（如 SBW 载具召唤箱）：准星指向已放置的方块跑
-  `/csbox nbt look`，输出可直接粘贴进箱子 items 的条目（方块物品 id + 方块实体数据，
-  按时代写入 `components.minecraft:block_entity_data`（1.21+）或
-  `tag.BlockEntityTag`（1.20.x）），末尾总是附一行纯 id 的 `_prices.json` 价键
-  （方块按 id 定价；`0` 为占位价，请改成实际价格）。
+- `/csbox nbt look` 把准星目标（6 格内）序列化成可直接粘贴进箱子 items 的条目，
+  识别三类目标，视线同时穿过多个时取最近的一个：**生物**（对应刷怪蛋的物品 id +
+  完整实体快照——装备、自定义名字等一并保留，按时代写入
+  `components.minecraft:entity_data`（1.21+）或 `tag.EntityTag`（1.20.x/1.18.x）；
+  坐标/运动数据会被剥离，蛋在自己使用的位置生成全新生物）、**带方块实体数据的
+  方块**（如 SBW 载具召唤箱：方块物品 id + 方块实体数据，按时代写入
+  `components.minecraft:block_entity_data`（1.21+）或 `tag.BlockEntityTag`
+  （1.20.x/1.18.x））、**普通方块**（只有 `{id, count}`——没有 NBT 的方块用这个，
+  `/csbox nbt hand` 够不到它们）。末尾总是附一行纯 id 的 `_prices.json` 价键
+  （`0` 为占位价，请改成实际价格）。
 - 模组不会自动创建一张空表；但旧版（v2.0.x）写在箱子 JSON 里的 `price` 会在下次
   `/csbox reload`（或热重载/重启）时**自动迁移**进这张表，并把箱子里的 `price`
   字段一并删掉（幂等，不会反复改写）。同一物品在不同箱子价格不同时，按平均值

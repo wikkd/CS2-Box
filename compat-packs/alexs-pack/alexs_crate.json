@@ -1,0 +1,218 @@
+{
+  "name": "#3F7FBF 亚历克斯生物赏金箱",
+  "requires": [
+    "alexsmobs",
+    "citadel"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "grade1": [
+    {
+      "id": "alexsmobs:banana",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:blobfish",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:ambergris",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:bone_serpent_tooth",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:cachalot_whale_tooth",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:cosmic_cod",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:centipede_leg",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:cockroach_wing",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:bear_fur",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:crocodile_scute",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:bison_fur",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_mimicube",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_rattlesnake",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_gorilla",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "alexsmobs:tarantula_hawk_wing",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_flying_fish",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_orca",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_elephant",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_rhinoceros",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_tiger",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_warped_toad",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_skelewag",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spawn_egg_banana_slug",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:animal_dictionary",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:leafcutter_ant_chamber",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:rocky_chestplate",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "alexsmobs:falconry_hood",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:flying_fish_boots",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:roadrunner_boots",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:froststalker_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:straddle_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spectre_sail",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:void_worm_effigy",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:centipede_leggings",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:blood_sprayer",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:crocodile_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:capsid",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "alexsmobs:skelewag_sword",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:shield_of_the_deep",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:dimensional_carver",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:end_pirate_anchor",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:falconry_glove",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:mysterious_worm",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:tarantula_hawk_elytra",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "alexsmobs:spawn_egg_void_worm",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:void_worm_eye",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:void_worm_mandible",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:end_pirate_ship_wheel",
+      "count": 1
+    }
+  ]
+}

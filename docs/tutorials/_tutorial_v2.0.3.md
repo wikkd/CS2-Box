@@ -168,13 +168,19 @@ it out of the box scan. Format is a flat map of **item id → non-negative integ
   merge it into the table (`0` is a placeholder, edit to the real price). The
   web editor also generates these keys automatically when such entries are
   pasted.
-- Blocks with block-entity data (e.g. SBW vehicle summon crates): aim the
-  crosshair at the placed block and run `/csbox nbt look` — it prints the
-  block as a ready-to-paste items entry (the block's item id plus its
-  block-entity data in the era-native slot:
-  `components.minecraft:block_entity_data` on 1.21+, `tag.BlockEntityTag` on
-  1.20.x), and always appends a plain-id `_prices.json` price-key line (blocks
-  are priced by id; `0` is a placeholder, edit to the real price).
+- `/csbox nbt look` serializes the crosshair target (within 6 blocks) into a
+  ready-to-paste items entry. It recognizes three targets, nearest-wins when
+  the aim line crosses both: an **entity** (the matching spawn egg's item id
+  plus a full entity snapshot — equipment, custom name and all — in the
+  era-native slot: `components.minecraft:entity_data` on 1.21+,
+  `tag.EntityTag` on 1.20.x/1.18.x; movement/position data is stripped so the
+  egg spawns fresh where it is used), a **block with block-entity data**
+  (e.g. SBW vehicle summon crates: the block's item id plus its block-entity
+  data in `components.minecraft:block_entity_data` on 1.21+,
+  `tag.BlockEntityTag` on 1.20.x/1.18.x), or a **plain block** (just
+  `{id, count}` — for blocks without NBT, where `/csbox nbt hand` cannot
+  reach). It always appends a plain-id `_prices.json` price-key line (`0` is
+  a placeholder, edit to the real price).
 - The mod never creates an empty table, but legacy (v2.0.x) `price` fields
   still sitting in box JSONs are **auto-migrated** into this table on the next
   `/csbox reload` (or hot reload / restart), and the `price` field is stripped

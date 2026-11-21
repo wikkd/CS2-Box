@@ -1,0 +1,154 @@
+{
+  "name": "#5F5FBF 斯巴达武备终端机",
+  "requires": [
+    "spartanweaponry",
+    "spartanshields"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "spartanweaponry:wooden_longsword",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:stone_longsword",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:wooden_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:copper_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:golden_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:iron_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:iron_tower_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:iron_longsword",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:iron_katana",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:iron_battleaxe",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:iron_spear",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:iron_warhammer",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "spartanweaponry:diamond_katana",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_saber",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_rapier",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_spear",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_scythe",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_longbow",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_heavy_crossbow",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:diamond_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:diamond_tower_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanshields:obsidian_basic_shield",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "spartanweaponry:diamond_halberd",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_greatsword",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_warhammer",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:diamond_lance",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "spartanshields:netherite_tower_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:netherite_longsword",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:netherite_katana",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "spartanshields:netherite_basic_shield",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:netherite_halberd",
+      "count": 1
+    },
+    {
+      "id": "spartanweaponry:netherite_greatsword",
+      "count": 1
+    }
+  ]
+}

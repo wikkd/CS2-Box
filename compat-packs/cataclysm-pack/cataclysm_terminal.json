@@ -1,0 +1,185 @@
+{
+  "name": "#B33A3A 灾变黑市终端机",
+  "requires": [
+    "cataclysm"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "cataclysm:black_steel_sword",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:black_steel_ingot",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ancient_metal_ingot",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:azure_seastone",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:lacrima",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:crystallized_coral",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:black_steel_targe",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ancient_spear",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:azure_sea_shield",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:monstrous_helm",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ignitium_ingot",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ignitium_helmet",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ignitium_chestplate",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ignitium_leggings",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ignitium_boots",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:cursed_bow",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:khopesh",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:bulwark_of_the_flame",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "cataclysm:kobolediator_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:kobolediator_skull",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:draugr_head",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:remnant_skull",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:the_immolator",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:ceraunus",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:brontes",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:tidal_claws",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:gauntlet_of_maelstrom",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:gauntlet_of_bulwark",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:gauntlet_of_guard",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "cataclysm:the_incinerator",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:laser_gatling",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:the_annihilator",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:meat_shredder",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:soul_render",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "cataclysm:ignitium_elytra_chestplate",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:music_disc_ignis",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:music_disc_the_leviathan",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:music_disc_maledictus",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "cataclysm:final_fractal",
+      "count": 1
+    },
+    {
+      "id": "cataclysm:boss_respawner",
+      "count": 1
+    }
+  ]
+}

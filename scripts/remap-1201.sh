@@ -84,6 +84,16 @@ DEOBF_CP="$ASM:$ASMT:$ASMC:$SRGUTILS"
 WORK="$(mktemp -d -t remap1201.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 
+# ---- incremental mapping merge (intermediary leftovers etc.) ----
+# scripts/tsrg-extra-1201.txt exists -> merge into the default tsrg and use the
+# result for this run (replaces the old TSRG_OVERRIDE-by-hand workflow).
+EXTRA_TSRG="${ROOT}/scripts/tsrg-extra-1201.txt"
+if [[ -f "$EXTRA_TSRG" && -z "${TSRG_OVERRIDE:-}" ]]; then
+    MERGED_TSRG="$WORK/tsrg-merged.tsrg.gz"
+    "$PY" "$ROOT/scripts/merge-tsrg-1201.py" "$MERGED_TSRG" >/dev/null
+    TSRG_GZ="$MERGED_TSRG"
+fi
+
 # ---- tool fingerprint (invalidates every stamp when anything changes) ----
 DEOBF_HASH="$(sha256sum "$ROOT/scripts/TaczDeobf.java" | cut -d' ' -f1)"
 PYHASH_HASH="$(sha256sum "$ROOT/scripts/remap-tacz-1201.py" | cut -d' ' -f1)"
@@ -132,6 +142,19 @@ while IFS=$'\t' read -r src_rel deploy_name jarjars; do
             failed=$((failed + 1))
             continue
         fi
+        # ---- mod-specific post-remap bytecode patches ----
+        # TB 9.1.58: TravelersBackpackItem$2 reads the SERVER config in the
+        # item capability path; SERVER specs don't load on a client until a
+        # world exists, so Epic Fight's config-load item scan trips Forge's
+        # dev-only strict check and kills the FG7 dev client (2026-11-18 and
+        # 2026-11-20 crashes). Production never throws, so this patch is
+        # dev-environment hygiene only.
+        case "$(basename "$SRC")" in
+            travelersbackpack-*)
+                echo "==> TB capability config guard"
+                $PY -I "$ROOT/scripts/patch-tb-capability-guard-1201.py" "$OUT" | sed 's/^/    /'
+                ;;
+        esac
         need_build=true
     fi
 

@@ -35,7 +35,8 @@ local-repo/com/kaleidoscope/1.20.1/kaleidoscope_bloodwine__1.20.1-forge.jar	kale
 local-repo/com/kaleidoscope/1.20.1/kaleidoscopedimensions-wine__1.20.1-forge.jar	kaleidoscopedimensions-wine__1.20.1-forge-official.jar	-
 local-repo/com/kaleidoscope/1.20.1/kaleidoscopetavern__1.20.1-forge.jar	kaleidoscopetavern__1.20.1-forge-official.jar	-
 # ===== 前置/库（dev 测试环境依赖）=====
-local-repo/dev/architectury/architectury-forge/9.0.7/architectury-forge-9.0.7.jar	architectury-9.0.7-official.jar	-
+# architectury 9.0.7 → 9.2.14（2026-11-20：SimplySwords 1.70.2 强制 [9.2.14,)）
+local-repo/dev/architectury/architectury-forge/9.2.14/architectury-forge-9.2.14.jar	architectury-9.2.14-official.jar	-
 local-repo/me/shedaniel/cloth/cloth-config-forge/11.0.99/cloth-config-forge-11.0.99.jar	cloth-config-11.0.99-official.jar	-
 local-repo/com/kaleidoscope/1.20.1/curios-forge-5.14.1+1.20.1.jar	curios-forge-5.14.1+1.20.1-official.jar	-
 local-repo/me/shedaniel/rei/12.1.785/RoughlyEnoughItems-forge-12.1.785.jar	rei-1.20.1-12.1.785-official.jar	-
@@ -53,3 +54,29 @@ local-repo/com/tartaricacid/tlm/1.20.1/touhoulittlemaid-1.5.3-forge+mc1.20.1-sna
 # ===== Epic Fight（史诗战斗）20.15.2——1.20.1 线，SRG 生产 jar 重映射（EF 检视预览联测环境）=====
 local-repo/com/epicfight/1.20.1/epicfight-1.20.1-20.15.2.jar	epicfight-1.20.1-20.15.2-official.jar	-
 local-repo/com/prefab/prefab/1.10.0.2/prefab-1.10.0.2.jar	prefab-1.10.0.2-official.jar	-
+
+# ===== 2026-11-20 热门模组批量收编（灾变/Alex's 系/暮色森林/武器装备批量/Cobblemon）=====
+# 灾变 L_Ender's Cataclysm 3.31（前置 lionfishapi；mixinextras 内嵌）
+local-repo/dev-mods-staging/L_Enders_Cataclysm-3.31.jar	L_Enders_Cataclysm-3.31-official.jar	META-INF/jarjar/mixinextras-forge-0.5.3.jar
+local-repo/dev-mods-staging/lionfishapi-3.0.jar	lionfishapi-3.0-official.jar	-
+# Alex's Mobs 1.22.9 / Alex's Caves 2.0.2（共同前置 citadel）
+local-repo/dev-mods-staging/alexsmobs-1.22.9.jar	alexsmobs-1.22.9-official.jar	-
+local-repo/dev-mods-staging/citadel-2.6.3-1.20.1.jar	citadel-2.6.3-1.20.1-official.jar	-
+local-repo/dev-mods-staging/alexscaves-2.0.2.jar	alexscaves-2.0.2-official.jar	-
+# Simply Swords 1.70.2 —— ! 休眠：前置 fzzy_config 强依赖 Kotlin for Forge [4.11,5.0)，
+# KFF 在 FG7 dev 无法注册语言提供者（Cobblemon/create_jetpack 同因），dev 不部署；
+# pack 数据照常交付，生产环境验证
+local-repo/dev-mods-staging/simplyswords-forge-1.70.2-1.20.1.jar	!simplyswords-forge-1.70.2-1.20.1-official.jar	-
+local-repo/dev-mods-staging/fzzy_config-0.7.7+1.20.1+forge.jar	!fzzy_config-0.7.7+1.20.1+forge-official.jar	-
+local-repo/dev-mods-staging/SimplyTooltips-forge-0.1.5-1.20.1.jar	!SimplyTooltips-forge-0.1.5-1.20.1-official.jar	-
+# Spartan Weaponry 3.2.1 + Shields 3.1.1（shouldersurfing 可选不装；mixinextras 内嵌）
+local-repo/dev-mods-staging/SpartanWeaponry-1.20.1-forge-3.2.1-all.jar	SpartanWeaponry-1.20.1-forge-3.2.1-all-official.jar	META-INF/jarjar/mixinextras-forge-0.3.5.jar
+local-repo/dev-mods-staging/SpartanShields-1.20.1-forge-3.1.1.jar	SpartanShields-1.20.1-forge-3.1.1-official.jar	-
+# Artifacts 9.5.19（curios/cloth_config/architectury 已在清单；expandability jarjar 只声明未内嵌，需外部 jar）
+local-repo/dev-mods-staging/artifacts-forge-9.5.19.jar	artifacts-forge-9.5.19-official.jar	-
+local-repo/dev-mods-staging/expandability-forge-9.0.4.jar	expandability-forge-9.0.4-official.jar	-
+# 暮色森林 Twilight Forest 4.3.2508（无前置）
+local-repo/dev-mods-staging/twilightforest-1.20.1-4.3.2508.jar	twilightforest-1.20.1-4.3.2508-official.jar	-
+# Cobblemon 1.5.2 —— ! 休眠：modLoader=kotlinforforge 硬前置，KFF 在 FG7 dev 无法注册语言提供者
+#（create_jetpack 同先例），不部署进 run/mods；pack 数据包照常交付，生产环境用户自带 KFF
+local-repo/dev-mods-staging/Cobblemon-forge-1.5.2+1.20.1.jar	!Cobblemon-forge-1.5.2+1.20.1-official.jar	-

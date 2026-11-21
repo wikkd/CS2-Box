@@ -1,0 +1,217 @@
+{
+  "name": "#2F9F8F 宝可梦商店终端机",
+  "requires": [
+    "cobblemon"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "cobblemon:poke_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:premier_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:great_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:azure_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:citrine_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:roseate_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:slate_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:verdant_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:heavy_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:fire_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:water_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:thunder_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:leaf_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:moon_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:sun_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:everstone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:oval_stone",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:link_cable",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:metal_coat",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:razor_claw",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "cobblemon:ultra_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:dusk_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:quick_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:luxury_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:cherish_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:dive_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:net_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:heal_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:choice_band",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:choice_specs",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:choice_scarf",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:focus_sash",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:eviolite",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:ability_shield",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:assault_vest",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:leftovers",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:air_balloon",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:rocky_helmet",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "cobblemon:beast_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:dream_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:ancient_jet_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:ancient_gigaton_ball",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:gilded_chest",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:black_gilded_chest",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "cobblemon:ability_patch",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:ability_capsule",
+      "count": 1
+    },
+    {
+      "id": "cobblemon:ancient_origin_ball",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "cobblemon:master_ball",
+      "count": 1
+    }
+  ]
+}

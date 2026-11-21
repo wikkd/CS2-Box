@@ -1,0 +1,141 @@
+{
+  "name": "#BF8F2F 简剑锻造终端机",
+  "requires": [
+    "simplyswords"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "simplyswords:iron_longsword",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:iron_spear",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:iron_katana",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:iron_claymore",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:iron_cutlass",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:iron_sai",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:brimstone_claymore",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:emberlash",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "simplyswords:diamond_longsword",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:diamond_katana",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:diamond_scythe",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:diamond_halberd",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:diamond_chakram",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "simplyswords:netherite_longsword",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:netherite_katana",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:netherite_scythe",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:tampered_remnant",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:contained_remnant",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:empowered_remnant",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "simplyswords:bloodwake",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:frostfall",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:emberblade",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:flamewind",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:dreadtide",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:gloampiercer",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "simplyswords:awakened_lichblade",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:caelestis",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:arcanethyst",
+      "count": 1
+    },
+    {
+      "id": "simplyswords:enigma",
+      "count": 1
+    }
+  ]
+}

@@ -6,9 +6,10 @@
 
 > **平台适配矩阵**：Create 官方支持 NeoForge 1.21.1（对应 `v1_21_1`，
 > 6.x）与 Forge 1.20.1（对应 `forge_1_20_1`，1.20.1 线最新 6.0.8，同为
-> 6.x 文件线——但 1.20.1 无 DataComponents，蓝图文件名的 NBT tag 键待
-> 考古，移植时该包条目写法随之调整）；1.18.2 仅有 0.5.1.i 旧线，蓝图
-> 预览不做。本配置带 `"requires": ["create"]` 门控。
+> 6.x 文件线——蓝图预览已双端落地（2026-11-20）：1.20.1 无
+> DataComponents，条目改写顶层 tag（见下），反射管线与 1.21.1 同形——
+> catnip 类同样在 jar-jar 的 Ponder 包内）；1.18.2 仅有 0.5.1.i 旧线，
+> 蓝图预览不做。本配置带 `"requires": ["create"]` 门控。
 
 ## 文件
 
@@ -43,3 +44,12 @@ python scripts/merge-prices.py compat-packs/create-pack/_prices.json config/csbo
 哨兵缓存降级（各有一次性日志）。测试前用蓝图笔框选一个 32768 方块以内的
 建筑保存为 `preview_test`（组件写 `preview_test.nbt`）；若开过缺失哨兵条目
 需重启客户端。
+
+Forge 1.20.1（6.0.8）条目写法（无组件，顶层 tag；`File` 同样必须带
+`.nbt` 后缀，`Owner` 建议照抄本地用户名——`loadSchematic` 客户端读
+`Owner`/`File` 两个顶层键，Create 6.0.8 字节码 2026-11-20 实证）：
+
+```json
+{ "id": "create:schematic", "count": 1,
+  "tag": { "Owner": "dev", "File": "preview_test.nbt" } }
+```

@@ -39,8 +39,15 @@ python scripts/merge-prices.py compat-packs/<pack>/_prices.json config/csbox/_pr
 | `kaleidoscope-twilight-pack/` | Kaleidoscope Twilight（森罗物语：暮色） | `v1_21_1` / `forge_1_20_1` | 暮色森林题材菜系（硬依赖暮色森林本体），含终端机 |
 | `kaleidoscope-dim-wine-pack/` | Kaleidoscope: Dimensions Wine（森罗酒馆：次元酒窖） | `v1_21_1` / `forge_1_20_1` | 次元酒名 + 汽水/啤酒花，含终端机 |
 | `kaleidoscope-bloodwine-pack/` | Kaleidoscope: Bloodwine（森罗酒馆：血酒） | `v1_21_1` / `forge_1_20_1` | 血酒系列（可与 Vampirism 联动），含终端机 |
+| `cataclysm-pack/` | L_Ender's Cataclysm（灾变） | `forge_1_20_1`（3.31 实测）/ `v1_21_1`（1.21.1 NeoForge 线有构建，包待镜像） | BOSS 蛋（利维坦/咒翼灵骸/远古遗魂）+ 炼狱套装/巨兽武器，含终端机 |
+| `alexs-pack/` | Alex's Mobs + Alex's Caves | `forge_1_20_1`（AM 1.22.9 / AC 2.0.2 实测；AM 另有 1.18.2） | BOSS 蛋（虚空蠕虫/震龙王/巨兽龙，`spawn_egg_<mob>` 形态）+ 装备/武器，双模组合用终端机 |
+| `twilight-forest-pack/` | Twilight Forest（暮色森林） | `forge_1_20_1`（4.3.2508 实测）/ 1.18.2 / 1.21.1 | 余烬之灯/迷宫破坏者 + 四大 BOSS 蛋 + 炽铁/骑士金属套装，含终端机 |
+| `simply-swords-pack/` | Simply Swords（简剑） | `forge_1_20_1`（1.70.2 实测）/ 1.18.2 / 1.21.1 三线全 | 传奇武器 grade5 + remnant 形态 + netherite 系（无 wooden/stone/golden 低阶——id 实测），含终端机 |
+| `spartan-pack/` | Spartan Weaponry + Shields | `forge_1_20_1`（3.2.1 + 3.1.1 实测）/ 1.18.2 | vanilla 材质武器全系（合金材质依赖矿物模组，不收）+ 盾牌，含终端机 |
+| `artifacts-pack/` | Artifacts（神秘饰品） | `forge_1_20_1`（9.5.19 实测）；**另有 26.1 构建（26.x 候选唯一）** | 全 43 件饰品按强度分档 + 宝箱怪蛋，含终端机 |
+| `cobblemon-pack/` | Cobblemon（宝可梦） | 生产环境交付（前置 KFF，FG7 dev 无法加载——jar 为 `!` 休眠件） | 大师球/远古球系/进化石/携带物分档，含终端机 |
 | `create-aeronautics-pack/` | Create: Aeronautics | 仅 `v1_21_1` | 航空材料与螺旋桨（A 类零适配），含终端机 |
-| `create-pack/` | Create（蓝图预览） | `v1_21_1`（6.x）；`forge_1_20_1` 有 6.0.8 待策略链移植 | `create:schematic` 结构预览（>8192 方块/缺文件降级平面），含终端机 |
+| `create-pack/` | Create（蓝图预览） | `v1_21_1`（6.x）+ `forge_1_20_1`（6.0.8，2026-11-20 双端落地） | `create:schematic` 结构预览（>32768 方块/缺文件降级平面），含终端机 |
 | `test-pack-fabric-1.21.1/` | 无（原版 1.21 内容） | 仅 `fabric_1_21_1` | `components` 数据组件 / 1.21 新物品与新附魔 / 标签展开 |
 | `test-pack-forge-1.18.2/` | 无（原版 ≤1.18 内容） | 为 `forge_1_18_2` 编写验证 | `tag` NBT 直写（药水/自定义名）/ 标签展开 |
 

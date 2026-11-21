@@ -1,0 +1,198 @@
+{
+  "name": "#BF5F5F 神秘饰品当铺终端机",
+  "requires": [
+    "artifacts",
+    "curios"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "artifacts:snorkel",
+      "count": 1
+    },
+    {
+      "id": "artifacts:flippers",
+      "count": 1
+    },
+    {
+      "id": "artifacts:plastic_drinking_hat",
+      "count": 1
+    },
+    {
+      "id": "artifacts:umbrella",
+      "count": 1
+    },
+    {
+      "id": "artifacts:cowboy_hat",
+      "count": 1
+    },
+    {
+      "id": "artifacts:anglers_hat",
+      "count": 1
+    },
+    {
+      "id": "artifacts:villager_hat",
+      "count": 1
+    },
+    {
+      "id": "artifacts:kitty_slippers",
+      "count": 1
+    },
+    {
+      "id": "artifacts:snowshoes",
+      "count": 1
+    },
+    {
+      "id": "artifacts:digging_claws",
+      "count": 1
+    },
+    {
+      "id": "artifacts:pickaxe_heater",
+      "count": 1
+    },
+    {
+      "id": "artifacts:rooted_boots",
+      "count": 1
+    },
+    {
+      "id": "artifacts:running_shoes",
+      "count": 1
+    },
+    {
+      "id": "artifacts:onion_ring",
+      "count": 1
+    },
+    {
+      "id": "artifacts:everlasting_beef",
+      "count": 1
+    },
+    {
+      "id": "artifacts:whoopee_cushion",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "artifacts:antidote_vessel",
+      "count": 1
+    },
+    {
+      "id": "artifacts:obsidian_skull",
+      "count": 1
+    },
+    {
+      "id": "artifacts:night_vision_goggles",
+      "count": 1
+    },
+    {
+      "id": "artifacts:lucky_scarf",
+      "count": 1
+    },
+    {
+      "id": "artifacts:cloud_in_a_bottle",
+      "count": 1
+    },
+    {
+      "id": "artifacts:bunny_hoppers",
+      "count": 1
+    },
+    {
+      "id": "artifacts:aqua_dashers",
+      "count": 1
+    },
+    {
+      "id": "artifacts:panic_necklace",
+      "count": 1
+    },
+    {
+      "id": "artifacts:shock_pendant",
+      "count": 1
+    },
+    {
+      "id": "artifacts:thorn_pendant",
+      "count": 1
+    },
+    {
+      "id": "artifacts:flame_pendant",
+      "count": 1
+    },
+    {
+      "id": "artifacts:pocket_piston",
+      "count": 1
+    },
+    {
+      "id": "artifacts:steadfast_spikes",
+      "count": 1
+    },
+    {
+      "id": "artifacts:charm_of_sinking",
+      "count": 1
+    },
+    {
+      "id": "artifacts:mimic_spawn_egg",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "artifacts:fire_gauntlet",
+      "count": 1
+    },
+    {
+      "id": "artifacts:feral_claws",
+      "count": 1
+    },
+    {
+      "id": "artifacts:golden_hook",
+      "count": 1
+    },
+    {
+      "id": "artifacts:cross_necklace",
+      "count": 1
+    },
+    {
+      "id": "artifacts:vampiric_glove",
+      "count": 1
+    },
+    {
+      "id": "artifacts:power_glove",
+      "count": 1
+    },
+    {
+      "id": "artifacts:helium_flamingo",
+      "count": 1
+    },
+    {
+      "id": "artifacts:crystal_heart",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "artifacts:eternal_steak",
+      "count": 1
+    },
+    {
+      "id": "artifacts:universal_attractor",
+      "count": 1
+    },
+    {
+      "id": "artifacts:novelty_drinking_hat",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "artifacts:universal_attractor",
+      "count": 1
+    }
+  ]
+}

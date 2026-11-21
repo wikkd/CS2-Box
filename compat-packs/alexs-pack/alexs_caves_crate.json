@@ -1,0 +1,198 @@
+{
+  "name": "#8F5FBF 亚历克斯洞穴秘藏箱",
+  "requires": [
+    "alexscaves",
+    "citadel"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "grade1": [
+    {
+      "id": "alexscaves:spawn_egg_trilocaris",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_lanternfish",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_sea_pig",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_candicorn",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_gummy_bear",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_ferrouslime",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_deep_one",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_subterranodon",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_grottoceratops",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_vallumraptor",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_relicheirus",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:amber",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:limestone_spear",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:frostmint",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "alexscaves:hazmat_mask",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:hazmat_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:hazmat_boots",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:gingerbread_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:gingerbread_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:gingerbread_boots",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:cave_map_filled",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:ambersol",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:frostmint_spear",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:dark_tatters",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "alexscaves:galena_gauntlet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:resistor_shield",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:beholder",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:amber_curiosity",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:primordial_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_boots",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:heart_of_iron",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "alexscaves:extinction_spear",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:dreadbow",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:telecore",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:sea_staff",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:totem_of_possession",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_tremorsaurus",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "alexscaves:spawn_egg_tremorzilla",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_luxtructosaurus",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:raygun",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:cloak_of_darkness",
+      "count": 1
+    }
+  ]
+}

@@ -147,6 +147,54 @@ python scripts/check-official-remap.py --deps   # 附带缺前置依赖告警
 - [ ] `scripts/test-forge-1201.sh` 门禁脚本（L0-L3 自动化）
 - [ ] 运行时 L4 回归报告（`docs/TEST-REPORT-FORGE-1201-*.md`，含 JEI 分类 E2E 抽查，见第 4 节）
 
+### 5.1 dev 客户端启动崩溃：Epic Fight 物品扫描 × 第三方背包（2026-11-20 定位）
+
+**症状**：`runClient` 在加载屏阶段崩溃，`crash-reports/crash-*-client.txt` 顶部为
+`Description: Rendering overlay` +
+`java.lang.IllegalStateException: Cannot get config value before config is loaded.`
+（该报错在 Forge 源码里由 `!FMLEnvironment.production` 守卫，**只在 dev 抛出**，生产环境仅打警告，玩家侧无影响）。
+首次出现 2026-11-17（Epic Fight 加入 dev 集当天），非本模组问题。
+
+**根因（一类问题，不止一个模组）**：Forge 1.20.1 的配置装载顺序是 CLIENT → COMMON → SERVER。
+Epic Fight 的 `ClientConfig.onLoad` 在 CLIENT 配置事件里调用 `ItemsPreferenceScreen.resetItems()`，
+遍历全部物品查询 capability；**任何在 item capability 路径里读取非 CLIENT 配置的模组都会踩雷**。
+已确认的踩雷者：
+
+- **Traveler's Backpack 9.1.58**：`TravelersBackpack.enableCurios()` 读 SERVER 配置 →
+  已由管线补丁 `scripts/patch-tb-capability-guard-1201.py` 修掉（`remap-1201.sh` 在
+  TB 重新 remap 时自动回补，产物含 `curiosEnabledGuarded` 标记）。
+- **Sophisticated Backpacks 3.26.20**：`BackpackItem.getNumberOfSlots()` →
+  `BackpackWrapper.cacheSlotNumbers()` 读配置 → 清空偏好列表复测时仍崩
+  （`crash-2026-11-20_16.48.43-client.txt`）。**即单修 TB 不够**。
+
+**修复（保留全部模组，推荐）**：给 `run/config/epicfight-client.toml` 的两个偏好列表任一填上
+合法物品 id，`resetItems()` 就不再在装载期被调用（EF 字节码：两表都为空才触发），
+从源头绕开整类问题：
+
+```toml
+combat_preferred_items = ["minecraft:iron_sword", "minecraft:diamond_sword", "minecraft:iron_axe"]
+mining_preferred_items = ["minecraft:iron_pickaxe", "minecraft:diamond_pickaxe", "minecraft:iron_shovel"]
+```
+
+注意 `run/` 被 gitignore，换机器/重建运行目录后需重新填；进游戏后在 EF 物品偏好界面点
+「重置」可正常生成完整列表（那时配置已全部装载，不会崩）。
+
+TB 补丁只在 TB 重新 remap 时应用（stamp 缓存命中会跳过，2026-11-20 实测首次落地时
+`run/mods` 里仍是未打补丁的 jar）。强制重建：
+
+```bash
+rm -f local-repo/com/tiviacz/travelersbackpack/9.1.58/travelersbackpack-*-official.jar*
+scripts/remap-1201.sh
+```
+
+管线输出应出现 `patched ... TravelersBackpackItem$2.class ...`；产物中该 class 含
+`curiosEnabledGuarded` 标记。**补丁只解决 TB 一家**，SB 等同类模组仍会崩，
+所以偏好列表种子仍是 dev 环境的必需项。
+
+**替代方案**：把 `travelersbackpack-forge-1.20.1-9.1.58-official.jar` 移出 `run/mods`
+（会失去 `backpack_preview_test` 箱子的预览联测环境）；或对每个踩雷模组逐一打补丁
+（不推荐——踩雷面随 dev 模组集变化）。
+
 ## 6. 迁移记录
 
 - 计划：`.opencode/plans/2026-08-18-forge-1-20-1-port.md`（7 Phase，约 89 文件）

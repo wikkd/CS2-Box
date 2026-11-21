@@ -1,0 +1,195 @@
+{
+  "name": "#3F7FBF 生物图鉴黑市终端机",
+  "requires": [
+    "alexsmobs",
+    "alexscaves",
+    "citadel"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "type": "terminal",
+  "drop": 0.05,
+  "grade1": [
+    {
+      "id": "alexsmobs:animal_dictionary",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:crocodile_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:falconry_glove",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:falconry_hood",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:flying_fish_boots",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:roadrunner_boots",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:froststalker_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:straddle_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:rocky_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:centipede_leggings",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:ambergris",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:cave_map_filled",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:diving_boots",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:hazmat_chestplate",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:galena_gauntlet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:resistor_shield",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:beholder",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:amber_curiosity",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "alexsmobs:skelewag_sword",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:shield_of_the_deep",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:dimensional_carver",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:end_pirate_anchor",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:spectre_sail",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:blood_sprayer",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:dreadbow",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:extinction_spear",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:sea_staff",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:telecore",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:totem_of_possession",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:primordial_helmet",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:ambersol",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "alexscaves:raygun",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:cloak_of_darkness",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:tarantula_hawk_elytra",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:mysterious_worm",
+      "count": 1
+    },
+    {
+      "id": "alexsmobs:end_pirate_ship_wheel",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "alexscaves:spawn_egg_tremorsaurus",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "alexsmobs:spawn_egg_void_worm",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_tremorzilla",
+      "count": 1
+    },
+    {
+      "id": "alexscaves:spawn_egg_luxtructosaurus",
+      "count": 1
+    }
+  ]
+}

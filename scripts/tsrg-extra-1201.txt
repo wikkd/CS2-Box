@@ -1,0 +1,10 @@
+# 1.20.1 官方->SRG TSRG 的增量条目（scripts/merge-tsrg-1201.py 消费）
+# 背景：模组生产 jar 偶发 intermediary 命名残留（architectury 多 loader 构建产物），
+# remap-tacz-1201.py 的 token 匹配认识 method_NNNNN 形态，但默认 tsrg 右列只有
+# m_/f_ SRG 名，无从映射。此处按官方->SRG 方向补条目（解析器取 left=official 名、
+# right=srg 名；反向查表后即 SRG/intermediary -> official）。
+# 首条目：SimplySwords 1.70.2 的 SimplySwordsWolfMinionEntity 把 Entity.level()
+# 的 override 以 intermediary 名 method_48926 声明（javap 实证 ()Lnet/minecraft/
+# world/level/Level; 自引用对），补 method_48926 -> level 还原 override 链。
+net/sweenus/simplyswords/entity/SimplySwordsWolfMinionEntity SimplySwordsWolfMinionEntity
+	level ()Lnet/minecraft/world/level/Level; method_48926

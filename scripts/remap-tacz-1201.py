@@ -47,6 +47,12 @@ def load_srg_to_official(tsrg_gz):
             line = raw.rstrip('\n').rstrip('\r')
             if not line.strip():
                 continue
+            if line.startswith('\t\t'):
+                # tsrg2 parameter row: "\t\t<index> <paramObf> <paramSrg>" under a
+                # method -- must be skipped, otherwise "4 surfaceRule f_188871_"
+                # poisons fields_global with f_188871_ -> "4" (citadel refmap
+                # corruption, 2026-11-20).
+                continue
             if not line.startswith('\t'):
                 # tsrg2 class line: "<leftClass> <rightClass>" (names often equal)
                 parts = line.split()

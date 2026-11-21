@@ -1,0 +1,233 @@
+{
+  "name": "#2F8F5F 暮色森林远征军火箱",
+  "requires": [
+    "twilightforest"
+  ],
+  "random": [
+    40,
+    30,
+    20,
+    7,
+    3
+  ],
+  "key": "csgobox:csgo_key0",
+  "drop": 1.0,
+  "grade1": [
+    {
+      "id": "twilightforest:filled_magic_map",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:filled_maze_map",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:filled_ore_map",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:maze_wafer",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:hydra_chop",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_block",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:minotaur_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:naga_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:glass_sword",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:transformation_powder",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "twilightforest:arctic_helmet",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:arctic_chestplate",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:arctic_leggings",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:arctic_boots",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_sword",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_helmet",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_chestplate",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_leggings",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:steeleaf_boots",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:charm_of_keeping_1",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:charm_of_life_1",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ironwood_sword",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "twilightforest:knightmetal_sword",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knightmetal_helmet",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knightmetal_chestplate",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knightmetal_leggings",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knightmetal_boots",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knightmetal_shield",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:diamond_minotaur_axe",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:charm_of_keeping_2",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:charm_of_life_2",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:moonworm_queen",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ice_sword",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ironwood_chestplate",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "twilightforest:fiery_sword",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:fiery_helmet",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:fiery_chestplate",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:fiery_leggings",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:fiery_boots",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:block_and_chain",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ice_bow",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ender_bow",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:lifedrain_scepter",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:fortification_scepter",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:charm_of_keeping_3",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:knight_phantom_spawn_egg",
+      "count": 1
+    }
+  ],
+  "grade5": [
+    {
+      "id": "twilightforest:lamp_of_cinders",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:mazebreaker_pickaxe",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:hydra_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:ur_ghast_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:snow_queen_spawn_egg",
+      "count": 1
+    },
+    {
+      "id": "twilightforest:lich_spawn_egg",
+      "count": 1
+    }
+  ]
+}
