@@ -15,6 +15,7 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -24,12 +25,20 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
@@ -72,8 +81,8 @@ public final class CsboxCommand {
     private static final SimpleCommandExceptionType NBT_LOOK_NO_TARGET = new SimpleCommandExceptionType(
             Component.translatable("commands.csgobox.nbt.look.no_target")
     );
-    private static final SimpleCommandExceptionType NBT_LOOK_NO_BLOCK_ENTITY = new SimpleCommandExceptionType(
-            Component.translatable("commands.csgobox.nbt.look.no_block_entity")
+    private static final SimpleCommandExceptionType NBT_LOOK_NO_EGG = new SimpleCommandExceptionType(
+            Component.translatable("commands.csgobox.nbt.look.no_egg")
     );
     private static final SimpleCommandExceptionType NBT_LOOK_NO_ITEM = new SimpleCommandExceptionType(
             Component.translatable("commands.csgobox.nbt.look.no_item")
@@ -82,6 +91,10 @@ public final class CsboxCommand {
     // --- Constants & suggestions ---
 
     private static final int MAX_NBT_CHARS = 20000;
+
+    /** /csbox nbt look ray range — shared by the block pick and the entity
+     *  ray (lang: look.no_target promises "within 6 blocks"). */
+    private static final double LOOK_RANGE = 6.0D;
 
     private static final SuggestionProvider<CommandSourceStack> BOX_SUGGESTIONS = (context, builder) -> {
         SharedSuggestionProvider.suggestResource(BoxRegistry.getIds(), builder);
@@ -570,70 +583,140 @@ public final class CsboxCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** Any player; serializes the crosshair-targeted block into a paste-ready
-     *  items entry: the block's item id plus its block-entity data under
-     *  minecraft:block_entity_data. Vanilla middle-click pick-block captures
-     *  the same data — this mirrors it server-side without needing the item
-     *  in hand. A plain _prices.json price-key line is always appended:
-     *  unpriced ids reject the whole box on load. */
+    /** Any player; serializes the crosshair target into a paste-ready items
+     *  entry. Three targets, nearest-wins when both rays land: an entity
+     *  (its spawn-egg id plus a full entity snapshot under
+     *  minecraft:entity_data — movement + UUID keys stripped so the egg
+     *  spawns fresh at the use site), a block with block-entity data
+     *  (minecraft:block_entity_data), or a plain block (bare {id, count} —
+     *  no NBT, which /csbox nbt hand cannot capture). Vanilla middle-click
+     *  pick-block captures the same data — this mirrors it server-side
+     *  without needing the item in hand. A plain _prices.json price-key
+     *  line is always appended: unpriced ids reject the whole box on load. */
     private static int showLookNbt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         ServerPlayer player = source.getPlayerOrException();
-        HitResult hit = player.pick(6.0D, 0.0F, false);
-        if (hit.getType() != HitResult.Type.BLOCK) {
-            throw NBT_LOOK_NO_TARGET.create();
-        }
-        BlockPos pos = ((BlockHitResult) hit).getBlockPos();
         ServerLevel level = source.getLevel();
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be == null) {
-            throw NBT_LOOK_NO_BLOCK_ENTITY.create();
-        }
-        Item item = level.getBlockState(pos).getBlock().asItem();
-        if (item == Items.AIR) {
-            throw NBT_LOOK_NO_ITEM.create();
-        }
-        Identifier itemId = BuiltInRegistries.ITEM.getKey(item);
-        source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.look.header",
-                level.getBlockState(pos).getBlock().getName().getString()), false);
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getViewVector(1.0F).scale(LOOK_RANGE));
+        AABB searchBox = player.getBoundingBox()
+                .expandTowards(player.getViewVector(1.0F).scale(LOOK_RANGE)).inflate(1.0D);
+        // 26.x narrowed the (Level, Entity, ...) overload's second parameter to
+        // Projectile; the 7-arg variant keeps Entity and behaves exactly like
+        // the pre-26 6-arg (which delegated here with 0.3F).
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(level, player, eye, end, searchBox,
+                target -> target != player && !target.isSpectator() && target.isPickable(), 0.3F);
+        HitResult blockHit = player.pick(LOOK_RANGE, 0.0F, false);
+        double blockDist = blockHit.getType() == HitResult.Type.BLOCK
+                ? eye.distanceTo(blockHit.getLocation()) : Double.MAX_VALUE;
+        double entityDist = entityHit != null ? eye.distanceTo(entityHit.getLocation()) : Double.MAX_VALUE;
         try {
-            CompoundTag beTag = be.saveWithoutMetadata(level.registryAccess());
-            JsonElement beJson = CompoundTag.CODEC.encodeStart(JsonOps.INSTANCE, beTag)
-                    .resultOrPartial(err -> CsgoBox.LOGGER.warn(
-                            "Partial block-entity serialization for {}: {}", itemId, err))
-                    .orElseThrow(() -> new IllegalStateException("block entity serialization failed"));
-            JsonObject serialized = new JsonObject();
-            serialized.addProperty("id", itemId.toString());
-            serialized.addProperty("count", 1);
-            JsonObject comps = new JsonObject();
-            comps.add("minecraft:block_entity_data", beJson);
-            serialized.add("components", comps);
-
-            String json = BoxItemCodec.gson().toJson(serialized);
-            if (json.length() > MAX_NBT_CHARS) {
-                source.sendSuccess(() -> copyable(Component.literal(json.substring(0, MAX_NBT_CHARS)), json), false);
-                source.sendSuccess(() -> copyable(Component.translatable("commands.csgobox.nbt.hand.truncated",
-                        String.valueOf(json.length())), json), false);
+            if (entityHit != null && entityDist < blockDist) {
+                lookEntity(source, level, entityHit.getEntity());
+            } else if (blockHit.getType() == HitResult.Type.BLOCK) {
+                lookBlock(source, level, ((BlockHitResult) blockHit).getBlockPos());
             } else {
-                source.sendSuccess(() -> copyable(Component.literal(json), json), false);
+                throw NBT_LOOK_NO_TARGET.create();
             }
-            source.sendSuccess(() -> copyable(
-                    Component.translatable("commands.csgobox.nbt.hand.copy_button")
-                            .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
-                    json), false);
-            JsonObject priceKey = new JsonObject();
-            priceKey.addProperty(itemId.toString(), 0);
-            String priceJson = BoxItemCodec.gson().toJson(priceKey);
-            source.sendSuccess(() -> copyable(
-                    Component.translatable("commands.csgobox.nbt.look.price_key", itemId)
-                            .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
-                    priceJson,
-                    Component.translatable("commands.csgobox.nbt.hand.price_key.click_copy")), false);
+        } catch (CommandSyntaxException e) {
+            throw e;
         } catch (Exception e) {
             source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.look.error",
                     e.getMessage()), false);
         }
         return Command.SINGLE_SUCCESS;
+    }
+
+    /** Block branch: block-entity data when present; otherwise a bare
+     *  {id, count} entry (previously rejected with no_block_entity — plain
+     *  blocks need no NBT, and look is the only way to grab their id from
+     *  the world without first holding the item). */
+    private static void lookBlock(CommandSourceStack source, ServerLevel level, BlockPos pos)
+            throws CommandSyntaxException {
+        Item item = level.getBlockState(pos).getBlock().asItem();
+        if (item == Items.AIR) {
+            throw NBT_LOOK_NO_ITEM.create();
+        }
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(item);
+        JsonObject serialized = new JsonObject();
+        serialized.addProperty("id", itemId.toString());
+        serialized.addProperty("count", 1);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be != null) {
+            CompoundTag beTag = be.saveWithoutMetadata(level.registryAccess());
+            JsonElement beJson = CompoundTag.CODEC.encodeStart(JsonOps.INSTANCE, beTag)
+                    .resultOrPartial(err -> CsgoBox.LOGGER.warn(
+                            "Partial block-entity serialization for {}: {}", itemId, err))
+                    .orElseThrow(() -> new IllegalStateException("block entity serialization failed"));
+            JsonObject comps = new JsonObject();
+            comps.add("minecraft:block_entity_data", beJson);
+            serialized.add("components", comps);
+        }
+        sendLookEntry(source, serialized, itemId,
+                level.getBlockState(pos).getBlock().getName().getString());
+    }
+
+    /** Entity branch: the spawn egg whose egg type matches the target, plus
+     *  a full entity snapshot (id re-added; Pos/Motion/Rotation/UUID stripped
+     *  so the egg spawns fresh at its use site). 26.x saves entities through
+     *  the ValueOutput tree — TagValueOutput with the discarding reporter
+     *  bridges it back to a CompoundTag, with the level's registry access as
+     *  lookup context for registry-bound codecs (equipment, effects). */
+    private static void lookEntity(CommandSourceStack source, ServerLevel level, Entity entity)
+            throws CommandSyntaxException {
+        Item egg = SpawnEggItem.byId(entity.getType()).map(Holder::value).orElse(null);
+        if (egg == null) {
+            throw NBT_LOOK_NO_EGG.create();
+        }
+        Identifier eggId = BuiltInRegistries.ITEM.getKey(egg);
+        TagValueOutput out = TagValueOutput.createWithContext(
+                ProblemReporter.DISCARDING, level.registryAccess());
+        entity.saveWithoutId(out);
+        CompoundTag tag = out.buildResult();
+        tag.remove("Pos");
+        tag.remove("Motion");
+        tag.remove("Rotation");
+        tag.remove("UUID");
+        tag.putString("id", BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString());
+        JsonElement tagJson = CompoundTag.CODEC.encodeStart(JsonOps.INSTANCE, tag)
+                .resultOrPartial(err -> CsgoBox.LOGGER.warn(
+                        "Partial entity serialization for {}: {}", eggId, err))
+                .orElseThrow(() -> new IllegalStateException("entity serialization failed"));
+        JsonObject serialized = new JsonObject();
+        serialized.addProperty("id", eggId.toString());
+        serialized.addProperty("count", 1);
+        JsonObject comps = new JsonObject();
+        comps.add("minecraft:entity_data", tagJson);
+        serialized.add("components", comps);
+        sendLookEntry(source, serialized, eggId, entity.getName().getString());
+    }
+
+    /** Shared tail: header + full/truncated JSON + copy button + the
+     *  mandatory _prices.json price-key line ({itemId: 0}, 0 = placeholder,
+     *  edit to the real price). */
+    private static void sendLookEntry(CommandSourceStack source, JsonObject serialized,
+            Identifier priceItemId, String targetName) {
+        source.sendSuccess(() -> Component.translatable("commands.csgobox.nbt.look.header", targetName), false);
+        String json = BoxItemCodec.gson().toJson(serialized);
+        if (json.length() > MAX_NBT_CHARS) {
+            source.sendSuccess(() -> copyable(Component.literal(json.substring(0, MAX_NBT_CHARS)), json), false);
+            source.sendSuccess(() -> copyable(Component.translatable("commands.csgobox.nbt.hand.truncated",
+                    String.valueOf(json.length())), json), false);
+        } else {
+            source.sendSuccess(() -> copyable(Component.literal(json), json), false);
+        }
+        source.sendSuccess(() -> copyable(
+                Component.translatable("commands.csgobox.nbt.hand.copy_button")
+                        .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                json), false);
+        JsonObject priceKey = new JsonObject();
+        priceKey.addProperty(priceItemId.toString(), 0);
+        String priceJson = BoxItemCodec.gson().toJson(priceKey);
+        source.sendSuccess(() -> copyable(
+                Component.translatable("commands.csgobox.nbt.look.price_key", priceItemId)
+                        .withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE),
+                priceJson,
+                Component.translatable("commands.csgobox.nbt.hand.price_key.click_copy")), false);
     }
 
     // --- Private helpers ---
