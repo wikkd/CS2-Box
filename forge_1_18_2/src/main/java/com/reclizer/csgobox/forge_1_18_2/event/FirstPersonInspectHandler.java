@@ -146,6 +146,17 @@ public final class FirstPersonInspectHandler {
     public static void onRenderGuiPre(RenderGameOverlayEvent.Pre event) {
         if (pending != null) {
             event.setCanceled(true);
+            return;
+        }
+        // The HUD-hiding screens (progress/bulk-result/look) set options.hideGui,
+        // but ForgeGui's overlay path checks that flag per entry only — the chat
+        // panel entry renders unguarded, so the chat box stayed visible behind
+        // our translucent screens (2026-11-22 maintainer report). Cancelling the
+        // whole GUI while a screen is up with hideGui on suppresses every overlay
+        // at once; F1 without a screen keeps the vanilla per-entry gating.
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.options.hideGui && mc.screen != null) {
+            event.setCanceled(true);
         }
     }
 
