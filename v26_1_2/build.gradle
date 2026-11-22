@@ -61,6 +61,10 @@ sourceSets.main.resources {
 sourceSets.main.java {
     srcDir project(':common').file('src/main/java')
     srcDir project(':common').file('src/main/mcshared')
+    // The preview API compiles only into the three strategy-chain platforms
+    // (v1_21_1 / forge_1_20_1 / fabric_1_21_1): this line has no strategy
+    // chain to dispatch it (docs/PREVIEW-API.md).
+    exclude 'com/reclizer/csgobox/api/preview/**'
 }
 
 // Multiple srcDirs in sourceSets.main.resources can collide on files like

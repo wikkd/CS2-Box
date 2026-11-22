@@ -6,6 +6,8 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
+import com.reclizer.csgobox.api.preview.PreviewSource;
+import com.reclizer.csgobox.api.preview.RestPose;
 import com.reclizer.csgobox.utils.Quat;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
@@ -456,6 +458,14 @@ public final class AnimRenderOps {
             renderItem2D(player, gg, item, cx, cy, scale);
             return;
         }
+        // Third-party code SPI (CsboxPreviewAPI): a registered provider
+        // deliberately takes over its own items before anything built-in
+        // runs (docs/PREVIEW-API.md).
+        PreviewSource provided = CsboxPreviewManager.resolveProvider(item);
+        if (provided != null) {
+            renderPreviewSource(gg, item, player, cx, cy, rotation, scale, provided);
+            return;
+        }
         // Mod-specific previews: the first matching strategy owns the item
         // (TACZ gun model, SBW vehicle/gun, SBP shell rest pose, spawn eggs,
         // armor stands, summon containers, Create/Prefab blueprints,
@@ -468,6 +478,14 @@ public final class AnimRenderOps {
                 strategy.render3D(gg, item, player, cx, cy, rotation, scale);
                 return;
             }
+        }
+        // Zero-code JSON declarations (assets/<mod>/csgobox_preview/) come
+        // after the built-ins: the shipped integrations know their mods
+        // better than a generic declaration would.
+        PreviewSource declared = CsboxPreviewManager.resolveDeclaration(item);
+        if (declared != null) {
+            renderPreviewSource(gg, item, player, cx, cy, rotation, scale, declared);
+            return;
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
@@ -508,6 +526,23 @@ public final class AnimRenderOps {
         // is probed offline and unioned into the envelope, so the drawn extent
         // — model + BE visuals — drives both the fit and the pivot.
         ModelBounds effectBounds = inspectEffectBounds(mc, item, renderModel);
+        if (renderModel == model) {
+            BakedModel emptyBlockModel = blockBackedModel(item, model, true);
+            if (emptyBlockModel != renderModel) {
+                ModelBounds berBounds = inspectEffectBounds(mc, item, emptyBlockModel);
+                if (berBounds != NO_BOUNDS) {
+                    // Empty block model + drawing BER (tavern chalkboard: the
+                    // block model has zero quads, every visual lives in the
+                    // BlockEntityRenderer). The flat icon kept by the G0 guard
+                    // would double the render under the union pivot (icon
+                    // drifting off-centre next to the board) — the BER IS the
+                    // block's visual, so render it alone and fit off the BER
+                    // envelope.
+                    renderModel = emptyBlockModel;
+                    effectBounds = berBounds;
+                }
+            }
+        }
         float fitScale = fitScaleFor(
                 effectBounds != NO_BOUNDS ? effectBounds.span() : itemModelSpan(renderModel), scale);
         PoseStack pose = gg.pose();
@@ -553,7 +588,7 @@ public final class AnimRenderOps {
         // 直绘（同样吃到 modelview）。非检视页（标志未设）零改动。
         boolean inspectEffects = INSPECT_ACTIVE && !INSPECT_DISABLED && INSPECT_STATE != null;
         if (inspectEffects) {
-            renderInspectBlockEntity(mc, renderStack, bufferSource);
+            renderInspectBlockEntity(mc, renderStack, bufferSource, renderModel);
         }
         bufferSource.endBatch();
         RenderSystem.enableDepthTest();
@@ -950,6 +985,14 @@ public final class AnimRenderOps {
      *  render throws, so the caller can degrade to the icon path. */
     private static boolean renderEntityPreview(GuiGraphics gg, Entity vehicle, ModelBounds bounds,
                                            int cx, int cy, Quat rotation, float scale) {
+        return renderEntityPreview(gg, vehicle, bounds, cx, cy, rotation, scale, 1.0F);
+    }
+
+    /** fitBoost overload for the declared/SPI previews (docs/PREVIEW-API.md):
+     *  multiplies the auto-fit result alongside {@link #SBW_FIT_BOOST}; 1.0F
+     *  keeps the entity-fit semantics the built-in branches rely on. */
+    private static boolean renderEntityPreview(GuiGraphics gg, Entity vehicle, ModelBounds bounds,
+                                           int cx, int cy, Quat rotation, float scale, float fitBoost) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return false;
         float fitScale = fitScaleFor(bounds.span(), scale);
@@ -962,7 +1005,7 @@ public final class AnimRenderOps {
             // uses, so every entity caps at PREVIEW_FILL * SBW_FIT_BOOST.
             fitScale = scale * PREVIEW_FILL / bounds.span();
         }
-        fitScale *= SBW_FIT_BOOST;
+        fitScale *= SBW_FIT_BOOST * fitBoost;
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx, cy, 100.0F);
@@ -1689,6 +1732,113 @@ public final class AnimRenderOps {
         }
     }
 
+    /** Third-party preview dispatch (2026-11-22 预览适配接口 v1): draws a
+     *  PreviewSource from the code SPI (CsboxPreviewAPI) or a JSON declaration
+     *  (assets/&lt;mod&gt;/csgobox_preview/) through the same pipeline the
+     *  built-in strategies use — probes, auto-fit, pivot and the flat degrade
+     *  all apply. rest_pose composes into the drag quaternion in model space
+     *  (the same space {@link #renderFixedContextModel3D} applies its restPose
+     *  in); fit_boost multiplies the auto-fit result, never the cell
+     *  centring. Package-private: called from renderItem3D only. */
+    static void renderPreviewSource(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                    int cx, int cy, Quat rotation, float scale, PreviewSource source) {
+        if (source.isRaw()) {
+            source.rawRenderer().render(gg, stack, player, cx, cy, rotation, scale);
+            return;
+        }
+        Quat rotationWithRest = source.restPose().isNone()
+                ? rotation
+                : Quat.mul(rotation, restPoseQuat(source.restPose()));
+        if (source.isEntity()) {
+            renderEntityPreviewForType(gg, stack, player, cx, cy, rotationWithRest, scale,
+                    source.entityType(), source.spawnData(), source.fitBoost());
+            return;
+        }
+        if (source.isBlock()) {
+            renderBlockStatePreview(gg, stack, player, cx, cy, rotationWithRest, scale,
+                    source.blockState(), source.fitBoost());
+        }
+    }
+
+    /** Model-space quaternion of a declared rest pose (degrees): yaw around
+     *  Y, then pitch around X, then roll around Z (the rotationYXZ
+     *  decomposition); a pure-yaw pose behaves exactly like the SBP shell's
+     *  FRONT_REST_YAW precedent. Composed under the drag rotation by the
+     *  caller, so dragging keeps rotating around the screen axes. */
+    private static Quat restPoseQuat(RestPose pose) {
+        Quat yaw = Quat.fromAxisAngle(0, 1, 0, (float) Math.toRadians(pose.yawDeg()));
+        Quat pitch = Quat.fromAxisAngle(1, 0, 0, (float) Math.toRadians(pose.pitchDeg()));
+        Quat roll = Quat.fromAxisAngle(0, 0, 1, (float) Math.toRadians(pose.rollDeg()));
+        return Quat.norm(Quat.mul(Quat.mul(yaw, pitch), roll));
+    }
+
+    /** Block-state 3D preview (declared "mode":"block" / PreviewSource.block):
+     *  renders the block's baked model through the same pose chain as the
+     *  default path, pivoting on the base-footprint cuboid
+     *  ({@link #blockBackedCenter}) and auto-fitting on the measured span.
+     *  The caller's ItemStack is only the degrade target: a custom-renderer
+     *  or unmeasurable block model falls back to the flat icon instead of
+     *  guessing. fitBoost multiplies the auto-fit result. */
+    static void renderBlockStatePreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                        int cx, int cy, Quat rotation, float scale,
+                                        BlockState state, float fitBoost) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        BakedModel blockModel;
+        try {
+            blockModel = mc.getBlockRenderer().getBlockModel(state);
+        } catch (Throwable t) {
+            LOGGER.warn("[csgobox] declared block preview failed to resolve a model", t);
+            blockModel = null;
+        }
+        if (blockModel == null || blockModel.isCustomRenderer() || modelBounds(blockModel) == NO_BOUNDS) {
+            renderItem2DFlat(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        ModelBounds bounds = modelBounds(blockModel);
+        float fitScale = fitScaleFor(bounds.span(), scale) * fitBoost;
+        PoseStack pose = gg.pose();
+        pose.pushPose();
+        pose.translate(cx, cy, 100.0F);
+        pose.translate(8.0F * scale, 8.0F * scale, 0.0F);
+        pose.scale(1.0F, -1.0F, 1.0F);
+        SCRATCH_QUAT.set(rotation.x(), rotation.y(), rotation.z(), rotation.w()).normalize();
+        pose.mulPose(SCRATCH_QUAT);
+        Lighting.setupForEntityInInventory();
+        pose.scale(16.0F * fitScale, 16.0F * fitScale, 16.0F * fitScale);
+        Vector3f center = blockBackedCenter(blockModel);
+        if (center != null) {
+            pose.translate(-center.x, -center.y, -center.z);
+        }
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        boolean flat = !blockModel.usesBlockLight();
+        if (flat) Lighting.setupForFlatItems();
+        PoseStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushPose();
+        modelViewStack.mulPoseMatrix(pose.last().pose());
+        RenderSystem.applyModelViewMatrix();
+        PoseStack renderStack = REUSABLE_POSE_STACK;
+        renderStack.setIdentity();
+        boolean rendered = true;
+        try {
+            mc.getItemRenderer().render(stack, ItemDisplayContext.GUI, false,
+                    renderStack, bufferSource, 15728880, OverlayTexture.NO_OVERLAY, blockModel);
+            bufferSource.endBatch();
+        } catch (Throwable t) {
+            LOGGER.warn("Declared block preview render failed; falling back to the flat icon", t);
+            rendered = false;
+        } finally {
+            modelViewStack.popPose();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.enableDepthTest();
+            pose.popPose();
+        }
+        if (flat) Lighting.setupFor3DItems();
+        if (!rendered) {
+            renderItem2DFlat(player, gg, stack, cx, cy, scale);
+        }
+    }
+
     /** Offline probe sink for {@link #fixedContextBounds}: hands the probe
      *  render one vertex recorder regardless of render type and discards
      *  everything else, so the measurement draws nothing and touches no
@@ -2176,6 +2326,14 @@ public final class AnimRenderOps {
      *  block-backed, its model is not flat, or the block has no measurable
      *  geometry. */
     private static BakedModel blockBackedModel(ItemStack item, BakedModel fallback) {
+        return blockBackedModel(item, fallback, false);
+    }
+
+    /** {@code allowEmpty} resolves an empty block model (zero quads — visuals
+     *  live in the block's BlockEntityRenderer) instead of keeping the flat
+     *  icon: the inspect-BER path uses it to suppress the icon and let the
+     *  BER drive the preview. */
+    private static BakedModel blockBackedModel(ItemStack item, BakedModel fallback, boolean allowEmpty) {
         if (!(item.getItem() instanceof BlockItem blockItem) || !isFlatSpriteModel(fallback)) {
             return fallback;
         }
@@ -2197,9 +2355,11 @@ public final class AnimRenderOps {
                 }
             }
             BakedModel blockModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
-            if (blockModel == null || blockModel.isCustomRenderer()
-                    || modelBounds(blockModel) == NO_BOUNDS) {
+            if (blockModel == null || blockModel.isCustomRenderer()) {
                 return fallback;
+            }
+            if (modelBounds(blockModel) == NO_BOUNDS) {
+                return allowEmpty ? blockModel : fallback;
             }
             return blockModel;
         } catch (Throwable t) {
@@ -2307,6 +2467,15 @@ public final class AnimRenderOps {
     static void renderEntityPreviewForType(GuiGraphics gg, ItemStack stack, LivingEntity player,
                                            int cx, int cy, Quat rotation, float scale, EntityType<?> type,
                                            CompoundTag spawnTag) {
+        renderEntityPreviewForType(gg, stack, player, cx, cy, rotation, scale, type, spawnTag, 1.0F);
+    }
+
+    /** fitBoost overload for the declared/SPI previews (docs/PREVIEW-API.md):
+     *  multiplies the auto-fit result — never the cell centring; 1.0F keeps
+     *  the pipeline exactly as the built-in branches drive it. */
+    static void renderEntityPreviewForType(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                           int cx, int cy, Quat rotation, float scale, EntityType<?> type,
+                                           CompoundTag spawnTag, float fitBoost) {
         Entity entity = entityPreviewInstance(type, player.level());
         markPreviewMob(entity);
         if (entity != null) {
@@ -2325,7 +2494,7 @@ public final class AnimRenderOps {
                 }
             }
             ModelBounds bounds = entityPreviewBounds(entity);
-            if (bounds != NO_BOUNDS && renderEntityPreview(gg, entity, bounds, cx, cy, rotation, scale)) {
+            if (bounds != NO_BOUNDS && renderEntityPreview(gg, entity, bounds, cx, cy, rotation, scale, fitBoost)) {
                 return;
             }
         }
@@ -3776,7 +3945,10 @@ public final class AnimRenderOps {
     private static BlockState INSPECT_STATE;
     private static BlockEntity INSPECT_BE;
     private static BlockEntityTicker<BlockEntity> INSPECT_TICKER;
-    private static boolean INSPECT_BER_SKIPPED;
+    /** Per-model verdict of {@link #computeInspectEffectBounds}: does the
+     *  block entity renderer add visual mass the baked model lacks (models
+     *  with no cache entry are treated as "no"). */
+    private static final Map<BakedModel, Boolean> INSPECT_BER_ADDS_MASS = new HashMap<>();
     private static long INSPECT_LAST_TICK_NANOS;
     private static long INSPECT_TICK_COUNT;
     private static final RandomSource INSPECT_RANDOM = RandomSource.create();
@@ -3827,9 +3999,9 @@ public final class AnimRenderOps {
         INSPECT_BE = null;
         INSPECT_TICKER = null;
         INSPECT_STATE = null;
-        INSPECT_BER_SKIPPED = false;
         INSPECT_LAST_TICK_NANOS = 0L;
         INSPECT_EFFECT_BOUNDS.clear();
+        INSPECT_BER_ADDS_MASS.clear();
         if (INSPECT_DISABLED || !(item.getItem() instanceof BlockItem blockItem)) {
             return;
         }
@@ -3844,6 +4016,14 @@ public final class AnimRenderOps {
         if (blockItem.getBlock() instanceof EntityBlock entityBlock) {
             try {
                 BlockEntity be = entityBlock.newBlockEntity(INSPECT_POS, state);
+                // Written board/sign content rides the item's BlockEntityTag
+                // (Forge storage: tag.BlockEntityTag) — load it so text-
+                // carrying BEs preview their item state instead of a blank
+                // freshly-placed board.
+                CompoundTag beTag = BlockItem.getBlockEntityData(item);
+                if (beTag != null && !beTag.isEmpty()) {
+                    be.load(beTag);
+                }
                 be.setLevel(level);
                 be.clearRemoved();
                 INSPECT_BE = be;
@@ -3896,13 +4076,23 @@ public final class AnimRenderOps {
     private static ModelBounds computeInspectEffectBounds(Minecraft mc, BakedModel renderModel) {
         BlockEntityRenderer<BlockEntity> ber = mc.getBlockEntityRenderDispatcher().getRenderer(INSPECT_BE);
         if (ber == null) {
-            INSPECT_BER_SKIPPED = true;
             return NO_BOUNDS;
         }
         FloatArrayList xs = new FloatArrayList();
         FloatArrayList ys = new FloatArrayList();
         FloatArrayList zs = new FloatArrayList();
         collectRawVertices(renderModel, xs, ys, zs);
+        // 模型自身 raw 盒（block 单位，未过 gui 链）——双绘判据的对照盒。
+        float modelMinX = Float.MAX_VALUE, modelMinY = Float.MAX_VALUE, modelMinZ = Float.MAX_VALUE;
+        float modelMaxX = -Float.MAX_VALUE, modelMaxY = -Float.MAX_VALUE, modelMaxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < xs.size(); i++) {
+            modelMinX = Math.min(modelMinX, xs.getFloat(i));
+            modelMinY = Math.min(modelMinY, ys.getFloat(i));
+            modelMinZ = Math.min(modelMinZ, zs.getFloat(i));
+            modelMaxX = Math.max(modelMaxX, xs.getFloat(i));
+            modelMaxY = Math.max(modelMaxY, ys.getFloat(i));
+            modelMaxZ = Math.max(modelMaxZ, zs.getFloat(i));
+        }
         REUSABLE_POSE_STACK.setIdentity();
         FIXED_CONTEXT_PROBE.reset();
         try {
@@ -3916,30 +4106,12 @@ public final class AnimRenderOps {
         }
         if (!FIXED_CONTEXT_PROBE.any) {
             // BER 不画东西 → 模型自身包络足矣（回落 previewPivot）。
-            INSPECT_BER_SKIPPED = true;
             return NO_BOUNDS;
         }
-        xs.addAll(FIXED_CONTEXT_PROBE.vx);
-        ys.addAll(FIXED_CONTEXT_PROBE.vy);
-        zs.addAll(FIXED_CONTEXT_PROBE.vz);
-        if (xs.isEmpty()) {
-            return NO_BOUNDS;
-        }
-        float rawMinX = Float.MAX_VALUE, rawMinY = Float.MAX_VALUE, rawMinZ = Float.MAX_VALUE;
-        float rawMaxX = -Float.MAX_VALUE, rawMaxY = -Float.MAX_VALUE, rawMaxZ = -Float.MAX_VALUE;
-        for (int i = 0; i < xs.size(); i++) {
-            rawMinX = Math.min(rawMinX, xs.getFloat(i));
-            rawMinY = Math.min(rawMinY, ys.getFloat(i));
-            rawMinZ = Math.min(rawMinZ, zs.getFloat(i));
-            rawMaxX = Math.max(rawMaxX, xs.getFloat(i));
-            rawMaxY = Math.max(rawMaxY, ys.getFloat(i));
-            rawMaxZ = Math.max(rawMaxZ, zs.getFloat(i));
-        }
+        // 模型顶点经 gui 链映射（真渲染里 ItemRenderer 会做），BER 顶点保持
+        // raw——真渲染走 identity renderStack，不吃 gui 链。两侧各在自己的
+        // 真实落屏空间取盒再取并（整包过 gui 曾把黑板包络整体挪位）。
         Matrix4f gui = guiRenderMatrix(renderModel);
-        // 枢轴 = raw 包络盒中心经 gui 链映射（2026-11-16 定版规则）。
-        Vector3f center = new Vector3f((rawMinX + rawMaxX) * 0.5F,
-                (rawMinY + rawMaxY) * 0.5F, (rawMinZ + rawMaxZ) * 0.5F);
-        center.mulPosition(gui);
         Vector3f v = new Vector3f();
         float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE;
         float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
@@ -3953,26 +4125,91 @@ public final class AnimRenderOps {
             maxY = Math.max(maxY, v.y());
             maxZ = Math.max(maxZ, v.z());
         }
+        FloatArrayList bx = FIXED_CONTEXT_PROBE.vx;
+        FloatArrayList by = FIXED_CONTEXT_PROBE.vy;
+        FloatArrayList bz = FIXED_CONTEXT_PROBE.vz;
+        float rawMinX = Float.MAX_VALUE, rawMinY = Float.MAX_VALUE, rawMinZ = Float.MAX_VALUE;
+        float rawMaxX = -Float.MAX_VALUE, rawMaxY = -Float.MAX_VALUE, rawMaxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < bx.size(); i++) {
+            rawMinX = Math.min(rawMinX, bx.getFloat(i));
+            rawMinY = Math.min(rawMinY, by.getFloat(i));
+            rawMinZ = Math.min(rawMinZ, bz.getFloat(i));
+            rawMaxX = Math.max(rawMaxX, bx.getFloat(i));
+            rawMaxY = Math.max(rawMaxY, by.getFloat(i));
+            rawMaxZ = Math.max(rawMaxZ, bz.getFloat(i));
+        }
+        // 双绘判据（2026-11-22 首测实测：Create 动力学族预览出现两根轴）：
+        // BER 把方块模型经 SuperByteBuffer 绕自身轴自旋重画——AABB 不变，
+        // raw 盒收在模型盒内，渲染它只会把同一几何画两遍；BER 视觉真正
+        // 超出模型盒（附魔书悬浮、刷怪笼火焰）或模型侧无 quads（黑板）
+        // 时才进预览。
+        boolean berAddsMass;
+        if (minX > maxX) {
+            // 模型侧无 quads（空方块模型）：BER 即全部视觉（黑板）。
+            berAddsMass = true;
+        } else {
+            berAddsMass = berExtendsBeyond(modelMinX, modelMaxX, rawMinX, rawMaxX)
+                    || berExtendsBeyond(modelMinY, modelMaxY, rawMinY, rawMaxY)
+                    || berExtendsBeyond(modelMinZ, modelMaxZ, rawMinZ, rawMaxZ);
+        }
+        INSPECT_BER_ADDS_MASS.put(renderModel, berAddsMass);
+        if (minX > maxX) {
+            // 模型侧无 quads（空方块模型）：包络 = BER raw 盒本身。
+            minX = rawMinX;
+            minY = rawMinY;
+            minZ = rawMinZ;
+            maxX = rawMaxX;
+            maxY = rawMaxY;
+            maxZ = rawMaxZ;
+        } else {
+            minX = Math.min(minX, rawMinX);
+            minY = Math.min(minY, rawMinY);
+            minZ = Math.min(minZ, rawMinZ);
+            maxX = Math.max(maxX, rawMaxX);
+            maxY = Math.max(maxY, rawMaxY);
+            maxZ = Math.max(maxZ, rawMaxZ);
+        }
+        if (minX > maxX || minY > maxY || minZ > maxZ) {
+            return NO_BOUNDS;
+        }
         float span = Math.max(maxX - minX, Math.max(maxY - minY, maxZ - minZ));
         if (span <= 0.0F) {
             return NO_BOUNDS;
         }
         if (span > INSPECT_BER_SPAN_LIMIT) {
             // 信标光柱一类的无界 BER：整段跳过，模型自身包络继续。
-            INSPECT_BER_SKIPPED = true;
             LOGGER.info("[csgobox] inspect preview: block entity visuals span {} blocks, skipping the BER",
                     String.format("%.2f", span));
             return NO_BOUNDS;
         }
+        // 枢轴 = 双侧各自落屏空间并集盒中心（模型侧已过 gui 链、BER 侧 raw）。
+        Vector3f center = new Vector3f((minX + maxX) * 0.5F,
+                (minY + maxY) * 0.5F, (minZ + maxZ) * 0.5F);
         return ModelBounds.of(center, span);
+    }
+
+    /** BER raw 盒在单轴上是否超出模型 raw 盒跨度的 25%——自旋族绕自身轴
+     *  转、AABB 不变则恒 false；外浮视觉（悬浮书、火焰、光柱）超出即 true。 */
+    private static boolean berExtendsBeyond(float modelMin, float modelMax, float rawMin, float rawMax) {
+        float span = modelMax - modelMin;
+        if (span <= 1.0e-5F) {
+            return rawMax - rawMin > 1.0e-3F;
+        }
+        float slack = span * 0.25F;
+        return rawMin < modelMin - slack || rawMax > modelMax + slack;
     }
 
     /** 检视页 BER 渲染：identity pose 进主 batch，与物品 quads 一次 endBatch
      *  一起落屏；错误按 BE 类型拉黑（与蓝图路径同一张黑名单）。 */
     private static void renderInspectBlockEntity(Minecraft mc, PoseStack renderStack,
-                                                 MultiBufferSource.BufferSource bufferSource) {
+                                                 MultiBufferSource.BufferSource bufferSource,
+                                                 BakedModel renderModel) {
         BlockEntity be = INSPECT_BE;
-        if (be == null || INSPECT_BER_SKIPPED || ERRORED_BE_TYPES.contains(be.getType())) {
+        // 只在 BER 探针判定"视觉超出模型盒"时才进主 batch（双绘判据，
+        // 见 computeInspectEffectBounds）；Create 动力学族等自旋重画型
+        // BER 在此被拦下，预览不再出现第二份方块模型。
+        if (be == null || !Boolean.TRUE.equals(INSPECT_BER_ADDS_MASS.get(renderModel))
+                || ERRORED_BE_TYPES.contains(be.getType())) {
             return;
         }
         BlockEntityRenderer<BlockEntity> ber = mc.getBlockEntityRenderDispatcher().getRenderer(be);

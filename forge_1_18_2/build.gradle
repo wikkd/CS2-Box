@@ -76,6 +76,10 @@ sourceSets.main.java {
     // No WTHIT build exists for MC 1.18.2 — the shared WTHIT provider cannot
     // compile here (it imports the waila API).
     exclude 'com/reclizer/csgobox/mcshared/wthit/**'
+    // The preview API compiles only into the three strategy-chain platforms
+    // (v1_21_1 / forge_1_20_1 / fabric_1_21_1): 1.18.2 has neither GuiGraphics
+    // nor a preview strategy chain (docs/PREVIEW-API.md).
+    exclude 'com/reclizer/csgobox/api/preview/**'
 }
 
 tasks.named('processResources', ProcessResources).configure {
