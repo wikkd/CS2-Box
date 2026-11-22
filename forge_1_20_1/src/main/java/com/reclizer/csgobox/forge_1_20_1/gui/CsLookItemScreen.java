@@ -9,6 +9,7 @@ import com.reclizer.csgobox.utils.ColorTools;
 import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
+import com.reclizer.csgobox.forge_1_20_1.utils.DiscInspect;
 import com.reclizer.csgobox.forge_1_20_1.utils.EpicFightInspect;
 import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_1_20_1.utils.MaidSlabPreview;
@@ -406,7 +407,8 @@ public class CsLookItemScreen extends Screen {
             // default mode (own 3D drag preview); its underline turns green
             // while a special inspect mode (mob animation / EF battle inspect)
             // is active.
-            boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive();
+            boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive()
+                    || DiscInspect.isPlaying();
             boolean active = i == 0 || (i == 1 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
@@ -656,6 +658,14 @@ public class CsLookItemScreen extends Screen {
         int inspectX = toolbarButtonX(0);
         int inspectY = toolbarButtonY() + toolbarEnterRise(0);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, inspectX, inspectY, infoSize, infoSize)) {
+            // Audio items (records, plus third-party inspect-audio provider
+            // matches): the inspect button doubles as the music switch
+            // (play/stop). They carry no special inspect mode, so none of the
+            // branches below would ever fire — the audio check runs first.
+            if (DiscInspect.isAudioItem(this.openItem)) {
+                DiscInspect.toggle(this.openItem);
+                return true;
+            }
             if (this.taczViewportActive) {
                 TaczInspectViewport.exit(this.openItem);
                 this.taczViewportActive = false;
@@ -934,6 +944,7 @@ public class CsLookItemScreen extends Screen {
             this.sceneryAutoStarted = false;
         }
         AnimRenderOps.resetPreviewMobAnimation();
+        DiscInspect.stop();
         this.mobAnimMode = false;
         EpicFightInspect.clear();
         if (this.sceneryPlayerHidden) {
