@@ -139,6 +139,11 @@ public class TerminalBootScreen extends Screen {
             }
             count++;
         }
+        // Mirror CsboxScreen: the gold slot needs a grid cell of its own, or a
+        // exactly-full last page paints the slot over the last item.
+        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4) {
+            count++;
+        }
         return count;
     }
 
@@ -262,14 +267,22 @@ public class TerminalBootScreen extends Screen {
                         slotVisualWidth, 0xFFD3D3D3);
             }
         }
-        if (showNames) {
+        if (showNames && !gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
+                && this.page == pageCount() - 1) {
             renderText(gg, Component.translatable("gui.csgobox.csgo_box.label_gold").getVisualOrderText(),
                     this.width * 4 / 100F + x * this.width * 9 / 100F,
                     this.height * y / 100F, 0.6F);
         }
         if (pageCount() > 1) {
-            renderText(gg, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
-                    this.width * 88 / 100F, this.height * 54 / 100F, 0.6F);
+            // The page counter rides the list header line ("items" caption),
+            // flush right with the list divider. The old spot sat inside the
+            // last grid column a hair above the frames, so it read as a stray
+            // label crossing the divider and clipping the frame top.
+            String pageText = (this.page + 1) + "/" + pageCount();
+            float pageScale = 0.6F;
+            renderText(gg, Component.literal(pageText).getVisualOrderText(),
+                    GuiRegion.list(this.width, this.height).right() - this.font.width(pageText) * pageScale,
+                    this.height * 50.3F / 100F, pageScale);
         }
 
         // terminal display name with its box-definition colour, centred title

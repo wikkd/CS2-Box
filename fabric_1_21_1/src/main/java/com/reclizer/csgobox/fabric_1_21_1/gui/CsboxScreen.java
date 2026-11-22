@@ -180,6 +180,13 @@ public class CsboxScreen extends Screen {
                 if (gradeList.get(i) > 4) break;
                 count++;
             }
+            // The gold slot occupies a grid cell of its own; without reserving
+            // it, a last page exactly filled by grade-≤4 items would leave the
+            // slot no free cell and paint it onto the last item (item sprites
+            // render above flat fills, so item and gold medallion overlap).
+            if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4) {
+                count++;
+            }
             cachedRenderableCount = count;
         }
         return cachedRenderableCount;
@@ -397,8 +404,15 @@ public class CsboxScreen extends Screen {
         renderLabelsAnimated(guiGraphics, showNames, partialTicks);
 
         if (pageCount() > 1) {
-            renderText(guiGraphics, Component.literal((this.page + 1) + "/" + pageCount()).getVisualOrderText(),
-                    this.width * 90 / 100F, this.height * 54 / 100F, 0.6F);
+            // The page counter rides the list header line ("items" caption),
+            // flush right with the list divider. The old spot sat inside the
+            // last grid column a hair above the frames, so it read as a stray
+            // label crossing the divider and clipping the frame top.
+            String pageText = (this.page + 1) + "/" + pageCount();
+            float pageScale = 0.6F;
+            renderText(guiGraphics, Component.literal(pageText).getVisualOrderText(),
+                    GuiRegion.list(this.width, this.height).right() - this.font.width(pageText) * pageScale,
+                    this.height * 50.3F / 100F, pageScale);
         }
         // v2.0.2 pity (保底) hint: the counter is server-authoritative, so the
         // client can only render what the preview packet carried.
@@ -515,9 +529,16 @@ public class CsboxScreen extends Screen {
                     this.width * 4F / 100 + px * this.width * 9F / 100,
                     this.height * py / 100F + offsetY, 0.6F, alpha);
         }
-        renderText(guiGraphics, goldLabel,
-                this.width * 4 / 100F + x * this.width * 9 / 100F,
-                this.height * y / 100F + offsetY, 0.6F, alpha);
+        // The "gold" caption travels with the gold slot cell only (same
+        // condition as renderPageGrid's slot draw); drawing it unconditionally
+        // put it under the last item's name on exactly-full pages and left a
+        // stray label on pages without the slot.
+        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) > 4
+                && page == pageCount() - 1) {
+            renderText(guiGraphics, goldLabel,
+                    this.width * 4 / 100F + x * this.width * 9 / 100F,
+                    this.height * y / 100F + offsetY, 0.6F, alpha);
+        }
     }
 
     private void renderCenteredText(GuiGraphics guiGraphics, FormattedCharSequence text,
