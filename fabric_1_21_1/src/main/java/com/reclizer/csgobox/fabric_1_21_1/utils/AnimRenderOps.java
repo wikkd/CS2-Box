@@ -117,6 +117,11 @@ public final class AnimRenderOps {
     /** Cached largest-axis span (block units) of each TACZ gun model, keyed
      *  and lifecycle-managed like {@link #GUN_MODEL_CENTERS}. */
     private static final Map<BedrockGunModel, Float> GUN_MODEL_SPANS = new WeakHashMap<>();
+    /** One-shot INFO per gun id (2026-11-22 fabric centre report): the
+     *  computed envelope centre/span of the first preview of each gun, so a
+     *  wrong-centre runtime report carries hard numbers to compare with the
+     *  offline model walk. */
+    private static final Set<String> GUN_PREVIEW_LOGGED = new HashSet<>();
     /** Cached centre + largest-axis span (block units, in the drag-rotation
      *  space) of each baked item model's geometry. Models are stable
      *  instances owned by the model manager and are replaced on resource
@@ -891,10 +896,32 @@ public final class AnimRenderOps {
     static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
+        // The bedrock model is a singleton shared with TACZ's own renderers
+        // (hand, ground, TACZ UI): their animation state machine writes bone
+        // offsets/quaternions/scales in place and only resets them after each
+        // of its own renders. Measuring the envelope on such a residue caches
+        // a posed centre that then disagrees with every later frame (our
+        // renders run on the cleaned state and re-clean after drawing) — the
+        // gun visibly sits off-centre (2026-11-22 fabric report). Reset to
+        // the default pose first so the cached envelope always matches what
+        // this render — and every later one — draws.
+        gunModel.cleanAnimationTransform();
         // Auto-fit: gun models routinely span 2-3 blocks; shrink so the
         // largest axis stays inside the preview square (normal guns keep
         // their tuned look via the same PREVIEW_FILL rule as vanilla items).
         float fitScale = fitScaleFor(gunModelSpan(gunModel), scale);
+        Vector3f logCenter = gunModelCenter(gunModel);
+        IGun gunApi = IGun.getIGunOrNull(item);
+        String gunId = gunApi != null && gunApi.getGunId(item) != null
+                ? gunApi.getGunId(item).toString() : "unknown";
+        if (GUN_PREVIEW_LOGGED.add(gunId)) {
+            LOGGER.info("[csgobox] tacz gun preview: gun={} center=({}, {}, {}) span={} fitScale={}",
+                    gunId,
+                    String.format("%.3f", logCenter.x), String.format("%.3f", logCenter.y),
+                    String.format("%.3f", logCenter.z),
+                    String.format("%.3f", GUN_MODEL_SPANS.getOrDefault(gunModel, 0.0F)),
+                    String.format("%.3f", fitScale));
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
@@ -2310,6 +2337,12 @@ public final class AnimRenderOps {
                                                 int cx, int cy, Quat rotation, float scale) {
         Entity entity = entityPreviewInstance(EntityType.ARMOR_STAND, player.level());
         if (entity instanceof ArmorStand stand) {
+            // The stand instance is cached and shared across inspections:
+            // wipe every equipment slot first, or the previously inspected
+            // pieces keep rendering alongside the new one.
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                stand.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
             stand.setItemSlot(((ArmorItem) stack.getItem()).getEquipmentSlot(), stack);
             ModelBounds bounds = armorPreviewBounds(stack, stand);
             if (bounds != NO_BOUNDS && renderEntityPreview(gg, stand, bounds, cx, cy, rotation, scale)) {

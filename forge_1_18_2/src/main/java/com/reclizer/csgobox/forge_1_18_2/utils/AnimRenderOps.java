@@ -1343,6 +1343,12 @@ public final class AnimRenderOps extends net.minecraft.client.gui.GuiComponent {
                                                 int cx, int cy, Quat rotation, float scale) {
         Entity entity = entityPreviewInstance(EntityType.ARMOR_STAND, player.level);
         if (entity instanceof ArmorStand stand) {
+            // The stand instance is cached and shared across inspections:
+            // wipe every equipment slot first, or the previously inspected
+            // pieces keep rendering alongside the new one.
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                stand.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
             stand.setItemSlot(((ArmorItem) stack.getItem()).getSlot(), stack);
             ModelBounds bounds = entityAabbBounds(stand);
             if (bounds != NO_BOUNDS && renderEntityPreview(pose, stand, bounds, cx, cy, rotation, scale)) {

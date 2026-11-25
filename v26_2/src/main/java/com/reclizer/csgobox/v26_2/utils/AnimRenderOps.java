@@ -1007,6 +1007,12 @@ public final class AnimRenderOps {
     private static void renderArmorStandPreview(GuiGraphicsExtractor gg, ItemStack stack, LivingEntity player,
                                                 int cx, int cy, Quat rotation, float scale, EquipmentSlot slot) {
         if (entityPreviewInstance(EntityTypes.ARMOR_STAND, player.level()) instanceof ArmorStand stand) {
+            // The stand instance is cached and shared across inspections:
+            // wipe every equipment slot first, or the previously inspected
+            // pieces keep rendering alongside the new one.
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                stand.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
             stand.setItemSlot(slot, stack);
             // The stand instance is cached per type, so the call below parks
             // and extracts the same (already equipped) stand.

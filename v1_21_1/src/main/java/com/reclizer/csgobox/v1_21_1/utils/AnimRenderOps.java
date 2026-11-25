@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
 import com.reclizer.csgobox.utils.Quat;
+import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.model.bedrock.BedrockCube;
 import com.tacz.guns.client.model.bedrock.BedrockCubeBox;
@@ -100,6 +101,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -153,6 +156,11 @@ public final class AnimRenderOps {
     /** Cached largest-axis span (block units) of each TACZ gun model, keyed
      *  and lifecycle-managed like {@link #GUN_MODEL_CENTERS}. */
     private static final Map<BedrockGunModel, Float> GUN_MODEL_SPANS = new WeakHashMap<>();
+    /** One-shot INFO per gun id (2026-11-22 fabric centre report): the
+     *  computed envelope centre/span of the first preview of each gun, so a
+     *  wrong-centre runtime report carries hard numbers to compare with the
+     *  offline model walk. */
+    private static final Set<String> GUN_PREVIEW_LOGGED = new HashSet<>();
 
     /** Cached centre + largest-axis span (block units, in the drag-rotation
      *  space) of each baked item model's geometry. Models are stable
@@ -384,6 +392,36 @@ public final class AnimRenderOps {
      *  convention for them here. Skipped under shader mods (Iris/Oculus)
      *  — their GUI interception breaks custom 3D paths, and the flat path
      *  cannot draw them either. */
+    /** Whether the item model is the vanilla barrier model — the upstream
+     *  "deliberately ships no icon" marker: every quad carries the barrier
+     *  sprite. Compared by sprite so parent-chain tricks survive; cached
+     *  per model (the quad walk is not free). */
+    private static final Map<BakedModel, Boolean> BARRIER_ICON_MODELS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static boolean isBarrierModel(BakedModel model) {
+        return BARRIER_ICON_MODELS.computeIfAbsent(model, m -> {
+            try {
+                RandomSource random = RandomSource.create();
+                List<BakedQuad> quads = new ArrayList<>(m.getQuads(null, null, random));
+                for (Direction direction : Direction.values()) {
+                    quads.addAll(m.getQuads(null, direction, random));
+                }
+                if (quads.isEmpty()) {
+                    return false;
+                }
+                for (BakedQuad quad : quads) {
+                    if (!quad.getSprite().contents().name().toString().equals("minecraft:item/barrier")) {
+                        return false;
+                    }
+                }
+                return true;
+            } catch (Throwable t) {
+                return false;
+            }
+        });
+    }
+
     public static void renderItem2D(LivingEntity entity, GuiGraphics gg, ItemStack stack, float x, float y, float scale) {
         BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(stack, entity.level(), entity, 0);
         // Mod-specific overrides first: the first matching strategy owns the
@@ -398,6 +436,20 @@ public final class AnimRenderOps {
         if (model.isCustomRenderer() && !isShaderModActive()) {
             renderFixedContextModel3D(gg, stack, entity, x, y, Quat.IDENTITY, scale, null);
             return;
+        }
+        // Upstream "deliberately no icon" markers: an item model inherited
+        // from the vanilla barrier model (the red prohibition sign) means
+        // the mod ships no inventory icon for this item — a block's item
+        // form then renders its real block model instead, matching the 3D
+        // pass's G0 block-backing rule. The vanilla barrier itself keeps
+        // its sign: its block model has no geometry and the resolver
+        // falls back to the item model.
+        if (stack.getItem() instanceof BlockItem && isBarrierModel(model)) {
+            BakedModel blockModel = blockBackedModel(stack, model);
+            if (blockModel != model) {
+                renderFixedContextModel3D(gg, stack, entity, x, y, Quat.IDENTITY, scale, null, blockModel);
+                return;
+            }
         }
         renderItem2DFlat(entity, gg, stack, x, y, scale);
     }
@@ -1658,6 +1710,12 @@ public final class AnimRenderOps {
         EquipmentSlot slot = ((ArmorItem) stack.getItem()).getEquipmentSlot();
         Entity entity = entityPreviewInstance(EntityType.ARMOR_STAND, player.level());
         if (entity instanceof ArmorStand stand) {
+            // The stand instance is cached and shared across inspections:
+            // wipe every equipment slot first, or the previously inspected
+            // pieces keep rendering alongside the new one.
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                stand.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
             stand.setItemSlot(slot, stack);
             ModelBounds bounds = armorPreviewBounds(stack, stand);
             if (bounds != NO_BOUNDS && renderEntityPreview(gg, stand, bounds, cx, cy, rotation, scale)) {
@@ -2541,7 +2599,16 @@ public final class AnimRenderOps {
     static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
                                                   float cx, float cy, Quat rotation, float scale,
                                                   Quaternionf restPose) {
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
+        renderFixedContextModel3D(gg, item, player, cx, cy, rotation, scale, restPose, null);
+    }
+
+    /** Model-override variant: renders the given baked model instead of the
+     *  item's own (the 2D barrier-icon rule feeds the block model here). */
+    static void renderFixedContextModel3D(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                                  float cx, float cy, Quat rotation, float scale,
+                                                  Quaternionf restPose, BakedModel modelOverride) {
+        BakedModel model = modelOverride != null ? modelOverride
+                : Minecraft.getInstance().getItemRenderer().getModel(item, player.level(), player, 0);
         ModelBounds bounds = fixedContextBounds(item, model);
         float fitScale = fitScaleFor(bounds.span(), scale);
         if (bounds != NO_BOUNDS) {
@@ -2742,10 +2809,32 @@ public final class AnimRenderOps {
     static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
+        // The bedrock model is a singleton shared with TACZ's own renderers
+        // (hand, ground, TACZ UI): their animation state machine writes bone
+        // offsets/quaternions/scales in place and only resets them after each
+        // of its own renders. Measuring the envelope on such a residue caches
+        // a posed centre that then disagrees with every later frame (our
+        // renders run on the cleaned state and re-clean after drawing) — the
+        // gun visibly sits off-centre (2026-11-22 fabric report). Reset to
+        // the default pose first so the cached envelope always matches what
+        // this render — and every later one — draws.
+        gunModel.cleanAnimationTransform();
         // Auto-fit: gun models routinely span 2-3 blocks; shrink so the
         // largest axis stays inside the preview square (normal guns keep
         // their tuned look via the same PREVIEW_FILL rule as vanilla items).
         float fitScale = fitScaleFor(gunModelSpan(gunModel), scale);
+        Vector3f logCenter = gunModelCenter(gunModel);
+        IGun gunApi = IGun.getIGunOrNull(item);
+        String gunId = gunApi != null && gunApi.getGunId(item) != null
+                ? gunApi.getGunId(item).toString() : "unknown";
+        if (GUN_PREVIEW_LOGGED.add(gunId)) {
+            LOGGER.info("[csgobox] tacz gun preview: gun={} center=({}, {}, {}) span={} fitScale={}",
+                    gunId,
+                    String.format("%.3f", logCenter.x), String.format("%.3f", logCenter.y),
+                    String.format("%.3f", logCenter.z),
+                    String.format("%.3f", GUN_MODEL_SPANS.getOrDefault(gunModel, 0.0F)),
+                    String.format("%.3f", fitScale));
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
@@ -3062,14 +3151,16 @@ public final class AnimRenderOps {
      *  {@code renderModel}; everything else renders the icon). So park a
      *  shared client-side rack entity, mount the blade through its two
      *  public fields ({@code currentTypeStack} = the blade — the rack
-     *  renderer itself re-applies {@code setEntityRepresentation(this)} per
-     *  frame, opening the gate; {@code currentType} = the floor-stand item —
-     *  selects the horizontal pose branch), and let the mod's own
-     *  {@code BladeStandEntityRenderer} run its full rack chain (anchor
-     *  translate, 45° wall-rotation steps, ×2 scale, horizontal pose).
-     *  The renderer draws only the blade — the stand's own body never
-     *  enters the preview — and the probe-based auto-fit, centring and
-     *  {@link #SBW_FIT_BOOST} apply on top. Zero SlashBlade class
+     *  renderer re-applies {@code setEntityRepresentation(this)} on its
+     *  EMPTY rebuild branch, opening the gate; {@code currentType} = a stand
+     *  item — the pose branch selector: {@code bladestand_1w} stands the
+     *  blade upright, the floor stands keep the horizontal rack pose), and
+     *  let the mod's own {@code BladeStandEntityRenderer} run its chain
+     *  (anchor translate, 45° rotation steps, ×2 scale). The ItemFrame's
+     *  own item stays EMPTY so the renderer's second renderItem — the rack
+     *  body — hits its empty-stack early return (javap both mod lines) and
+     *  only the blade enters the preview; probe-based auto-fit, centring
+     *  and {@link #SBW_FIT_BOOST} apply on top. Zero SlashBlade class
      *  references: the entity comes from the vanilla registry, the fields
      *  are written reflectively. Degrades to the flat icon when the entity,
      *  the fields or the render are unavailable. Package-private: the
@@ -3148,9 +3239,11 @@ public final class AnimRenderOps {
      *  renderer re-applies {@code setEntityRepresentation} only when its own
      *  {@code currentTypeStack} is EMPTY (the rebuild branch), so a directly
      *  mounted non-empty stack without it never opens the TEISR renderModel
-     *  gate. The rack body comes along: doRender's second renderItem draws
-     *  the ItemFrame's own item, set here to the matching stand model.
-     *  False when the fields are unreachable or the stand item is gone. */
+     *  gate. The ItemFrame's own item is forced EMPTY: doRender's second
+     *  renderItem would draw it as the rack body, and its empty-stack guard
+     *  (javap: isEmpty → early return, both mod lines) skips that draw —
+     *  only the blade renders. False when the fields are unreachable or the
+     *  stand item is gone. */
     private static boolean mountSlashBladeOnStand(Entity stand, ItemStack stack, boolean upright) {
         if (!SLASHBLADE_STAND_FIELDS_RESOLVED) {
             SLASHBLADE_STAND_FIELDS_RESOLVED = true;
@@ -3180,8 +3273,13 @@ public final class AnimRenderOps {
             copy.setEntityRepresentation(stand);
             SLASHBLADE_STAND_TYPE_FIELD.set(stand, standItem);
             SLASHBLADE_STAND_STACK_FIELD.set(stand, copy);
+            // The rack body draw is the renderer's second renderItem over
+            // the ItemFrame's own item; an empty item hits its isEmpty
+            // early return (javap both mod lines) so only the blade draws
+            // (maintainer call 2026-11-17: blade only, no rack body). The
+            // pose branch reads the currentType field, not this item.
             if (stand instanceof ItemFrame frame) {
-                frame.setItem(new ItemStack(standItem));
+                frame.setItem(ItemStack.EMPTY);
             }
             return true;
         } catch (Throwable t) {
