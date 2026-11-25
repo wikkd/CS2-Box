@@ -115,10 +115,14 @@ runClient/runServer 需联网下载 assets/服务端分发包。
    main entrypoint 阶段直接抛异常**（"Rerached side issue ... use rei_server /
    rei_client / rei_common"）——fabric 的 runServer 从接入 REI 起就没真正跑
    通过。已改为 `rei_client`（插件实现的是 `REIClientPlugin`）。
-2. **fabric-loader 钉版 0.16.14**：0.20.x 与 Loom 1.17 版本错位（0.20 要求
-   access widener 头为新名 `classTweaker v2 named`，0.16.x 时代标准头为
-   `accessWidener v2 named`；AW 头已随钉版改回）。0.16.x 是 1.21.1 时代与
-   Loom 1.17 同期的正确线。
+2. **fabric-loader 钉版（2026-11-22 升至 0.19.5）**：0.20.x 与 Loom 1.17
+   版本错位（0.20 要求 access widener 头为新名 `classTweaker v2 named`，
+   0.16.x/0.19.x 时代标准头仍是 `accessWidener v2 named`；AW 头保持旧名）。
+   最初钉 0.16.14 是 1.21.1 时代与 Loom 1.17 同期的保守线；2026-11-22 因
+   dev 第三方模组（森罗厨房 Refabricated 1.6.0.9 要求 `fabricloader >= 0.19`、
+   TaCZ Refabricated 要求 `>= 0.17.2`）升至 **0.19.5**——0.19 仍接受旧 AW 头，
+   `runClient` 实测 78 mods 正常启动。本模组 `fabric.mod.json` 仍声明
+   `fabricloader >= 0.16.0`，生产玩家不受影响。
 3. **`#tag` 条目加载时机（自愈）**：物品标签在客户端首次资源加载 /
    服务器数据包加载前未绑定，早期扫描（`onInitialize`）必然展开失败；而
    `BoxJsonLoader` 的解析缓存会把带错误的解析结果按文件+价格表哈希**粘住**，
@@ -191,12 +195,45 @@ ObjectAnimationRunner/IClientPlayerGunOperator/LocalPlayerDataHolder.clientState
 SoundPlayManager/IGun/Common*Index/POJO/AttachmentType）——全部同名同签名；
 注意 1.21.1 分支源码已比 release 新（引用 MAE 动画库），**以 release jar 为准**。
 
-运行时注意：Refabricated 声明 `fabricloader >= 0.17.2`，而本模块 dev 环境
-钉 0.16.14（AW 头时代匹配，见上文 loader 钉版说明）——**dev runClient/
-runServer 无法直接加载 TACZ 做联测**；生产环境玩家侧 loader 自选不受影响。
-另一运行时依赖 Forge Config API Port（`forgeconfigapiport`），仅真实加载
-TACZ 时需要。枪包方面：1.20.1 枪包需经 TACZ Pack Upgrader 升级为 1.21.1
-NeoForge 兼容格式后方可用于 Refabricated（上游 README 声明）。
+运行时注意（2026-11-22 更新）：Refabricated 声明 `fabricloader >= 0.17.2`，
+本模块 dev 环境已升至 **0.19.5**（见上文 loader 钉版说明），**dev runClient
+可正常加载 TACZ 联测**；runServer 仍被上游 fabric-resource-loader-v0 的
+`server.LanguageMixin` 阻断（与 loader 版本无关，见「已知 dev 环境限制」）。
+生产环境玩家侧 loader 自选不受影响。另一运行时依赖 Forge Config API Port
+（`forgeconfigapiport`），真实加载 TACZ 时必须同装。枪包方面：1.20.1 枪包需
+经 TACZ Pack Upgrader 升级为 1.21.1 NeoForge 兼容格式后方可用于 Refabricated
+（上游 README 声明）。
+
+## 2026-11-22 dev 第三方模组部署（Immersive Aircraft / 森罗厨房 / TACZ Refabricated）
+
+`scripts/deploy-fabric-1211-dev.sh` 把 Fabric 1.21.1 构建的第三方模组与对应
+`compat-packs/` 数据包部署进 `fabric_1_21_1/run/`（gitignored，零 build.gradle
+改动，幂等重跑）。模组集（2026-11-22 按发布 jar 的 `fabric.mod.json` 与
+`models/item` 实测）：
+
+| 模组 | 版本 / 文件 | 说明 |
+|---|---|---|
+| Immersive Aircraft | `immersive_aircraft-fabric-1.7.0+1.21.1.jar` | `ia_crate`/`ia_terminal` 的 27 个 id 全在 |
+| Kaleidoscope Cookery | `kaleidoscope_cookery-1.6.0.9-fabric+mc1.21.1.jar` | Refabricated 1.6.0.9；`kc_crate`/`kc_terminal` 的 21 个 id 全在。1.0.1 缺 12 个（`bamboo_tube_rice`/`barley_tea`/`biluochun`/`apple_platter`/`baozi_plate`/`beef_noodle`/`candied_potato`/`trash_can`/`buddha_jumps_over_the_wall`/`cold_cut_ham_slices_block`/`teapot_3d`/`eight_immortals_table`），不要退回 |
+| TaCZ: Refabricated | `tacz-refabricated-1.21.1-0.7.1-forge1.1.8-hotfix2.jar` | `local-repo`（`scripts/download-tacz-fabric.sh`）；`gun_crate`/`tacz_terminal` 的真枪条目 |
+| Forge Config API Port | `ForgeConfigAPIPort-v21.1.6-1.21.1-Fabric.jar` | 森罗厨房 Refabricated 与 TACZ Refabricated 的硬前置 |
+
+`fabric-api` **不要**复制进 `run/mods`：Loom 已在运行时 classpath 提供
+0.116.17，重复 mod id 会直接拒绝启动。数据包部署 `ia_*`/`kc_*`/`gun_*`
+六份 JSON，`_prices.json` 经 `scripts/merge-prices.py` 合并（既有键优先）。
+注意 **未定价 id 会拒绝整箱**：`gun_crate` 的 `minecraft:iron_nugget` 曾因此
+被跳过，已在 `compat-packs/tacz-pack/_prices.json` 补价。
+
+验证（loader 0.19.5，`runClient`）：78 mods 加载，`csgobox` / `tacz` /
+`immersive_aircraft` / `kaleidoscope_cookery` / `forgeconfigapiport` 全在场；
+启动时 `Loaded 111 price(s)`，补 `minecraft:iron_nugget` 后 `/csbox reload`
+载入 112 条；8 个箱子 JSON 全载、`skipped 0`（reload 日志 `loaded 8,
+skipped 0`）；TACZ 枪包导出并扫描到 `tacz_default_gun`。
+日志中 `Removed resource pack tacz/kaleidoscope_cookery ... no longer compatible`
+是 vanilla 对内置资源包 pack_format 的裁剪（模组资源仍经 `tacz_resources` /
+模组资源管理器加载），非装载失败。`runServer` 仍受上文 LanguageMixin 上游
+限制，联测一律用 `runClient`。本次为**装载级验证**；3D 预览 / 检视的 L4
+视觉回归由维护者用 `runClient` 实测（`/csbox give @p csgobox:ia_crate` 等）。
 
 ## 2026-10-25 Superb Warfare（卓越前线）3D 预览
 

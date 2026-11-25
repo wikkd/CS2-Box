@@ -269,6 +269,8 @@
   "emi.csgobox.tooltip.drop_rate": "掉落率: %s%%",
   "emi.csgobox.tooltip.grade_weight": "[%s] 权重 %s/%s",
   "emi.csgobox.tooltip.item_chance": "单件概率 %s%%",
+  "config.jade.plugin_csgobox.box_item_entity": "CS2-Box 箱子掉落率",
+  "config.jade.plugin_csgobox.armory_recycler": "CS2-Box 武库拆解台",
   "jade.csgobox.box.drop_rate": "掉落率: %s%%",
   "jade.csgobox.box.grade_line": "%s %s%%",
   "jade.csgobox.box.more_grades": "…共 %s 级",

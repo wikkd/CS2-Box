@@ -269,6 +269,8 @@
   "emi.csgobox.tooltip.drop_rate": "Drop rate: %s%%",
   "emi.csgobox.tooltip.grade_weight": "[%s] weight %s/%s",
   "emi.csgobox.tooltip.item_chance": "Per-item chance %s%%",
+  "config.jade.plugin_csgobox.box_item_entity": "CS2-Box box drop rates",
+  "config.jade.plugin_csgobox.armory_recycler": "CS2-Box armory recycler",
   "jade.csgobox.box.drop_rate": "Drop rate: %s%%",
   "jade.csgobox.box.grade_line": "%s %s%%",
   "jade.csgobox.box.more_grades": "…%s more tiers",

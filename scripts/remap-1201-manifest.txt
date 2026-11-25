@@ -80,3 +80,21 @@ local-repo/dev-mods-staging/twilightforest-1.20.1-4.3.2508.jar	twilightforest-1.
 # Cobblemon 1.5.2 —— ! 休眠：modLoader=kotlinforforge 硬前置，KFF 在 FG7 dev 无法注册语言提供者
 #（create_jetpack 同先例），不部署进 run/mods；pack 数据包照常交付，生产环境用户自带 KFF
 local-repo/dev-mods-staging/Cobblemon-forge-1.5.2+1.20.1.jar	!Cobblemon-forge-1.5.2+1.20.1-official.jar	-
+
+# ===== Point Blank 2.2.0（点防御，零代码预览=BEWLR/geckolib 重路由命中，2026-11-22）=====
+local-repo/com/vicmatskiv/pointblank/2.2.0/pointblank-forge-1.20.1-2.2.0.jar	pointblank-forge-1.20.1-2.2.0-official.jar	-
+# ===== GeckoLib 4.8.5（Point Blank 前置，要求 [4.4.7,)）=====
+local-repo/software/bernie/geckolib/4.8.5/geckolib-forge-1.20.1-4.8.5.jar	geckolib-forge-1.20.1-4.8.5-official.jar	META-INF/jarjar/mclib-20.jar
+# ===== Daffa's Arsenal 3.8.0.2（TACZ 内容包，57 枪，2026-11-22）=====
+local-repo/com/daffas/daffasarsenal/3.8.0.2/daffas_arsenal-3.8.0.2.jar	daffas_arsenal-3.8.0.2-official.jar	-
+
+# ===== WTHIT 8.21.1 + badpackets 0.4.3 (WTHIT HUD dev test, 2026-11-24) =====
+local-repo/dev-mods-staging/wthit-1.20.1-forge-8.21.1.jar	wthit-1.20.1-forge-8.21.1-official.jar	-
+local-repo/dev-mods-staging/badpackets-forge-0.4.3.jar	badpackets-forge-0.4.3-official.jar	-
+
+# ===== Jade 11.13.3+forge (Jade HUD dev test, 2026-11-24) =====
+# Production jar is SRG-mapped: copied raw into run/mods it kills the dev
+# client at startup (NoSuchMethodError InputConstants$Type.m_84895_), so it
+# has to go through this pipeline like every other 1.20.1 Forge jar.
+local-repo/_probe/jade-1201.jar	jade-11.13.3+forge-official.jar	-
+local-repo/dev-mods-staging/player-animation-lib-forge-1.0.2-rc1+1.20.jar	player-animation-lib-forge-1.0.2-rc1+1.20-official.jar	-
