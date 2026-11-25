@@ -23,6 +23,9 @@ SRC="${SRC_DIR}/curios-forge-${VERSION}.jar"
 download_curios() {
     local part="${SRC}.part"
     local attempt
+    # curl cannot create the parent directory, and a bare checkout has no
+    # local-repo/com/kaleidoscope tree at all (CI hit curl error 23 here).
+    mkdir -p "$SRC_DIR"
     for attempt in 1 2 3; do
         echo "Downloading Curios ${VERSION} from ${URL} (curl attempt ${attempt}/3) ..."
         # -4/--http1.1 and no resume: same integrity reasoning as
@@ -30,7 +33,6 @@ download_curios() {
         if curl -4 --http1.1 -fL --retry 3 --retry-delay 2 \
                 --connect-timeout 20 --max-time 300 -o "$part" "$URL"; then
             if unzip -tq "$part" >/dev/null 2>&1; then
-                mkdir -p "$SRC_DIR"
                 mv "$part" "$SRC"
                 echo "Done: $SRC"
                 return 0
