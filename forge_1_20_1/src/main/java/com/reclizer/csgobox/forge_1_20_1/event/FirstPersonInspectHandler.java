@@ -4,6 +4,7 @@ import com.reclizer.csgobox.forge_1_20_1.CsgoBox;
 import com.reclizer.csgobox.forge_1_20_1.compat.TaczInspectViewport;
 import com.reclizer.csgobox.forge_1_20_1.gui.CsLookItemScreen;
 import com.reclizer.csgobox.forge_1_20_1.gui.FirstPersonInspectScreen;
+import com.reclizer.csgobox.forge_1_20_1.utils.EpicFightInspect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
@@ -16,10 +17,13 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Drives the opt-in "first-person inspect" flow for {@link CsLookItemScreen}
- * on Forge 1.20.1: the gloves button closes the look screen, injects the gun
+ * on Forge 1.20.1: the inspect button closes the look screen, injects the gun
  * into the main hand (client-side) and triggers TACZ's native inspect; this
  * handler watches for the animation to finish, then restores the hand and
- * reopens the look screen. TACZ is optional and each entry is facade-guarded.
+ * reopens the look screen. When Epic Fight's player mode is active the session
+ * takes the player out of it first (EF renders the first-person hand itself,
+ * so TACZ's inspect could never appear) and restores it afterwards. TACZ is
+ * optional and each entry is facade-guarded.
  */
 @Mod.EventBusSubscriber(value = Dist.CLIENT, modid = CsgoBox.MODID)
 public final class FirstPersonInspectHandler {
@@ -45,6 +49,10 @@ public final class FirstPersonInspectHandler {
         int ticks;
         int doneStreak;
         boolean inspectTriggered;
+        /** True when the session took the player out of Epic Fight's player
+         *  mode (EF renders the first-person hand itself, hiding TACZ's gun)
+         *  and must put it back on finish/cancel. */
+        boolean leftBattleMode;
     }
 
     private FirstPersonInspectHandler() {
@@ -81,7 +89,23 @@ public final class FirstPersonInspectHandler {
         s.returnScreen = returnScreen;
         s.lookPreviousScreen = lookPreviousScreen;
         s.restoreHand = player.getMainHandItem().copy();
+        // Epic Fight's player mode renders the first-person hand itself:
+        // TACZ's native draw/inspect can never appear there and the draw
+        // leaves TACZ's client state lock up, so the session would sit on a
+        // blank lock screen until it aborts (the 2026-11-23 report). Take
+        // the player out of that mode for the session and put it back on
+        // finish/cancel — EF's own mode-change path, server included.
+        s.leftBattleMode = EpicFightInspect.leaveBattleMode(player);
+        if (EpicFightInspect.isEpicFightMode(player)) {
+            // Still in EF's player mode (another mod cancelled the change,
+            // or an EF build without the mode setters): the hand renderer
+            // would keep the gun invisible and trap the session. Refuse and
+            // leave the caller's GUI up.
+            EpicFightInspect.restoreBattleMode(player, s.leftBattleMode);
+            return false;
+        }
         if (!TaczInspectViewport.startFirstPersonInspect(s.item, player)) {
+            EpicFightInspect.restoreBattleMode(player, s.leftBattleMode);
             return false;
         }
         pending = s;
@@ -169,7 +193,17 @@ public final class FirstPersonInspectHandler {
         LocalPlayer player = mc.player;
         if (player != null) {
             TaczInspectViewport.endFirstPersonInspect(s.item, player, s.restoreHand);
+            EpicFightInspect.restoreBattleMode(player, s.leftBattleMode);
         }
+        restoreUi(mc, s);
+    }
+
+    /** Puts the caller's UI back after a session. Aborting without this
+     *  leaves the transparent lock screen up with the HUD suppressed and
+     *  Esc dead (the session is already gone, so requestFinish is a no-op):
+     *  the player cannot move, see the HUD or leave — the 2026-11-23 "TACZ
+     *  inspect freezes in EF battle mode" trap. */
+    private static void restoreUi(Minecraft mc, Session s) {
         if (s.returnScreen != null) {
             mc.setScreen(s.returnScreen);
         } else {
@@ -181,8 +215,21 @@ public final class FirstPersonInspectHandler {
         Session s = pending;
         pending = null;
         LocalPlayer player = mc.player;
+        boolean canRestore = player != null && player.isAlive() && !player.isRemoved();
         if (player != null) {
             TaczInspectViewport.endFirstPersonInspect(s.item, player, s.restoreHand);
+            // Restore the mode even for a dead/removed player: the change
+            // was sent to the server, and leaving it there would strand the
+            // player in vanilla mode (the client session is over either way).
+            EpicFightInspect.restoreBattleMode(player, s.leftBattleMode);
+        }
+        // Dead/removed players (respawn replaced the screen) must not get the
+        // look screen back; everyone else does, so an aborted session never
+        // strands the player on the invisible lock screen.
+        if (canRestore) {
+            restoreUi(mc, s);
+        } else if (mc.screen instanceof FirstPersonInspectScreen) {
+            mc.setScreen(null);
         }
     }
 }

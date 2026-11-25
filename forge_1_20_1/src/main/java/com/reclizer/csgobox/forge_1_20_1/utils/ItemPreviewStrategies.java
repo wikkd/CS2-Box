@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.BoatItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraftforge.fml.ModList;
@@ -40,7 +41,7 @@ import java.util.Optional;
  *   <li>Sophisticated Backpacks shells (FIXED-context baked render with a
  *       rest yaw showing the pocket face; zero SBP class references);</li>
  *   <li>Vanilla + modded spawn eggs (mob model via SpawnEggItem.getType);</li>
- *   <li>Armor pieces (invisible armor stand proxy);</li>
+ *   <li>Armor pieces (player-model preview);</li>
  *   <li>Generic summon containers ({@code tag.BlockEntityTag}
  *       carrying a resolvable {@code EntityType} — the Superb Warfare
  *       summon-crate convention, also matched for addon mods reusing it
@@ -80,14 +81,16 @@ final class ItemPreviewStrategies {
             new SbwGunStrategy(),
             new SbpShellStrategy(),
             new SpawnEggStrategy(),
-            new ArmorStandStrategy(),
+            new ArmorStrategy(),
+            new CuriosWearableStrategy(),
             new EntityContainerStrategy(),
             new CreateSchematicStrategy(),
             new PrefabBlueprintStrategy(),
             new SlashBladeStrategy(),
             new MaidSlabStrategy(),
             new TlmGarageKitStrategy(),
-            new TlmChairStrategy());
+            new TlmChairStrategy(),
+            new BoatStrategy());
 
     /** One mod-specific preview override. Rendering delegates back into
      *  {@link AnimRenderOps} (package-private bodies, one pose convention). */
@@ -310,13 +313,14 @@ final class ItemPreviewStrategies {
     }
 
     /** Armor pieces: GUI never draws the worn model (it lives in the humanoid
-     *  armor layers, not the baked item model), so the 3D pass equips an
-     *  invisible armor stand with the piece and renders the stand — trims,
-     *  enchant glints and modded armor models that register an armor-stand
-     *  layer come along. Pieces whose mod registers no armor-stand layer
-     *  render nothing (empty probe) and degrade to the flat icon. Animal
-     *  armor (wolf/horse) uses its own renderer and is not covered. */
-    private static final class ArmorStandStrategy implements ItemPreviewStrategy {
+     *  armor layers, not the baked item model), so the 3D pass equips the
+     *  shared preview player with the piece and renders the player wearing
+     *  it — the viewer's own skin, trims, enchant glints, and modded armor
+     *  layers registered on the player renderer (invisible on the retired
+     *  armor stand) all come along. Degrades to the flat icon when the
+     *  carrier or the install fails. Animal armor (wolf/horse) is not an
+     *  {@code ArmorItem} and uses its own renderer — not covered. */
+    private static final class ArmorStrategy implements ItemPreviewStrategy {
 
         @Override
         public boolean matches(ItemStack stack) {
@@ -326,7 +330,65 @@ final class ItemPreviewStrategies {
         @Override
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
-            AnimRenderOps.renderArmorStandPreview(gg, stack, player, cx, cy, rotation, scale);
+            AnimRenderOps.renderArmorPlayerPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Curios wearables (Artifacts 等 curios 系饰品): items whose mod
+     *  registered a curios body renderer preview on a shared player carrier
+     *  wearing the piece, instead of the floating item. The gate resolves
+     *  curios classes only after {@code ModList.isLoaded("curios")} — no
+     *  Curios class is ever touched without the mod installed, and items
+     *  whose renderer draws nothing on the body keep the flat icon (the
+     *  match itself requires a registered body renderer). */
+    private static final class CuriosWearableStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return !stack.isEmpty()
+                    && ModList.get().isLoaded("curios")
+                    && AnimRenderOps.isCuriosBodyWearable(stack);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderCuriosPlayerPreview(gg, stack, player, cx, cy, rotation, scale);
+        }
+
+        @Override
+        public boolean render2D(LivingEntity entity, GuiGraphics gg, ItemStack stack,
+                                float x, float y, float scale) {
+            return false;
+        }
+    }
+
+    /** Wood boats: the item ids carry the wood prefix ({@code oak_boat})
+     *  while the entity ids are plain boat/chest_boat and the wood lives in
+     *  the boat's Type variant — bamboo rafts and other same-id kin ride
+     *  the default path's same-id convention instead. Modded woods without
+     *  a vanilla boat type degrade to the flat icon. */
+    private static final class BoatStrategy implements ItemPreviewStrategy {
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            if (!(stack.getItem() instanceof BoatItem)) {
+                return false;
+            }
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            return !BuiltInRegistries.ENTITY_TYPE.containsKey(id);
+        }
+
+        @Override
+        public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                             int cx, int cy, Quat rotation, float scale) {
+            AnimRenderOps.renderBoatPreview(gg, stack, player, cx, cy, rotation, scale);
         }
 
         @Override
@@ -428,7 +490,9 @@ final class ItemPreviewStrategies {
      *  its two public fields, and lets the mod's own rack renderer pose the
      *  blade horizontally exactly like the rack does; zero SlashBlade class
      *  references (namespace + cached reflective instanceof gate, vanilla
-     *  registry entity). 2D grids keep the flat icon. */
+     *  registry entity). While the look screen plays the combo-motion
+     *  inspect ({@link SlashBladeComboInspect}) the 3D pass switches to the
+     *  preview player wielding the blade. 2D grids keep the flat icon. */
     private static final class SlashBladeStrategy implements ItemPreviewStrategy {
 
         @Override
@@ -439,7 +503,11 @@ final class ItemPreviewStrategies {
         @Override
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
-            AnimRenderOps.renderSlashBladeRackPreview(gg, stack, player, cx, cy, rotation, scale);
+            if (SlashBladeComboInspect.isActive()) {
+                AnimRenderOps.renderSlashBladeComboPreview(gg, stack, player, cx, cy, rotation, scale);
+            } else {
+                AnimRenderOps.renderSlashBladeRackPreview(gg, stack, player, cx, cy, rotation, scale);
+            }
         }
 
         @Override

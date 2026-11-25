@@ -44,12 +44,22 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.RemotePlayer;
+import com.mojang.authlib.GameProfile;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
+import top.theillusivec4.curios.api.type.ISlotType;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
+import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
+import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.SpellcasterIllager;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
@@ -170,6 +180,11 @@ public final class AnimRenderOps {
     /** Cached largest-axis span (block units) of each TACZ gun model, keyed
      *  and lifecycle-managed like {@link #GUN_MODEL_CENTERS}. */
     private static final Map<BedrockGunModel, Float> GUN_MODEL_SPANS = new WeakHashMap<>();
+    /** One-shot INFO per gun id (2026-11-22 fabric centre report): the
+     *  computed envelope centre/span of the first preview of each gun, so a
+     *  wrong-centre runtime report carries hard numbers to compare with the
+     *  offline model walk. */
+    private static final Set<String> GUN_PREVIEW_LOGGED = new HashSet<>();
     /** Sentinel cached for models without usable geometry (custom renderers
      *  or degenerate bounds): distinguishes "not computed" from "nothing to
      *  centre", so those models are not rescanned every frame. */
@@ -1989,6 +2004,30 @@ public final class AnimRenderOps {
         return bounds;
     }
 
+    /** Axis-aligned box of an item's rendered geometry in a display context
+     *  ({@code {minX, minY, minZ, maxX, maxY, maxZ}}, block units): the same
+     *  probe render as {@link #fixedContextBounds}, uncached, in the
+     *  display-transform space that context's {@code ItemRenderer.render}
+     *  call consumes — so a caller that poses the item with its own matrix
+     *  afterwards (Epic Fight hangs the held item on a joint) can carry the
+     *  eight corners through that matrix. Null when the probe drew nothing
+     *  or threw. Render thread only (the probe sink is shared). */
+    static float[] displayContextBox(ItemStack item, BakedModel model, ItemDisplayContext context,
+                                     boolean leftHand) {
+        FIXED_CONTEXT_PROBE.reset();
+        try {
+            Minecraft.getInstance().getItemRenderer().render(item, context, leftHand,
+                    new PoseStack(), FIXED_CONTEXT_PROBE, 0, OverlayTexture.NO_OVERLAY, model);
+        } catch (Throwable t) {
+            return null;
+        }
+        if (!FIXED_CONTEXT_PROBE.any) {
+            return null;
+        }
+        return new float[]{FIXED_CONTEXT_PROBE.minX, FIXED_CONTEXT_PROBE.minY, FIXED_CONTEXT_PROBE.minZ,
+                FIXED_CONTEXT_PROBE.maxX, FIXED_CONTEXT_PROBE.maxY, FIXED_CONTEXT_PROBE.maxZ};
+    }
+
     /** TACZ gun 3D render: same pose convention as the vanilla branch, but
      *  the model is a {@link BedrockGunModel} drawn on an identity stack via
      *  RenderSystem's model-view matrix — the vanilla ItemRenderer path only
@@ -1996,10 +2035,32 @@ public final class AnimRenderOps {
     static void renderGunModel3D(GuiGraphics gg, ItemStack item, int cx, int cy,
                                          Quat rotation, float scale,
                                          BedrockGunModel gunModel, GunDisplayInstance display) {
+        // The bedrock model is a singleton shared with TACZ's own renderers
+        // (hand, ground, TACZ UI): their animation state machine writes bone
+        // offsets/quaternions/scales in place and only resets them after each
+        // of its own renders. Measuring the envelope on such a residue caches
+        // a posed centre that then disagrees with every later frame (our
+        // renders run on the cleaned state and re-clean after drawing) — the
+        // gun visibly sits off-centre (2026-11-22 fabric report). Reset to
+        // the default pose first so the cached envelope always matches what
+        // this render — and every later one — draws.
+        gunModel.cleanAnimationTransform();
         // Auto-fit: gun models routinely span 2-3 blocks; shrink so the
         // largest axis stays inside the preview square (normal guns keep
         // their tuned look via the same PREVIEW_FILL rule as vanilla items).
         float fitScale = fitScaleFor(gunModelSpan(gunModel), scale);
+        Vector3f logCenter = gunModelCenter(gunModel);
+        IGun gunApi = IGun.getIGunOrNull(item);
+        String gunId = gunApi != null && gunApi.getGunId(item) != null
+                ? gunApi.getGunId(item).toString() : "unknown";
+        if (GUN_PREVIEW_LOGGED.add(gunId)) {
+            LOGGER.info("[csgobox] tacz gun preview: gun={} center=({}, {}, {}) span={} fitScale={}",
+                    gunId,
+                    String.format("%.3f", logCenter.x), String.format("%.3f", logCenter.y),
+                    String.format("%.3f", logCenter.z),
+                    String.format("%.3f", GUN_MODEL_SPANS.getOrDefault(gunModel, 0.0F)),
+                    String.format("%.3f", fitScale));
+        }
         PoseStack pose = gg.pose();
         pose.pushPose();
         pose.translate(cx + 8.0F * scale, cy + 8.0F * scale, 100.0F);
@@ -3078,32 +3139,54 @@ public final class AnimRenderOps {
             new PrefabStructureLevel(new PrefabStructurePreview.StructureData(
                     Map.of(), Map.of(), new Vector3f(), 1.0F));
 
-    /** Armor preview on the shared armor stand: equip the piece (its
-     *  {@code ArmorItem} slot), probe with it worn (bounds cached per item
-     *  id), draw, and degrade to the flat icon. GUI never draws the worn
-     *  model — it lives in the humanoid armor layers, which the stand's
-     *  renderer carries; pieces whose mod registers no armor-stand layer
-     *  render nothing and degrade via the empty probe. Animal armor (wolf/
-     *  horse) uses its own renderer and is not covered. */
-    static void renderArmorStandPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
-                                                int cx, int cy, Quat rotation, float scale) {
-        Entity entity = entityPreviewInstance(EntityType.ARMOR_STAND, player.level());
-        if (entity instanceof ArmorStand stand) {
-            stand.setItemSlot(((ArmorItem) stack.getItem()).getEquipmentSlot(), stack);
-            ModelBounds bounds = armorPreviewBounds(stack, stand);
-            if (bounds != NO_BOUNDS && renderEntityPreview(gg, stand, bounds, cx, cy, rotation, scale)) {
+    /** Armor preview on the shared preview player: equip the piece (its
+     *  {@code ArmorItem} slot) and render the player wearing it — the worn
+     *  look on the viewer's own skin (2026-11-22: replaced the invisible
+     *  armor stand; armor layers registered on the player renderer, the
+     *  common shape for modded armors, now come along). Degrades to the
+     *  flat icon when the carrier or the install fails. Animal armor
+     *  (wolf/horse) is not an {@code ArmorItem} and stays uncovered. */
+    static void renderArmorPlayerPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                         int cx, int cy, Quat rotation, float scale) {
+        LivingEntity carrier = curiosPlayerInstance(player.level());
+        if (carrier != null && armorInstallOnPreview(carrier, stack)) {
+            ModelBounds bounds = armorPreviewBounds(stack, carrier);
+            if (bounds != NO_BOUNDS && renderEntityPreview(gg, carrier, bounds, cx, cy, rotation, scale)) {
                 return;
             }
         }
         renderItem2DFlat(player, gg, stack, cx, cy, scale);
     }
 
-    /** Bounds of an armor piece worn by the shared preview stand, cached per
-     *  item id (the stand's entity type is constant but its worn model varies
-     *  per piece). The stand must already be equipped when probing. */
+    /** Equips {@code stack} into its {@code ArmorItem} slot on the shared
+     *  carrier: every equipment slot is wiped first (the carrier is shared
+     *  across inspections — stale pieces must not linger), then the curios
+     *  slots too (that wipe is kept behind the mod gate — curios classes
+     *  must load only on gated paths). */
+    private static boolean armorInstallOnPreview(LivingEntity carrier, ItemStack stack) {
+        try {
+            EquipmentSlot slot = ((ArmorItem) stack.getItem()).getEquipmentSlot();
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                carrier.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
+            if (ModList.get().isLoaded("curios")) {
+                curiosClearWearables(carrier);
+            }
+            carrier.setItemSlot(slot, stack);
+            return true;
+        } catch (Throwable t) {
+            LOGGER.warn("Armor preview install failed for {}",
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()), t);
+            return false;
+        }
+    }
+
+    /** Bounds of an armor piece worn by the shared preview player, cached
+     *  per item id (the carrier is constant but its worn model varies per
+     *  piece). The carrier must already be equipped when probing. */
     private static final Map<String, Object> ARMOR_PREVIEW_BOUNDS = new HashMap<>();
 
-    private static ModelBounds armorPreviewBounds(ItemStack stack, ArmorStand stand) {
+    private static ModelBounds armorPreviewBounds(ItemStack stack, Entity carrier) {
         String cacheKey = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         Object cached = ARMOR_PREVIEW_BOUNDS.get(cacheKey);
         if (cached instanceof ModelBounds bounds) {
@@ -3112,15 +3195,284 @@ public final class AnimRenderOps {
         if (cached == NO_BOUNDS) {
             return NO_BOUNDS;
         }
-        ModelBounds bounds = probeEntityBounds(stand);
-        ARMOR_PREVIEW_BOUNDS.put(cacheKey, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        ModelBounds bounds = probeEntityBounds(carrier);
+        if (bounds == NO_BOUNDS) {
+            LOGGER.info("[csgobox] armor preview: {} probe empty; staying on the flat icon", cacheKey);
+        } else {
+            LOGGER.info("[csgobox] armor preview: {} span={} (player-carrier fit)", cacheKey, bounds.span());
+        }
+        ARMOR_PREVIEW_BOUNDS.put(cacheKey, bounds);
+        return bounds;
+    }
+
+    /** Boat preview on the shared boat/chest-boat instances: the item ids
+     *  carry the wood prefix (oak_boat) while the entity ids are plain
+     *  boat/chest_boat and the wood lives in the boat's {@link Boat.Type}
+     *  variant — bamboo rafts and pale oak share ids with their entities
+     *  and ride the plain same-id convention instead. */
+    static void renderBoatPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                  int cx, int cy, Quat rotation, float scale) {
+        Boat.Type type = boatTypeOf(stack);
+        Entity entity = entityPreviewInstance(
+                chestBoat(stack) ? EntityType.CHEST_BOAT : EntityType.BOAT, player.level());
+        if (entity instanceof Boat boat && type != null) {
+            // The instance is shared across every boat item: re-apply the
+            // wood per render or one boat would paint all the others.
+            boat.setVariant(type);
+            ModelBounds bounds = boatPreviewBounds(stack, boat);
+            if (bounds != NO_BOUNDS && renderEntityPreview(gg, boat, bounds, cx, cy, rotation, scale)) {
+                return;
+            }
+        }
+        renderItem2DFlat(player, gg, stack, cx, cy, scale);
+    }
+
+    /** The wood {@link Boat.Type} of a boat item id ({@code oak_boat} →
+     *  OAK), or null for unknown woods — modded boats degrade to the flat
+     *  icon rather than render the wrong wood. */
+    private static Boat.Type boatTypeOf(ItemStack stack) {
+        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+        String wood;
+        if (path.endsWith("_chest_boat")) {
+            wood = path.substring(0, path.length() - "_chest_boat".length());
+        } else if (path.endsWith("_boat")) {
+            wood = path.substring(0, path.length() - "_boat".length());
+        } else {
+            return null;
+        }
+        return Boat.Type.CODEC.byName(wood, null);
+    }
+
+    private static boolean chestBoat(ItemStack stack) {
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().endsWith("_chest_boat");
+    }
+
+    /** Bounds of a boat variant on the shared preview boat, cached per item
+     *  id (the entity type is constant but its model varies per wood). The
+     *  boat must already carry its variant when probing. */
+    private static final Map<String, Object> BOAT_PREVIEW_BOUNDS = new HashMap<>();
+
+    private static ModelBounds boatPreviewBounds(ItemStack stack, Boat boat) {
+        String cacheKey = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        Object cached = BOAT_PREVIEW_BOUNDS.get(cacheKey);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(boat);
+        BOAT_PREVIEW_BOUNDS.put(cacheKey, bounds == NO_BOUNDS ? NO_BOUNDS : bounds);
+        return bounds;
+    }
+
+    // ===================== Curios wearable on the player (inspect) =====================
+
+    /** Shared client-side carrier that previews curios wearables: the item is
+     *  equipped into its curios inventory and the player renderer's Curios
+     *  layer draws it at its worn position — exactly what the player sees in
+     *  the world. The carrier is a RemotePlayer subclass so curios' own
+     *  client renderers run untouched (zero curio-mod classes referenced from
+     *  our side); the name plate is suppressed via the entity-level flag. */
+    private static final String CURIOS_PLAYER_CACHE_KEY = "csgobox:curios_player";
+
+    /** Items whose curios body renderer is registered — probe result cached
+     *  per item id (matching runs every preview frame). Strong map: a weak
+     *  one silently rebuilt entries and spawned fresh carriers per GC
+     *  (2026-11-14 lesson). */
+    private static final Map<String, Boolean> CURIOS_WEARABLE_MATCH = new HashMap<>();
+
+    /** First curios slot slug that accepts an item, cached per item id. */
+    private static final Map<String, Object> CURIOS_WEARABLE_SLUG = new HashMap<>();
+
+    /** Player-carrier preview bounds cached per item id (the carrier is
+     *  constant but the worn piece varies the envelope). */
+    private static final Map<String, Object> CURIOS_PREVIEW_BOUNDS = new HashMap<>();
+
+    /** True when the stack is a curios the player would visibly wear: the
+     *  ICurio capability is present, some curios slot accepts the item, and
+     *  its mod registered a curios body renderer (the only way curios 5.x
+     *  draws on the body — items without one would preview as a bare player,
+     *  which reads as "not equipped"). Caller must gate on
+     *  {@code ModList.isLoaded("curios")} first; every Curios class reference
+     *  sits behind that gate. */
+    static boolean isCuriosBodyWearable(ItemStack stack) {
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        Boolean cached = CURIOS_WEARABLE_MATCH.get(id);
+        if (cached != null) {
+            return cached;
+        }
+        boolean wearable = curiosProbeWearable(stack);
+        CURIOS_WEARABLE_MATCH.put(id, wearable);
+        return wearable;
+    }
+
+    private static boolean curiosProbeWearable(ItemStack stack) {
+        try {
+            if (!CuriosApi.getCurio(stack).isPresent()) {
+                return false;
+            }
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) {
+                return false;
+            }
+            Map<String, ISlotType> slots = CuriosApi.getItemStackSlots(stack, mc.level);
+            if (slots.isEmpty()) {
+                return false;
+            }
+            return CuriosRendererRegistry.getRenderer(stack.getItem()).isPresent();
+        } catch (Throwable t) {
+            LOGGER.warn("Curios wearable probe failed for {}",
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()), t);
+            return false;
+        }
+    }
+
+    /** 3D preview of a curios wearable: equip the shared preview player and
+     *  render it — the worn look, not the floating item. Degrades to the
+     *  flat icon when the carrier or the slot install fails. */
+    static void renderCuriosPlayerPreview(GuiGraphics gg, ItemStack stack, LivingEntity player,
+                                          int cx, int cy, Quat rotation, float scale) {
+        LivingEntity carrier = curiosPlayerInstance(player.level());
+        String slug = curiosWearableSlug(stack);
+        if (carrier == null || slug == null || !curiosInstallOnPreview(carrier, stack, slug)) {
+            renderItem2DFlat(player, gg, stack, cx, cy, scale);
+            return;
+        }
+        ModelBounds bounds = curiosPreviewBounds(stack, carrier);
+        if (bounds != NO_BOUNDS && renderEntityPreview(gg, carrier, bounds, cx, cy, rotation, scale)) {
+            return;
+        }
+        renderItem2DFlat(player, gg, stack, cx, cy, scale);
+    }
+
+    /** The shared preview player, cached like the other preview entities.
+     *  Built from the local player's game profile so the preview shows the
+     *  viewer's own skin; curios slot handlers are built client-side via
+     *  {@code reset()} (real players receive them through server sync, a
+     *  locally constructed one must assemble them from the slot registry). */
+    private static LivingEntity curiosPlayerInstance(Level level) {
+        Entity cached = ENTITY_PREVIEW_INSTANCES.get(CURIOS_PLAYER_CACHE_KEY);
+        if (cached instanceof LivingEntity living && cached.level() == level) {
+            return living;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !(level instanceof ClientLevel clientLevel)) {
+            return null;
+        }
+        try {
+            PreviewPlayer carrier = new PreviewPlayer(clientLevel, mc.player.getGameProfile());
+            carrier.setPos(0.0D, 64.0D, 0.0D);
+            carrier.setYRot(180.0F);
+            carrier.setXRot(0.0F);
+            CuriosApi.getCuriosInventory(carrier).resolve().ifPresent(ICuriosItemHandler::reset);
+            ENTITY_PREVIEW_INSTANCES.put(CURIOS_PLAYER_CACHE_KEY, carrier);
+            LOGGER.info("[csgobox] curios preview: player carrier ready");
+            return carrier;
+        } catch (Throwable t) {
+            LOGGER.warn("Curios preview player creation failed", t);
+            return null;
+        }
+    }
+
+    private static final class PreviewPlayer extends RemotePlayer {
+        private PreviewPlayer(ClientLevel level, GameProfile profile) {
+            super(level, profile);
+        }
+
+        @Override
+        public boolean shouldShowName() {
+            return false;
+        }
+    }
+
+    /** Installs {@code stack} at slot 0 of {@code slug}: the carrier is
+     *  shared across every inspected item, so every curios slot (functional
+     *  and cosmetic) plus all equipment slots are wiped first or the
+     *  previous piece keeps rendering alongside the new one. */
+    private static boolean curiosInstallOnPreview(LivingEntity carrier, ItemStack stack, String slug) {
+        try {
+            curiosClearWearables(carrier);
+            for (EquipmentSlot clearSlot : EquipmentSlot.values()) {
+                carrier.setItemSlot(clearSlot, ItemStack.EMPTY);
+            }
+            Optional<ICuriosItemHandler> inv = CuriosApi.getCuriosInventory(carrier).resolve();
+            if (inv.isEmpty()) {
+                return false;
+            }
+            inv.get().setEquippedCurio(slug, 0, stack);
+            return true;
+        } catch (Throwable t) {
+            LOGGER.warn("Curios preview install failed for slug={}", slug, t);
+            return false;
+        }
+    }
+
+    /** Wipes every curios slot (functional and cosmetic) on the carrier;
+     *  callers must be on curios-gated paths — this body references curios
+     *  classes directly. */
+    private static void curiosClearWearables(LivingEntity carrier) {
+        Optional<ICuriosItemHandler> inv = CuriosApi.getCuriosInventory(carrier).resolve();
+        if (inv.isEmpty()) {
+            return;
+        }
+        for (ICurioStacksHandler stacksHandler : inv.get().getCurios().values()) {
+            IDynamicStackHandler stacks = stacksHandler.getStacks();
+            for (int i = 0; i < stacks.getSlots(); i++) {
+                stacks.setStackInSlot(i, ItemStack.EMPTY);
+            }
+            IDynamicStackHandler cosmetic = stacksHandler.getCosmeticStacks();
+            for (int i = 0; i < cosmetic.getSlots(); i++) {
+                cosmetic.setStackInSlot(i, ItemStack.EMPTY);
+            }
+        }
+    }
+
+    /** First curios slot slug that accepts the item (alphabetical for
+     *  determinism; multi-slot items preview in their first one). */
+    private static String curiosWearableSlug(ItemStack stack) {
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        Object cached = CURIOS_WEARABLE_SLUG.get(id);
+        if (cached instanceof String slug) {
+            return slug;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        String slug = null;
+        if (mc.level != null) {
+            Map<String, ISlotType> slots = CuriosApi.getItemStackSlots(stack, mc.level);
+            slug = slots.keySet().stream().sorted().findFirst().orElse(null);
+        }
+        CURIOS_WEARABLE_SLUG.put(id, slug);
+        return slug;
+    }
+
+    /** Bounds of the player carrier wearing {@code stack}, cached per item
+     *  id — a one-shot INFO records the fit the first time each piece is
+     *  probed (same diagnostic shape as the entity previews). */
+    private static ModelBounds curiosPreviewBounds(ItemStack stack, Entity carrier) {
+        String cacheKey = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        Object cached = CURIOS_PREVIEW_BOUNDS.get(cacheKey);
+        if (cached instanceof ModelBounds bounds) {
+            return bounds;
+        }
+        if (cached == NO_BOUNDS) {
+            return NO_BOUNDS;
+        }
+        ModelBounds bounds = probeEntityBounds(carrier);
+        if (bounds == NO_BOUNDS) {
+            LOGGER.info("[csgobox] curios preview: {} probe empty; staying on the flat icon", cacheKey);
+        } else {
+            LOGGER.info("[csgobox] curios preview: {} span={} (player-carrier fit)", cacheKey, bounds.span());
+        }
+        CURIOS_PREVIEW_BOUNDS.put(cacheKey, bounds);
         return bounds;
     }
 
     /** Raw (uncached) probe of an entity's rendered geometry into the shared
      *  vertex recorder — the per-type cache lives in
-     *  {@link #entityPreviewBounds} and the per-item armor cache in
-     *  {@link #armorPreviewBounds}; both funnel here. */
+     *  {@link #entityPreviewBounds} the per-item armor cache in
+     *  {@link #armorPreviewBounds} and the per-item boat cache in
+     *  {@link #boatPreviewBounds}; all funnel here. */
     private static ModelBounds probeEntityBounds(Entity entity) {
         return probeEntityBounds(entity, null);
     }
@@ -3298,14 +3650,16 @@ public final class AnimRenderOps {
      *  {@code renderModel}; everything else renders the icon). So park a
      *  shared client-side rack entity, mount the blade through its two
      *  public fields ({@code currentTypeStack} = the blade — the rack
-     *  renderer itself re-applies {@code setEntityRepresentation(this)} per
-     *  frame, opening the gate; {@code currentType} = the floor-stand item —
-     *  selects the horizontal pose branch), and let the mod's own
-     *  {@code BladeStandEntityRenderer} run its full rack chain (anchor
-     *  translate, 45° wall-rotation steps, ×2 scale, horizontal pose).
-     *  The renderer draws only the blade — the stand's own body never
-     *  enters the preview — and the probe-based auto-fit, centring and
-     *  {@link #SBW_FIT_BOOST} apply on top. Zero SlashBlade class
+     *  renderer re-applies {@code setEntityRepresentation(this)} on its
+     *  EMPTY rebuild branch, opening the gate; {@code currentType} = a stand
+     *  item — the pose branch selector: {@code bladestand_1w} stands the
+     *  blade upright, the floor stands keep the horizontal rack pose), and
+     *  let the mod's own {@code BladeStandEntityRenderer} run its chain
+     *  (anchor translate, 45° rotation steps, ×2 scale). The ItemFrame's
+     *  own item stays EMPTY so the renderer's second renderItem — the rack
+     *  body — hits its empty-stack early return (javap both mod lines) and
+     *  only the blade enters the preview; probe-based auto-fit, centring
+     *  and {@link #SBW_FIT_BOOST} apply on top. Zero SlashBlade class
      *  references: the entity comes from the vanilla registry, the fields
      *  are written reflectively. Degrades to the flat icon when the entity,
      *  the fields or the render are unavailable. */
@@ -3383,9 +3737,11 @@ public final class AnimRenderOps {
      *  renderer re-applies {@code setEntityRepresentation} only when its own
      *  {@code currentTypeStack} is EMPTY (the rebuild branch), so a directly
      *  mounted non-empty stack without it never opens the TEISR renderModel
-     *  gate. The rack body comes along: doRender's second renderItem draws
-     *  the ItemFrame's own item, set here to the matching stand model.
-     *  False when the fields are unreachable or the stand item is gone. */
+     *  gate. The ItemFrame's own item is forced EMPTY: doRender's second
+     *  renderItem would draw it as the rack body, and its empty-stack guard
+     *  (javap: isEmpty → early return, both mod lines) skips that draw —
+     *  only the blade renders. False when the fields are unreachable or the
+     *  stand item is gone. */
     private static boolean mountSlashBladeOnStand(Entity stand, ItemStack stack, boolean upright) {
         if (!SLASHBLADE_STAND_FIELDS_RESOLVED) {
             SLASHBLADE_STAND_FIELDS_RESOLVED = true;
@@ -3415,8 +3771,13 @@ public final class AnimRenderOps {
             copy.setEntityRepresentation(stand);
             SLASHBLADE_STAND_TYPE_FIELD.set(stand, standItem);
             SLASHBLADE_STAND_STACK_FIELD.set(stand, copy);
+            // The rack body draw is the renderer's second renderItem over
+            // the ItemFrame's own item; an empty item hits its isEmpty
+            // early return (javap both mod lines) so only the blade draws
+            // (maintainer call 2026-11-17: blade only, no rack body). The
+            // pose branch reads the currentType field, not this item.
             if (stand instanceof ItemFrame frame) {
-                frame.setItem(new ItemStack(standItem));
+                frame.setItem(ItemStack.EMPTY);
             }
             return true;
         } catch (Throwable t) {
@@ -3445,6 +3806,94 @@ public final class AnimRenderOps {
                     cacheKey, bounds == NO_BOUNDS ? "none" : bounds.span());
         }
         return bounds;
+    }
+
+    /** Preview player of the SlashBlade combo-motion inspect (see
+     *  {@link SlashBladeComboInspect}): a dedicated carrier — the curios one
+     *  carries its slot handlers and is shared with the armor preview —
+     *  built from the inspecting player's profile so the figure wears their
+     *  skin. Never added to the world: the mod's blade layer reads only the
+     *  rendered entity's main-hand state and follows game time by itself. */
+    private static final String SLASHBLADE_COMBO_PLAYER_CACHE_KEY = "csgobox:slashblade_player";
+
+    /** Framing of the combo preview. The figure is probed once in its rest
+     *  pose (see {@link #slashBladeComboBounds}); that envelope only holds
+     *  the carried blade, so the frame is widened by the first constant and
+     *  its centre lifted by the second (blocks) — the swing arc reaches
+     *  past the figure on every side and highest overhead — so the whole
+     *  chain stays inside the preview square at the cost of a smaller
+     *  figure. Framing values to be confirmed in game. */
+    private static final float SLASHBLADE_COMBO_FRAME = 1.8F;
+    private static final float SLASHBLADE_COMBO_CENTER_LIFT = 0.2F;
+
+    /** Rest-pose bounds of the combo preview player (re-probed when the
+     *  carrier is rebuilt, e.g. after a world change). */
+    private static Entity slashBladeComboBoundsCarrier;
+    private static ModelBounds slashBladeComboBoundsCache;
+
+    /** SlashBlade blade 3D preview in the combo-motion form: the preview
+     *  player wields a copy of the blade and the mod's own render layer
+     *  swings it through the blade's attack chain
+     *  ({@link SlashBladeComboInspect} performs the clicks). Falls back to
+     *  the rack form when the combo motion is off or broke, and to the flat
+     *  icon when the carrier is unavailable. */
+    static void renderSlashBladeComboPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                             int cx, int cy, Quat rotation, float scale) {
+        LivingEntity carrier = slashBladeComboPlayer(player.level());
+        if (carrier != null && SlashBladeComboInspect.drive(carrier, item)) {
+            markSlashBladePreview(slashBladeVariantKey(item));
+            ModelBounds bounds = slashBladeComboBounds(carrier);
+            if (bounds != NO_BOUNDS && renderEntityPreview(gg, carrier, bounds, cx, cy, rotation, scale)) {
+                return;
+            }
+        }
+        renderSlashBladeRackPreview(gg, item, player, cx, cy, rotation, scale);
+    }
+
+    private static LivingEntity slashBladeComboPlayer(Level level) {
+        Entity cached = ENTITY_PREVIEW_INSTANCES.get(SLASHBLADE_COMBO_PLAYER_CACHE_KEY);
+        if (cached instanceof LivingEntity living && cached.level() == level) {
+            return living;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !(level instanceof ClientLevel clientLevel)) {
+            return null;
+        }
+        try {
+            PreviewPlayer carrier = new PreviewPlayer(clientLevel, mc.player.getGameProfile());
+            carrier.setPos(0.0D, 64.0D, 0.0D);
+            carrier.setYRot(180.0F);
+            carrier.setXRot(0.0F);
+            ENTITY_PREVIEW_INSTANCES.put(SLASHBLADE_COMBO_PLAYER_CACHE_KEY, carrier);
+            slashBladeComboBoundsCarrier = null;
+            LOGGER.info("[csgobox] slashblade combo preview: player carrier ready");
+            return carrier;
+        } catch (Throwable t) {
+            LOGGER.warn("SlashBlade combo preview player creation failed", t);
+            return null;
+        }
+    }
+
+    /** Frame of the combo preview, probed while the blade sits in its rest
+     *  pose (the first frame after the install — the opening swing starts
+     *  {@code IDLE_MS} later) and widened per the framing constants. */
+    private static ModelBounds slashBladeComboBounds(Entity carrier) {
+        if (slashBladeComboBoundsCarrier != carrier) {
+            slashBladeComboBoundsCarrier = carrier;
+            ModelBounds probed = probeEntityBounds(carrier);
+            if (probed == NO_BOUNDS) {
+                slashBladeComboBoundsCache = NO_BOUNDS;
+                LOGGER.info("[csgobox] slashblade combo preview: rest-pose probe empty; keeping the raw preview scale");
+            } else {
+                Vector3f center = probed.center();
+                slashBladeComboBoundsCache = new ModelBounds(
+                        new Vector3f(center.x, center.y + SLASHBLADE_COMBO_CENTER_LIFT, center.z),
+                        probed.hub(), probed.span() * SLASHBLADE_COMBO_FRAME);
+                LOGGER.info("[csgobox] slashblade combo preview: rest-pose span={} frame span={}",
+                        probed.span(), slashBladeComboBoundsCache.span());
+            }
+        }
+        return slashBladeComboBoundsCache;
     }
 
     // ===================== Touhou Little Maid soul slab preview =====================

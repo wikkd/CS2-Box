@@ -6,7 +6,6 @@ import net.minecraft.util.FormattedCharSequence;
 import com.reclizer.csgobox.forge_1_20_1.sounds.ModSounds;
 import com.reclizer.csgobox.forge_1_20_1.utils.ButtonPalette;
 import com.reclizer.csgobox.utils.ColorTools;
-import com.reclizer.csgobox.utils.Easing;
 import com.reclizer.csgobox.utils.ItemDrag3D;
 import com.reclizer.csgobox.forge_1_20_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.forge_1_20_1.utils.DiscInspect;
@@ -14,24 +13,28 @@ import com.reclizer.csgobox.forge_1_20_1.utils.EpicFightInspect;
 import com.reclizer.csgobox.forge_1_20_1.utils.GuiItemMove;
 import com.reclizer.csgobox.forge_1_20_1.utils.MaidSlabPreview;
 import com.reclizer.csgobox.forge_1_20_1.utils.SlashBladePreview;
+import com.reclizer.csgobox.forge_1_20_1.utils.SlashBladeComboInspect;
 import com.reclizer.csgobox.forge_1_20_1.utils.RenderFontTool;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.levelgen.Heightmap;
 
-import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
-
+/**
+ * The look screen: the big centred preview of one item (unboxing reward or
+ * right-click inspect) over a live world backdrop. This class is only the
+ * orchestrator — the pieces live in their own collaborators:
+ * {@link LookLayout} (rects/easing), {@link LookToolbar} (icon row),
+ * {@link LookWearCard} (shipment wear metadata), {@link LookSceneryRig}
+ * (panorama camera), and the preview strategies in utils (EF battle
+ * inspect, mob animation, SlashBlade rack, TACZ first-person, music).
+ */
 public class CsLookItemScreen extends Screen {
     private final Player player;
     private final ItemStack openItem;
@@ -50,105 +53,25 @@ public class CsLookItemScreen extends Screen {
     /** Skips the entry finish chime when the screen is reopened by
      *  {@link #openQuietly} right after a first-person inspect finishes. */
     private static boolean quietReopen = false;
-    private final float wearValue;
-    private final int patternSeed;
-    private final int skinId;
-    private final int skinStyleIndex;
+    private final LookWearCard wearCard;
 
-    private static final ResourceLocation ICON_INSPECT =
-            new ResourceLocation("csgobox:textures/gui/toolbar/inspect.png");
-    private static final ResourceLocation ICON_INFO =
-            new ResourceLocation("csgobox:textures/gui/toolbar/info.png");
-    private static final ResourceLocation ICON_STICKER =
-            new ResourceLocation("csgobox:textures/gui/toolbar/sticker.png");
-    private static final ResourceLocation ICON_MORE =
-            new ResourceLocation("csgobox:textures/gui/toolbar/more.png");
-
-
-    /** Content bounding box (px in the 32x32 texture) per icon, kept in
-     *  sync with the artwork: inspect 30x29, info 26x26, sticker 30x23,
-     *  more 7x27. */
-    private static final int[] ICON_CONTENT_W = {30, 26, 30, 7};
-    private static final int[] ICON_CONTENT_H = {29, 26, 23, 27};
-
-    /** Tooltip lang keys per toolbar button (shipment toolbar, with wear). */
-    private static final String[] TOOLTIP_KEYS = {
-            "gui.csgobox.csgo_box.toolbar.inspect",
-            "gui.csgobox.csgo_box.toolbar.info",
-            "gui.csgobox.csgo_box.toolbar.sticker",
-            "gui.csgobox.csgo_box.toolbar.more"
-    };
-    /** Tooltip keys for the compact inspect toolbar (no wear button: the
-     *  right-click inspect flow confirms nothing about an item's wear). */
-    private static final String[] TOOLTIP_KEYS_INSPECT = {
-            "gui.csgobox.csgo_box.toolbar.inspect",
-            "gui.csgobox.csgo_box.toolbar.sticker",
-            "gui.csgobox.csgo_box.toolbar.more"
-    };
-
-    /** Toolbar hover state: index of hovered button (-1 = none) and 0..1 glow. */
-    private int hoveredButton = -1;
-    private float toolbarGlow = 0F;
+    /** Toolbar hover/glow state and drawing. */
+    private final LookToolbar toolbar = new LookToolbar();
+    /** Panorama camera rig behind the live world backdrop. */
+    private final LookSceneryRig sceneryRig = new LookSceneryRig();
     private int screenTicks = 0;
 
-    /** Decorative finish styles, mirrored in lang (style.custom_paint etc). */
-    private static final String[] SKIN_STYLES = {
-            "custom_paint", "gunsmith", "patina", "hydrographic", "spray_paint", "anodized"
-    };
-
-    /** Random scenery (picture toolbar button): pitch band around the horizon
-     *  in degrees; yaw is a full random circle. */
-    private static final float SCENERY_PITCH_RANGE_DEG = 30.0F;
-    /** Flight duration in client ticks: a slow cinematic glide (instant-replay
-     *  style camera move). */
-    private static final int SCENERY_GLIDE_TICKS = 60;
-    /** Background panorama spin: continuous slow yaw drift while the screen
-     *  is open, in degrees per client tick — the vanilla main-menu pace
-     *  (PanoramaRenderer adds deltaTicks * panoramaSpeed * 0.1, i.e. 2 deg/s
-     *  at the default 100% panorama speed). */
-    private static final float SCENERY_SPIN_DEG_PER_TICK = 0.1F;
-    /** Mount parking spot: this far in front of the player's face (along the
-     *  view direction), so the camera starts outside the head model. */
-    private static final double SCENERY_MOUNT_FORWARD = 0.5;
-    /** Scenery flight: distance range from the player (blocks) and the
-     *  clearance above the surface heightmap the camera parks at. */
-    private static final double SCENERY_DIST_MIN = 8.0;
-    private static final double SCENERY_DIST_RANGE = 12.0;
-    private static final double SCENERY_SURFACE_CLEARANCE = 2.0;
-    /** Client-side rig entity id seed (negative: never collides with server
-     *  entity ids, which count up from zero). */
-    private static int sceneryRigIdCounter;
-
-    /** Scenery camera rig: a client-side-only marker entity the render camera
-     *  rides via {@link Minecraft#setCameraEntity} (the vanilla spectator
-     *  camera mechanism, no mixins). Markers never render and have no AI, and
-     *  the player's own view is never touched. */
-    private Entity sceneryRig;
-    private Entity sceneryOriginalCamera;
-    /** Flight animation state: pose to fly from, target pose, and tick
-     *  progress within SCENERY_GLIDE_TICKS (-1 = not flying). */
-    private double sceneryFromX;
-    private double sceneryFromY;
-    private double sceneryFromZ;
-    private float sceneryFromYaw;
-    private float sceneryFromPitch;
-    private double sceneryToX;
-    private double sceneryToY;
-    private double sceneryToZ;
-    private float sceneryToYaw;
-    private float sceneryToPitch;
-    private int sceneryAnimTick = -1;
-    /** Guards the screen-open camera mount so window resizes don't re-mount. */
-    private boolean sceneryAutoStarted;
-    /** True while we hid the local player model for the panorama mount
-     *  (skipped when already invisible, e.g. an invisibility potion). */
-    private boolean sceneryPlayerHidden;
     /** Inspect-button animation mode: cached living-entity previews (mob
      *  drops) walk in place while on; toggled by the inspect toolbar button
      *  (index 0, the single inspect entry), armed only when the current item
      *  renders as a living entity. */
     private boolean mobAnimMode = false;
 
+    /** Inspect-button position in a blade's cycle (rack pose flip → combo
+     *  motion → stop): set once the pose has been flipped, so the next
+     *  click starts the combo motion instead. Reset whenever the screen
+     *  (re)opens. */
+    private boolean slashBladePoseFlipped = false;
 
 
     /** Displays the server-authoritative reward after the progress animation completes. */
@@ -167,31 +90,15 @@ public class CsLookItemScreen extends Screen {
         this.openItem = item == null ? ItemStack.EMPTY : item.copy();
         this.grade = grade;
         this.previousScreen = previousScreen;
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        if (!this.openItem.isEmpty() && this.openItem.isDamageableItem() && this.openItem.getDamageValue() > 0) {
-            int maxDamage = this.openItem.getMaxDamage();
-            this.wearValue = maxDamage > 0 ? (float) this.openItem.getDamageValue() / maxDamage : rnd.nextFloat();
-        } else {
-            this.wearValue = rnd.nextFloat();
-        }
-        this.patternSeed = rnd.nextInt(1000);
-        this.skinId = rnd.nextInt(100, 1301);
-        this.skinStyleIndex = rnd.nextInt(SKIN_STYLES.length);
+        this.wearCard = new LookWearCard(this.openItem, ThreadLocalRandom.current());
         // Inspect entry is silent: the unboxing chime belongs to the reward flow.
         boolean silent = quietReopen || previousScreen != null;
         quietReopen = false;
         if (this.player != null && !this.openItem.isEmpty() && !silent) {
-            float vol = 1.0F;
-            if (vol > 0) {
-                player.playSound(ModSounds.CS_FINSH.get(), vol * 10F, 1F);
-            }
+            player.playSound(ModSounds.CS_FINSH.get(), 10F, 1F);
         }
     }
 
-    /**
-     * Reopen this screen without the entry finish chime, used after a
-     * first-person inspect finishes so the return doesn't replay the chime.
-     */
     /**
      * Reopen this screen without the entry finish chime, used after a
      * first-person inspect finishes so the return doesn't replay the chime.
@@ -212,80 +119,47 @@ public class CsLookItemScreen extends Screen {
         return this.previousScreen == null;
     }
 
+    // Thin layout wrappers (the math lives in LookLayout; these keep the
+    // call sites in this file short).
+
     private int backButtonWidth() {
-        return Math.max(64, this.width * 7 / 100);
+        return LookLayout.backButtonWidth(this.width);
     }
 
     private int backButtonX() {
-        return Math.max(8, this.width - backButtonWidth() - 16);
+        return LookLayout.backButtonX(this.width);
     }
 
     private int backButtonY() {
-        return this.height - 8 - this.height * 5 / 100;
+        return LookLayout.backButtonY(this.height);
     }
 
     private int toolbarButtonSize() {
-        return Math.max(17, this.height * 35 / 1000);
+        return LookLayout.toolbarButtonSize(this.height);
     }
 
     private int toolbarButtonX(int index) {
-        return Math.max(8, 8 + index * (toolbarButtonSize() + 6));
+        return LookLayout.toolbarButtonX(index, this.height);
     }
 
     private int toolbarButtonY() {
-        return this.height - 8 - toolbarButtonSize();
-    }
-
-    private float toolbarEnterEase(int index) {
-        float enterT = Math.max(0F, Math.min(1F, (this.screenTicks - index * 0.8F) / 3F));
-        return 1F - (1F - enterT) * (1F - enterT);
+        return LookLayout.toolbarButtonY(this.height);
     }
 
     private int toolbarEnterRise(int index) {
-        return (int) (8F * (1F - toolbarEnterEase(index)));
+        return LookLayout.toolbarEnterRise(this.screenTicks, index);
     }
 
-    /** Enter transition progress: 0 at screen open, 1 after 300ms (6 ticks). */
-    private float enterE() {
-        return Easing.easeOutCubic(Math.min(1F, this.screenTicks / 6F));
-    }
-
-    private String wearTierKey() {
-        float w = this.wearValue;
-        if (w < 0.07F) return "gui.csgobox.csgo_box.wear_fn";
-        if (w < 0.15F) return "gui.csgobox.csgo_box.wear_mw";
-        if (w < 0.38F) return "gui.csgobox.csgo_box.wear_ft";
-        if (w < 0.45F) return "gui.csgobox.csgo_box.wear_ww";
-        return "gui.csgobox.csgo_box.wear_bs";
-    }
-
-    private String formatWear() {
-        return String.format(Locale.ROOT, "%.9f", this.wearValue);
-    }
-
-    // Preview geometry shared by renderBg (positions the PIP render state)
-    // and mouseDragged (keeps the drag-detection rectangle in lock-step with
-    // what the user actually sees). Mirrors CsboxScreen's helper trio so the
-    // result screen and the box-opening screen render the same held item at
-    // the same on-screen pixel size.
     private int previewTextureSize() {
-        int containerTop = this.height * 22 / 100;
-        int containerBottom = this.height * 88 / 100;
-        int containerHeight = containerBottom - containerTop;
-        return Math.max(144, Math.min(this.width * 28 / 100, containerHeight * 72 / 100));
+        return LookLayout.previewTextureSize(this.width, this.height);
     }
 
     private int previewPixelX() {
-        return (this.width - previewTextureSize()) / 2;
+        return LookLayout.previewPixelX(this.width, this.height);
     }
 
     private int previewPixelY() {
-        // Container = vertical band between the grade bar and the divider
-        // above the button. Centre the crate within it so the result focus
-        // sits in the visual middle of the screen.
-        int containerTop = this.height * 22 / 100;
-        int containerBottom = this.height * 88 / 100;
-        return (containerTop + containerBottom - previewTextureSize()) / 2;
+        return LookLayout.previewPixelY(this.width, this.height);
     }
 
     @Override
@@ -322,18 +196,18 @@ public class CsLookItemScreen extends Screen {
 
         // Enter transition: the strip screen's dark backdrop fades out while
         // the item scales up from 0.9 to 1.0 over 300ms (6 ticks).
-        int fadeAlpha = (int) (0xFF * (1F - enterE())) & 0xFF;
+        int fadeAlpha = (int) (0xFF * (1F - LookLayout.enterEase(this.screenTicks))) & 0xFF;
         if (fadeAlpha > 0) {
             AnimRenderOps.fill(guiGraphics, 0, 0, this.width, this.height,
                     (fadeAlpha << 24) | 0x000000);
         }
 
-        float scale = (previewTextureSize() / 16F) * (0.9F + 0.1F * enterE());
-        int dividerY = this.height - 18 - toolbarButtonSize();
+        float scale = (previewTextureSize() / 16F) * (0.9F + 0.1F * LookLayout.enterEase(this.screenTicks));
+        int dividerY = LookLayout.dividerY(this.height);
         AnimRenderOps.fill(guiGraphics, this.width * 25 / 100, dividerY,
                 this.width * 75 / 100, dividerY + 1, 0xFFD3D3D3);
-        AnimRenderOps.fill(guiGraphics, this.width * 33 / 100, this.height * 17 / 100,
-                this.width * 67 / 100, this.height * 17 / 100 + 4, ColorTools.colorItems(grade));
+        AnimRenderOps.fill(guiGraphics, this.width * 33 / 100, LookLayout.gradeBarY(this.height),
+                this.width * 67 / 100, LookLayout.gradeBarY(this.height) + 4, ColorTools.colorItems(grade));
         // Centre the result preview in the available band; mouseDragged below
         // uses the same previewPixelX/Y/size so drag-detection matches what
         // the user sees.
@@ -375,7 +249,7 @@ public class CsLookItemScreen extends Screen {
         int btnX = backButtonX();
         int btnY = backButtonY();
         int btnW = backButtonWidth();
-        int btnH = this.height * 5 / 100;
+        int btnH = LookLayout.backButtonHeight(this.height);
         boolean hoverButton = ButtonPalette.isInside(mouseX, mouseY, btnX, btnY, btnW, btnH);
         ButtonPalette.drawButton(guiGraphics, ButtonPalette.DANGER, btnX, btnY, btnW, btnH, hoverButton);
 
@@ -384,99 +258,10 @@ public class CsLookItemScreen extends Screen {
     }
 
     private void renderToolbar(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int size = toolbarButtonSize();
-        int y = toolbarButtonY();
-        // The wear (ⓘ) button ships only in shipment flows; the inspect
-        // toolbar is compact [inspect, sticker, more] with no dead slot.
-        boolean shipment = this.showsShipment();
-        ResourceLocation[] icons = shipment
-                ? new ResourceLocation[]{ICON_INSPECT, ICON_INFO, ICON_STICKER, ICON_MORE}
-                : new ResourceLocation[]{ICON_INSPECT, ICON_STICKER, ICON_MORE};
-        String[] tooltips = shipment ? TOOLTIP_KEYS : TOOLTIP_KEYS_INSPECT;
-        this.hoveredButton = -1;
-        for (int i = 0; i < icons.length; i++) {
-            int x = toolbarButtonX(i);
-            int by = y + toolbarEnterRise(i);
-            int alpha = (int) (0xFF * toolbarEnterEase(i));
-
-            boolean hover = ButtonPalette.isInside(mouseX, mouseY, x, by, size, size);
-            if (hover) {
-                this.hoveredButton = i;
-            }
-            // Inspect (index 0) is the single inspect entry: always on as the
-            // default mode (own 3D drag preview); its underline turns green
-            // while a special inspect mode (mob animation / EF battle inspect)
-            // is active.
-            boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive()
-                    || DiscInspect.isPlaying();
-            boolean active = i == 0 || (i == 1 && this.showInfoPanel);
-            int outer = 0xFF2B2B31;
-            int inner = active ? 0xFF33333B : 0xFF232328;
-            guiGraphics.fill(x, by, x + size, by + size, (alpha << 24) | (outer & 0xFFFFFF));
-            guiGraphics.fill(x + 1, by + 1, x + size - 1, by + size - 1, (alpha << 24) | (inner & 0xFFFFFF));
-            if (active) {
-                guiGraphics.fill(x + 2, by + size - 2, x + size - 2, by + size,
-                        (alpha << 24) | (i == 0 && specialInspect ? 0x54FF54 : 0xFFFFFF));
-            }
-            int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
-            int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
-            int screenW = iconSize * ICON_CONTENT_W[i] / maxEdge;
-            int screenH = iconSize * ICON_CONTENT_H[i] / maxEdge;
-            int iconX = x + (size - screenW) / 2;
-            int iconY = by + (size - screenH) / 2;
-            int u = (32 - ICON_CONTENT_W[i]) / 2;
-            int v = (32 - ICON_CONTENT_H[i]) / 2;
-            int iconColor;
-            if (active) {
-                iconColor = 0xFFFFFFFF;
-            } else {
-                float b = i == this.hoveredButton ? 0.55F + 0.45F * this.toolbarGlow : 0.55F;
-                iconColor = 0xFF000000 | ((int) (0xFF * b) << 16) | ((int) (0xFF * b) << 8) | (int) (0xFF * b);
-            }
-            iconColor = (alpha << 24) | (iconColor & 0xFFFFFF);
-            if (i == icons.length - 1) {
-                renderMoreDots(guiGraphics, x, by, size, iconColor);
-            } else {
-                AnimRenderOps.blitTextured(guiGraphics, icons[i],
-                    iconX, iconY, screenW, screenH, u, v,
-                    ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
-            }        }
-        renderToolbarTooltip(guiGraphics, mouseX, mouseY, tooltips);
-    }
-
-    private void renderMoreDots(GuiGraphics guiGraphics, int btnX, int btnY, int size, int color) {
-        int r = Math.max(2, size / 5);
-        int cx = btnX + size / 2;
-        int cy = btnY + size / 2;
-        int spacing = Math.max(3, r * 2);
-        for (int k = -1; k <= 1; k++) {
-            int ccy = cy + k * spacing;
-            for (int dy = -r; dy <= r; dy++) {
-                int half = (int) Math.sqrt((double) (r * r - dy * dy));
-                guiGraphics.fill(cx - half, ccy + dy, cx + half + 1, ccy + dy + 1, color);
-            }
-        }
-    }
-
-
-    private void renderToolbarTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY, String[] tooltips) {
-        if (this.hoveredButton < 0 || this.toolbarGlow < 0.05F) return;
-        int size = toolbarButtonSize();
-        int x = toolbarButtonX(this.hoveredButton);
-        int y = toolbarButtonY() + toolbarEnterRise(this.hoveredButton);
-        int textW = this.font.width(Component.translatable(tooltips[this.hoveredButton]).getVisualOrderText());
-        int tooltipW = (int) (textW * 0.7F) + 8;
-        int tooltipH = (int) (this.font.lineHeight * 0.7F) + 4;
-        int tipX = x + (size - tooltipW) / 2;
-        int tipY = y - tooltipH - 6;
-        tipX = Math.max(2, Math.min(tipX, this.width - tooltipW - 2));
-        tipY = Math.max(2, tipY);
-        int alpha = (int) (0xCC * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
-        guiGraphics.fill(tipX, tipY, tipX + tooltipW, tipY + tooltipH, (alpha << 24) | 0x101014);
-        int textAlpha = (int) (0xFF * this.toolbarGlow * toolbarEnterEase(this.hoveredButton));
-        renderText(guiGraphics,
-                Component.translatable(tooltips[this.hoveredButton]).getVisualOrderText(),
-                tipX + 4, tipY + 2, 0.7F, (textAlpha << 24) | 0xCCCCCC);
+        boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive()
+                || SlashBladeComboInspect.isActive() || DiscInspect.isPlaying();
+        this.toolbar.render(guiGraphics, this.font, this.width, this.height,
+                mouseX, mouseY, this.screenTicks, showsShipment(), specialInspect, this.showInfoPanel);
     }
 
     private void renderInfoPanel(GuiGraphics guiGraphics) {
@@ -491,11 +276,11 @@ public class CsLookItemScreen extends Screen {
                 "gui.csgobox.csgo_box.info.exterior"
         };
         Component[] valueTexts = {
-                Component.translatable("gui.csgobox.csgo_box.style." + SKIN_STYLES[this.skinStyleIndex]),
-                Component.literal(String.valueOf(this.skinId)),
-                Component.literal(String.valueOf(this.patternSeed)),
-                Component.literal(formatWear()),
-                Component.translatable(wearTierKey())
+                Component.translatable(this.wearCard.skinStyleKey()),
+                Component.literal(String.valueOf(this.wearCard.skinId())),
+                Component.literal(String.valueOf(this.wearCard.patternSeed())),
+                Component.literal(this.wearCard.formatWear()),
+                Component.translatable(this.wearCard.wearTierKey())
         };
         int gap = 8;
         int padX = 8;
@@ -568,7 +353,7 @@ public class CsLookItemScreen extends Screen {
         int bx = backButtonX();
         int by = backButtonY();
         int bw = backButtonWidth();
-        int bh = this.height * 5 / 100;
+        int bh = LookLayout.backButtonHeight(this.height);
         boolean backHover = ButtonPalette.isInside(mouseX, mouseY, bx, by, bw, bh);
         int backText = backHover ? ButtonPalette.DANGER.textColorHover() : ButtonPalette.DANGER.textColor();
         renderCenteredText(guiGraphics,
@@ -645,7 +430,7 @@ public class CsLookItemScreen extends Screen {
         int btnX = backButtonX();
         int btnY = backButtonY();
         int btnW = backButtonWidth();
-        int btnH = this.height * 5 / 100;
+        int btnH = LookLayout.backButtonHeight(this.height);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, btnX, btnY, btnW, btnH)) {
             this.onClose();
             return true;
@@ -653,8 +438,9 @@ public class CsLookItemScreen extends Screen {
         int infoSize = toolbarButtonSize();
         // Inspect button (index 0) is the single inspect entry: it cycles the
         // inspect modes available for this item — Epic Fight battle inspect,
-        // mob animation, SlashBlade rack pose, TACZ first-person inspect —
-        // falling back to our own 3D drag preview once nothing special is on.
+        // mob animation, SlashBlade rack pose / combo motion, TACZ
+        // first-person inspect — falling back to our own 3D drag preview
+        // once nothing special is on.
         int inspectX = toolbarButtonX(0);
         int inspectY = toolbarButtonY() + toolbarEnterRise(0);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, inspectX, inspectY, infoSize, infoSize)) {
@@ -676,13 +462,28 @@ public class CsLookItemScreen extends Screen {
             } else if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
             } else if (SlashBladePreview.hasPreviewBlade()) {
-                SlashBladePreview.toggleStyle();
+                // Blade cycle: flip the rack pose, then play the blade's own
+                // combo motion on the preview player, then stop it again.
+                if (SlashBladeComboInspect.isActive()) {
+                    SlashBladeComboInspect.stop();
+                } else if (!this.slashBladePoseFlipped) {
+                    this.slashBladePoseFlipped = true;
+                    SlashBladePreview.toggleStyle();
+                } else if (!SlashBladeComboInspect.start()) {
+                    // Combo motion unavailable (SlashBlade's surface moved):
+                    // keep the button useful as the pose flip.
+                    this.slashBladePoseFlipped = false;
+                    SlashBladePreview.toggleStyle();
+                }
             } else if (this.minecraft != null && this.minecraft.player != null
                     && TaczInspectViewport.isAvailable(this.openItem)) {
-                // First-person inspect: close the GUI first, then let TACZ play
-                // its native first-person inspect behind a transparent
-                // input-lock screen; FirstPersonInspectHandler reopens this
-                // screen when the animation finishes or the player presses Esc.
+                // First-person inspect: close the GUI, then let TACZ play its
+                // native first-person inspect behind a transparent input-lock
+                // screen; FirstPersonInspectHandler reopens this screen when
+                // the animation finishes or the player presses Esc. TACZ's
+                // native draw needs the vanilla first-person hand, so the
+                // handler takes Epic Fight out of its player mode for the
+                // session and restores it afterwards.
                 this.onClose();
                 FirstPersonInspectHandler.start(this.minecraft.player, this.openItem, this.grade,
                         null, this.previousScreen);
@@ -703,7 +504,7 @@ public class CsLookItemScreen extends Screen {
         int stickerX = toolbarButtonX(stickerSlot);
         int stickerY = toolbarButtonY() + toolbarEnterRise(stickerSlot);
         if (button == 0 && ButtonPalette.isInside(mouseX, mouseY, stickerX, stickerY, infoSize, infoSize)) {
-            this.randomizeScenery();
+            this.sceneryRig.randomize(this.minecraft, this.player);
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -717,18 +518,16 @@ public class CsLookItemScreen extends Screen {
         super.init();
         AnimRenderOps.clearPreviewMobInstance();
         SlashBladePreview.clearPreviewBlade();
+        this.slashBladePoseFlipped = false;
         MaidSlabPreview.clearPreviewPick();
         EpicFightInspect.clear();
-        if (!this.sceneryAutoStarted) {
-            this.sceneryAutoStarted = true;
-            this.beginSceneryPanorama();
-        }
+        this.sceneryRig.beginPanorama(this.minecraft, this.player);
     }
 
     /** Toggles the Epic Fight battle inspect: starts their own previewer
-     *  widget over the preview area (figure wearing the player's skin,
-     *  holding the weapon) or tears it down again. Reflection failures leave
-     *  the screen untouched. */
+     *  widget over the room above the toolbar (figure wearing the player's
+     *  skin, holding the weapon) or tears it down again. Reflection failures
+     *  leave the screen untouched. */
     private void toggleEpicFightInspect() {
         if (EpicFightInspect.isActive()) {
             EpicFightInspect.stop();
@@ -743,164 +542,18 @@ public class CsLookItemScreen extends Screen {
             skin = this.minecraft.getSkinManager()
                     .getInsecureSkinLocation(this.minecraft.player.getGameProfile());
         }
-        EpicFightInspect.start(previewPixelX(), previewPixelY(),
-                previewTextureSize(), previewTextureSize(), this.openItem, skin);
-    }
-
-    /** Mounts the render camera onto a rig parked at the player's eye so the
-     *  backdrop spins slowly from the player's own view (main-menu panorama
-     *  style). No flight: the rig stays put until a "change scenery" click. */
-    private void beginSceneryPanorama() {
-        if (this.minecraft == null || this.minecraft.level == null || this.player == null) {
-            return;
-        }
-        if (this.sceneryRig != null) {
-            return;
-        }
-        this.sceneryRig = this.createSceneryRig();
-        if (this.sceneryRig == null) {
-            return;
-        }
-        this.sceneryOriginalCamera = this.minecraft.getCameraEntity();
-        this.minecraft.setCameraEntity(this.sceneryRig);
-        // The panorama shows the world, not the player: hide the local model
-        // while mounted (mid-spin the head would otherwise sweep through the
-        // close-up frame). Restored in removed().
-        if (!this.player.isInvisible()) {
-            this.player.setInvisible(true);
-            this.sceneryPlayerHidden = true;
-        }
+        // The figure takes the whole room above the toolbar instead of the
+        // item square: its framing has to hold the weapon's whole swing
+        // (see EpicFightInspect). The item square's size is passed along as
+        // the size the figure must not exceed — the size it had before.
+        EpicFightInspect.start(0, 0, this.width, LookLayout.battleInspectHeight(this.height),
+                this.openItem, skin, previewTextureSize());
     }
 
     /** True while the scenery rig owns the render camera (panorama mount);
      *  read by the render-cancel handler in the event package. */
     public boolean isSceneryRigMounted() {
-        return this.sceneryRig != null;
-    }
-
-    /** Scenery toolbar button (index 4): fly the render camera to a random
-     *  nearby spot so the live world backdrop behind the item changes, while
-     *  the player's own view is never touched. The camera rides a client-side
-     *  marker entity (vanilla spectator camera mechanism), mounted when the
-     *  screen opens and later flying from wherever it currently is.
-     *  {@link #removed()} hands the camera back and discards the rig. */
-    private void randomizeScenery() {
-        if (this.minecraft == null || this.minecraft.level == null || this.player == null) {
-            return;
-        }
-        if (this.sceneryRig == null) {
-            this.sceneryRig = this.createSceneryRig();
-            if (this.sceneryRig == null) {
-                return;
-            }
-            this.sceneryOriginalCamera = this.minecraft.getCameraEntity();
-            this.minecraft.setCameraEntity(this.sceneryRig);
-            this.sceneryFromX = this.sceneryRig.getX();
-            this.sceneryFromY = this.sceneryRig.getY();
-            this.sceneryFromZ = this.sceneryRig.getZ();
-            this.sceneryFromYaw = this.sceneryRig.getYRot();
-            this.sceneryFromPitch = this.sceneryRig.getXRot();
-        } else {
-            this.sceneryFromX = this.sceneryRig.getX();
-            this.sceneryFromY = this.sceneryRig.getY();
-            this.sceneryFromZ = this.sceneryRig.getZ();
-            this.sceneryFromYaw = this.sceneryRig.getYRot();
-            this.sceneryFromPitch = this.sceneryRig.getXRot();
-        }
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        double angle = rnd.nextDouble() * Math.PI * 2.0;
-        double dist = SCENERY_DIST_MIN + rnd.nextDouble() * SCENERY_DIST_RANGE;
-        // Glide the short way around the circle: wrap the delta, not the target.
-        this.sceneryToX = this.player.getX() + Math.cos(angle) * dist;
-        this.sceneryToY = this.scenerySurfaceY(this.sceneryToX, this.player.getZ() + Math.sin(angle) * dist);
-        this.sceneryToZ = this.player.getZ() + Math.sin(angle) * dist;
-        this.sceneryToYaw = this.sceneryFromYaw + wrapDegrees(rnd.nextFloat() * 360.0F - this.sceneryFromYaw);
-        this.sceneryToPitch = (rnd.nextFloat() * 2.0F - 1.0F) * SCENERY_PITCH_RANGE_DEG;
-        this.sceneryAnimTick = 0;
-
-    }
-
-    /** Surface height at the target block, with an unloaded-chunk fallback
-     *  (heightmaps answer the world floor for missing chunks). */
-    private double scenerySurfaceY(double x, double z) {
-        ClientLevel level = this.minecraft.level;
-        int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, (int) Math.floor(x), (int) Math.floor(z));
-        if (surface <= level.getMinBuildHeight()) {
-            return this.player.getY() + 4.0;
-        }
-        return surface + SCENERY_SURFACE_CLEARANCE;
-    }
-
-    /** Advances the scenery camera: between flights it spins the rig yaw
-     *  slowly and continuously (main-menu panorama pace); during a flight it
-     *  eases the rig (and thus the render camera) from the pose the click
-     *  started at toward the random target over SCENERY_GLIDE_TICKS client
-     *  ticks. Old-position bookkeeping feeds the vanilla per-frame
-     *  interpolation, so both stay smooth at frame rate. */
-    private void advanceSceneryGlide() {
-        if (this.sceneryRig == null) {
-            return;
-        }
-        if (this.sceneryAnimTick < 0) {
-            // Panorama spin: slow continuous yaw drift, position untouched.
-            this.sceneryRig.yRotO = this.sceneryRig.getYRot();
-            this.sceneryRig.setYRot(wrapDegrees(this.sceneryRig.getYRot() + SCENERY_SPIN_DEG_PER_TICK));
-            return;
-        }
-        this.sceneryAnimTick++;
-        float t = Math.min(1.0F, (float) this.sceneryAnimTick / (float) SCENERY_GLIDE_TICKS);
-        float e = 1.0F - (1.0F - t) * (1.0F - t) * (1.0F - t); // easeOutCubic
-        this.sceneryRig.xo = this.sceneryRig.getX();
-        this.sceneryRig.yo = this.sceneryRig.getY();
-        this.sceneryRig.zo = this.sceneryRig.getZ();
-        this.sceneryRig.yRotO = this.sceneryRig.getYRot();
-        this.sceneryRig.xRotO = this.sceneryRig.getXRot();
-        this.sceneryRig.setPos(this.sceneryFromX + (this.sceneryToX - this.sceneryFromX) * e,
-                this.sceneryFromY + (this.sceneryToY - this.sceneryFromY) * e,
-                this.sceneryFromZ + (this.sceneryToZ - this.sceneryFromZ) * e);
-        this.sceneryRig.setYRot(this.sceneryFromYaw + (this.sceneryToYaw - this.sceneryFromYaw) * e);
-        this.sceneryRig.setXRot(this.sceneryFromPitch + (this.sceneryToPitch - this.sceneryFromPitch) * e);
-        if (t >= 1.0F) {
-            this.sceneryAnimTick = -1;
-        }
-    }
-    /** Creates the client-side-only camera rig (a marker entity, which never
-     *  renders and has no AI) and registers it into the client level. */
-    private Entity createSceneryRig() {
-        ClientLevel level = this.minecraft.level;
-        Entity rig = EntityType.MARKER.create(level);
-        if (rig == null) {
-            return null;
-        }
-        rig.setId(-1_900_000_000 - sceneryRigIdCounter++);
-        rig.moveTo(this.player.getX(), this.player.getEyeY(), this.player.getZ(),
-                this.player.getYRot(), this.player.getXRot());
-        // Park in front of the face (along the view direction) so the camera
-        // starts outside the head model instead of sitting inside it.
-        double lookYaw = Math.toRadians(this.player.getYRot());
-        double lookPitch = Math.toRadians(this.player.getXRot());
-        rig.setPos(rig.getX() - Math.sin(lookYaw) * Math.cos(lookPitch) * SCENERY_MOUNT_FORWARD,
-                rig.getY() - Math.sin(lookPitch) * SCENERY_MOUNT_FORWARD,
-                rig.getZ() + Math.cos(lookYaw) * Math.cos(lookPitch) * SCENERY_MOUNT_FORWARD);
-        rig.xo = rig.getX();
-        rig.yo = rig.getY();
-        rig.zo = rig.getZ();
-        rig.yRotO = rig.getYRot();
-        rig.xRotO = rig.getXRot();
-        level.addFreshEntity(rig);
-        return rig;
-    }
-
-    /** Wraps an angle delta to [-180, 180). */
-    private static float wrapDegrees(float deg) {
-        deg %= 360.0F;
-        if (deg >= 180.0F) {
-            deg -= 360.0F;
-        }
-        if (deg < -180.0F) {
-            deg += 360.0F;
-        }
-        return deg;
+        return this.sceneryRig.mounted();
     }
 
     @Override
@@ -932,27 +585,13 @@ public class CsLookItemScreen extends Screen {
         if (this.minecraft != null) {
             this.minecraft.options.hideGui = false;
         }
-        if (this.sceneryRig != null) {
-            // Hand the render camera back to the player and drop the rig.
-            if (this.minecraft != null && this.minecraft.getCameraEntity() == this.sceneryRig) {
-                this.minecraft.setCameraEntity(this.sceneryOriginalCamera != null
-                        ? this.sceneryOriginalCamera : this.player);
-            }
-            this.sceneryRig.discard();
-            this.sceneryRig = null;
-            this.sceneryAnimTick = -1;
-            this.sceneryAutoStarted = false;
-        }
+        this.sceneryRig.dismount(this.minecraft, this.player);
         AnimRenderOps.resetPreviewMobAnimation();
         DiscInspect.stop();
         this.mobAnimMode = false;
         EpicFightInspect.clear();
-        if (this.sceneryPlayerHidden) {
-            if (this.player != null) {
-                this.player.setInvisible(false);
-            }
-            this.sceneryPlayerHidden = false;
-        }
+        SlashBladeComboInspect.stop();
+        this.slashBladePoseFlipped = false;
         if (this.taczViewportActive) {
             TaczInspectViewport.exit(this.openItem);
             this.taczViewportActive = false;
@@ -964,12 +603,12 @@ public class CsLookItemScreen extends Screen {
     public final void tick() {
         super.tick();
         this.screenTicks++;
-        float glowTarget = this.hoveredButton >= 0 ? 1F : 0F;
-        this.toolbarGlow += (glowTarget - this.toolbarGlow) * 0.5F;
+        this.toolbar.tickGlow();
         if (this.minecraft == null || this.minecraft.player == null) return;
-        this.advanceSceneryGlide();
+        this.sceneryRig.advance();
         AnimRenderOps.tickPreviewMobAnimations(this.mobAnimMode);
         EpicFightInspect.tick();
+        SlashBladeComboInspect.tick();
         if (!this.minecraft.player.isAlive() || this.minecraft.player.isRemoved()) {
             this.onClose();
         }

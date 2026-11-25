@@ -79,6 +79,7 @@ case "${1:-all}" in
         ;;
     forge_1_20_1)
         run tacz-1201 download-tacz-1201.sh
+        run curios-1201 download-curios-1201.sh
         run_py create download-create-deps.py
         ;;
     fabric_1_21_1)
@@ -87,6 +88,7 @@ case "${1:-all}" in
     all)
         run tacz download-tacz.sh
         run tacz-1201 download-tacz-1201.sh
+        run curios-1201 download-curios-1201.sh
         run tacz-fabric download-tacz-fabric.sh
         run_py create download-create-deps.py
         ;;

@@ -30,6 +30,13 @@ public class FirstPersonInspectScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == InputConstants.KEY_ESCAPE) {
             FirstPersonInspectHandler.requestFinish();
+            // Belt-and-braces: requestFinish is a no-op once the session has
+            // aborted, and this transparent screen would then keep eating all
+            // input with the HUD hidden (the 2026-11-23 freeze trap). Never
+            // let it stay as the active screen.
+            if (this.minecraft != null && this.minecraft.screen == this) {
+                this.minecraft.setScreen(null);
+            }
             return true;
         }
         // Swallow every other key so the player can't act during the inspect.

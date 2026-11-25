@@ -141,6 +141,17 @@ dependencies {
     // from the TACZ jarjar bundle so javac can resolve the class hierarchy.
     compileOnly 'com.github.mcmodderanchor:simplebedrockmodel:2.2.2-forge+mc1.20.1'
 
+    // Curios API (饰品栏, 1.20.1 forge 5.14.1) — optional compileOnly for the
+    // curios wearable player preview (CsLookItemScreen 检视 + preview grids):
+    // the preview equips a client-side preview player and lets Curios' own
+    // body renderers draw the piece at its worn position. The remapped jar is
+    // NOT committed: scripts/download-curios-1201.sh fills local-repo (it
+    // runs the shared remap-1201 pipeline, same product that deploys to
+    // run/mods as the Artifacts prerequisite). Guarded at runtime via
+    // ModList.isLoaded("curios"); the strategy chain never resolves Curios
+    // classes without it.
+    compileOnly 'top.theillusivec4:curios:5.14.1-1.20.1'
+
     // Create (机械动力) — optional compileOnly, official deployer recipe API.
     // Copy create-1.20.1-<v>.jar (e.g. [机械动力] create-1.20.1-6.0.8.jar)
     // from the game's mods folder into local-repo/com/simibubi/create/create/<v>/
