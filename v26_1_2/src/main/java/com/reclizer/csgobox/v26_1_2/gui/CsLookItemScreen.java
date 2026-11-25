@@ -56,11 +56,14 @@ public class CsLookItemScreen extends Screen {
             Identifier.parse("csgobox:textures/gui/toolbar/more.png");
 
 
-    /** Content bounding box (px in the 32x32 texture) per icon, kept in
-     *  sync with the artwork: inspect 30x29, info 26x26, sticker 30x23,
-     *  more 7x27. */
-    private static final int[] ICON_CONTENT_W = {30, 26, 30, 7};
-    private static final int[] ICON_CONTENT_H = {29, 26, 23, 27};
+    /** Content bounding boxes (px in the 32x32 texture) per toolbar slot,
+     *  kept in sync with the artwork: inspect 30x29, info 26x26,
+     *  sticker 30x23, more 5x21. One row per layout — the compact layout
+     *  holds different icons than shipment at the same slot (sticker is
+     *  slot 1 compact but slot 2 shipment), so the layouts cannot share
+     *  positional arrays. */
+    private static final int[][] SHIPMENT_CONTENT = {{30, 29}, {26, 26}, {30, 23}, {5, 21}};
+    private static final int[][] COMPACT_CONTENT = {{30, 29}, {30, 23}, {5, 21}};
 
     /** Tooltip lang keys per toolbar button (shipment toolbar, with wear). */
     private static final String[] TOOLTIP_KEYS = {
@@ -337,6 +340,7 @@ public class CsLookItemScreen extends Screen {
                 ? new Identifier[]{ICON_INSPECT, ICON_INFO, ICON_STICKER, ICON_MORE}
                 : new Identifier[]{ICON_INSPECT, ICON_STICKER, ICON_MORE};
         String[] tooltips = shipment ? TOOLTIP_KEYS : TOOLTIP_KEYS_INSPECT;
+        int[][] contents = shipment ? SHIPMENT_CONTENT : COMPACT_CONTENT;
         this.hoveredButton = -1;
         for (int i = 0; i < icons.length; i++) {
             int x = toolbarButtonX(i);
@@ -363,13 +367,13 @@ public class CsLookItemScreen extends Screen {
                                 | (i == 0 && specialInspect ? 0x54FF54 : 0xFFFFFF));
             }
             int iconSize = Math.max(12, Math.min(64, size * 3 / 4));
-            int maxEdge = Math.max(ICON_CONTENT_W[i], ICON_CONTENT_H[i]);
-            int screenW = iconSize * ICON_CONTENT_W[i] / maxEdge;
-            int screenH = iconSize * ICON_CONTENT_H[i] / maxEdge;
+            int maxEdge = Math.max(contents[i][0], contents[i][1]);
+            int screenW = iconSize * contents[i][0] / maxEdge;
+            int screenH = iconSize * contents[i][1] / maxEdge;
             int iconX = x + (size - screenW) / 2;
             int iconY = by + (size - screenH) / 2;
-            int u = (32 - ICON_CONTENT_W[i]) / 2;
-            int v = (32 - ICON_CONTENT_H[i]) / 2;
+            int u = (32 - contents[i][0]) / 2;
+            int v = (32 - contents[i][1]) / 2;
             int iconColor;
             if (active) {
                 iconColor = 0xFFFFFFFF;
@@ -378,28 +382,11 @@ public class CsLookItemScreen extends Screen {
                 iconColor = 0xFF000000 | ((int) (0xFF * b) << 16) | ((int) (0xFF * b) << 8) | (int) (0xFF * b);
             }
             iconColor = (alpha << 24) | (iconColor & 0xFFFFFF);
-            if (i == icons.length - 1) {
-                renderMoreDots(guiGraphics, x, by, size, iconColor);
-            } else {
-                AnimRenderOps.blitTextured(guiGraphics, icons[i],
-                    iconX, iconY, screenW, screenH, u, v,
-                    ICON_CONTENT_W[i], ICON_CONTENT_H[i], 32, 32, iconColor);
-            }        }
-        renderToolbarTooltip(guiGraphics, mouseX, mouseY, tooltips);
-    }
-
-    private void renderMoreDots(GuiGraphicsExtractor guiGraphics, int btnX, int btnY, int size, int color) {
-        int r = Math.max(2, size / 5);
-        int cx = btnX + size / 2;
-        int cy = btnY + size / 2;
-        int spacing = Math.max(3, r * 2);
-        for (int k = -1; k <= 1; k++) {
-            int ccy = cy + k * spacing;
-            for (int dy = -r; dy <= r; dy++) {
-                int half = (int) Math.sqrt((double) (r * r - dy * dy));
-                AnimRenderOps.fill(guiGraphics, cx - half, ccy + dy, cx + half + 1, ccy + dy + 1, color);
-            }
+            AnimRenderOps.blitTextured(guiGraphics, icons[i],
+                iconX, iconY, screenW, screenH, u, v,
+                contents[i][0], contents[i][1], 32, 32, iconColor);
         }
+        renderToolbarTooltip(guiGraphics, mouseX, mouseY, tooltips);
     }
 
 
