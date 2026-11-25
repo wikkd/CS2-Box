@@ -94,6 +94,11 @@ jobs:
         if: matrix.module == 'forge_1_20_1'
         run: scripts/download-tacz-1201.sh
 
+      # Curios is fetched by the Gradle bootstrapLocalDeps task (its marker is
+      # missing on a bare checkout). It must run *after* configuration because
+      # remap-1201.sh needs the tsrg cache that ForgeGradle's mavenizer writes
+      # during configuration — an explicit step here would run too early.
+
       - name: Download TACZ compileOnly jars (fabric_1_21_1, TaCZ Refabricated)
         if: matrix.module == 'fabric_1_21_1'
         run: bash scripts/download-tacz-fabric.sh

@@ -55,8 +55,31 @@ find_jar() { # "group/artifact:version"
     gav="${spec%:*}"
     ver="${spec##*:}"
     artifact="${gav##*/}"
+    # `|| true`: with `set -o pipefail`, a missing cache directory would
+    # otherwise abort the whole script before the download fallback runs.
     find "${GRADLE_CACHE}/${gav}" -name "${artifact}-${ver}.jar" \
-        ! -name '*-sources.jar' ! -name '*-javadoc.jar' 2>/dev/null | head -1
+        ! -name '*-sources.jar' ! -name '*-javadoc.jar' 2>/dev/null | head -1 || true
+}
+
+# The remapper's own tool jars are intentionally not part of any Gradle
+# configuration (the pipeline runs outside Gradle), so a fresh CI runner or a
+# brand-new dev machine has no copy in ~/.gradle. Fall back to downloading
+# them into the gitignored build/ cache instead of failing.
+TOOL_CACHE="${ROOT}/build/remap-tools"
+mkdir -p "$TOOL_CACHE"
+
+fetch_tool() { # <url> <file-name>; echoes the absolute path on success
+    local url="$1" name="$2" out="${TOOL_CACHE}/$2"
+    if [[ ! -f "$out" ]]; then
+        echo "==> fetching ${name}" >&2
+        if ! curl -sS -4 --http1.1 -fL --retry 3 --retry-delay 2 \
+                --connect-timeout 20 --max-time 180 -o "${out}.part" "$url"; then
+            rm -f "${out}.part"
+            return 1
+        fi
+        mv "${out}.part" "$out"
+    fi
+    printf '%s' "$out"
 }
 
 # ---- python probe: python3 -> python -> py -3 ----
@@ -70,12 +93,18 @@ echo "python: $PY"
 # ---- prereqs ----
 [[ -f "$MANIFEST" ]] || { echo "ERROR: manifest missing: $MANIFEST" >&2; exit 1; }
 [[ -f "$TSRG_GZ" ]] || { echo "ERROR: tsrg missing: $TSRG_GZ" >&2; exit 1; }
-[[ -d "$MODS_DIR" ]] || { echo "ERROR: $MODS_DIR missing" >&2; exit 1; }
+# The deploy folder is an output of this pipeline, not a prerequisite: fresh
+# clones and CI checkouts have no forge_1_20_1/run/ directory yet.
+mkdir -p "$MODS_DIR"
 
 ASM="$(find_jar org.ow2.asm/asm:9.9.1)"
+[[ -n "$ASM" ]] || ASM="$(fetch_tool https://repo1.maven.org/maven2/org/ow2/asm/asm/9.9.1/asm-9.9.1.jar asm-9.9.1.jar)" || ASM=""
 ASMT="$(find_jar org.ow2.asm/asm-tree:9.9.1)"
+[[ -n "$ASMT" ]] || ASMT="$(fetch_tool https://repo1.maven.org/maven2/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.jar asm-tree-9.9.1.jar)" || ASMT=""
 ASMC="$(find_jar org.ow2.asm/asm-commons:9.9.1)"
+[[ -n "$ASMC" ]] || ASMC="$(fetch_tool https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.9.1/asm-commons-9.9.1.jar asm-commons-9.9.1.jar)" || ASMC=""
 SRGUTILS="$(find_jar net.minecraftforge/srgutils:0.4.11)"
+[[ -n "$SRGUTILS" ]] || SRGUTILS="$(fetch_tool https://maven.minecraftforge.net/net/minecraftforge/srgutils/0.4.11/srgutils-0.4.11.jar srgutils-0.4.11.jar)" || SRGUTILS=""
 for v in ASM ASMT ASMC SRGUTILS; do
     [[ -n "${!v}" ]] || { echo "ERROR: could not resolve $v" >&2; exit 1; }
 done
@@ -125,8 +154,12 @@ while IFS=$'\t' read -r src_rel deploy_name jarjars; do
     STAMP="${OUT}.stamp"
 
     if [[ ! -f "$SRC" ]]; then
+        # The manifest covers every 1.20.1 dev jar across all platforms; a
+        # checkout only carries the ones its download scripts fetched (CI has
+        # TACZ / Create / Curios, nothing else). Missing sources are not
+        # failures — `failed` is reserved for remap/gate errors.
         echo "SKIP (source missing): $src_rel" >&2
-        failed=$((failed + 1))
+        skipped=$((skipped + 1))
         continue
     fi
 

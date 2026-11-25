@@ -351,16 +351,20 @@ tasks.named('check').configure { dependsOn(tasks.named('checkDistSafety')) }
 
 
 // ---- Fresh-clone bootstrap: fetch non-committed local-repo artifacts ----
-// TACZ / Create compileOnly jars are not in git (*.jar convention); this
-// runs the idempotent download scripts automatically on the first build so
-// `./gradlew :forge_1_20_1:compileJava` works on a bare checkout (CI fetches
-// explicitly before Gradle and skips this via the marker check).
+// TACZ / Curios / Create compileOnly jars are not in git (*.jar convention);
+// this runs the idempotent download scripts automatically on the first build
+// so `./gradlew :forge_1_20_1:compileJava` works on a bare checkout. CI runs
+// the TACZ/Create steps explicitly; Curios goes through this bootstrap
+// because its remap pipeline needs the tsrg cache that ForgeGradle's
+// mavenizer writes during configuration (an explicit pre-Gradle step would
+// run too early).
 apply from: rootProject.file('gradle/bootstrap-local-deps.gradle')
 setupBootstrapLocalDeps([
     scriptArgs: ['forge_1_20_1'],
     markers: [
         'com/tacz/tacz/1.1.8-hotfix/tacz-1.1.8-hotfix.jar',
         'com/github/mcmodderanchor/simplebedrockmodel/2.2.2-forge+mc1.20.1/simplebedrockmodel-2.2.2-forge+mc1.20.1.jar',
+        'top/theillusivec4/curios/5.14.1-1.20.1/curios-5.14.1-1.20.1.jar',
         'com/simibubi/create/create/6.0.8/create-6.0.8.jar',
         'com/tterrag/registrate/Registrate/MC1.20-1.3.3/Registrate-MC1.20-1.3.3.jar',
         'dev/engine-room/flywheel/flywheel-forge-1.20.1/1.0.5/flywheel-forge-1.20.1-1.0.5.jar',

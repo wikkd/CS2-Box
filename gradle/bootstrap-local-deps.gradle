@@ -62,7 +62,14 @@ ext.bootstrapRunScript = { List<String> scriptArgs ->
     }
     def cmd = [bash, rootProject.file('scripts/bootstrap-dev.sh').absolutePath.replace('\\', '/')] + scriptArgs
     logger.lifecycle "bootstrapLocalDeps: ${cmd.join(' ')}"
-    def proc = new ProcessBuilder(cmd).inheritIO().start()
+    // Do NOT use inheritIO(): with --no-daemon the forked daemon's stdout is a
+    // pipe the client does not drain, so a script that prints more than the
+    // buffer (the remap pipeline prints one gate line per product) blocks
+    // forever at 0% CPU. Pump the merged stream through the Gradle logger and
+    // close stdin (a build has no console input to give the scripts).
+    def proc = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+    proc.getOutputStream().close()
+    proc.inputStream.eachLine { line -> logger.lifecycle(line) }
     if (proc.waitFor() != 0) {
         throw new GradleException('bootstrapLocalDeps: download script failed — see the output above.')
     }

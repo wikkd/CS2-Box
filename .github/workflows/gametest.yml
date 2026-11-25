@@ -86,6 +86,9 @@ jobs:
         if: matrix.module == 'forge_1_20_1'
         run: scripts/download-tacz-1201.sh
 
+      # Curios is fetched by the Gradle bootstrapLocalDeps task (marker check),
+      # after configuration has produced the tsrg cache remap-1201.sh needs.
+
       - name: Check for GameTest sources
         id: has-gametest
         run: |
