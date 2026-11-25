@@ -4,8 +4,10 @@
 `kaleidoscopecookery-1.6.0-neoforge+mc1.21.1` 发布 jar 实测为准（231 个物品）。
 
 > **平台适配矩阵**：官方支持 1.21.1 与 1.20.1（Forge/Fabric 双线）；对应
-> `v1_21_1` 与 `forge_1_20_1`（Fabric 1.21.1 官方线停更，`fabric_1_21_1`
-> 以实装版本为准）。无 26.x 构建。本配置带
+> `v1_21_1` / `forge_1_20_1`，`fabric_1_21_1` 用 **Refabricated 1.6.0.9**
+> （Fabric 社区移植，1.21.1；本包 21 个 id 全在）。官方 Fabric 1.21.1 线
+> 停更在 1.0.1，该版本缺 12 个本包 id（3D 食物/器具为主），不要退回。
+> 无 26.x 构建。本配置带
 > `"requires": ["kaleidoscope_cookery"]` 门控：未装时整箱跳过并在
 > `/csbox info error` 报错。
 

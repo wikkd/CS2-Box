@@ -28,7 +28,7 @@ python scripts/merge-prices.py compat-packs/<pack>/_prices.json config/csbox/_pr
 | `immersive-aircraft-pack/` | Immersive Aircraft | `v1_21_1`（1.7.0 NF）/ `forge_1_20_1`（1.5.0 Forge）/ `fabric_1_21_1`（1.7.0）/ `v26_1_2` + `v26_2`（1.7.0 NF，唯一有 26.x 构建的模组） | 7 种载具（实体代理 3D 预览）+ 全套升级零件，含终端机 |
 | `modular-golems-pack/` | Modular Golems | `v1_21_1` / `forge_1_20_1`（2.7.x） | 升级卡白/蓝/紫三档 + 先锋甲四件套，含终端机 |
 | `prefab-pack/` | Prefab（预制建筑） | `v1_21_1`（1.0.9 NF）/ `forge_1_20_1`（1.10.0.2） | 蓝图建筑（整栋结构 3D 预览：29 个专属结构映射）+ 镰刀/迅捷军刀/压缩方块，含终端机 |
-| `kaleidoscope-cookery-pack/` | Kaleidoscope Cookery | `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` | A 类零适配代表：8 个带 `elements` 几何的 3D 食物/器具 + 平面料理，含终端机 |
+| `kaleidoscope-cookery-pack/` | Kaleidoscope Cookery | `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`（Refabricated 1.6.0.9） | A 类零适配代表：8 个带 `elements` 几何的 3D 食物/器具 + 平面料理，含终端机 |
 | `kaleidoscope-grilling-pack/` | Kaleidoscope Grilling（森罗物语：烟火） | `v1_21_1` / `forge_1_20_1` | 烧烤菜系：烤串/调料/农产（6 个 `elements` 真 3D），含终端机 |
 | `kaleidoscope-tavern-pack/` | Kaleidoscope Tavern（森罗物语：酒馆） | `v1_21_1` / `forge_1_20_1` | 酒馆家具 + 基酒/鸡尾酒（酒桶真 3D），含终端机 |
 | `kaleidoscope-world-liquor-pack/` | Kaleidoscope World Liquor（森罗酒馆：世界名酒） | `v1_21_1` / `forge_1_20_1`；`v26_1_2` + `v26_2`（26.1.2 官方构建） | 现实名酒 + 鸡尾酒，含终端机 |
@@ -48,6 +48,8 @@ python scripts/merge-prices.py compat-packs/<pack>/_prices.json config/csbox/_pr
 | `cobblemon-pack/` | Cobblemon（宝可梦） | 生产环境交付（前置 KFF，FG7 dev 无法加载——jar 为 `!` 休眠件） | 大师球/远古球系/进化石/携带物分档，含终端机 |
 | `create-aeronautics-pack/` | Create: Aeronautics | 仅 `v1_21_1` | 航空材料与螺旋桨（A 类零适配），含终端机 |
 | `create-pack/` | Create（蓝图预览） | `v1_21_1`（6.x）+ `forge_1_20_1`（6.0.8，2026-11-20 双端落地） | `create:schematic` 结构预览（>32768 方块/缺文件降级平面），含终端机 |
+| `pointblank-pack/` | Point Blank（点防御） | `forge_1_20_1` / `v1_21_1` / `fabric_1_21_1`（2.2.0 全线实测）；26.x 无构建不做 | 61 枪（数据驱动裸 id，零 NBT）+ 16 弹 + 配件/瞄具/皮肤/材料，含终端机；注意与 SBW 在 1.21.1 NeoForge 的 geckolib 版本冲突（见包 README） |
+| `daffasarsenal-pack/` | Daffa's Arsenal | 依赖 TACZ 枪包本体的平台（`v1_21_1` / `forge_1_20_1` / `fabric_1_21_1`） | 57 枪 + 6 弹 + 18 附件（TACZ `GunId`/`AmmoId`/`AttachmentId` 变体，命名空间 `daffas_arsenal`，mod id 同带下划线），含终端机 |
 | `test-pack-fabric-1.21.1/` | 无（原版 1.21 内容） | 仅 `fabric_1_21_1` | `components` 数据组件 / 1.21 新物品与新附魔 / 标签展开 |
 | `test-pack-forge-1.18.2/` | 无（原版 ≤1.18 内容） | 为 `forge_1_18_2` 编写验证 | `tag` NBT 直写（药水/自定义名）/ 标签展开 |
 

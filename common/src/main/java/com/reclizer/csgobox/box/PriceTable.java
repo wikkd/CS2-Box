@@ -57,11 +57,12 @@ public final class PriceTable {
     private static final Pattern KEY_RE = Pattern.compile("^[a-z0-9_.-]+:[a-z0-9_./-]+(#.+)?$");
 
     /** NBT variant field in a legacy {@code "tag"} string: TACZ guns carry
-     *  {@code GunId}, ammo carries {@code AmmoId}, and any mod may carry the
-     *  generic {@code VariantId} marker (e.g. SlashBlade Resharped blades).
-     *  Group 1 = the variant id. */
+     *  {@code GunId}, ammo carries {@code AmmoId}, attachments carry
+     *  {@code AttachmentId}, and any mod may carry the generic {@code
+     *  VariantId} marker (e.g. SlashBlade Resharped blades). Group 1 = the
+     *  variant id. */
     private static final Pattern VARIANT_FIELD_RE = Pattern.compile(
-            "\\b(?:GunId|AmmoId|VariantId)\\b\\s*[:=]\\s*\"?([A-Za-z0-9_.:+-]+)\"?");
+            "\\b(?:GunId|AmmoId|AttachmentId|VariantId)\\b\\s*[:=]\\s*\"?([A-Za-z0-9_.:+-]+)\"?");
 
     private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 
@@ -203,7 +204,8 @@ public final class PriceTable {
 
     /**
      * Extracts the NBT variant id of a box item entry ({@code GunId} /
-     * {@code AmmoId} for TACZ, generic {@code VariantId} for any mod) from
+     * {@code AmmoId} / {@code AttachmentId} for TACZ, generic {@code
+     * VariantId} for any mod) from
      * any of its three serialized shapes: a legacy {@code "tag"} SNBT string,
      * a JSON-object {@code "tag"} (NBT eras), or
      * {@code components.minecraft:custom_data} (1.21+). Returns empty for
@@ -263,6 +265,10 @@ public final class PriceTable {
             return v;
         }
         v = stringField(obj, "AmmoId");
+        if (v.isPresent()) {
+            return v;
+        }
+        v = stringField(obj, "AttachmentId");
         if (v.isPresent()) {
             return v;
         }

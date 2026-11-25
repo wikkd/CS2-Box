@@ -1,0 +1,165 @@
+{
+  "name": "#AA3333 Daffa 军火箱",
+  "key": "csgobox:csgo_key3",
+  "drop": 0.02,
+  "random": [
+    625,
+    125,
+    25,
+    6,
+    4
+  ],
+  "requires": [
+    "tacz",
+    "daffas_arsenal"
+  ],
+  "grade5": [
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:auxur\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:wawan20002\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:mg338\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:southeastmomssecretweapon3\"}"
+    }
+  ],
+  "grade4": [
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:ssg69\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:wawan2000\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:rpd\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:hk417\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:ss1_v5g\"}"
+    }
+  ],
+  "grade3": [
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:hk416\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:scarlalala\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:sg552\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:g36c_commando\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:m79sohrt\"}"
+    },
+    {
+      "id": "tacz:ammo",
+      "count": 24,
+      "tag": "{AmmoId:\"daffas_arsenal:500\"}"
+    }
+  ],
+  "grade2": [
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:ak47\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:g36c\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:mp5k\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:nova6\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:hk45_sup\"}"
+    },
+    {
+      "id": "tacz:ammo",
+      "count": 64,
+      "tag": "{AmmoId:\"daffas_arsenal:acp45\"}"
+    },
+    {
+      "id": "tacz:ammo",
+      "count": 32,
+      "tag": "{AmmoId:\"daffas_arsenal:daffas_flechette\"}"
+    }
+  ],
+  "grade1": [
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:welrod\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:makten_single\"}"
+    },
+    {
+      "id": "tacz:modern_kinetic_gun",
+      "count": 1,
+      "tag": "{GunId:\"daffas_arsenal:p99_nohak\"}"
+    },
+    {
+      "id": "tacz:ammo",
+      "count": 32,
+      "tag": "{AmmoId:\"daffas_arsenal:acp45\"}"
+    },
+    {
+      "id": "tacz:ammo",
+      "count": 16,
+      "tag": "{AmmoId:\"daffas_arsenal:water\"}"
+    },
+    {
+      "id": "minecraft:gunpowder",
+      "count": 8
+    }
+  ]
+}

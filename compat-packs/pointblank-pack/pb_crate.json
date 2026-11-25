@@ -1,0 +1,145 @@
+{
+  "name": "#AA3333 Point Blank 军火箱",
+  "key": "csgobox:csgo_key3",
+  "drop": 0.02,
+  "random": [
+    625,
+    125,
+    25,
+    6,
+    4
+  ],
+  "requires": [
+    "pointblank"
+  ],
+  "grade5": [
+    {
+      "id": "pointblank:javelin",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m134minigun",
+      "count": 1
+    },
+    {
+      "id": "pointblank:gm6lynx",
+      "count": 1
+    },
+    {
+      "id": "pointblank:xm29",
+      "count": 1
+    }
+  ],
+  "grade4": [
+    {
+      "id": "pointblank:ballista",
+      "count": 1
+    },
+    {
+      "id": "pointblank:c14",
+      "count": 1
+    },
+    {
+      "id": "pointblank:l96a1",
+      "count": 1
+    },
+    {
+      "id": "pointblank:mk48",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m249",
+      "count": 1
+    }
+  ],
+  "grade3": [
+    {
+      "id": "pointblank:hk416",
+      "count": 1
+    },
+    {
+      "id": "pointblank:ak12",
+      "count": 1
+    },
+    {
+      "id": "pointblank:scarl",
+      "count": 1
+    },
+    {
+      "id": "pointblank:mk14ebr",
+      "count": 1
+    },
+    {
+      "id": "pointblank:aa12",
+      "count": 1
+    },
+    {
+      "id": "pointblank:uar10",
+      "count": 1
+    }
+  ],
+  "grade2": [
+    {
+      "id": "pointblank:ak47",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m4a1",
+      "count": 1
+    },
+    {
+      "id": "pointblank:g36c",
+      "count": 1
+    },
+    {
+      "id": "pointblank:mp5",
+      "count": 1
+    },
+    {
+      "id": "pointblank:vector",
+      "count": 1
+    },
+    {
+      "id": "pointblank:p90",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m870",
+      "count": 1
+    }
+  ],
+  "grade1": [
+    {
+      "id": "pointblank:glock17",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m1911a1",
+      "count": 1
+    },
+    {
+      "id": "pointblank:deserteagle",
+      "count": 1
+    },
+    {
+      "id": "pointblank:m590",
+      "count": 1
+    },
+    {
+      "id": "pointblank:mp7",
+      "count": 1
+    },
+    {
+      "id": "pointblank:ammo9mm",
+      "count": 32
+    },
+    {
+      "id": "pointblank:ammo556",
+      "count": 32
+    },
+    {
+      "id": "pointblank:gunmetal_ingot",
+      "count": 4
+    }
+  ]
+}

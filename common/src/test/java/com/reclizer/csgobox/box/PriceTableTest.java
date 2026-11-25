@@ -143,6 +143,11 @@ final class PriceTableTest {
                 """).getAsJsonObject();
         assertEquals("tacz:12g", PriceTable.variantId(ammo).orElseThrow());
 
+        JsonObject attachment = JsonParser.parseString("""
+                {"id": "tacz:attachment", "tag": "{AttachmentId:\\"daffas_arsenal:scope_wawan2000\\"}"}
+                """).getAsJsonObject();
+        assertEquals("daffas_arsenal:scope_wawan2000", PriceTable.variantId(attachment).orElseThrow());
+
         JsonObject plain = JsonParser.parseString("""
                 {"id": "minecraft:diamond"}
                 """).getAsJsonObject();
@@ -195,6 +200,11 @@ final class PriceTableTest {
                 {"id": "tacz:ammo", "tag": {"AmmoId": "tacz:762x39", "AmmoCount": 60}}
                 """).getAsJsonObject();
         assertEquals("tacz:762x39", PriceTable.variantId(ammoObject).orElseThrow());
+
+        JsonObject attachmentObject = JsonParser.parseString("""
+                {"id": "tacz:attachment", "tag": {"AttachmentId": "daffas_arsenal:scope_wawan2000"}}
+                """).getAsJsonObject();
+        assertEquals("daffas_arsenal:scope_wawan2000", PriceTable.variantId(attachmentObject).orElseThrow());
 
         // components.custom_data (1.21+), GunId preferred over VariantId
         JsonObject componentsForm = JsonParser.parseString("""

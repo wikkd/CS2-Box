@@ -4,9 +4,12 @@
 `tacz:modern_kinetic_gun`，开出来可直接开火）与配套弹药，含普通箱与终端机两种。
 把 JSON 复制到 `config/csbox/`，然后 `/csbox reload`。
 
-> **平台限制**：TACZ 仅 `v1_21_1`（NeoForge 1.21.1）与 `forge_1_20_1`（Forge 1.20.1）
-> 两个平台有集成（检视视口）。本配置带 `"requires": ["tacz"]` 门控：**未装 TACZ 时
-> 整箱跳过并在 `/csbox info error` 报错**，不会再出现紫黑块/裸枪。
+> **平台限制**：TACZ 集成在 `v1_21_1`（NeoForge 1.21.1）、`forge_1_20_1`
+> （Forge 1.20.1）与 `fabric_1_21_1`（TaCZ: Refabricated，Fabric 移植，mod id
+> 同为 `tacz`）三平台可用（检视视口 / 3D 枪械渲染）。Fabric 侧另需前置
+> Forge Config API Port（`forgeconfigapiport`）。本配置带 `"requires": ["tacz"]`
+> 门控：**未装 TACZ 时整箱跳过并在 `/csbox info error` 报错**，不会再出现
+> 紫黑块/裸枪。
 
 ## 文件
 
@@ -19,8 +22,12 @@
 ## 安装（1.20.1 示例）
 
 ```bash
-cp compat-packs/tacz-pack/*.json config/csbox/
+cp compat-packs/tacz-pack/gun_crate.json compat-packs/tacz-pack/tacz_terminal.json config/csbox/
+python scripts/merge-prices.py compat-packs/tacz-pack/_prices.json config/csbox/_prices.json
 ```
+
+`_prices.json` 必须**合并**而不是覆盖（直接 `cp *.json` 会把全局价格表冲成
+只剩 TACZ 片段，其他箱子的物品全部变成未定价）。
 
 - 箱子：进游戏 `/csbox reload`，然后 `/csbox give @p csgobox:gun_crate`。
 - 终端机：**新增配置文件后需重启游戏**（动态物品在 RegisterEvent 注册阶段创建，
@@ -65,8 +72,9 @@ cp compat-packs/tacz-pack/*.json config/csbox/
   会附一行可点击的 `_prices.json` 价键片段（`id#GunId`），点击复制后合并进价格表
   （`0` 为占位价，请改成实际价格——未定价的变体条目会整箱拒载）。
 
-- 开出的枪在 `v1_21_1` / `forge_1_20_1` 可进检视视口（`CsLookItemScreen` 内 3D 检视；
-  终端机报价面板「检视」胶囊对 TACZ 枪同样触发第一人称检视）。
+- 开出的枪在 `v1_21_1` / `forge_1_20_1` / `fabric_1_21_1` 可进检视视口
+  （`CsLookItemScreen` 内 3D 检视；终端机报价面板「检视」胶囊对 TACZ 枪同样
+  触发第一人称检视）。
 
 - **查已加载 ID（推荐工作流）**：装好 TACZ 后进游戏跑 `/csbox editor`，内嵌链接会把
   服务端实际加载的全部物品 id（含 `tacz:*` 枪械/弹药/附件）带进网页编辑器的自动补全，
