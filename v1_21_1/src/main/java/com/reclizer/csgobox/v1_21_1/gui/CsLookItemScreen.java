@@ -11,6 +11,7 @@ import com.reclizer.csgobox.v1_21_1.utils.AnimRenderOps;
 import com.reclizer.csgobox.v1_21_1.utils.MaidSlabPreview;
 import com.reclizer.csgobox.v1_21_1.utils.RenderFontTool;
 import com.reclizer.csgobox.v1_21_1.utils.EpicFightInspect;
+import com.reclizer.csgobox.v1_21_1.utils.SlashBladeComboInspect;
 import com.reclizer.csgobox.v1_21_1.utils.SlashBladePreview;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -165,6 +166,10 @@ public class CsLookItemScreen extends Screen {
      *  (index 0, the single inspect entry), armed only when the current item
      *  renders as a living entity. */
     private boolean mobAnimMode = false;
+
+    /** Inspect-button position in a blade's cycle (rack pose flip → combo
+     *  motion → stop). Reset whenever the screen opens or closes. */
+    private boolean slashBladePoseFlipped = false;
 
 
 
@@ -400,9 +405,10 @@ public class CsLookItemScreen extends Screen {
             }
             // Inspect (index 0) is the single inspect entry: always on as the
             // default mode (own 3D drag preview); its underline turns green
-            // while a special inspect mode (mob animation / EF battle inspect)
-            // is active.
-            boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive();
+            // while a special inspect mode (mob animation / EF battle inspect /
+            // blade combo motion) is active.
+            boolean specialInspect = this.mobAnimMode || EpicFightInspect.isActive()
+                    || SlashBladeComboInspect.isActive();
             boolean active = i == 0 || (i == 1 && this.showInfoPanel);
             int outer = 0xFF2B2B31;
             int inner = active ? 0xFF33333B : 0xFF232328;
@@ -620,8 +626,9 @@ public class CsLookItemScreen extends Screen {
         int infoSize = toolbarButtonSize();
         // Inspect button (index 0) is the single inspect entry: it cycles the
         // inspect modes available for this item — Epic Fight battle inspect,
-        // mob animation, SlashBlade rack pose, TACZ first-person inspect —
-        // falling back to our own 3D drag preview once nothing special is on.
+        // mob animation, SlashBlade rack pose / own combo motion, TACZ
+        // first-person inspect — falling back to our own 3D drag preview once
+        // nothing special is on.
         int inspectX = toolbarButtonX(0);
         int inspectY = toolbarButtonY() + toolbarEnterRise(0);
         if (button == 0 && isInside(mouseX, mouseY, inspectX, inspectY, infoSize, infoSize)) {
@@ -635,7 +642,17 @@ public class CsLookItemScreen extends Screen {
             } else if (AnimRenderOps.hasPreviewMobInstance()) {
                 this.mobAnimMode = !this.mobAnimMode;
             } else if (SlashBladePreview.hasPreviewBlade()) {
-                SlashBladePreview.toggleStyle();
+                if (SlashBladeComboInspect.isActive()) {
+                    SlashBladeComboInspect.stop();
+                } else if (!this.slashBladePoseFlipped) {
+                    this.slashBladePoseFlipped = true;
+                    SlashBladePreview.toggleStyle();
+                } else if (!SlashBladeComboInspect.start()) {
+                    // Combo motion unavailable (SlashBlade's surface moved):
+                    // keep the button a pose flip.
+                    this.slashBladePoseFlipped = false;
+                    SlashBladePreview.toggleStyle();
+                }
             } else if (this.minecraft != null && this.minecraft.player != null
                     && TaczInspectViewport.isAvailable(this.openItem)) {
                 // First-person inspect: close the GUI first, then let TACZ play
@@ -692,6 +709,8 @@ public class CsLookItemScreen extends Screen {
     public void init() {
         super.init();
         AnimRenderOps.clearPreviewMobInstance();
+        SlashBladeComboInspect.stop();
+        this.slashBladePoseFlipped = false;
         SlashBladePreview.clearPreviewBlade();
         MaidSlabPreview.clearPreviewPick();
         EpicFightInspect.clear();
@@ -904,6 +923,8 @@ public class CsLookItemScreen extends Screen {
         }
         AnimRenderOps.resetPreviewMobAnimation();
         this.mobAnimMode = false;
+        SlashBladeComboInspect.stop();
+        this.slashBladePoseFlipped = false;
         EpicFightInspect.clear();
         if (this.sceneryPlayerHidden) {
             if (this.player != null) {
@@ -933,6 +954,7 @@ public class CsLookItemScreen extends Screen {
         this.advanceSceneryGlide();
         AnimRenderOps.tickPreviewMobAnimations(this.mobAnimMode);
         EpicFightInspect.tick();
+        SlashBladeComboInspect.tick();
         if (!this.minecraft.player.isAlive() || this.minecraft.player.isRemoved()) {
             this.onClose();
         }

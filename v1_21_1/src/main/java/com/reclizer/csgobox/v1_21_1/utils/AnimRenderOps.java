@@ -13,9 +13,12 @@ import com.tacz.guns.client.model.bedrock.BedrockCubeBox;
 import com.tacz.guns.client.model.bedrock.BedrockCubePerFace;
 import com.tacz.guns.client.model.bedrock.BedrockPart;
 import com.tacz.guns.client.resource.GunDisplayInstance;
+import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.RemotePlayer;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -3308,6 +3311,104 @@ public final class AnimRenderOps {
                     cacheKey, bounds == NO_BOUNDS ? "none" : bounds.span());
         }
         return bounds;
+    }
+
+    /** Preview player of the SlashBlade combo-motion inspect (see
+     *  {@link SlashBladeComboInspect}): a dedicated carrier built from the
+     *  inspecting player's profile so the figure wears their skin. Never
+     *  added to the world: the mod's blade layer reads only the rendered
+     *  entity's main-hand state and follows game time by itself. */
+    private static final String SLASHBLADE_COMBO_PLAYER_CACHE_KEY = "csgobox:slashblade_player";
+
+    /** Framing of the combo preview. The figure is probed once in its rest
+     *  pose (see {@link #slashBladeComboBounds}); that envelope only holds
+     *  the carried blade, so the frame is widened by the first constant and
+     *  its centre lifted by the second (blocks) — the swing arc reaches
+     *  past the figure on every side and highest overhead — so the whole
+     *  chain stays inside the preview square at the cost of a smaller
+     *  figure. Framing values to be confirmed in game. */
+    private static final float SLASHBLADE_COMBO_FRAME = 1.8F;
+    private static final float SLASHBLADE_COMBO_CENTER_LIFT = 0.2F;
+
+    /** Rest-pose bounds of the combo preview player (re-probed when the
+     *  carrier is rebuilt, e.g. after a world change). */
+    private static Entity slashBladeComboBoundsCarrier;
+    private static ModelBounds slashBladeComboBoundsCache;
+
+    /** SlashBlade blade 3D preview in the combo-motion form: the preview
+     *  player wields a copy of the blade and the mod's own render layer
+     *  swings it through the blade's attack chain
+     *  ({@link SlashBladeComboInspect} performs the clicks). Falls back to
+     *  the rack form when the combo motion is off or broke, and to the flat
+     *  icon when the carrier is unavailable. */
+    static void renderSlashBladeComboPreview(GuiGraphics gg, ItemStack item, LivingEntity player,
+                                             int cx, int cy, Quat rotation, float scale) {
+        LivingEntity carrier = slashBladeComboPlayer(player.level());
+        if (carrier != null && SlashBladeComboInspect.drive(carrier, item)) {
+            markSlashBladePreview(slashBladeVariantKey(item));
+            ModelBounds bounds = slashBladeComboBounds(carrier);
+            if (bounds != NO_BOUNDS && renderEntityPreview(gg, carrier, bounds, cx, cy, rotation, scale)) {
+                return;
+            }
+        }
+        renderSlashBladeRackPreview(gg, item, player, cx, cy, rotation, scale);
+    }
+
+    private static LivingEntity slashBladeComboPlayer(Level level) {
+        Entity cached = ENTITY_PREVIEW_INSTANCES.get(SLASHBLADE_COMBO_PLAYER_CACHE_KEY);
+        if (cached instanceof LivingEntity living && cached.level() == level) {
+            return living;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !(level instanceof ClientLevel clientLevel)) {
+            return null;
+        }
+        try {
+            PreviewPlayer carrier = new PreviewPlayer(clientLevel, mc.player.getGameProfile());
+            carrier.setPos(0.0D, 64.0D, 0.0D);
+            carrier.setYRot(180.0F);
+            carrier.setXRot(0.0F);
+            ENTITY_PREVIEW_INSTANCES.put(SLASHBLADE_COMBO_PLAYER_CACHE_KEY, carrier);
+            slashBladeComboBoundsCarrier = null;
+            LOGGER.info("[csgobox] slashblade combo preview: player carrier ready");
+            return carrier;
+        } catch (Throwable t) {
+            LOGGER.warn("SlashBlade combo preview player creation failed", t);
+            return null;
+        }
+    }
+
+    /** Frame of the combo preview, probed while the blade sits in its rest
+     *  pose (the first frame after the install — the opening swing starts
+     *  {@code IDLE_MS} later) and widened per the framing constants. */
+    private static ModelBounds slashBladeComboBounds(Entity carrier) {
+        if (slashBladeComboBoundsCarrier != carrier) {
+            slashBladeComboBoundsCarrier = carrier;
+            ModelBounds probed = probeEntityBounds(carrier);
+            if (probed == NO_BOUNDS) {
+                slashBladeComboBoundsCache = NO_BOUNDS;
+                LOGGER.info("[csgobox] slashblade combo preview: rest-pose probe empty; keeping the raw preview scale");
+            } else {
+                Vector3f center = probed.center();
+                slashBladeComboBoundsCache = new ModelBounds(
+                        new Vector3f(center.x, center.y + SLASHBLADE_COMBO_CENTER_LIFT, center.z),
+                        probed.hub(), probed.span() * SLASHBLADE_COMBO_FRAME);
+                LOGGER.info("[csgobox] slashblade combo preview: rest-pose span={} frame span={}",
+                        probed.span(), slashBladeComboBoundsCache.span());
+            }
+        }
+        return slashBladeComboBoundsCache;
+    }
+
+    private static final class PreviewPlayer extends RemotePlayer {
+        private PreviewPlayer(ClientLevel level, GameProfile profile) {
+            super(level, profile);
+        }
+
+        @Override
+        public boolean shouldShowName() {
+            return false;
+        }
     }
 
     // ===================== Touhou Little Maid soul slab preview =====================

@@ -164,7 +164,10 @@ final class ItemPreviewStrategies {
      *  its two public fields, and lets the mod's own rack renderer pose the
      *  blade horizontally exactly like the rack does; zero SlashBlade class
      *  references (namespace + cached reflective instanceof gate, vanilla
-     *  registry entity). 2D grids keep the flat icon. */
+     *  registry entity). The inspect button's combo mode instead plays the
+     *  blade's own attack chain on the preview player (see
+     *  {@link SlashBladeComboInspect}), falling back to the rack form when
+     *  that surface is unavailable. 2D grids keep the flat icon. */
     private static final class SlashBladeStrategy implements ItemPreviewStrategy {
 
         @Override
@@ -175,7 +178,11 @@ final class ItemPreviewStrategies {
         @Override
         public void render3D(GuiGraphics gg, ItemStack stack, LivingEntity player,
                              int cx, int cy, Quat rotation, float scale) {
-            AnimRenderOps.renderSlashBladeRackPreview(gg, stack, player, cx, cy, rotation, scale);
+            if (SlashBladeComboInspect.isActive()) {
+                AnimRenderOps.renderSlashBladeComboPreview(gg, stack, player, cx, cy, rotation, scale);
+            } else {
+                AnimRenderOps.renderSlashBladeRackPreview(gg, stack, player, cx, cy, rotation, scale);
+            }
         }
 
         @Override

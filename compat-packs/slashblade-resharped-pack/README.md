@@ -81,7 +81,8 @@ python scripts/merge-prices.py compat-packs/slashblade-resharped-pack/_prices.js
 经模组自己的动作事件叠加；两者都是模组原代码，预览只负责"点击"（写连段
 状态 + 发动作事件，不碰会真打伤害的点击入口）。装 Player Animator 时人物
 随动作全身摆动；未装时刀照常挥、人物保持站姿（与游戏内同装环境一致）。
-`v1_21_1` 待镜像。
+`v1_21_1` 已镜像（2026-11-25，待 L4）：同一三态循环与自家连段状态机；1.21.1 的刀状态是数据组件、输入指令是实体附件，反射面按 2.1.9 jar 单独核对。全身动作需 Player Animator 的 NeoForge
+1.21.1 构建（dev 已投放 2.0.4）。
 
 ## 未覆盖
 
